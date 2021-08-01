@@ -10,6 +10,16 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>strobe-graphics</artifactId>
+    <dependencies>
+        <dependency>
+            <groupId>strobe</groupId>
+            <artifactId>strobe-window</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>strobe</groupId>
+            <artifactId>strobe-debug</artifactId>
+        </dependency>
+    </dependencies>
 
     <properties>
         <maven.compiler.source>16</maven.compiler.source>

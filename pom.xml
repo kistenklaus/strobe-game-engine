@@ -13,6 +13,7 @@
         <module>strobe-window</module>
         <module>strobe-debug</module>
         <module>strobe-graphics</module>
+        <module>strobe-window-glfw</module>
     </modules>
 
     <properties>
@@ -71,6 +72,26 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- module dependencies !-->
+            <dependency>
+                <groupId>strobe</groupId>
+                <artifactId>strobe-window</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>strobe</groupId>
+                <artifactId>strobe-graphics</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>strobe</groupId>
+                <artifactId>strobe-debug</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+                <scope>compile</scope>
+            </dependency>
+
             <!-- actual dependencies !-->
             <!--LWJGL !-->
             <dependency>
