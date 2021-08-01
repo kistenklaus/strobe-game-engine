@@ -11,6 +11,7 @@
     <modules>
         <module>strobe-utils</module>
         <module>strobe-window</module>
+        <module>strobe-debug</module>
     </modules>
 
     <properties>
