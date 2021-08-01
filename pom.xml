@@ -14,6 +14,7 @@
         <module>strobe-debug</module>
         <module>strobe-graphics</module>
         <module>strobe-window-glfw</module>
+        <module>strobe-transform</module>
     </modules>
 
     <properties>
