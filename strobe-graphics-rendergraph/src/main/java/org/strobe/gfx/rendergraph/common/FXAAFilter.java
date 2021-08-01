@@ -5,7 +5,6 @@ import org.strobe.gfx.Graphics;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.opengl.bindables.mapper.Uniform;
 import org.strobe.gfx.opengl.bindables.shader.Shader;
-import org.strobe.gfx.opengl.bindables.shader.Texture2DShaderUniform;
 import org.strobe.gfx.opengl.bindables.shader.io.ShaderLoader;
 import org.strobe.gfx.opengl.bindables.texture.Texture2D;
 

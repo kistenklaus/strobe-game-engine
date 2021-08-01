@@ -4,7 +4,6 @@ import org.joml.Matrix4f;
 import org.strobe.gfx.Bindable;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.Renderable;
-import org.strobe.gfx.lights.LightManager;
 import org.strobe.gfx.materials.shaders.MaterialShader;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.opengl.bindables.mapper.Uniform;
@@ -44,7 +43,7 @@ public final class ShadowQueue extends RenderQueue {
     }
 
     @Override
-    public void renderDrawable(Graphics gfx, AbstractTransform transform, Renderable mesh, MaterialShader shader, Bindable[] bindables) {
+    public void renderDrawable(Graphics gfx, AbstractTransform transform, Renderable renderable, MaterialShader shader, Bindable[] bindables) {
 
     }
 

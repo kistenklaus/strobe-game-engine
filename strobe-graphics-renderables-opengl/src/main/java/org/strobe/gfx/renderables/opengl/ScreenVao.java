@@ -5,6 +5,8 @@ import org.strobe.gfx.Renderable;
 import org.strobe.gfx.opengl.bindables.vao.Ibo;
 import org.strobe.gfx.opengl.bindables.vao.Vao;
 
+import java.util.Arrays;
+
 import static org.lwjgl.opengl.GL11.*;
 
 public final class ScreenVao implements Renderable {
@@ -12,8 +14,9 @@ public final class ScreenVao implements Renderable {
     private static Vao screenVao;
 
     public ScreenVao(Graphics gfx){
-        if(screenVao != null){
-            screenVao = new Vao(gfx, 4, new Ibo(gfx, new int[]{3,2,1,0,2,3}, true),
+        if(screenVao == null){
+            screenVao = new Vao(gfx, 4,
+                    new Ibo(gfx, new int[]{2,1,0,0,3,2}, true),
                     "layout(location=0,usage=static) in vec3",
                             "layout(location=1,usage=static) in vec2");
             screenVao.bufferLocation(gfx, 0, new float[]{

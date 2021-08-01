@@ -2,12 +2,18 @@ package org.strobe.gfx.camera;
 
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
-import org.joml.Vector4f;
-import org.strobe.gfx.transform.AbstractTransform;
-import org.strobe.gfx.transform.IdentityTransform;
-import org.strobe.gfx.transform.RenderTransform3D;
+import org.strobe.gfx.Graphics;
+import org.strobe.gfx.camera.filters.FXAAFilter;
+import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
+
+import java.util.ArrayList;
 
 public abstract class AbstractCamera {
+
+    private static final Framebuffer.Attachment[] DEFAULT_ATTACHMENTS = {
+            Framebuffer.Attachment.COLOR_RGBA_ATTACHMENT_0,
+            Framebuffer.Attachment.DEPTH_ATTACHMENT
+    };
 
     public static final int FXAA = 1;
 
@@ -15,38 +21,47 @@ public abstract class AbstractCamera {
     protected final Matrix4f projMatrix = new Matrix4f().identity();
     protected final Vector3f position = new Vector3f();
 
-    private final int horResolution;
-    private final int verResolution;
+    private Framebuffer frontTarget;
+    private Framebuffer backTarget;
 
-    private final CameraSetting settings = new CameraSetting();
+    private final CameraUbo ubo;
 
-    protected final AbstractTransform root = new IdentityTransform();
+    private final Vector3f backgroundColor = new Vector3f(0);
 
-    public AbstractCamera(int horResolution, int verResolution) {
-        this.horResolution = horResolution;
-        this.verResolution = verResolution;
+    private final ArrayList<CameraFilter> filters = new ArrayList<>();
+
+    private boolean linearScalingEnabled = false;
+
+    private FXAAFilter fxaaFilter = null;
+    private boolean fxaaEnabled = false;
+
+    public AbstractCamera(Graphics gfx, int horResolution, int verResolution) {
+        frontTarget = new Framebuffer(gfx, horResolution, verResolution, DEFAULT_ATTACHMENTS);
+        backTarget = new Framebuffer(gfx, horResolution, verResolution, DEFAULT_ATTACHMENTS);
+        ubo = new CameraUbo(gfx);
     }
 
-    public void updateViewMatrix() {
-        Matrix4f transform = new Matrix4f(root.getTransformationMatrix());
-        Vector4f temp = new Vector4f(0,0,0,1);
-        transform.transform(temp);
-        position.set(temp.x, temp.y, temp.z);
-
-        viewMatrix.set(transform.invertAffine());
+    public void enableLinearScaling(){
+        linearScalingEnabled = true;
     }
 
-    public void enable(int setting){
-        settings.enable(setting);
+    public void disableLinearScaling(){
+        linearScalingEnabled = false;
     }
 
-    public void disable(int setting){
-        settings.disable(setting);
+    public void enableFXAA(Graphics gfx){
+        fxaaFilter = new FXAAFilter(gfx);
+        fxaaEnabled = true;
+        addFilter(fxaaFilter);
     }
 
-    public boolean isEnabled(int setting){
-        return settings.isEnabled(setting);
+    public void disableFXAA(){
+        fxaaEnabled = false;
+        if(fxaaFilter == null)return;
+        removeFilter(fxaaFilter);
     }
+
+    public abstract void update();
 
     public Matrix4f getViewMatrix() {
         return viewMatrix;
@@ -56,20 +71,49 @@ public abstract class AbstractCamera {
         return projMatrix;
     }
 
+    public final void swapBuffers(){
+        Framebuffer temp = frontTarget;
+        frontTarget = backTarget;
+        backTarget = temp;
+    }
+
+    public Framebuffer getTarget(){
+        return frontTarget;
+    }
+
+    public Framebuffer getBackTarget(){
+        return backTarget;
+    }
+
+    public CameraUbo getCameraUbo() {
+        return ubo;
+    }
+
     public Vector3f getPosition(){
         return position;
     }
 
-    public AbstractTransform getRootTransform() {
-        return root;
+    public Vector3f getBackgroundColor(){
+        return backgroundColor;
     }
 
-
-    public int getHorResolution() {
-        return horResolution;
+    public void addFilter(CameraFilter filter) {
+        filters.add(filter);
     }
 
-    public int getVerResolution() {
-        return verResolution;
+    public void removeFilter(CameraFilter filter){
+        filters.remove(filter);
+    }
+
+    public Iterable<CameraFilter> filters(){
+        return filters;
+    }
+
+    public boolean isEnabledLinearScaling() {
+        return linearScalingEnabled;
+    }
+
+    public boolean isEnabledFXAA(){
+        return fxaaEnabled;
     }
 }

@@ -1,7 +1,8 @@
-package org.strobe.gfx.lights;
+package org.strobe.gfx.rendergraph.common;
 
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.lights.DirectionalLight;
+import org.strobe.gfx.lights.LightUbo;
 
 import java.awt.*;
 import java.util.List;

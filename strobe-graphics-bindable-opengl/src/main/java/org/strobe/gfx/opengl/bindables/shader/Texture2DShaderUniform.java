@@ -27,6 +27,7 @@ public class Texture2DShaderUniform extends ShaderUniform<Texture2D> {
     @Override
     public void uniform(Graphics gfx, Texture2D value) {
         this.value = value;
+        if(shader.isBound())onShaderBind(gfx);
     }
 
     @Override

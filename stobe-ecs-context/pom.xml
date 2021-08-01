@@ -43,6 +43,10 @@
             <version>0.1.0-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>strobe</groupId>
+            <artifactId>strobe-camera</artifactId>
+        </dependency>
     </dependencies>
 
     <properties>

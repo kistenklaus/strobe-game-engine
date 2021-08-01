@@ -31,6 +31,10 @@
             <groupId>strobe</groupId>
             <artifactId>strobe-window-glfw</artifactId>
         </dependency>
+        <dependency>
+            <groupId>strobe</groupId>
+            <artifactId>strobe-debug-imgui</artifactId>
+        </dependency>
     </dependencies>
 
     <properties>

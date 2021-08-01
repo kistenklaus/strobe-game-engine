@@ -20,7 +20,7 @@ public abstract class RenderQueue extends BindingPass{
         queue.add(new RenderQueue.Job(drawable, step));
     }
 
-    public abstract void renderDrawable(Graphics gfx, AbstractTransform transform, Renderable mesh,
+    public abstract void renderDrawable(Graphics gfx, AbstractTransform transform, Renderable renderable,
                                         MaterialShader shader, Bindable[] bindables);
 
 
