@@ -29,7 +29,6 @@ public class Game extends EntityContext {
         renderable.addComponent(mesh);
         TestMaterial mat;
         renderable.addComponent(mat = new TestMaterial());
-        mat.switchShader();
         renderable.addComponent(new MeshRenderer());
 
 

@@ -1,38 +1,31 @@
 package org.strobe.ecs.context.renderer.materials;
 
+import org.strobe.ecs.context.renderer.EntityRenderer;
 import org.strobe.ecs.context.renderer.Material;
+import org.strobe.gfx.Graphics;
 import org.strobe.gfx.materials.GreenShaderMaterial;
 import org.strobe.gfx.materials.RedShaderMaterial;
-import org.strobe.gfx.rendergraph.core.Step;
+import org.strobe.gfx.materials.ShaderMaterial;
 
 public final class TestMaterial extends Material {
 
-    private Step greenStep;
-    private Step redStep;
+    private GreenShaderMaterial greenShaderMaterial;
+    private RedShaderMaterial redShaderMaterial;
 
-    boolean green = true;
-
-    public TestMaterial(){
-        materialOps.add((gfx,renderer)->{
-            GreenShaderMaterial greenShaderMaterial = new GreenShaderMaterial(gfx);
-            greenStep = new Step(renderer.getForwardQueue(), greenShaderMaterial.passes()[0].getShader(), greenShaderMaterial.passes()[0].getBindables());
-            technique.setSteps(greenStep);
-
-            RedShaderMaterial redShaderMaterial = new RedShaderMaterial(gfx);
-            redStep = new Step(renderer.getForwardQueue(), redShaderMaterial.passes()[0].getShader(), greenShaderMaterial.passes()[0].getBindables());
-
-        });
+    @Override
+    protected ShaderMaterial createShaderMaterials(Graphics gfx, EntityRenderer renderer) {
+        greenShaderMaterial = new GreenShaderMaterial(gfx);
+        redShaderMaterial = new RedShaderMaterial(gfx);
+        return greenShaderMaterial;
     }
 
-    public void switchShader(){
-        materialOps.add((gfx,r)->{
-            if(green){
-                technique.setSteps(redStep);
-            }else{
-                technique.setSteps(greenStep);
-            }
-            green = !green;
-        });
+    public void setGreen(){
+        switchShaderMaterial(()->greenShaderMaterial);
     }
+
+    public void setRed(){
+        switchShaderMaterial(()->redShaderMaterial);
+    }
+
 
 }
