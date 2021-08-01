@@ -10,6 +10,23 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>strobe-utils</artifactId>
+    <dependencies>
+        <!--LWJGL !-->
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl</artifactId>
+            <version>${lwjgl.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl</artifactId>
+            <classifier>${lwjgl.natives}</classifier>
+            <version>${lwjgl.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
+    </dependencies>
 
 
 </project>
