@@ -16,6 +16,7 @@
         <module>strobe-window-glfw</module>
         <module>strobe-transform</module>
         <module>strobe-graphics-bindable-opengl</module>
+        <module>strobe-engine</module>
     </modules>
 
     <properties>
