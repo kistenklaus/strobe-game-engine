@@ -1,4 +1,4 @@
-package org.strobe.commons.lang;
+package org.strobe.utils;
 
 import java.util.AbstractList;
 import java.util.Arrays;
