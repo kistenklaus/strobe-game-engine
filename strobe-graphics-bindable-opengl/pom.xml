@@ -50,6 +50,24 @@
             <version>${lwjgl.version}</version>
             <scope>compile</scope>
         </dependency>
+        <!-- STB !-->
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-stb</artifactId>
+            <version>${lwjgl.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-stb</artifactId>
+            <classifier>${lwjgl.natives}</classifier>
+            <version>${lwjgl.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>strobe</groupId>
+            <artifactId>strobe-utils</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

@@ -1,6 +1,7 @@
 package org.strobe.ecs;
 
-import org.strobe.commons.lang.UnboundedArray;
+
+import org.strobe.utils.UnboundedArray;
 
 public final class ComponentMapper<T extends Component> {
 

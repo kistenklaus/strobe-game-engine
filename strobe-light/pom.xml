@@ -19,6 +19,10 @@
             <groupId>strobe</groupId>
             <artifactId>strobe-graphics</artifactId>
         </dependency>
+        <dependency>
+            <groupId>strobe</groupId>
+            <artifactId>strobe-graphics-bindable-opengl</artifactId>
+        </dependency>
     </dependencies>
 
     <properties>

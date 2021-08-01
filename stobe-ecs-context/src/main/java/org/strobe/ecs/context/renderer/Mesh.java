@@ -113,7 +113,7 @@ public class Mesh implements Component {
     }
 
     Renderable createRenderable(Graphics gfx) {
-        if (vao != null) return new IndexedVao(vao, getDrawCount(), GL_TRIANGLES, GL_UNSIGNED_INT);
+        if (vao != null) return new IndexedVao(vao, getDrawCount());
         meshOps.clear();
         vao = new Vao(gfx, vertexCount, ibo = new Ibo(gfx, getIndices(), dynamicIndices), layout);
         if (positions != null) vao.bufferLocation(gfx, 0, positions);
@@ -121,7 +121,7 @@ public class Mesh implements Component {
         if (normals != null) vao.bufferLocation(gfx, 2, normals);
         if (tangents != null) vao.bufferLocation(gfx, 3, tangents);
         if (bitangents != null) vao.bufferLocation(gfx, 4, bitangents);
-        return new IndexedVao(vao, getDrawCount(), GL_TRIANGLES, GL_UNSIGNED_INT);
+        return new IndexedVao(vao, getDrawCount());
     }
 
     public int getVertexCount() {

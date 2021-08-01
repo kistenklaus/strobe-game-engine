@@ -4,7 +4,7 @@ import org.lwjgl.BufferUtils;
 import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 import org.strobe.gfx.Graphics;
-import org.strobe.io.ResourceLoader;
+import org.strobe.utils.ResourceLoader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
