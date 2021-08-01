@@ -15,6 +15,7 @@
         <module>strobe-graphics</module>
         <module>strobe-window-glfw</module>
         <module>strobe-transform</module>
+        <module>strobe-graphics-bindable-opengl</module>
     </modules>
 
     <properties>
@@ -89,6 +90,24 @@
             <dependency>
                 <groupId>strobe</groupId>
                 <artifactId>strobe-debug</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>strobe</groupId>
+                <artifactId>strobe-transform</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>strobe</groupId>
+                <artifactId>strobe-window-glfw</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>strobe</groupId>
+                <artifactId>strobe-utils</artifactId>
                 <version>0.1.0-SNAPSHOT</version>
                 <scope>compile</scope>
             </dependency>
