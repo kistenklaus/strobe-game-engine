@@ -13,11 +13,11 @@
     <dependencies>
         <dependency>
             <groupId>strobe</groupId>
-            <artifactId>strobe-debug</artifactId>
+            <artifactId>strobe-graphics</artifactId>
         </dependency>
         <dependency>
             <groupId>strobe</groupId>
-            <artifactId>strobe-graphics</artifactId>
+            <artifactId>strobe-debug</artifactId>
         </dependency>
     </dependencies>
 
