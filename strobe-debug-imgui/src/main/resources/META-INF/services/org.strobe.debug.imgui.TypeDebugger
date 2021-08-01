@@ -1,0 +1,16 @@
+org.strobe.debug.imgui.extentions.ObjectDebugger
+org.strobe.debug.imgui.extentions.DebuggableDebugger
+org.strobe.debug.imgui.extentions.CollectionDebugger
+org.strobe.debug.imgui.extentions.ArrayDebugger
+org.strobe.debug.imgui.extentions.primitive.BooleanDebugger
+org.strobe.debug.imgui.extentions.primitive.ByteDebugger
+org.strobe.debug.imgui.extentions.primitive.CharacterDebugger
+org.strobe.debug.imgui.extentions.primitive.FloatingDebugger
+org.strobe.debug.imgui.extentions.primitive.IntegerDebugger
+org.strobe.debug.imgui.extentions.joml.Vector2Debugger
+org.strobe.debug.imgui.extentions.joml.Vector3Debugger
+org.strobe.debug.imgui.extentions.joml.Vector4Debugger
+org.strobe.debug.imgui.extentions.opengl.Texture2DDebugger
+org.strobe.debug.imgui.extentions.util.MapDebugger
+org.strobe.debug.imgui.extentions.opengl.VboDebugger
+org.strobe.debug.imgui.extentions.opengl.IboDebugger

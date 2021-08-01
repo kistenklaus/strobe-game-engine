@@ -17,6 +17,7 @@
         <module>strobe-transform</module>
         <module>strobe-graphics-bindable-opengl</module>
         <module>strobe-engine</module>
+        <module>strobe-debug-imgui</module>
     </modules>
 
     <properties>
@@ -76,6 +77,12 @@
     <dependencyManagement>
         <dependencies>
             <!-- module dependencies !-->
+            <dependency>
+                <groupId>strobe</groupId>
+                <artifactId>strobe-engine</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+                <scope>compile</scope>
+            </dependency>
             <dependency>
                 <groupId>strobe</groupId>
                 <artifactId>strobe-window</artifactId>
