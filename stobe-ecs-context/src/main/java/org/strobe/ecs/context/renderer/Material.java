@@ -43,7 +43,6 @@ public abstract class Material implements Component {
     }
 
     private Step[] createSteps(Graphics gfx, EntityRenderer renderer, ShaderMaterial material){
-        System.out.println("creating steps for " + material);
         Step[] steps = new Step[material.passCount()];
         for(int i=0;i<steps.length;i++){
             //select queue based on flags (could be out sourced to the EntityRenderer)

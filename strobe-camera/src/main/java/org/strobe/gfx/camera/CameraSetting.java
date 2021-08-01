@@ -6,7 +6,6 @@ public final class CameraSetting {
     public static final int FXAA = LINEAR_INTERPOLATION+1;
     public static final int SETTINGS_LAST = FXAA;
 
-
     private boolean[] settings = new boolean[SETTINGS_LAST+1];
 
     public void enable(int setting){

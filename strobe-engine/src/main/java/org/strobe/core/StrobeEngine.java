@@ -56,8 +56,8 @@ class StrobeEngine implements Runnable{
         context.render(gfx);
         masterDebugger.debug(gfx);
         //render
-        masterDebugger.render();
         gfx.render();
+        masterDebugger.render();
         //context render (submit)
         //render debug
         //logic

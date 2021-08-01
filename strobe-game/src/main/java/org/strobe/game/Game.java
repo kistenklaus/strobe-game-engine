@@ -1,13 +1,15 @@
 package org.strobe.game;
 
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.strobe.core.Strobe;
+import org.strobe.debug.imgui.ImGuiDebugger;
 import org.strobe.ecs.Entity;
 import org.strobe.ecs.context.*;
-import org.strobe.ecs.context.renderer.Mesh;
-import org.strobe.ecs.context.renderer.MeshRenderer;
-import org.strobe.ecs.context.renderer.Transform;
+import org.strobe.ecs.context.renderer.*;
 import org.strobe.ecs.context.renderer.materials.TestMaterial;
 import org.strobe.gfx.Graphics;
+import org.strobe.gfx.camera.filters.FXAAFilter;
 import org.strobe.window.glfw.GlfwWindow;
 
 public class Game extends EntityContext {
@@ -18,7 +20,7 @@ public class Game extends EntityContext {
 
     @Override
     public void setup(Graphics gfx) {
-        //addDebugger(new ImGuiDebugger(gfx))
+        addDebugger(new ImGuiDebugger(gfx));
 
 
         Entity renderable = ecs.createEntity();
@@ -32,6 +34,23 @@ public class Game extends EntityContext {
         renderable.addComponent(new MeshRenderer());
 
 
+        Entity camera = ecs.createEntity();
+        camera.addComponent(new PerspectiveLense(60, 960f/640, 0.01f, 100));
+        int resRed = 8;
+        CameraRenderer cr;
+        camera.addComponent(cr=new CameraRenderer(960/resRed, 640/resRed));
+        //cr.enableFXAA();
+        camera.addComponent(new Transform(new Vector3f(0,0f,5f), new Vector3f(1), new Quaternionf().identity()));
+        camera.addComponent(new CameraController());
+
+        /*
+        Entity c2 = ecs.createEntity();
+        c2.addComponent(new PerspectiveLense(60, 960/640f, 0.01f, 100f));
+        c2.addComponent(new CameraRenderer(960, 640));
+        c2.addComponent(new Transform(new Vector3f(0,0,1f), new Vector3f(1), new Quaternionf()));
+         */
+
         ecs.addEntitySystem(new TestMeshSystem(ecs,getKeyboard()));
+        ecs.addEntitySystem(new CameraControllerSystem(ecs, getMouse(), getKeyboard()));
     }
 }

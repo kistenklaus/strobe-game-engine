@@ -28,11 +28,15 @@ public class UboPool extends BindablePool<Ubo> implements Debuggable {
         return "[name=" + name + ",bindingIndex=" + bindingIndex + ",layout=" + Arrays.toString(layout) + "]";
     }
 
-    public Ubo registerUbo(String name, int bindingIndex, String... layout) {
+    public Ubo forceAdd(String name, int bindingIndex, String... layout) {
         String hash = hashUbo(name, bindingIndex, layout);
         Integer index = indices.get(hash);
         if(index != null)return ubos.get(index);
         return null;
+    }
+
+    public void forceAdd(Ubo ubo){
+        ubos.add(ubo);
     }
 
     @Override

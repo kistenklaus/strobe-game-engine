@@ -3,7 +3,6 @@ package org.strobe.gfx.rendergraph.common;
 import org.strobe.gfx.Bindable;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.Renderable;
-import org.strobe.gfx.lights.LightManager;
 import org.strobe.gfx.materials.shaders.MaterialShader;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.opengl.bindables.ubo.Ubo;

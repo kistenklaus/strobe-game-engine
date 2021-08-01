@@ -27,12 +27,12 @@ public class Ubo extends DataBuffer<UboPool> {
     private final Type[] types;
     private final Map<String, Integer> nameMap;
 
-    public Ubo(Graphics gfx, String name, int bindingIndex, String... layout) {
+    public Ubo(Graphics gfx, String name, int bindingIndex, boolean unique, String... layout) {
         super(gfx, GL_UNIFORM_BUFFER, GL_DYNAMIC_DRAW, false);
         this.name = name;
         this.bindingIndex = bindingIndex;
 
-        Ubo pooledUbo = pool.registerUbo(name, bindingIndex, layout);
+        Ubo pooledUbo = pool.forceAdd(name, bindingIndex, layout);
 
         if(pooledUbo == null){
             nameMap = new HashMap<>();
@@ -74,14 +74,26 @@ public class Ubo extends DataBuffer<UboPool> {
             glBindBuffer(target, 0);
             pool.addUbo(this, layout);
         }else{
-            ID = pooledUbo.ID;
             offsets = pooledUbo.offsets;
             types = pooledUbo.types;
             capacity = pooledUbo.capacity;
             this.nameMap = pooledUbo.nameMap;
             alignment = pooledUbo.alignment;
             array_size = pooledUbo.array_size;
+            if(unique){
+                ID = glGenBuffers();
+                glBindBuffer(GL_UNIFORM_BUFFER, ID);
+                glBufferData(target, capacity, usage);
+                glBindBuffer(GL_UNIFORM_BUFFER, 0);
+                pool.forceAdd(this);
+            }else{
+                ID = pooledUbo.ID;
+            }
         }
+    }
+
+    public Ubo(Graphics gfx, String name, int bindingIndex, String...layout){
+        this(gfx, name, bindingIndex, false, layout);
     }
 
     public <T> Uniform<T> getUniform(Class<T> type, String name) {

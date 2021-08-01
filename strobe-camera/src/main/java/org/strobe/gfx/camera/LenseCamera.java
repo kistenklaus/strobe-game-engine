@@ -1,0 +1,39 @@
+package org.strobe.gfx.camera;
+
+import org.joml.Matrix4f;
+import org.strobe.gfx.Graphics;
+import org.strobe.gfx.transform.AbstractTransform;
+
+import java.util.function.Supplier;
+
+public final class LenseCamera extends AbstractCamera{
+
+    private final Supplier<Lense> lense;
+    private final Supplier<AbstractTransform> transform;
+
+    public LenseCamera(Graphics gfx, int horResolution, int verResolution,
+                       Supplier<Lense> lense,
+                       Supplier<AbstractTransform> transform) {
+        super(gfx, horResolution, verResolution);
+        this.lense = lense;
+        this.transform = transform;
+    }
+
+    @Override
+    public void update() {
+        viewMatrix.identity();
+        AbstractTransform transform = this.transform.get();
+        if (transform != null) {
+            position.set(transform.getPosition());
+            Matrix4f mat4 = transform.getTransformationMatrix();
+            mat4.invertAffine(viewMatrix);
+        }else position.set(0,0,0);
+
+        //TODO conditional proj update
+        Lense lense = this.lense.get();
+        projMatrix.identity();
+        if(lense != null){
+            lense.project(projMatrix);
+        }
+    }
+}

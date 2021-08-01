@@ -25,9 +25,7 @@ public final class CameraControllerSystem extends EntitySystem {
         super(ecs);
         this.mouse = mouse;
         this.keyboard = keyboard;
-
-        throw new UnsupportedOperationException();
-        //controllerPool = ecs.createPool(EntityFilter.requireAll(Camera.class, Transform.class, CameraController.class));
+        controllerPool = ecs.createPool(EntityFilter.requireAll(CameraController.class));
     }
 
     @Override
