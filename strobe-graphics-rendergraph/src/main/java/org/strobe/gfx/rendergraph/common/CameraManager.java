@@ -10,6 +10,7 @@ public final class CameraManager {
 
     private CameraUbo ubo;
     private final ArrayList<AbstractCamera> cameras = new ArrayList<>();
+    private AbstractCamera selectedCamera = null;
 
     public CameraManager(Graphics gfx){
         ubo = new CameraUbo(gfx);
@@ -21,6 +22,7 @@ public final class CameraManager {
 
     public void clearFrame(){
         cameras.clear();
+        selectedCamera = null;
     }
 
     public Iterable<AbstractCamera> cameras(){
@@ -28,10 +30,11 @@ public final class CameraManager {
     }
 
     public AbstractCamera getSelectedCamera(){
-        if(cameras.isEmpty())return null;
-        return cameras.get(0);
+        return selectedCamera;
     }
 
 
-
+    public void selectCamera(AbstractCamera camera) {
+        selectedCamera = camera;
+    }
 }

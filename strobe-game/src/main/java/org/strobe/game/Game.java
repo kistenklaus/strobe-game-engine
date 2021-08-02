@@ -42,6 +42,7 @@ public class Game extends EntityContext {
         //cr.enableFXAA();
         camera.addComponent(new Transform(new Vector3f(0,0f,5f), new Vector3f(1), new Quaternionf().identity()));
         camera.addComponent(new CameraController());
+        camera.addComponent(new FocusCamera());
 
         /*
         Entity c2 = ecs.createEntity();
