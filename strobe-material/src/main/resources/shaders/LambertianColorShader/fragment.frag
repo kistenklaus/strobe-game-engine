@@ -45,7 +45,7 @@ void main(){
     vec3 combined = vec3(0);
 
     for (int i=0;i<directionalLightCount;i++){
-        combined += calcDirLight(directionalLightDir[i], directionalLightDiffuse[i], norm, material.diffuseColor);
+        combined += calcDirLight(-directionalLightDir[i], directionalLightDiffuse[i], norm, material.diffuseColor);
     }
 
     //TODO point lights and spot lights

@@ -26,8 +26,8 @@ public final class DaylightSystem extends EntitySystem {
         cycle += dt * 0.25f;
         for(Entity entity : pool){
             Transform transform = entity.get(Transform.class);
-            transform.setPosition((float) Math.cos(cycle)*3,
-                    (float)Math.sin(cycle)*3,0f);
+            transform.setPosition(0, (float) Math.cos(cycle)*3,
+                    (float)Math.sin(cycle)*3);
         }
     }
 

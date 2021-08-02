@@ -166,7 +166,6 @@ public class Vao extends Bindable<VaoPool> {
     }
 
     public Vbo getVboForLocation(int location) {
-        if (location >= attribCount || location < 0) throw new IllegalArgumentException("vao doesn't have a attribute at location :" + location);
         Vbo vbo = vbos[location];
         if (vbo == null) throw new IllegalArgumentException("vao doesn't have a attribute at location :" + location);
         return vbo;

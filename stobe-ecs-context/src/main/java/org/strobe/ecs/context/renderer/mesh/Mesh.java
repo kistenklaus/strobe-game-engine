@@ -8,6 +8,7 @@ import org.strobe.gfx.opengl.bindables.vao.Ibo;
 import org.strobe.gfx.opengl.bindables.vao.Vao;
 import org.strobe.gfx.renderables.opengl.IndexedVao;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.function.BiConsumer;
 
@@ -104,7 +105,7 @@ public class Mesh implements Component {
     }
 
     public Mesh(int vertexCount, int drawCount) {
-        this(vertexCount, drawCount, DYNAMIC_POSITIONS);
+        this(vertexCount, drawCount, DYNAMIC_POSITIONS | DYNAMIC_NORMALS);
     }
 
     void enqueueScheduledMeshOps(EntityRenderer renderer) {

@@ -10,7 +10,7 @@ import org.strobe.ecs.context.renderer.camera.CameraRenderer;
 import org.strobe.ecs.context.renderer.camera.FocusCamera;
 import org.strobe.ecs.context.renderer.camera.PerspectiveLense;
 import org.strobe.ecs.context.renderer.light.DirectionalLight;
-import org.strobe.ecs.context.renderer.materials.TestMaterial;
+import org.strobe.ecs.context.renderer.materials.LambertianMaterial;
 import org.strobe.ecs.context.renderer.mesh.Mesh;
 import org.strobe.ecs.context.renderer.mesh.MeshRenderer;
 import org.strobe.ecs.context.renderer.transform.Transform;
@@ -32,10 +32,12 @@ public class Game extends EntityContext {
         renderable.addComponent(new Transform());
         Mesh mesh = new Mesh(4, 6);
         mesh.setPositions(0, new float[]{-0.5f, -0.5f, 0f, -0.5f, 0.5f, 0f, 0.5f, 0.5f, 0f, 0.5f, -0.5f, 0f});
+        mesh.setNormals(0, new float[]{0,0,1,0,0,1,0,0,1,0,0,1});
         mesh.setIndices(0, new int[]{2, 1, 0, 0, 3, 2});
         renderable.addComponent(mesh);
-        TestMaterial mat;
-        renderable.addComponent(mat = new TestMaterial());
+        LambertianMaterial mat = new LambertianMaterial(1,0,1);
+        mat.setDiffuseColor(new Vector3f(1,1,0));
+        renderable.addComponent(mat);
         renderable.addComponent(new MeshRenderer());
 
 

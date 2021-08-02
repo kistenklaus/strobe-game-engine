@@ -8,17 +8,17 @@ import org.strobe.gfx.opengl.bindables.shader.ShaderUniformSet;
 
 public final class LambertianColorShaderMaterial extends ShaderMaterial{
 
-    private final LambertianColorShader shader;
-    private final ShaderUniformSet uniformSet;
+    private LambertianColorShader shader;
+    private ShaderUniformSet uniformSet;
 
     public LambertianColorShaderMaterial(Graphics gfx) {
         super(gfx);
-        shader = new LambertianColorShader(gfx);
-        uniformSet = shader.createShaderUniformSet(gfx);
     }
 
     @Override
     protected MaterialPass[] createPasses(Graphics gfx) {
+        shader = new LambertianColorShader(gfx);
+        uniformSet = shader.createShaderUniformSet(gfx);
         return new MaterialPass[]{new MaterialPass(shader, 0,
                 new Bindable[]{uniformSet})};
     }
