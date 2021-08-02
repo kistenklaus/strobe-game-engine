@@ -1,9 +1,12 @@
 package org.strobe.ecs.context.renderer;
 
+import org.joml.Vector3f;
 import org.strobe.ecs.*;
 import org.strobe.gfx.Graphics;
+import org.strobe.gfx.lights.DirectionalLight;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.rendergraph.common.*;
+import org.strobe.gfx.rendergraph.common.debugpasses.CameraDebugPass;
 import org.strobe.gfx.rendergraph.common.manager.CameraManager;
 import org.strobe.gfx.rendergraph.common.manager.LightManager;
 import org.strobe.gfx.rendergraph.core.RenderGraphRenderer;
@@ -97,6 +100,9 @@ public final class EntityRenderer extends RenderGraphRenderer {
     @Override
     public void beforeRender(Graphics gfx) {
         while(!renderOps.isEmpty())renderOps.pop().accept(gfx, this);
+
+        lightManager.submitLight(new DirectionalLight(new Vector3f(0.1f),
+                new Vector3f(1), new Vector3f(1), new Vector3f(0,0,-1)));
     }
 
     @Override

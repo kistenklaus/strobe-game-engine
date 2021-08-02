@@ -1,4 +1,4 @@
-package org.strobe.gfx.rendergraph.common;
+package org.strobe.gfx.rendergraph.common.debugpasses;
 
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
