@@ -1,7 +1,9 @@
 package org.strobe.assimp;
 
-public record AssimpMesh(String name, float[] positions, float[] textureCoords, float[] normals, float[] tangents,
-                         float[] bitangents, AssimpMaterial material) {
+public record AssimpMesh(String name, int vertexCount, float[] positions, float[] textureCoords,
+                         float[] normals, float[] tangents, float[] bitangents,
+                         int[] indices, int drawCount,
+                         AssimpMaterial material) {
 
     public boolean hasPositions() {
         return positions != null;

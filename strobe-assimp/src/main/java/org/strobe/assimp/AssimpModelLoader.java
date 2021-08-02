@@ -16,7 +16,7 @@ import static org.lwjgl.system.MemoryUtil.*;
 
 public final class AssimpModelLoader {
 
-    public static AssimpNode loadScene(String resource) {
+    public static AssimpNode loadModel(String resource) {
         AIFileIO fileIo = AIFileIO.create()
                 .OpenProc((pFileIO, fileName, openMode) -> {
                     ByteBuffer data;
@@ -208,10 +208,22 @@ public final class AssimpModelLoader {
             }
         }
 
+        AIFace.Buffer aiFaces = aiMesh.mFaces();
+        if(aiFaces == null)throw new IllegalStateException();
+        int i=0;
+        int[] indices = new int[aiMesh.mNumFaces()*3];
+        while(aiFaces.hasRemaining()){
+            AIFace face = aiFaces.get();
+            if(face.mNumIndices() != 3)throw new IllegalStateException();
+            IntBuffer faceIndices = face.mIndices();
+            while(faceIndices.hasRemaining())indices[i++] = faceIndices.get();
+        }
+
         AssimpMaterial material = materials[aiMesh.mMaterialIndex()];
         String name = aiMesh.mName().dataString();
 
-        return new AssimpMesh(name, positions, textureCoords, normals, tangents, bitangents, material);
+        return new AssimpMesh(name, vertexCount, positions, textureCoords, normals,
+                tangents, bitangents, indices, indices.length, material);
     }
 
     private static AssimpNode processAINode(AINode aiNode, AssimpMesh[] meshes) {

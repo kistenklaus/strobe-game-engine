@@ -26,7 +26,7 @@ public final class MeshRenderer implements Component {
     void update(EntityRenderer renderer, Transform transform, Mesh mesh, Material material) {
         graphDrawable.setTransform(transform);
 
-        //create mesh
+        //create meshes
         if (mesh != currentMesh) {
             currentMesh = mesh;
             if (currentMesh != null) {
