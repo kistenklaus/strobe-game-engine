@@ -51,15 +51,16 @@ public class Game extends EntityContext {
         camera.addComponent(new CameraController());
         camera.addComponent(new FocusCamera());
 
-        Entity c2 = ecs.createEntity();
-        c2.addComponent(new PerspectiveLense(60, 960/640f, 0.01f, 100f));
-        c2.addComponent(new CameraRenderer(960, 640));
-        c2.addComponent(new Transform(new Vector3f(0,0,1f), new Vector3f(1), new Quaternionf()));
 
         Entity light = ecs.createEntity();
         light.addComponent(new Transform(new Vector3f(0,2,0)));
         light.addComponent(new DirectionalLight(new Vector3f(0.1f), new Vector3f(1), new Vector3f(1)));
         light.addComponent(new DaylightCycle());
+
+        Entity c2 = light.createChild();
+        c2.addComponent(new PerspectiveLense(60, 960/640f, 0.01f, 100f));
+        c2.addComponent(new CameraRenderer(960, 640));
+        c2.addComponent(new Transform(new Vector3f(0,0,1f), new Vector3f(1), new Quaternionf()));
 
         ecs.addEntitySystem(new TestMeshSystem(ecs,getKeyboard()));
         ecs.addEntitySystem(new CameraControllerSystem(ecs, getMouse(), getKeyboard()));

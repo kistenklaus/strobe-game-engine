@@ -164,7 +164,7 @@ public final class Entity {
 
     public Entity getParent(){
         if(parent == -1)return null;
-        return ecs.getEntity(entityIndex);
+        return ecs.getEntity(parent);
     }
 
     public boolean isChildOf(Entity entity){

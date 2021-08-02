@@ -29,6 +29,7 @@ public final class EntityHierarchyTesting {
         Assertions.assertTrue(other.hasChild(child));
         Assertions.assertTrue(child.isChildOf(other));
         Assertions.assertFalse(child.isChildOf(parent));
+        Assertions.assertTrue(child.getParent().equals(other));
 
 
     }
