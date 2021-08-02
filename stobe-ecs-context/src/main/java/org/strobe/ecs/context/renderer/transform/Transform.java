@@ -17,6 +17,10 @@ public class Transform extends AbstractTransform implements Component {
         this(null,null,null);
     }
 
+    public Transform(Vector3f position){
+        this(position, null,null);
+    }
+
     @Override
     public void updateTransformationMatrix() {
         transformationMatrix.identity();
