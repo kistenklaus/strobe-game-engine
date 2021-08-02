@@ -41,10 +41,11 @@ public final class EntityRenderer extends RenderGraphRenderer {
     private final CameraForwardQueue forwardQueue;
     private final CameraPostProcessingPass postProcessingPass;
     private final BlitSelectedCameraPass blitCameraPass;
+    private final LightUpdatePass lightUpdatePass;
 
     private final Resource<CameraManager> globalCameraResource;
     private final Resource<Framebuffer> globalBackBuffer;
-
+    private final Resource<LightManager> globalLightResource;
 
     private final LinkedList<BiConsumer<Graphics, EntityRenderer>> renderOps = new LinkedList<>();
 
@@ -62,15 +63,21 @@ public final class EntityRenderer extends RenderGraphRenderer {
         forwardQueue = new CameraForwardQueue();
         postProcessingPass = new CameraPostProcessingPass(gfx);
         blitCameraPass = new BlitSelectedCameraPass();
+        lightUpdatePass = new LightUpdatePass();
 
         addPass(clearCamerasPass);
         addPass(cameraUpdatePass);
         addPass(forwardQueue);
         addPass(postProcessingPass);
         addPass(blitCameraPass);
+        addPass(lightUpdatePass);
 
         globalCameraResource = registerResource(CameraManager.class, GLOBAL_CAMERA_RESOURCE, cameraManager);
         globalBackBuffer = registerResource(Framebuffer.class, GLOBAL_BACK_BUFFER_RESOURCE, Framebuffer.getBackBuffer(gfx));
+        globalLightResource = registerResource(LightManager.class, GLOBAL_LIGHTS_RESOURCE, lightManager);
+
+        addLinkage(globalLightResource, lightUpdatePass.getLightResource());
+        addLinkage(lightUpdatePass.getLightResource(), forwardQueue.getLightResource());
 
         addLinkage(globalCameraResource, clearCamerasPass.getCameraResource());
         addLinkage(clearCamerasPass.getCameraResource(), cameraUpdatePass.getCameraResource());
@@ -89,6 +96,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
     @Override
     public void afterRender(Graphics gfx) {
         cameraManager.clearFrame();
+        lightManager.clearFrame();
     }
     public RenderQueue getForwardQueue() {
         return forwardQueue;

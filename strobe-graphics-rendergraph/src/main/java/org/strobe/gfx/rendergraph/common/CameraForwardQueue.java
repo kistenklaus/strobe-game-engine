@@ -6,22 +6,21 @@ import org.strobe.gfx.Renderable;
 import org.strobe.gfx.camera.AbstractCamera;
 import org.strobe.gfx.materials.shaders.MaterialShader;
 import org.strobe.gfx.rendergraph.common.manager.CameraManager;
+import org.strobe.gfx.rendergraph.common.manager.LightManager;
 import org.strobe.gfx.rendergraph.core.RenderQueue;
 import org.strobe.gfx.rendergraph.core.Resource;
 import org.strobe.gfx.transform.AbstractTransform;
 
 public class CameraForwardQueue extends RenderQueue {
 
-    private final Resource<CameraManager> cameras;
-
-    public CameraForwardQueue(){
-        cameras = registerResource(CameraManager.class, "cameras");
-    }
+    private final Resource<CameraManager> cameras = registerResource(CameraManager.class, "cameras");
+    private final Resource<LightManager> lights = registerResource(LightManager.class, "lights");
 
 
     @Override
     protected void complete(Graphics gfx) {
-
+        if(cameras.get()==null)throw new IllegalStateException();
+        if(lights.get()==null)throw new IllegalStateException();
     }
 
     @Override
@@ -36,6 +35,7 @@ public class CameraForwardQueue extends RenderQueue {
 
     @Override
     protected void renderQueue(Graphics gfx) {
+        gfx.bind(lights.get().ubo());
         for(AbstractCamera camera : cameras.get().cameras()){
             gfx.bind(camera.getTarget());
             gfx.bind(camera.getCameraUbo());
@@ -43,9 +43,14 @@ public class CameraForwardQueue extends RenderQueue {
             gfx.unbind(camera.getCameraUbo());
             gfx.unbind(camera.getTarget());
         }
+        gfx.unbind(lights.get().ubo());
     }
 
     public Resource<CameraManager> getCameraResource(){
         return cameras;
+    }
+
+    public Resource<LightManager> getLightResource(){
+        return lights;
     }
 }

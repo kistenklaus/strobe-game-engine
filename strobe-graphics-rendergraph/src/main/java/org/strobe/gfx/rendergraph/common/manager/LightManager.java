@@ -1,5 +1,6 @@
 package org.strobe.gfx.rendergraph.common.manager;
 
+import org.joml.Vector3f;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.lights.DirectionalLight;
 import org.strobe.gfx.lights.LightUbo;
@@ -23,6 +24,21 @@ public final class LightManager {
     public void submitLight(DirectionalLight light){
         directionalLights.add(light);
     }
+
+    public void updateUbo(Graphics gfx){
+        ubo.uniformAmbientLight(gfx, calculateAmbient());
+        ubo.uniformDirectionalLight(gfx, directionalLights);
+    }
+
+    private Vector3f calculateAmbient(){
+        Vector3f acc = new Vector3f();
+        for(DirectionalLight dirLight : directionalLights){
+            acc.add(dirLight.getAmbient());
+        }
+        acc.mul(1f/Math.min(directionalLights.size(), DIR_LIGHT_COUNT));
+        return acc;
+    }
+
 
     public void clearFrame(){
         directionalLights.clear();
