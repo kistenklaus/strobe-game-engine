@@ -38,8 +38,10 @@ public final class EntityRenderer extends RenderGraphRenderer {
     private final CameraUpdatePass cameraUpdatePass;
     private final CameraForwardQueue forwardQueue;
     private final CameraPostProcessingPass postProcessingPass;
+    private final BlitSelectedCameraPass blitCameraPass;
 
     private final Resource<CameraManager> globalCameraResource;
+    private final Resource<Framebuffer> globalBackBuffer;
 
 
     private final LinkedList<BiConsumer<Graphics, EntityRenderer>> renderOps = new LinkedList<>();
@@ -56,21 +58,25 @@ public final class EntityRenderer extends RenderGraphRenderer {
         cameraUpdatePass = new CameraUpdatePass();
         forwardQueue = new CameraForwardQueue();
         postProcessingPass = new CameraPostProcessingPass(gfx);
+        blitCameraPass = new BlitSelectedCameraPass();
 
         addPass(clearCamerasPass);
         addPass(cameraUpdatePass);
         addPass(forwardQueue);
         addPass(postProcessingPass);
+        addPass(blitCameraPass);
 
         globalCameraResource = registerResource(CameraManager.class, GLOBAL_CAMERA_RESOURCE, cameraManager);
+        globalBackBuffer = registerResource(Framebuffer.class, GLOBAL_BACK_BUFFER_RESOURCE, Framebuffer.getBackBuffer(gfx));
 
         addLinkage(globalCameraResource, clearCamerasPass.getCameraResource());
         addLinkage(clearCamerasPass.getCameraResource(), cameraUpdatePass.getCameraResource());
         addLinkage(cameraUpdatePass.getCameraResource(), forwardQueue.getCameraResource());
         addLinkage(forwardQueue.getCameraResource(), postProcessingPass.getCameraResource());
+        addLinkage(postProcessingPass.getCameraResource(), blitCameraPass.getCameraResource());
+
+        addLinkage(globalBackBuffer, blitCameraPass.getTargetResource());
     }
-
-
 
     @Override
     public void beforeRender(Graphics gfx) {
@@ -79,15 +85,6 @@ public final class EntityRenderer extends RenderGraphRenderer {
 
     @Override
     public void afterRender(Graphics gfx) {
-        AbstractCamera mainCamera = cameraManager.getSelectedCamera();
-        if (mainCamera != null) {
-            mainCamera.getTarget().copyTo(gfx, Framebuffer.getBackBuffer(gfx), GL_COLOR_BUFFER_BIT,
-                    mainCamera.isEnabledLinearScaling()?GL_LINEAR:GL_NEAREST);
-        } else {
-            //TODO better No Camera Render
-            glClearColor(1,0,1,1);
-            glClear(GL_COLOR_BUFFER_BIT);
-        }
         cameraManager.clearFrame();
     }
     public RenderQueue getForwardQueue() {
