@@ -33,7 +33,7 @@ public final class CameraDebugPass extends RenderPass {
     private final IndexedVao cameraVao;
 
     public CameraDebugPass(Graphics gfx) {
-        debugShader = ShaderLoader.loadShader(gfx, "shaders/cameraDebug/");
+        debugShader = ShaderLoader.loadShader(gfx, "shaders/debugLine/");
         view = debugShader.getUniform(Matrix4f.class, "view");
         model = debugShader.getUniform(Matrix4f.class, "model");
         proj = debugShader.getUniform(Matrix4f.class, "proj");
@@ -112,7 +112,7 @@ public final class CameraDebugPass extends RenderPass {
         return cameras;
     }
 
-    public final Resource<Framebuffer> getTarget() {
+    public final Resource<Framebuffer> getTargetResource() {
         return target;
     }
 }
