@@ -42,6 +42,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
     private final CameraPostProcessingPass postProcessingPass;
     private final BlitSelectedCameraPass blitCameraPass;
     private final LightUpdatePass lightUpdatePass;
+    private final CameraDebugPass cameraDebugPass;
 
     private final Resource<CameraManager> globalCameraResource;
     private final Resource<Framebuffer> globalBackBuffer;
@@ -64,6 +65,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
         postProcessingPass = new CameraPostProcessingPass(gfx);
         blitCameraPass = new BlitSelectedCameraPass();
         lightUpdatePass = new LightUpdatePass();
+        cameraDebugPass = new CameraDebugPass(gfx);
 
         addPass(clearCamerasPass);
         addPass(cameraUpdatePass);
@@ -71,6 +73,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
         addPass(postProcessingPass);
         addPass(blitCameraPass);
         addPass(lightUpdatePass);
+        addPass(cameraDebugPass);
 
         globalCameraResource = registerResource(CameraManager.class, GLOBAL_CAMERA_RESOURCE, cameraManager);
         globalBackBuffer = registerResource(Framebuffer.class, GLOBAL_BACK_BUFFER_RESOURCE, Framebuffer.getBackBuffer(gfx));
@@ -83,7 +86,8 @@ public final class EntityRenderer extends RenderGraphRenderer {
         addLinkage(clearCamerasPass.getCameraResource(), cameraUpdatePass.getCameraResource());
         addLinkage(cameraUpdatePass.getCameraResource(), forwardQueue.getCameraResource());
         addLinkage(forwardQueue.getCameraResource(), postProcessingPass.getCameraResource());
-        addLinkage(postProcessingPass.getCameraResource(), blitCameraPass.getCameraResource());
+        addLinkage(postProcessingPass.getCameraResource(), cameraDebugPass.getCameraResource());
+        addLinkage(cameraDebugPass.getCameraResource(), blitCameraPass.getCameraResource());
 
         addLinkage(globalBackBuffer, blitCameraPass.getTargetResource());
     }

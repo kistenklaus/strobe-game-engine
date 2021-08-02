@@ -63,6 +63,9 @@ public abstract class AbstractCamera {
 
     public abstract void update();
 
+    public abstract float getNear();
+    public abstract float getFar();
+
     public Matrix4f getViewMatrix() {
         return viewMatrix;
     }
@@ -115,5 +118,9 @@ public abstract class AbstractCamera {
 
     public boolean isEnabledFXAA(){
         return fxaaEnabled;
+    }
+
+    public float getAspect(){
+        return frontTarget.getWidth() / (float)frontTarget.getHeight();
     }
 }

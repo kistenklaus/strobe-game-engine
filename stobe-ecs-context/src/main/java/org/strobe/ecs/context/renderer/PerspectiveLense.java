@@ -20,5 +20,15 @@ public final class PerspectiveLense extends CameraLense{
     public void project(Matrix4f projectionMatrix) {
         projectionMatrix.perspective(fov, aspect, near, far);
     }
+
+    @Override
+    public float getNear() {
+        return near;
+    }
+
+    @Override
+    public float getFar() {
+        return far;
+    }
 }
 
