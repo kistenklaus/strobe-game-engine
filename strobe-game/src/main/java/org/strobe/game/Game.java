@@ -9,6 +9,7 @@ import org.strobe.ecs.context.*;
 import org.strobe.ecs.context.renderer.camera.CameraRenderer;
 import org.strobe.ecs.context.renderer.camera.FocusCamera;
 import org.strobe.ecs.context.renderer.camera.PerspectiveLense;
+import org.strobe.ecs.context.renderer.light.DirectionalLight;
 import org.strobe.ecs.context.renderer.materials.TestMaterial;
 import org.strobe.ecs.context.renderer.mesh.Mesh;
 import org.strobe.ecs.context.renderer.mesh.MeshRenderer;
@@ -53,7 +54,13 @@ public class Game extends EntityContext {
         c2.addComponent(new CameraRenderer(960, 640));
         c2.addComponent(new Transform(new Vector3f(0,0,1f), new Vector3f(1), new Quaternionf()));
 
+        Entity light = ecs.createEntity();
+        light.addComponent(new Transform(new Vector3f(0,2,0)));
+        light.addComponent(new DirectionalLight(new Vector3f(0.1f), new Vector3f(1), new Vector3f(1)));
+        light.addComponent(new DaylightCycle());
+
         ecs.addEntitySystem(new TestMeshSystem(ecs,getKeyboard()));
         ecs.addEntitySystem(new CameraControllerSystem(ecs, getMouse(), getKeyboard()));
+        ecs.addEntitySystem(new DaylightSystem(ecs));
     }
 }
