@@ -29,16 +29,16 @@ public class EntityComponentSystem {
     }
 
     public Entity createEntity() {
+        int entityIndex = entities.getNextFreeIndex();
+        Entity entity;
         if (!deadEntities.isEmpty()) {
-            Entity entity = deadEntities.pop();
-            return entity;
+            entity = deadEntities.pop();
         } else {
-            int entityIndex = entities.getNextFreeIndex();
-            Entity entity = new Entity(this);
-            entity.respawn(entityIndex);
-            entities.set(entityIndex, entity);
-            return entity;
+            entity = new Entity(this);
         }
+        entity.respawn(entityIndex);
+        entities.set(entityIndex, entity);
+        return entity;
     }
 
     public EntityPool createPool(EntityFilter filter) {

@@ -1,12 +1,8 @@
 package org.strobe.ecs;
 
-
 import org.strobe.utils.UnboundedArray;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 public final class Entity {
 
@@ -21,10 +17,12 @@ public final class Entity {
     private final ArrayList<ComponentObserver> componentAddedObservers = new ArrayList<>();
     private final ArrayList<ComponentObserver> componentRemovedObserver = new ArrayList<>();
 
+    private int parent = -1;
+    private final HashSet<Integer> children = new HashSet<>();
+
     protected Entity(EntityComponentSystem ecs) {
         this.ecs = ecs;
     }
-
 
     /**
      *
@@ -157,13 +155,68 @@ public final class Entity {
     }
 
 
+    public Entity createChild(){
+        Entity entity = ecs.createEntity();
+        entity.parent = entityIndex;
+        children.add(entity.getEntityIndex());
+        return entity;
+    }
+
+    public Entity getParent(){
+        if(parent == -1)return null;
+        return ecs.getEntity(entityIndex);
+    }
+
+    public boolean isChildOf(Entity entity){
+        return parent==entity.getEntityIndex();
+    }
+
+    public boolean hasChild(Entity entity){
+        return children.contains(entity.getEntityIndex());
+    }
+
+    public Iterable<Entity> children(){
+        return () -> new Iterator<>() {
+
+            private Iterator<Integer> indicesIterator = Entity.this.children.iterator();
+
+            @Override
+            public boolean hasNext() {
+                return indicesIterator.hasNext();
+            }
+
+            @Override
+            public Entity next() {
+                return ecs.getEntity(indicesIterator.next());
+            }
+        };
+    }
+
+    public void relocate(Entity entity){
+        if(parent != -1){
+            Entity parentEntity = ecs.getEntity(parent);
+            parentEntity.children.remove(entityIndex);
+        }
+        parent = entity.getEntityIndex();
+        entity.children.add(entityIndex);
+    }
+
     protected void respawn(int entityIndex) {
         this.entityIndex = entityIndex;
         alive = true;
     }
 
     protected void kill() {
+        if (parent != -1) {
+            Entity parentEntity = ecs.getEntity(parent);
+            parentEntity.children.remove(entityIndex);
+            parent = -1;
+        }
         entityIndex = -1;
+        componentAddedObservers.clear();
+        componentRemovedObserver.clear();
+        components.clear();
+        children.clear();
         alive = false;
     }
 
