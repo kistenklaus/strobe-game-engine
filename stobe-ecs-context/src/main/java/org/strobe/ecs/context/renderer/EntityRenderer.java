@@ -109,7 +109,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
         while(!renderOps.isEmpty())renderOps.pop().accept(gfx, this);
 
         lightManager.submitLight(new DirectionalLight(new Vector3f(0.1f),
-                new Vector3f(1), new Vector3f(1), new Vector3f(0,0,-1)));
+                new Vector3f(1), new Vector3f(1), new Vector3f(1,1,0)));
     }
 
     @Override

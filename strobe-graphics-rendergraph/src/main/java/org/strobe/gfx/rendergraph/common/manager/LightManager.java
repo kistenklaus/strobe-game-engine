@@ -39,6 +39,9 @@ public final class LightManager {
         return acc;
     }
 
+    public Iterable<DirectionalLight> directionalLights(){
+        return directionalLights;
+    }
 
     public void clearFrame(){
         directionalLights.clear();
