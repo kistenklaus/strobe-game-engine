@@ -9,14 +9,14 @@ import org.strobe.gfx.lights.AbstractLight;
 import java.util.ArrayList;
 import java.util.function.BiConsumer;
 
-public abstract class LightComponent implements Component {
+abstract class LightComponent implements Component {
 
     private final AbstractLight light;
 
     private final ArrayList<BiConsumer<Graphics, EntityRenderer>> lightOps = new ArrayList<>();
 
 
-    public LightComponent(AbstractLight light){
+    LightComponent(AbstractLight light){
         if(light == null)throw new IllegalArgumentException();
         this.light = light;
     }

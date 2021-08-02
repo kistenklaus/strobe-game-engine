@@ -1,13 +1,12 @@
 package org.strobe.ecs.context.renderer;
 
-import org.joml.Vector3f;
 import org.strobe.ecs.*;
-import org.strobe.ecs.context.renderer.camera.CameraRenderSystem;
+import org.strobe.ecs.context.renderer.camera.CameraSubmissionSystem;
+import org.strobe.ecs.context.renderer.light.LightSubmissionSystem;
 import org.strobe.ecs.context.renderer.materials.MaterialSystem;
 import org.strobe.ecs.context.renderer.mesh.MeshRendererSystem;
 import org.strobe.ecs.context.renderer.transform.TransformSystem;
 import org.strobe.gfx.Graphics;
-import org.strobe.gfx.lights.DirectionalLight;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.rendergraph.common.*;
 import org.strobe.gfx.rendergraph.common.debugpasses.CameraDebugPass;
@@ -64,7 +63,8 @@ public final class EntityRenderer extends RenderGraphRenderer {
         ecs.addEntitySystem(new MeshRendererSystem(ecs, this));
         ecs.addEntitySystem(new MaterialSystem(ecs, this));
         ecs.addEntitySystem(new TransformSystem(ecs));
-        ecs.addEntitySystem(new CameraRenderSystem(ecs, this));
+        ecs.addEntitySystem(new CameraSubmissionSystem(ecs, this));
+        ecs.addEntitySystem(new LightSubmissionSystem(ecs, this));
 
         cameraManager = new CameraManager(gfx);
         lightManager = new LightManager(gfx);
@@ -112,9 +112,6 @@ public final class EntityRenderer extends RenderGraphRenderer {
     @Override
     public void beforeRender(Graphics gfx) {
         while(!renderOps.isEmpty())renderOps.pop().accept(gfx, this);
-
-        lightManager.submitLight(new DirectionalLight(new Vector3f(0.1f),
-                new Vector3f(1), new Vector3f(1), new Vector3f(1,1,0)));
     }
 
     @Override

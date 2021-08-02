@@ -6,7 +6,7 @@ import org.strobe.ecs.context.renderer.transform.Transform;
 import org.strobe.gfx.lights.AbstractLight;
 
 
-public final class LightRendererSystem extends EntitySystem {
+public final class LightSubmissionSystem extends EntitySystem {
 
     private static final ComponentMapper<LightComponent> LIGHT_COMPONENT = ComponentMapper.getFor(LightComponent.class);
     private static final ComponentMapper<Transform> TRANSFORM = ComponentMapper.getFor(Transform.class);
@@ -14,7 +14,7 @@ public final class LightRendererSystem extends EntitySystem {
     private final EntityRenderer renderer;
     private final EntityPool pool;
 
-    public LightRendererSystem(EntityComponentSystem ecs, EntityRenderer renderer) {
+    public LightSubmissionSystem(EntityComponentSystem ecs, EntityRenderer renderer) {
         super(ecs);
         this.renderer = renderer;
 
