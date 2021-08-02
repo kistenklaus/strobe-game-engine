@@ -1,4 +1,4 @@
-package org.strobe.ecs.context.renderer;
+package org.strobe.ecs.context.renderer.camera;
 
 import org.strobe.ecs.Component;
 

@@ -1,10 +1,18 @@
 package org.strobe.ecs.context.renderer;
 
 import org.strobe.ecs.*;
+import org.strobe.ecs.context.renderer.camera.CameraSubmissionSystem;
+import org.strobe.ecs.context.renderer.light.LightSubmissionSystem;
+import org.strobe.ecs.context.renderer.materials.MaterialSystem;
+import org.strobe.ecs.context.renderer.mesh.MeshRendererSystem;
+import org.strobe.ecs.context.renderer.transform.TransformSystem;
 import org.strobe.gfx.Graphics;
-import org.strobe.gfx.camera.AbstractCamera;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.rendergraph.common.*;
+import org.strobe.gfx.rendergraph.common.debugpasses.CameraDebugPass;
+import org.strobe.gfx.rendergraph.common.debugpasses.LightDebugPass;
+import org.strobe.gfx.rendergraph.common.manager.CameraManager;
+import org.strobe.gfx.rendergraph.common.manager.LightManager;
 import org.strobe.gfx.rendergraph.core.RenderGraphRenderer;
 import org.strobe.gfx.rendergraph.core.RenderQueue;
 import org.strobe.gfx.rendergraph.core.Resource;
@@ -25,6 +33,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
     private static final String GLOBAL_SHADOW_MAP_RESOURCE = "globalShadowMapResource";
 
 
+
     private enum RendererState {
         DISABLED_RENDERER,
         RENDERER_3D,
@@ -33,14 +42,20 @@ public final class EntityRenderer extends RenderGraphRenderer {
     private RendererState rendererState = RendererState.DISABLED_RENDERER;
 
     private final CameraManager cameraManager;
+    private final LightManager lightManager;
 
     private final ClearCamerasPass clearCamerasPass;
     private final CameraUpdatePass cameraUpdatePass;
     private final CameraForwardQueue forwardQueue;
     private final CameraPostProcessingPass postProcessingPass;
+    private final BlitSelectedCameraPass blitCameraPass;
+    private final LightUpdatePass lightUpdatePass;
+    private final CameraDebugPass cameraDebugPass;
+    private final LightDebugPass lightDebugPass;
 
     private final Resource<CameraManager> globalCameraResource;
-
+    private final Resource<Framebuffer> globalBackBuffer;
+    private final Resource<LightManager> globalLightResource;
 
     private final LinkedList<BiConsumer<Graphics, EntityRenderer>> renderOps = new LinkedList<>();
 
@@ -48,29 +63,51 @@ public final class EntityRenderer extends RenderGraphRenderer {
         ecs.addEntitySystem(new MeshRendererSystem(ecs, this));
         ecs.addEntitySystem(new MaterialSystem(ecs, this));
         ecs.addEntitySystem(new TransformSystem(ecs));
-        ecs.addEntitySystem(new CameraRenderSystem(ecs, this));
+        ecs.addEntitySystem(new CameraSubmissionSystem(ecs, this));
+        ecs.addEntitySystem(new LightSubmissionSystem(ecs, this));
 
         cameraManager = new CameraManager(gfx);
+        lightManager = new LightManager(gfx);
 
         clearCamerasPass = new ClearCamerasPass(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         cameraUpdatePass = new CameraUpdatePass();
         forwardQueue = new CameraForwardQueue();
         postProcessingPass = new CameraPostProcessingPass(gfx);
+        blitCameraPass = new BlitSelectedCameraPass();
+        lightUpdatePass = new LightUpdatePass();
+        cameraDebugPass = new CameraDebugPass(gfx);
+        lightDebugPass = new LightDebugPass(gfx);
 
         addPass(clearCamerasPass);
         addPass(cameraUpdatePass);
         addPass(forwardQueue);
         addPass(postProcessingPass);
+        addPass(blitCameraPass);
+        addPass(lightUpdatePass);
+        addPass(cameraDebugPass);
+        addPass(lightDebugPass);
 
         globalCameraResource = registerResource(CameraManager.class, GLOBAL_CAMERA_RESOURCE, cameraManager);
+        globalBackBuffer = registerResource(Framebuffer.class, GLOBAL_BACK_BUFFER_RESOURCE, Framebuffer.getBackBuffer(gfx));
+        globalLightResource = registerResource(LightManager.class, GLOBAL_LIGHTS_RESOURCE, lightManager);
+
+        addLinkage(globalLightResource, lightUpdatePass.getLightResource());
+        addLinkage(lightUpdatePass.getLightResource(), forwardQueue.getLightResource());
+        addLinkage(forwardQueue.getLightResource(), lightDebugPass.getLightResource());
 
         addLinkage(globalCameraResource, clearCamerasPass.getCameraResource());
         addLinkage(clearCamerasPass.getCameraResource(), cameraUpdatePass.getCameraResource());
         addLinkage(cameraUpdatePass.getCameraResource(), forwardQueue.getCameraResource());
         addLinkage(forwardQueue.getCameraResource(), postProcessingPass.getCameraResource());
+        addLinkage(postProcessingPass.getCameraResource(), blitCameraPass.getCameraResource());
+
+        addLinkage(blitCameraPass.getCameraResource(), cameraDebugPass.getCameraResource());
+        addLinkage(cameraDebugPass.getCameraResource(), lightDebugPass.getCameraResource());
+
+        addLinkage(globalBackBuffer, blitCameraPass.getTargetResource());
+        addLinkage(blitCameraPass.getTargetResource(), cameraDebugPass.getTargetResource());
+        addLinkage(cameraDebugPass.getTargetResource(), lightDebugPass.getTargetResource());
     }
-
-
 
     @Override
     public void beforeRender(Graphics gfx) {
@@ -79,16 +116,8 @@ public final class EntityRenderer extends RenderGraphRenderer {
 
     @Override
     public void afterRender(Graphics gfx) {
-        AbstractCamera mainCamera = cameraManager.getSelectedCamera();
-        if (mainCamera != null) {
-            mainCamera.getTarget().copyTo(gfx, Framebuffer.getBackBuffer(gfx), GL_COLOR_BUFFER_BIT,
-                    mainCamera.isEnabledLinearScaling()?GL_LINEAR:GL_NEAREST);
-        } else {
-            //TODO better No Camera Render
-            glClearColor(1,0,1,1);
-            glClear(GL_COLOR_BUFFER_BIT);
-        }
         cameraManager.clearFrame();
+        lightManager.clearFrame();
     }
     public RenderQueue getForwardQueue() {
         return forwardQueue;
@@ -104,5 +133,9 @@ public final class EntityRenderer extends RenderGraphRenderer {
 
     public CameraManager getCameraManager(){
         return cameraManager;
+    }
+
+    public LightManager getLightManager() {
+        return lightManager;
     }
 }

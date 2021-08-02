@@ -6,10 +6,15 @@ import org.strobe.core.Strobe;
 import org.strobe.debug.imgui.ImGuiDebugger;
 import org.strobe.ecs.Entity;
 import org.strobe.ecs.context.*;
-import org.strobe.ecs.context.renderer.*;
+import org.strobe.ecs.context.renderer.camera.CameraRenderer;
+import org.strobe.ecs.context.renderer.camera.FocusCamera;
+import org.strobe.ecs.context.renderer.camera.PerspectiveLense;
+import org.strobe.ecs.context.renderer.light.DirectionalLight;
 import org.strobe.ecs.context.renderer.materials.TestMaterial;
+import org.strobe.ecs.context.renderer.mesh.Mesh;
+import org.strobe.ecs.context.renderer.mesh.MeshRenderer;
+import org.strobe.ecs.context.renderer.transform.Transform;
 import org.strobe.gfx.Graphics;
-import org.strobe.gfx.camera.filters.FXAAFilter;
 import org.strobe.window.glfw.GlfwWindow;
 
 public class Game extends EntityContext {
@@ -36,7 +41,7 @@ public class Game extends EntityContext {
 
         Entity camera = ecs.createEntity();
         camera.addComponent(new PerspectiveLense(60, 960f/640, 0.01f, 100));
-        int resRed = 8;
+        int resRed = 1;
         CameraRenderer cr;
         camera.addComponent(cr=new CameraRenderer(960/resRed, 640/resRed));
         //cr.enableFXAA();
@@ -44,14 +49,18 @@ public class Game extends EntityContext {
         camera.addComponent(new CameraController());
         camera.addComponent(new FocusCamera());
 
-        /*
         Entity c2 = ecs.createEntity();
         c2.addComponent(new PerspectiveLense(60, 960/640f, 0.01f, 100f));
         c2.addComponent(new CameraRenderer(960, 640));
         c2.addComponent(new Transform(new Vector3f(0,0,1f), new Vector3f(1), new Quaternionf()));
-         */
+
+        Entity light = ecs.createEntity();
+        light.addComponent(new Transform(new Vector3f(0,2,0)));
+        light.addComponent(new DirectionalLight(new Vector3f(0.1f), new Vector3f(1), new Vector3f(1)));
+        light.addComponent(new DaylightCycle());
 
         ecs.addEntitySystem(new TestMeshSystem(ecs,getKeyboard()));
         ecs.addEntitySystem(new CameraControllerSystem(ecs, getMouse(), getKeyboard()));
+        ecs.addEntitySystem(new DaylightSystem(ecs));
     }
 }

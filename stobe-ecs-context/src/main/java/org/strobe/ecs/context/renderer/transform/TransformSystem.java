@@ -1,4 +1,4 @@
-package org.strobe.ecs.context.renderer;
+package org.strobe.ecs.context.renderer.transform;
 
 import org.strobe.ecs.EntityComponentSystem;
 import org.strobe.ecs.EntityFilter;

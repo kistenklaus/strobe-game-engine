@@ -1,8 +1,10 @@
-package org.strobe.ecs.context.renderer;
+package org.strobe.ecs.context.renderer.camera;
 
 import org.strobe.ecs.*;
+import org.strobe.ecs.context.renderer.EntityRenderer;
+import org.strobe.ecs.context.renderer.transform.Transform;
 
-public class CameraRenderSystem extends EntitySystem {
+public class CameraSubmissionSystem extends EntitySystem {
 
     private static final ComponentMapper<CameraRenderer> CAMERA_RENDERER = ComponentMapper.getFor(CameraRenderer.class);
     private static final ComponentMapper<Transform> TRANSFORM = ComponentMapper.getFor(Transform.class);
@@ -13,7 +15,7 @@ public class CameraRenderSystem extends EntitySystem {
     private final EntityPool focusedCameras;
     private final EntityRenderer renderer;
 
-    public CameraRenderSystem(EntityComponentSystem ecs, EntityRenderer renderer) {
+    public CameraSubmissionSystem(EntityComponentSystem ecs, EntityRenderer renderer) {
         super(ecs);
         this.renderer = renderer;
         cameraRenderers = ecs.createPool(EntityFilter.requireAll(CameraRenderer.class, CameraLense.class));

@@ -1,6 +1,7 @@
-package org.strobe.ecs.context.renderer;
+package org.strobe.ecs.context.renderer.materials;
 
 import org.strobe.ecs.*;
+import org.strobe.ecs.context.renderer.EntityRenderer;
 
 public final class MaterialSystem extends EntitySystem {
 

@@ -6,4 +6,7 @@ public interface Lense {
 
     void project(Matrix4f projectionMatrix);
 
+    float getNear();
+    float getFar();
+
 }

@@ -16,9 +16,9 @@ public final class LightUbo extends Ubo {
     private final Uniform<Vector3f> ambientLight;
 
     private final Uniform<Integer> directionalLightCount;
-    private final Uniform<Vector3f>[] directionalLightDir = null;
-    private final Uniform<Vector3f>[] directionalLightDiffuse = null;
-    private final Uniform<Vector3f>[] directionalLightSpecular = null;
+    private final Uniform<Vector3f>[] directionalLightDir;
+    private final Uniform<Vector3f>[] directionalLightDiffuse;
+    private final Uniform<Vector3f>[] directionalLightSpecular;
 
     private final int dirLightCount;
     private final int pointLightCount;
@@ -40,9 +40,9 @@ public final class LightUbo extends Ubo {
 
         directionalLightCount = getUniform(int.class, "directionalLightCount");
 
-        //directionalLightDir = getUniformArray(Vector3f.class, "directionalLightDir");
-        //directionalLightDiffuse = getUniformArray(Vector3f.class, "directionalLightDiffuse");
-        //directionalLightSpecular = getUniformArray(Vector3f.class, "directionalLightSpecular");
+        directionalLightDir = getUniformArray(Vector3f.class, "directionalLightDir");
+        directionalLightDiffuse = getUniformArray(Vector3f.class, "directionalLightDiffuse");
+        directionalLightSpecular = getUniformArray(Vector3f.class, "directionalLightSpecular");
     }
 
     public void uniformAmbientLight(Graphics gfx, Vector3f ambientLight){

@@ -1,4 +1,4 @@
-package org.strobe.ecs.context.renderer;
+package org.strobe.ecs.context.renderer.transform;
 
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -15,6 +15,10 @@ public class Transform extends AbstractTransform implements Component {
 
     public Transform(){
         this(null,null,null);
+    }
+
+    public Transform(Vector3f position){
+        this(position, null,null);
     }
 
     @Override

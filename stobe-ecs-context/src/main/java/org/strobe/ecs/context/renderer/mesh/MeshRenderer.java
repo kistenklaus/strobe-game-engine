@@ -1,6 +1,9 @@
-package org.strobe.ecs.context.renderer;
+package org.strobe.ecs.context.renderer.mesh;
 
 import org.strobe.ecs.Component;
+import org.strobe.ecs.context.renderer.EntityRenderer;
+import org.strobe.ecs.context.renderer.materials.Material;
+import org.strobe.ecs.context.renderer.transform.Transform;
 import org.strobe.gfx.rendergraph.core.GraphDrawable;
 import org.strobe.gfx.rendergraph.core.Technique;
 

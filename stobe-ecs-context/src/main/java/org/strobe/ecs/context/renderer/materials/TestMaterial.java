@@ -1,7 +1,6 @@
 package org.strobe.ecs.context.renderer.materials;
 
 import org.strobe.ecs.context.renderer.EntityRenderer;
-import org.strobe.ecs.context.renderer.Material;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.materials.GreenShaderMaterial;
 import org.strobe.gfx.materials.RedShaderMaterial;

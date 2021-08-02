@@ -34,7 +34,7 @@ public class Ubo extends DataBuffer<UboPool> {
 
         Ubo pooledUbo = pool.forceAdd(name, bindingIndex, layout);
 
-        if(pooledUbo == null){
+        if (pooledUbo == null) {
             nameMap = new HashMap<>();
             offsets = new int[layout.length];
             types = new Type[layout.length];
@@ -48,14 +48,14 @@ public class Ubo extends DataBuffer<UboPool> {
                 String varName = split[1];
 
                 int byteSize;
-                if(varType.matches("[a-z|A-Z|0-9]+\\[[1-9][0-9]*\\]")){
+                if (varType.matches("[a-zA-Z0-9]+\\[[1-9][0-9]*]")) {
                     String subType = varType.substring(0, varType.indexOf("["));
-                    array_size[i] = Integer.parseInt(varType.substring(varType.indexOf("[") +1, varType.indexOf("]")));
+                    array_size[i] = Integer.parseInt(varType.substring(varType.indexOf("[") + 1, varType.indexOf("]")));
                     alignment[i] = TypeUtil.getAlignmentOfGlslType(subType);
                     byteSize = alignment[i] * array_size[i];
-                    types[i] = TypeUtil.glslTypeToClassArray(subType);
-                }else{
-                    array_size[i] = 1;
+                    types[i] = TypeUtil.glslTypeToClass(subType);
+                } else {
+                    array_size[i] = -1;
                     alignment[i] = TypeUtil.getAlignmentOfGlslType(varType);
                     byteSize = TypeUtil.getSizeOfGlslType(varType);
                     types[i] = TypeUtil.glslTypeToClass(varType);
@@ -69,30 +69,30 @@ public class Ubo extends DataBuffer<UboPool> {
             ID = glGenBuffers();
             capacity = uboByteSize;
             glBindBuffer(target, ID);
-            System.out.println("create ubo "+name+" with capacity : " + capacity);
+            System.out.println("create ubo " + name + " with capacity : " + capacity);
             glBufferData(target, capacity, usage);
             glBindBuffer(target, 0);
             pool.addUbo(this, layout);
-        }else{
+        } else {
             offsets = pooledUbo.offsets;
             types = pooledUbo.types;
             capacity = pooledUbo.capacity;
             this.nameMap = pooledUbo.nameMap;
             alignment = pooledUbo.alignment;
             array_size = pooledUbo.array_size;
-            if(unique){
+            if (unique) {
                 ID = glGenBuffers();
                 glBindBuffer(GL_UNIFORM_BUFFER, ID);
                 glBufferData(target, capacity, usage);
                 glBindBuffer(GL_UNIFORM_BUFFER, 0);
                 pool.forceAdd(this);
-            }else{
+            } else {
                 ID = pooledUbo.ID;
             }
         }
     }
 
-    public Ubo(Graphics gfx, String name, int bindingIndex, String...layout){
+    public Ubo(Graphics gfx, String name, int bindingIndex, String... layout) {
         this(gfx, name, bindingIndex, false, layout);
     }
 
@@ -100,20 +100,50 @@ public class Ubo extends DataBuffer<UboPool> {
         Integer index = nameMap.get(name);
         if (index == null) throw new IllegalArgumentException("ubo doesn't have a variable called [" + name + "]");
         if (types[index] != type) throw new IllegalArgumentException(name + " is not of type " + type.getSimpleName());
-        if (type == Matrix4f.class) {
-            return (Uniform<T>) new UboUniformMatrix4f(this, offsets[index]);
-        } else if (type == Vector3f.class) {
-            return (Uniform<T>) new UboUniformVector3f(this, offsets[index]);
-        } else {
+        if (array_size[index] != -1) {
+            //TODO array UboUniforms
             throw new UnsupportedOperationException();
+        } else {
+            return selectUniform(type, offsets[index]);
         }
     }
+
+    @SuppressWarnings("unchecked")
+    public <T> Uniform<T>[] getUniformArray(Class<T> baseType, String name) {
+        Integer index = nameMap.get(name);
+        if (index == null) throw new IllegalArgumentException("ubo doesn't have a variable called [" + name + "]");
+        if (types[index] != baseType)
+            throw new IllegalArgumentException(name + " is not of type " + baseType.getSimpleName());
+        if (array_size[index] == -1)
+            throw new IllegalArgumentException(name + " is not a array variable of the uniform");
+        Uniform<T>[] uniforms = new Uniform[array_size[index]];
+        int offset = offsets[index];
+        for (int i = 0; i < uniforms.length; i++) {
+            uniforms[i] = selectUniform(types[index], offset);
+            offset += alignment[index];
+        }
+        return uniforms;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> Uniform<T> selectUniform(Type type, int offset){
+        if (type == Matrix4f.class) {
+            return (Uniform<T>) new UboUniformMatrix4f(this, offset);
+        } else if (type == Vector3f.class) {
+            return (Uniform<T>) new UboUniformVector3f(this, offset);
+        } else if (type == Integer.class || type == int.class) {
+            return (Uniform<T>) new UboUniformInteger(this, offset);
+        }
+        throw new UnsupportedOperationException();
+    }
+
 
     public void uniform(Graphics gfx, String uniformName, Matrix4f mat4) {
         Integer index = nameMap.get(uniformName);
         if (index == null)
             throw new IllegalArgumentException("ubo doesn't have a variable called [" + uniformName + "]");
         if (types[index] != Matrix4f.class) throw new IllegalArgumentException(uniformName + " is not of type mat4");
+        if (array_size[index] != -1) throw new UnsupportedOperationException();
         float[] mat4_array = new float[16];
         mat4.get(mat4_array);
         bufferSubData(gfx, offsets[index], mat4_array);
@@ -127,11 +157,11 @@ public class Ubo extends DataBuffer<UboPool> {
         bufferSubData(gfx, offsets[index], new float[]{vec3.x, vec3.y, vec3.z});
     }
 
-    protected void bind(Graphics gfx){
+    protected void bind(Graphics gfx) {
         super.bind(gfx);
     }
 
-    protected void unbind(Graphics gfx){
+    protected void unbind(Graphics gfx) {
         super.bind(gfx);
     }
 
@@ -144,15 +174,15 @@ public class Ubo extends DataBuffer<UboPool> {
         return name;
     }
 
-    protected int getID(){
+    protected int getID() {
         return ID;
     }
 
-    public int[] getOffsets(){
+    public int[] getOffsets() {
         return offsets;
     }
 
-    public Type[] getTypes(){
+    public Type[] getTypes() {
         return types;
     }
 

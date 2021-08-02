@@ -97,6 +97,10 @@ public abstract class AbstractTransform {
         this.position.set(position);
     }
 
+    public synchronized void setPosition(float x, float y, float z){
+        this.position.set(x,y,z);
+    }
+
     public synchronized void setX(float x) {
         this.position.x = x;
     }

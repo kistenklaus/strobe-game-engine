@@ -1,8 +1,8 @@
-package org.strobe.ecs.context.renderer;
+package org.strobe.ecs.context.renderer.camera;
 
 import org.joml.Matrix4f;
 
-public final class PerspectiveLense extends CameraLense{
+public final class PerspectiveLense extends CameraLense {
 
     private float fov;
     private float aspect;
@@ -19,6 +19,16 @@ public final class PerspectiveLense extends CameraLense{
     @Override
     public void project(Matrix4f projectionMatrix) {
         projectionMatrix.perspective(fov, aspect, near, far);
+    }
+
+    @Override
+    public float getNear() {
+        return near;
+    }
+
+    @Override
+    public float getFar() {
+        return far;
     }
 }
 

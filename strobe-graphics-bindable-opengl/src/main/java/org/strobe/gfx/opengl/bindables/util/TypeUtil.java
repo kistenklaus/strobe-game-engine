@@ -24,6 +24,7 @@ public final class TypeUtil {
 
     public static int getAlignmentOfGlslType(String glslType){
         return switch(glslType){
+            case "int", "float" -> 4;
             case "vec2" -> 8;
             case "vec3", "mat4", "mat3", "vec4" -> 16;
             default -> throw new IllegalArgumentException(glslType + " is not a valid glsl type descriptor");
@@ -32,6 +33,7 @@ public final class TypeUtil {
 
     public static int getSizeOfGlslType(String glslType){
         return switch(glslType){
+            case "int","float"->4;
             case "vec2" -> 8;
             case "vec3" -> 12;
             case "vec4" -> 16;
@@ -43,6 +45,7 @@ public final class TypeUtil {
 
     public static Type glslTypeToClass(String glslType){
         return switch(glslType){
+            case "int" -> int.class;
             case "bool" -> boolean.class;
             case "float" -> float.class;
             case "vec2" -> Vector2f.class;
@@ -51,12 +54,13 @@ public final class TypeUtil {
             case "mat4" -> Matrix4f.class;
             case "mat3" -> Matrix3f.class;
             case "sampler2D" -> Texture2D.class;
-            default -> throw new IllegalArgumentException("not a valid glsl type descriptor");
+            default -> throw new IllegalArgumentException(glslType + " is not a valid glsl type descriptor");
         };
     }
 
     public static Type glslTypeToClassArray(String glslType){
         return switch(glslType){
+            case "int" -> int[].class;
             case "float" -> float[].class;
             case "vec2" -> Vector2f[].class;
             case "vec3" -> Vector3f[].class;

@@ -36,4 +36,16 @@ public final class LenseCamera extends AbstractCamera{
             lense.project(projMatrix);
         }
     }
+
+    @Override
+    public float getNear() {
+        if(lense.get() == null)return 0;
+        return lense.get().getNear();
+    }
+
+    @Override
+    public float getFar() {
+        if(lense.get() == null)return 1;
+        return lense.get().getFar();
+    }
 }
