@@ -2,9 +2,10 @@ package org.strobe.ecs.context.renderer;
 
 import org.strobe.ecs.*;
 import org.strobe.gfx.Graphics;
-import org.strobe.gfx.camera.AbstractCamera;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.rendergraph.common.*;
+import org.strobe.gfx.rendergraph.common.manager.CameraManager;
+import org.strobe.gfx.rendergraph.common.manager.LightManager;
 import org.strobe.gfx.rendergraph.core.RenderGraphRenderer;
 import org.strobe.gfx.rendergraph.core.RenderQueue;
 import org.strobe.gfx.rendergraph.core.Resource;
@@ -33,6 +34,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
     private RendererState rendererState = RendererState.DISABLED_RENDERER;
 
     private final CameraManager cameraManager;
+    private final LightManager lightManager;
 
     private final ClearCamerasPass clearCamerasPass;
     private final CameraUpdatePass cameraUpdatePass;
@@ -53,6 +55,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
         ecs.addEntitySystem(new CameraRenderSystem(ecs, this));
 
         cameraManager = new CameraManager(gfx);
+        lightManager = new LightManager(gfx);
 
         clearCamerasPass = new ClearCamerasPass(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         cameraUpdatePass = new CameraUpdatePass();

@@ -3,11 +3,12 @@ package org.strobe.gfx.rendergraph.common;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.camera.AbstractCamera;
 import org.strobe.gfx.camera.CameraFilter;
+import org.strobe.gfx.rendergraph.common.manager.CameraManager;
 import org.strobe.gfx.rendergraph.core.FullScreenPass;
 import org.strobe.gfx.rendergraph.core.Resource;
 
 import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL20.glUseProgram;
+
 import org.strobe.gfx.camera.filters.FXAAFilter;
 
 public class CameraPostProcessingPass extends FullScreenPass {

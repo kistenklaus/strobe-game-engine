@@ -2,6 +2,7 @@ package org.strobe.gfx.rendergraph.common;
 
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.camera.AbstractCamera;
+import org.strobe.gfx.rendergraph.common.manager.CameraManager;
 import org.strobe.gfx.rendergraph.core.RenderPass;
 import org.strobe.gfx.rendergraph.core.Resource;
 

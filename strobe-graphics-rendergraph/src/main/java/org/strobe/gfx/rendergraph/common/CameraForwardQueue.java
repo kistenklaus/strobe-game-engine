@@ -4,13 +4,11 @@ import org.strobe.gfx.Bindable;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.Renderable;
 import org.strobe.gfx.camera.AbstractCamera;
-import org.strobe.gfx.camera.CameraUbo;
 import org.strobe.gfx.materials.shaders.MaterialShader;
+import org.strobe.gfx.rendergraph.common.manager.CameraManager;
 import org.strobe.gfx.rendergraph.core.RenderQueue;
 import org.strobe.gfx.rendergraph.core.Resource;
 import org.strobe.gfx.transform.AbstractTransform;
-
-import java.util.Arrays;
 
 public class CameraForwardQueue extends RenderQueue {
 

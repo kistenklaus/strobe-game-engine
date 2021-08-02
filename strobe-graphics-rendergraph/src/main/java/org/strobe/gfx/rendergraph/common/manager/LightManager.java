@@ -1,4 +1,4 @@
-package org.strobe.gfx.rendergraph.common;
+package org.strobe.gfx.rendergraph.common.manager;
 
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.lights.DirectionalLight;
@@ -10,24 +10,22 @@ import java.util.ArrayList;
 
 public final class LightManager {
 
+    private static final int POINT_LIGHT_COUNT = 10;
+    private static final int DIR_LIGHT_COUNT = 3;
+
     private ArrayList<DirectionalLight> directionalLights = new ArrayList<>();
     private final LightUbo ubo;
 
-    public LightManager(Graphics gfx, int dirLightCount, int pointLightCount){
-        ubo = new LightUbo(gfx, dirLightCount, pointLightCount);
+    public LightManager(Graphics gfx){
+        ubo = new LightUbo(gfx, DIR_LIGHT_COUNT, POINT_LIGHT_COUNT);
     }
 
-
-    public void addLight(DirectionalLight light){
+    public void submitLight(DirectionalLight light){
         directionalLights.add(light);
     }
 
-    public void removeLight(DirectionalLight light){
-        directionalLights.remove(light);
-    }
-
-    public List<DirectionalLight> directionalLights(){
-        return directionalLights;
+    public void clearFrame(){
+        directionalLights.clear();
     }
 
     public LightUbo ubo(){

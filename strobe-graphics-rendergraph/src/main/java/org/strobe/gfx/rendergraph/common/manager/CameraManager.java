@@ -1,4 +1,4 @@
-package org.strobe.gfx.rendergraph.common;
+package org.strobe.gfx.rendergraph.common.manager;
 
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.camera.AbstractCamera;
