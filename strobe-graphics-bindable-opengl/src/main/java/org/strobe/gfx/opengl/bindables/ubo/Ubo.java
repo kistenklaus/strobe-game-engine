@@ -96,7 +96,6 @@ public class Ubo extends DataBuffer<UboPool> {
         this(gfx, name, bindingIndex, false, layout);
     }
 
-    @SuppressWarnings("unchecked")
     public <T> Uniform<T> getUniform(Class<T> type, String name) {
         Integer index = nameMap.get(name);
         if (index == null) throw new IllegalArgumentException("ubo doesn't have a variable called [" + name + "]");
@@ -109,6 +108,7 @@ public class Ubo extends DataBuffer<UboPool> {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public <T> Uniform<T>[] getUniformArray(Class<T> baseType, String name) {
         Integer index = nameMap.get(name);
         if (index == null) throw new IllegalArgumentException("ubo doesn't have a variable called [" + name + "]");
@@ -122,10 +122,10 @@ public class Ubo extends DataBuffer<UboPool> {
             uniforms[i] = selectUniform(types[index], offset);
             offset += alignment[index];
         }
-
-        return null;
+        return uniforms;
     }
 
+    @SuppressWarnings("unchecked")
     private <T> Uniform<T> selectUniform(Type type, int offset){
         if (type == Matrix4f.class) {
             return (Uniform<T>) new UboUniformMatrix4f(this, offset);
