@@ -70,9 +70,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
         addLinkage(forwardQueue.getCameraResource(), postProcessingPass.getCameraResource());
     }
 
-    public void submitCamera(AbstractCamera camera) {
-        cameraManager.submitCamera(camera);
-    }
+
 
     @Override
     public void beforeRender(Graphics gfx) {
@@ -104,4 +102,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
         renderOps.add(renderOp);
     }
 
+    public CameraManager getCameraManager(){
+        return cameraManager;
+    }
 }

@@ -122,6 +122,15 @@ public final class EntityPool implements Iterable<Entity> {
         };
     }
 
+    public boolean isEmpty() {
+        return entityIndices.isEmpty();
+    }
+
+    public Entity getAny() {
+        if(isEmpty())return null;
+        return ecs.getEntity(entityIndices.iterator().next());
+    }
+
     private static final class PoolEvent {
         private final Entity entity;
         private final Collection<Consumer<Entity>> observers;
