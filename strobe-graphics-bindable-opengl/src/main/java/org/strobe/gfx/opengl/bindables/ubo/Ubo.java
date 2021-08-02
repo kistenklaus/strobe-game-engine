@@ -48,14 +48,14 @@ public class Ubo extends DataBuffer<UboPool> {
                 String varName = split[1];
 
                 int byteSize;
-                if(varType.matches("[a-z|A-Z|0-9]+\\[[1-9][0-9]*\\]")){
+                if(varType.matches("[a-zA-Z0-9]+\\[[1-9][0-9]*]")){
                     String subType = varType.substring(0, varType.indexOf("["));
                     array_size[i] = Integer.parseInt(varType.substring(varType.indexOf("[") +1, varType.indexOf("]")));
                     alignment[i] = TypeUtil.getAlignmentOfGlslType(subType);
                     byteSize = alignment[i] * array_size[i];
                     types[i] = TypeUtil.glslTypeToClassArray(subType);
                 }else{
-                    array_size[i] = 1;
+                    array_size[i] = -1;
                     alignment[i] = TypeUtil.getAlignmentOfGlslType(varType);
                     byteSize = TypeUtil.getSizeOfGlslType(varType);
                     types[i] = TypeUtil.glslTypeToClass(varType);
@@ -96,6 +96,7 @@ public class Ubo extends DataBuffer<UboPool> {
         this(gfx, name, bindingIndex, false, layout);
     }
 
+    @SuppressWarnings("unchecked")
     public <T> Uniform<T> getUniform(Class<T> type, String name) {
         Integer index = nameMap.get(name);
         if (index == null) throw new IllegalArgumentException("ubo doesn't have a variable called [" + name + "]");
@@ -104,7 +105,9 @@ public class Ubo extends DataBuffer<UboPool> {
             return (Uniform<T>) new UboUniformMatrix4f(this, offsets[index]);
         } else if (type == Vector3f.class) {
             return (Uniform<T>) new UboUniformVector3f(this, offsets[index]);
-        } else {
+        } else if (type == Integer.class || type == int.class){
+            return (Uniform<T>) new UboUniformInteger(this, offsets[index]);
+        }else{
             throw new UnsupportedOperationException();
         }
     }
