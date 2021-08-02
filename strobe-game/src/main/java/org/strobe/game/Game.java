@@ -36,7 +36,7 @@ public class Game extends EntityContext {
 
         Entity camera = ecs.createEntity();
         camera.addComponent(new PerspectiveLense(60, 960f/640, 0.01f, 100));
-        int resRed = 8;
+        int resRed = 1;
         CameraRenderer cr;
         camera.addComponent(cr=new CameraRenderer(960/resRed, 640/resRed));
         //cr.enableFXAA();
@@ -48,7 +48,6 @@ public class Game extends EntityContext {
         c2.addComponent(new PerspectiveLense(60, 960/640f, 0.01f, 100f));
         c2.addComponent(new CameraRenderer(960, 640));
         c2.addComponent(new Transform(new Vector3f(0,0,1f), new Vector3f(1), new Quaternionf()));
-
 
         ecs.addEntitySystem(new TestMeshSystem(ecs,getKeyboard()));
         ecs.addEntitySystem(new CameraControllerSystem(ecs, getMouse(), getKeyboard()));

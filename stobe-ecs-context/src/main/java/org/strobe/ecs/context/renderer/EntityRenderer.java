@@ -7,6 +7,7 @@ import org.strobe.gfx.lights.DirectionalLight;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.rendergraph.common.*;
 import org.strobe.gfx.rendergraph.common.debugpasses.CameraDebugPass;
+import org.strobe.gfx.rendergraph.common.debugpasses.LightDebugPass;
 import org.strobe.gfx.rendergraph.common.manager.CameraManager;
 import org.strobe.gfx.rendergraph.common.manager.LightManager;
 import org.strobe.gfx.rendergraph.core.RenderGraphRenderer;
@@ -46,6 +47,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
     private final BlitSelectedCameraPass blitCameraPass;
     private final LightUpdatePass lightUpdatePass;
     private final CameraDebugPass cameraDebugPass;
+    private final LightDebugPass lightDebugPass;
 
     private final Resource<CameraManager> globalCameraResource;
     private final Resource<Framebuffer> globalBackBuffer;
@@ -69,6 +71,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
         blitCameraPass = new BlitSelectedCameraPass();
         lightUpdatePass = new LightUpdatePass();
         cameraDebugPass = new CameraDebugPass(gfx);
+        lightDebugPass = new LightDebugPass(gfx);
 
         addPass(clearCamerasPass);
         addPass(cameraUpdatePass);
@@ -77,6 +80,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
         addPass(blitCameraPass);
         addPass(lightUpdatePass);
         addPass(cameraDebugPass);
+        addPass(lightDebugPass);
 
         globalCameraResource = registerResource(CameraManager.class, GLOBAL_CAMERA_RESOURCE, cameraManager);
         globalBackBuffer = registerResource(Framebuffer.class, GLOBAL_BACK_BUFFER_RESOURCE, Framebuffer.getBackBuffer(gfx));
@@ -84,6 +88,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
 
         addLinkage(globalLightResource, lightUpdatePass.getLightResource());
         addLinkage(lightUpdatePass.getLightResource(), forwardQueue.getLightResource());
+        addLinkage(forwardQueue.getLightResource(), lightDebugPass.getLightResource());
 
         addLinkage(globalCameraResource, clearCamerasPass.getCameraResource());
         addLinkage(clearCamerasPass.getCameraResource(), cameraUpdatePass.getCameraResource());
@@ -92,9 +97,11 @@ public final class EntityRenderer extends RenderGraphRenderer {
         addLinkage(postProcessingPass.getCameraResource(), blitCameraPass.getCameraResource());
 
         addLinkage(blitCameraPass.getCameraResource(), cameraDebugPass.getCameraResource());
+        addLinkage(cameraDebugPass.getCameraResource(), lightDebugPass.getCameraResource());
 
         addLinkage(globalBackBuffer, blitCameraPass.getTargetResource());
-        addLinkage(blitCameraPass.getTargetResource(), cameraDebugPass.getTarget());
+        addLinkage(blitCameraPass.getTargetResource(), cameraDebugPass.getTargetResource());
+        addLinkage(cameraDebugPass.getTargetResource(), lightDebugPass.getTargetResource());
     }
 
     @Override
