@@ -87,7 +87,7 @@ public class Mesh implements Component {
         if (hasTangents) {
             if (!first) layoutStr.append("\n");
             String usage = dynamicTangents ? "dynamic" : "static";
-            layoutStr.append("layout(location=3,usage=").append(usage).append(") in vec3").append("\\")
+            layoutStr.append("layout(location=3,usage=").append(usage).append(") in vec3").append("\n")
                     .append("layout(location=4,usage=").append(usage).append(") in vec3");
             tangents = new float[vertexCount * 3];
             bitangents = new float[vertexCount * 3];

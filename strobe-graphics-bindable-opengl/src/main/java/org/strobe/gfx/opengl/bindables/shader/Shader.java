@@ -126,7 +126,7 @@ public class Shader extends Bindable<ShaderPool> {
 
     @Override
     public String toString() {
-        return "Shader{" +
+        return getClass().getSimpleName()+"{" +
                 "ID=" + ID +
                 '}';
     }

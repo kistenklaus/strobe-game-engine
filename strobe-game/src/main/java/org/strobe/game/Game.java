@@ -6,6 +6,7 @@ import org.strobe.core.Strobe;
 import org.strobe.debug.imgui.ImGuiDebugger;
 import org.strobe.ecs.Entity;
 import org.strobe.ecs.context.*;
+import org.strobe.ecs.context.loader.ModelLoaderScript;
 import org.strobe.ecs.context.renderer.camera.CameraRenderer;
 import org.strobe.ecs.context.renderer.camera.FocusCamera;
 import org.strobe.ecs.context.renderer.camera.PerspectiveLense;
@@ -39,6 +40,10 @@ public class Game extends EntityContext {
         mat.setDiffuseColor(new Vector3f(1,1,0));
         renderable.addComponent(mat);
         renderable.addComponent(new MeshRenderer());
+
+
+        Entity model = ecs.createEntity();
+        model.addComponent(new ModelLoaderScript("assets/backpack/backpack.obj"));
 
 
         Entity camera = ecs.createEntity();

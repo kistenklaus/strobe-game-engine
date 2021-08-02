@@ -11,6 +11,8 @@ import org.strobe.gfx.rendergraph.core.RenderQueue;
 import org.strobe.gfx.rendergraph.core.Resource;
 import org.strobe.gfx.transform.AbstractTransform;
 
+import static org.lwjgl.opengl.GL11.*;
+
 public class CameraForwardQueue extends RenderQueue {
 
     private final Resource<CameraManager> cameras = registerResource(CameraManager.class, "cameras");
@@ -35,6 +37,8 @@ public class CameraForwardQueue extends RenderQueue {
 
     @Override
     protected void renderQueue(Graphics gfx) {
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
         gfx.bind(lights.get().ubo());
         for(AbstractCamera camera : cameras.get().cameras()){
             gfx.bind(camera.getTarget());

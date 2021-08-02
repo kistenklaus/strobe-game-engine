@@ -60,7 +60,6 @@ public final class LightDebugPass extends RenderPass {
         }
 
 
-        System.out.println(Arrays.toString(indices));
         Vao vao = new Vao(gfx, precision*3*2, new Ibo(gfx, indices, true),
                 "layout(location=0,usage=static) in vec3");
         float[] circlePos = new float[precision*3*2];
@@ -75,7 +74,6 @@ public final class LightDebugPass extends RenderPass {
             circlePos[i*3+2+3*precision] = -RAY_LENGTH;
             theta+=delta;
         }
-        System.out.println(Arrays.toString(circlePos));
         vao.bufferLocation(gfx, 0, circlePos);
         dirLightVao = new IndexedVao(vao, precision*2*2, GL_LINES);
     }

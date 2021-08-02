@@ -10,11 +10,22 @@ import org.strobe.utils.ResourceLoader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.Arrays;
 
 import static org.lwjgl.assimp.Assimp.*;
 import static org.lwjgl.system.MemoryUtil.*;
 
 public final class AssimpModelLoader {
+
+
+    private static final int ASSIMP_SCENE_LOADING_FLAGS =
+            aiProcess_CalcTangentSpace |
+                    aiProcess_Triangulate |
+                    aiProcess_OptimizeGraph |
+                    aiProcess_OptimizeMeshes |
+                    aiProcess_FlipUVs |
+                    aiProcess_JoinIdenticalVertices |
+                    aiProcess_GenNormals;
 
     public static AssimpNode loadModel(String resource) {
         AIFileIO fileIo = AIFileIO.create()
@@ -52,8 +63,7 @@ public final class AssimpModelLoader {
                     aiFile.SeekProc().free();
                     aiFile.FileSizeProc().free();
                 });
-        AIScene scene = aiImportFileEx(resource,
-                aiProcess_JoinIdenticalVertices | aiProcess_Triangulate, fileIo);
+        AIScene scene = aiImportFileEx(resource, ASSIMP_SCENE_LOADING_FLAGS, fileIo);
         fileIo.OpenProc().free();
         fileIo.CloseProc().free();
         if (scene == null) {
@@ -154,14 +164,14 @@ public final class AssimpModelLoader {
         boolean hasBitangents = aiBitangents != null;
 
         float[] positions = hasPositions ? new float[vertexCount * 3] : null;
-        float[] textureCoords = hasTextureCoords ? new float[vertexCount*2]:null;
-        float[] normals = hasNormals ? new float[vertexCount*3]:null;
-        float[] tangents = hasTangents ? new float[vertexCount*3]:null;
-        float[] bitangents = hasBitangents ? new float[vertexCount*3]:null;
+        float[] textureCoords = hasTextureCoords ? new float[vertexCount * 2] : null;
+        float[] normals = hasNormals ? new float[vertexCount * 3] : null;
+        float[] tangents = hasTangents ? new float[vertexCount * 3] : null;
+        float[] bitangents = hasBitangents ? new float[vertexCount * 3] : null;
 
-        if(hasPositions){
-            int i=0;
-            while(aiPositions.hasRemaining()){
+        if (hasPositions) {
+            int i = 0;
+            while (aiPositions.hasRemaining()) {
                 AIVector3D vec3 = aiPositions.get();
                 positions[i++] = vec3.x();
                 positions[i++] = vec3.y();
@@ -169,18 +179,18 @@ public final class AssimpModelLoader {
             }
         }
 
-        if(hasTextureCoords){
-            int i=0;
-            while(aiTextureCoords.hasRemaining()){
+        if (hasTextureCoords) {
+            int i = 0;
+            while (aiTextureCoords.hasRemaining()) {
                 AIVector3D vec3 = aiTextureCoords.get();
                 textureCoords[i++] = vec3.x();
                 textureCoords[i++] = vec3.y();
             }
         }
 
-        if(hasNormals){
-            int i=0;
-            while(aiNormals.hasRemaining()){
+        if (hasNormals) {
+            int i = 0;
+            while (aiNormals.hasRemaining()) {
                 AIVector3D vec3 = aiNormals.get();
                 normals[i++] = vec3.x();
                 normals[i++] = vec3.y();
@@ -188,9 +198,9 @@ public final class AssimpModelLoader {
             }
         }
 
-        if(hasTangents){
-            int i=0;
-            while(aiTangents.hasRemaining()){
+        if (hasTangents) {
+            int i = 0;
+            while (aiTangents.hasRemaining()) {
                 AIVector3D vec3 = aiTangents.get();
                 tangents[i++] = vec3.x();
                 tangents[i++] = vec3.y();
@@ -198,9 +208,9 @@ public final class AssimpModelLoader {
             }
         }
 
-        if(hasBitangents){
-            int i=0;
-            while(aiBitangents.hasRemaining()){
+        if (hasBitangents) {
+            int i = 0;
+            while (aiBitangents.hasRemaining()) {
                 AIVector3D vec3 = aiBitangents.get();
                 bitangents[i++] = vec3.x();
                 bitangents[i++] = vec3.y();
@@ -209,14 +219,14 @@ public final class AssimpModelLoader {
         }
 
         AIFace.Buffer aiFaces = aiMesh.mFaces();
-        if(aiFaces == null)throw new IllegalStateException();
-        int i=0;
-        int[] indices = new int[aiMesh.mNumFaces()*3];
-        while(aiFaces.hasRemaining()){
+        if (aiFaces == null) throw new IllegalStateException();
+        int i = 0;
+        int[] indices = new int[aiMesh.mNumFaces() * 3];
+        while (aiFaces.hasRemaining()) {
             AIFace face = aiFaces.get();
-            if(face.mNumIndices() != 3)throw new IllegalStateException();
+            if (face.mNumIndices() != 3) throw new IllegalStateException();
             IntBuffer faceIndices = face.mIndices();
-            while(faceIndices.hasRemaining())indices[i++] = faceIndices.get();
+            while (faceIndices.hasRemaining()) indices[i++] = faceIndices.get();
         }
 
         AssimpMaterial material = materials[aiMesh.mMaterialIndex()];
@@ -243,16 +253,16 @@ public final class AssimpModelLoader {
 
         AssimpMesh[] nodeMeshes = new AssimpMesh[aiNode.mNumMeshes()];
         IntBuffer meshIndices = aiNode.mMeshes();
-        if(meshIndices != null){
-            int i=0;
-            while(meshIndices.hasRemaining())nodeMeshes[i++] = meshes[meshIndices.get()];
+        if (meshIndices != null) {
+            int i = 0;
+            while (meshIndices.hasRemaining()) nodeMeshes[i++] = meshes[meshIndices.get()];
         }
 
         AssimpNode[] children = new AssimpNode[aiNode.mNumChildren()];
         PointerBuffer aiChildren = aiNode.mChildren();
-        if(aiChildren == null){
-            int i=0;
-            while(aiChildren.hasRemaining())
+        if (aiChildren != null) {
+            int i = 0;
+            while (aiChildren.hasRemaining())
                 children[i++] = processAINode(AINode.create(aiChildren.get()), meshes);
         }
 
@@ -260,7 +270,7 @@ public final class AssimpModelLoader {
         return new AssimpNode(name, position, scale, orientation, nodeMeshes, children);
     }
 
-    private static AssimpNode processAIScene(AIScene scene){
+    private static AssimpNode processAIScene(AIScene scene) {
         AssimpMesh[] meshes = processAISceneMeshes(scene);
         return processAINode(scene.mRootNode(), meshes);
     }
