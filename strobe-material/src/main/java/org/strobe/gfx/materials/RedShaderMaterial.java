@@ -12,6 +12,8 @@ public class RedShaderMaterial extends ShaderMaterial{
 
     @Override
     protected MaterialPass[] createPasses(Graphics gfx) {
-        return new MaterialPass[]{new MaterialPass(new RedTestShader(gfx),0, new Bindable[]{})};
+        return new MaterialPass[]{
+                new MaterialPass(new RedTestShader(gfx),0, new Bindable[]{})
+        };
     }
 }
