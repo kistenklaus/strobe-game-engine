@@ -1,4 +1,4 @@
-package org.strobe.ecs.context.renderer;
+package org.strobe.ecs.context.renderer.transform;
 
 import org.joml.Quaternionf;
 import org.joml.Vector3f;

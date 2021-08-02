@@ -1,6 +1,8 @@
-package org.strobe.ecs.context.renderer;
+package org.strobe.ecs.context.renderer.camera;
 
 import org.strobe.ecs.*;
+import org.strobe.ecs.context.renderer.EntityRenderer;
+import org.strobe.ecs.context.renderer.transform.Transform;
 
 public class CameraRenderSystem extends EntitySystem {
 

@@ -6,10 +6,14 @@ import org.strobe.core.Strobe;
 import org.strobe.debug.imgui.ImGuiDebugger;
 import org.strobe.ecs.Entity;
 import org.strobe.ecs.context.*;
-import org.strobe.ecs.context.renderer.*;
+import org.strobe.ecs.context.renderer.camera.CameraRenderer;
+import org.strobe.ecs.context.renderer.camera.FocusCamera;
+import org.strobe.ecs.context.renderer.camera.PerspectiveLense;
 import org.strobe.ecs.context.renderer.materials.TestMaterial;
+import org.strobe.ecs.context.renderer.mesh.Mesh;
+import org.strobe.ecs.context.renderer.mesh.MeshRenderer;
+import org.strobe.ecs.context.renderer.transform.Transform;
 import org.strobe.gfx.Graphics;
-import org.strobe.gfx.camera.filters.FXAAFilter;
 import org.strobe.window.glfw.GlfwWindow;
 
 public class Game extends EntityContext {

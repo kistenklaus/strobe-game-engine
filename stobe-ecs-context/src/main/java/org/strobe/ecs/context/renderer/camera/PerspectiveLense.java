@@ -1,8 +1,8 @@
-package org.strobe.ecs.context.renderer;
+package org.strobe.ecs.context.renderer.camera;
 
 import org.joml.Matrix4f;
 
-public final class PerspectiveLense extends CameraLense{
+public final class PerspectiveLense extends CameraLense {
 
     private float fov;
     private float aspect;

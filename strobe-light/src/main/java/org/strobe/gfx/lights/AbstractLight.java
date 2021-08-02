@@ -32,4 +32,20 @@ public abstract class AbstractLight {
     public Vector3f getPosition(){
         return position;
     }
+
+    public void setAmbient(Vector3f ambient){
+        this.ambient.set(ambient);
+    }
+
+    public void setDiffuse(Vector3f diffuse){
+        this.diffuse.set(diffuse);
+    }
+
+    public void setSpecular(Vector3f specular){
+        this.specular.set(specular);
+    }
+
+    public void setPosition(Vector3f position){
+        this.position.set(position);
+    }
 }

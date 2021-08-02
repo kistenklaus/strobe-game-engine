@@ -3,7 +3,7 @@ package org.strobe.game;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.strobe.ecs.*;
-import org.strobe.ecs.context.renderer.Transform;
+import org.strobe.ecs.context.renderer.transform.Transform;
 import org.strobe.window.WindowButton;
 import org.strobe.window.WindowKey;
 import org.strobe.window.WindowKeyboard;

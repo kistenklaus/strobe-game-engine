@@ -1,7 +1,7 @@
 package org.strobe.game;
 
 import org.strobe.ecs.*;
-import org.strobe.ecs.context.renderer.Mesh;
+import org.strobe.ecs.context.renderer.mesh.Mesh;
 import org.strobe.window.WindowKey;
 import org.strobe.window.WindowKeyboard;
 

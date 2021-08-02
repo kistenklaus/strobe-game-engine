@@ -2,6 +2,10 @@ package org.strobe.ecs.context.renderer;
 
 import org.joml.Vector3f;
 import org.strobe.ecs.*;
+import org.strobe.ecs.context.renderer.camera.CameraRenderSystem;
+import org.strobe.ecs.context.renderer.materials.MaterialSystem;
+import org.strobe.ecs.context.renderer.mesh.MeshRendererSystem;
+import org.strobe.ecs.context.renderer.transform.TransformSystem;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.lights.DirectionalLight;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
@@ -28,6 +32,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
     private static final String GLOBAL_TARGET_BUFFER_RESOURCE = "globalTargetBufferResource";
     private static final String GLOBAL_POST_PROCESSING_BUFFER_RESOURCE = "globalPostProcessingBufferResource";
     private static final String GLOBAL_SHADOW_MAP_RESOURCE = "globalShadowMapResource";
+
 
 
     private enum RendererState {
@@ -131,5 +136,9 @@ public final class EntityRenderer extends RenderGraphRenderer {
 
     public CameraManager getCameraManager(){
         return cameraManager;
+    }
+
+    public LightManager getLightManager() {
+        return lightManager;
     }
 }

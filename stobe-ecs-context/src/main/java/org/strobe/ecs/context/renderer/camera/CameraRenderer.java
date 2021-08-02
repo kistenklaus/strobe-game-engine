@@ -1,10 +1,10 @@
-package org.strobe.ecs.context.renderer;
+package org.strobe.ecs.context.renderer.camera;
 
 import org.strobe.ecs.Component;
+import org.strobe.ecs.context.renderer.EntityRenderer;
+import org.strobe.ecs.context.renderer.transform.Transform;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.camera.AbstractCamera;
-import org.strobe.gfx.camera.CameraFilter;
-import org.strobe.gfx.camera.Lense;
 import org.strobe.gfx.camera.LenseCamera;
 
 import java.util.ArrayList;
