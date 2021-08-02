@@ -26,6 +26,7 @@
         <module>strobe-graphics-renderables-opengl</module>
         <module>strobe-material</module>
         <module>strobe-game</module>
+        <module>strobe-assimp</module>
     </modules>
 
     <properties>
