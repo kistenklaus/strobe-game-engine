@@ -10,16 +10,21 @@ public class IndexedVao implements Renderable {
 
     private final Vao vao;
     private int drawCount;
+    private final int mode;
 
-    public IndexedVao(Vao vao, int drawCount){
+    public IndexedVao(Vao vao, int drawCount, int mode){
         this.vao = vao;
         this.drawCount = drawCount;
+        this.mode = mode;
+    }
+    public IndexedVao(Vao vao, int drawCount){
+        this(vao, drawCount, GL_TRIANGLES);
     }
 
     @Override
     public void render(Graphics gfx) {
         gfx.bind(vao);
-        glDrawElements(GL_TRIANGLES, drawCount, GL_UNSIGNED_INT, 0);
+        glDrawElements(mode, drawCount, GL_UNSIGNED_INT, 0);
         gfx.unbind(vao);
     }
 }
