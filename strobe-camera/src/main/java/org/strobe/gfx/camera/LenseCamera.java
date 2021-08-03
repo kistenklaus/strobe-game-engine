@@ -1,6 +1,7 @@
 package org.strobe.gfx.camera;
 
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.transform.AbstractTransform;
 
@@ -25,8 +26,7 @@ public final class LenseCamera extends AbstractCamera{
         AbstractTransform transform = this.transform.get();
         if (transform != null) {
             position.set(transform.getPosition());
-            Matrix4f mat4 = transform.getTransformationMatrix();
-            mat4.invertAffine(viewMatrix);
+            transform.getTransformationMatrix().invert(viewMatrix);
         }else position.set(0,0,0);
 
         //TODO conditional proj update
@@ -47,5 +47,20 @@ public final class LenseCamera extends AbstractCamera{
     public float getFar() {
         if(lense.get() == null)return 1;
         return lense.get().getFar();
+    }
+
+    @Override
+    public CameraFrustum getFrustumBox() {
+
+        Matrix4f projView = projMatrix.mul(viewMatrix, new Matrix4f());
+        return new CameraFrustum(
+                projView.frustumCorner(Matrix4f.CORNER_NXNYNZ,new Vector3f()),
+                projView.frustumCorner(Matrix4f.CORNER_NXPYNZ, new Vector3f()),
+                projView.frustumCorner(Matrix4f.CORNER_PXPYNZ, new Vector3f()),
+                projView.frustumCorner(Matrix4f.CORNER_PXNYNZ, new Vector3f()),
+                projView.frustumCorner(Matrix4f.CORNER_NXNYPZ, new Vector3f()),
+                projView.frustumCorner(Matrix4f.CORNER_NXPYPZ, new Vector3f()),
+                projView.frustumCorner(Matrix4f.CORNER_PXPYPZ, new Vector3f()),
+                projView.frustumCorner(Matrix4f.CORNER_PXNYPZ, new Vector3f()));
     }
 }

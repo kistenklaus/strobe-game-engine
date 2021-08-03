@@ -3,7 +3,9 @@ package org.strobe.ecs.context.renderer.materials;
 import org.strobe.ecs.Component;
 import org.strobe.ecs.context.renderer.EntityRenderer;
 import org.strobe.gfx.Graphics;
+import org.strobe.gfx.materials.MaterialPass;
 import org.strobe.gfx.materials.ShaderMaterial;
+import org.strobe.gfx.rendergraph.core.RenderQueue;
 import org.strobe.gfx.rendergraph.core.Step;
 import org.strobe.gfx.rendergraph.core.Technique;
 
@@ -47,8 +49,13 @@ public abstract class Material implements Component {
         Step[] steps = new Step[material.passCount()];
         for(int i=0;i<steps.length;i++){
             //select queue based on flags (could be out sourced to the EntityRenderer)
-            steps[i] = new Step(renderer.getForwardQueue(), material.passes()[i].getShader(),
-                    material.passes()[i].getBindables());
+            MaterialPass pass = material.passes()[i];
+            RenderQueue queue = switch(pass.flags()){
+                case MaterialPass.FORWARD_PASS -> renderer.getForwardQueue();
+                case MaterialPass.SHADOW_MAP_PASS -> renderer.getShadowQueue();
+                default -> throw new IllegalStateException("Unexpected value: " + pass.flags());
+            };
+            steps[i] = new Step(queue, pass.shader(), pass.bindables());
         }
         return steps;
     }

@@ -123,4 +123,6 @@ public abstract class AbstractCamera {
     public float getAspect(){
         return frontTarget.getWidth() / (float)frontTarget.getHeight();
     }
+
+    public abstract CameraFrustum getFrustumBox();
 }

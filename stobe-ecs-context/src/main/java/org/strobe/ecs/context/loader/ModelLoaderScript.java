@@ -7,7 +7,6 @@ import org.strobe.assimp.AssimpNode;
 import org.strobe.ecs.ComponentMapper;
 import org.strobe.ecs.Entity;
 import org.strobe.ecs.context.renderer.materials.LambertianMaterial;
-import org.strobe.ecs.context.renderer.materials.TestMaterial;
 import org.strobe.ecs.context.renderer.mesh.Mesh;
 import org.strobe.ecs.context.renderer.mesh.MeshRenderer;
 import org.strobe.ecs.context.renderer.transform.Transform;

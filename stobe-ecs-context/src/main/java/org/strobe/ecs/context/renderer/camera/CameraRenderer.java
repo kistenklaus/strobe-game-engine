@@ -12,11 +12,14 @@ import java.util.function.BiConsumer;
 
 public final class CameraRenderer implements Component {
 
+
     private final ArrayList<BiConsumer<Graphics, EntityRenderer>> cameraOps = new ArrayList<>();
 
     private AbstractCamera camera = null;
     private CameraLense lense = null;
     private Transform transform = null;
+
+    private boolean renderShadows = true;
 
     public CameraRenderer(int horResolution, int verResolution){
         cameraOps.add((gfx, renderer)->{
@@ -59,6 +62,10 @@ public final class CameraRenderer implements Component {
 
     protected void setLense(CameraLense lense){
         this.lense = lense;
+    }
+
+    public boolean isRenderingShadows(){
+        return renderShadows;
     }
 
 }

@@ -1,9 +1,6 @@
 package org.strobe.gfx.opengl.bindables.shader;
 
-import org.joml.Matrix4f;
-import org.joml.Vector2f;
-import org.joml.Vector3f;
-import org.joml.Vector4f;
+import org.joml.*;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.opengl.bindables.texture.Texture2D;
 
@@ -28,9 +25,12 @@ public final class ShaderUniformLoader {
             return new BooleanShaderUniform(shader, loc);
         } else if (type.equals(Vector2f.class)) {
             return new Vector2fShaderUniform(shader, loc);
-        } else {
-            throw new IllegalArgumentException("can't uniform type : " + type);
+        } else if( type.equals(int.class) || type.equals(Integer.class)){
+            return new IntegerShaderUniform(shader,loc);
+        }else if(type.equals(Matrix3f.class)){
+            return new Matrix3fShaderUniform(shader, loc);
         }
+        throw new IllegalArgumentException("can't uniform type : " + type);
     }
 
 

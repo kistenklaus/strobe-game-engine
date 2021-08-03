@@ -9,6 +9,7 @@ import org.strobe.gfx.opengl.bindables.texture.Texture2D;
 import org.strobe.gfx.opengl.bindables.texture.TextureFormat;
 import org.strobe.gfx.opengl.bindables.texture.TextureOptions;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.function.Supplier;
 
@@ -42,6 +43,7 @@ public class Framebuffer extends Bindable<FramebufferPool> implements Debuggable
         this.attachments = new FramebufferAttachment[attachments.length];
         boolean tempDepth = false;
         boolean tempStencil = false;
+        ArrayList<Integer> drawBuffers = new ArrayList<>();
         for (int i = 0; i < attachments.length; i++) {
             FramebufferAttachment att = attachments[i].get();
             tempDepth |= att.hasDepth();
@@ -49,10 +51,20 @@ public class Framebuffer extends Bindable<FramebufferPool> implements Debuggable
             this.attachments[i] = att;
             indexMap.put(attachments[i], i);
             att.attach(gfx, this);
+
+            if(att.isDrawBuffer())drawBuffers.add(att.getAttachment());
         }
         this.hasDepth = tempDepth;
         this.hasStencil = tempStencil;
-        //check for complete framebuffer (TODO)
+
+        if(drawBuffers.isEmpty()){
+            glDrawBuffer(GL_NONE);
+        }else{
+            int[] bufs = new int[drawBuffers.size()];
+            for(int i=0;i<drawBuffers.size();i++)bufs[i] = drawBuffers.get(i);
+            glDrawBuffers(bufs);
+        }
+
         int status;
         if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
             throw new RuntimeException("the fbo is not complete status=" + status);
@@ -160,25 +172,25 @@ public class Framebuffer extends Bindable<FramebufferPool> implements Debuggable
     public enum Attachment {
         COLOR_RGB_ATTACHMENT_0("color0", () -> new FramebufferTextureAttachment(GL_COLOR_ATTACHMENT0,
                 new TextureOptions(1, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, TextureFormat.RGB_UBYTE),
-                false, false)),
+                true, false, false)),
         COLOR_RGBA_ATTACHMENT_0("color0", () -> new FramebufferTextureAttachment(GL_COLOR_ATTACHMENT0,
                 new TextureOptions(1, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, TextureFormat.RGBA_UBYTE),
-                false, false)),
+                true, false, false)),
         COLOR_RGBA_ATTACHMENT_1("color1", () -> new FramebufferTextureAttachment(GL_COLOR_ATTACHMENT1,
                 new TextureOptions(1, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, TextureFormat.RGBA_UBYTE),
-                false, false)),
+                true,false, false)),
         COLOR_RGBA_ATTACHMENT_2("color2", () -> new FramebufferTextureAttachment(GL_COLOR_ATTACHMENT2,
                 new TextureOptions(1, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, TextureFormat.RGBA_UBYTE),
-                false, false)),
+                true, false, false)),
         COLOR_RGBA_ATTACHMENT_3("color3", () -> new FramebufferTextureAttachment(GL_COLOR_ATTACHMENT3,
                 new TextureOptions(1, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, TextureFormat.RGBA_UBYTE),
-                false, false)),
+                true, false, false)),
         DEPTH_ATTACHMENT("depth", () -> new FramebufferTextureAttachment(GL_DEPTH_ATTACHMENT,
                 new TextureOptions(1, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, TextureFormat.DEPTH_FLOAT),
-                true, false)),
+                false, true, false)),
         STENCIL_ATTACHMENT("stencil", ()->new FramebufferTextureAttachment(GL_STENCIL_ATTACHMENT,
                 new TextureOptions(1, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, TextureFormat.STENCIL_INDEX8_FLOAT),
-                false, true)),
+                false, false, true)),
         DEPTH_RBO_ATTACHMENT("depthRbo", () -> new FramebufferRboAttachment(GL_DEPTH_COMPONENT,
                 GL_DEPTH_ATTACHMENT, 1, true, false));
 

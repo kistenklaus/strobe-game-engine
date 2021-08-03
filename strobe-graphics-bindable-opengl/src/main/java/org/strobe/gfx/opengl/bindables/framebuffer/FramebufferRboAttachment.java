@@ -7,17 +7,15 @@ import static org.lwjgl.opengl.GL30.*;
 
 class FramebufferRboAttachment extends FramebufferAttachment {
 
-    private final int attachment;
     private final int internalFormat;
     private int rboID;
     @Debug
     private final int samples;
 
     public FramebufferRboAttachment(int attachment, int internalFormat, int samples, boolean hasDepth, boolean hasStencil){
-        super(false, hasDepth, hasStencil);
+        super(attachment, false, false, hasDepth, hasStencil);
         this.internalFormat = internalFormat;
         this.samples = samples;
-        this.attachment = attachment;
     }
 
     @Override

@@ -3,27 +3,10 @@ package org.strobe.gfx.materials;
 import org.strobe.gfx.Bindable;
 import org.strobe.gfx.materials.shaders.MaterialShader;
 
-public final class MaterialPass {
+public record MaterialPass(MaterialShader shader, int flags,
+                           Bindable...bindables) {
 
-    private final MaterialShader shader;
-    private final Bindable[] bindables;
-    private final int renderFlags;
+    public static final int FORWARD_PASS = 1;
+    public static final int SHADOW_MAP_PASS = 2;
 
-    public MaterialPass(MaterialShader shader, int renderFlags, Bindable[] bindables) {
-        this.shader = shader;
-        this.renderFlags = renderFlags;
-        this.bindables = bindables;
-    }
-
-    public MaterialShader getShader() {
-        return shader;
-    }
-
-    public Bindable[] getBindables() {
-        return bindables;
-    }
-
-    public int getRenderFlags() {
-        return renderFlags;
-    }
 }

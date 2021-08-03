@@ -1,5 +1,6 @@
 package org.strobe.ecs.context.renderer.transform;
 
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.strobe.ecs.Component;
@@ -25,7 +26,8 @@ public class Transform extends AbstractTransform implements Component {
     public void updateTransformationMatrix() {
         transformationMatrix.identity();
         transformationMatrix.translate(position);
-        transformationMatrix.rotate(orientation);
+        Matrix4f rot = orientation.get(new Matrix4f());
+        transformationMatrix.mul(rot);
         transformationMatrix.scale(scale);
     }
 }

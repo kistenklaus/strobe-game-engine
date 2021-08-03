@@ -6,24 +6,32 @@ import org.strobe.gfx.opengl.bindables.texture.Texture2D;
 
 public abstract class FramebufferAttachment implements Debuggable {
 
+    protected final int attachment;
     private final boolean isTexture;
+    private final boolean isDrawBuffer;
     private final boolean hasDepth;
     private final boolean hasStencil;
 
-    FramebufferAttachment(boolean isTextured, boolean hasDepth, boolean hasStencil){
-            this.isTexture = isTextured;
-            this.hasDepth = hasDepth;
-            this.hasStencil = hasStencil;
+    FramebufferAttachment(int attachment, boolean isTextured, boolean isDrawBuffer, boolean hasDepth, boolean hasStencil) {
+        this.attachment = attachment;
+        this.isTexture = isTextured;
+        this.isDrawBuffer = isDrawBuffer;
+        this.hasDepth = hasDepth;
+        this.hasStencil = hasStencil;
     }
 
     abstract void attach(Graphics gfx, Framebuffer fbo);
 
-    public Texture2D getTexture(){
+    public Texture2D getTexture() {
         throw new UnsupportedOperationException();
     }
 
     public boolean isTextured() {
         return isTexture;
+    }
+
+    protected boolean isDrawBuffer() {
+        return isDrawBuffer;
     }
 
     public boolean hasDepth() {
@@ -32,5 +40,9 @@ public abstract class FramebufferAttachment implements Debuggable {
 
     public boolean hasStencil() {
         return hasStencil;
+    }
+
+    protected int getAttachment(){
+        return attachment;
     }
 }

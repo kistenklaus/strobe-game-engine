@@ -65,7 +65,6 @@ public class Ubo extends DataBuffer<UboPool> {
                 }
 
                 int alignedOffset = (int) (Math.ceil(uboByteSize / (float) alignment[i]) * alignment[i]);
-                System.out.println(alignedOffset);
                 offsets[i] = alignedOffset;
                 nameMap.put(varName, i);
                 uboByteSize = alignedOffset + byteSize;

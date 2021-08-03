@@ -29,7 +29,6 @@ public class Game extends EntityContext {
         addDebugger(new ImGuiDebugger(gfx));
 
 
-        /*
         Entity renderable = ecs.createEntity();
         renderable.addComponent(new Transform());
         Mesh mesh = new Mesh(4, 6);
@@ -40,17 +39,15 @@ public class Game extends EntityContext {
         LambertianMaterial mat = new LambertianMaterial(1,0,1);
         mat.setDiffuseColor(new Vector3f(1,1,0));
         renderable.addComponent(mat);
-
-         */
-        //renderable.addComponent(new MeshRenderer());
+        renderable.addComponent(new MeshRenderer());
 
 
         Entity model = ecs.createEntity();
-        model.addComponent(new Transform(new Vector3f(0,5,0)));
-        model.addComponent(new ModelLoaderScript("assets/backpack/backpack.obj"));
+        //model.addComponent(new Transform(new Vector3f(0,5,0)));
+        //model.addComponent(new ModelLoaderScript("assets/backpack/backpack.obj"));
 
         Entity ground = ecs.createEntity();
-        ground.addComponent(new GroundGenScript());
+        //ground.addComponent(new GroundGenScript());
 
 
         Entity camera = ecs.createEntity();
@@ -58,23 +55,25 @@ public class Game extends EntityContext {
         int resRed = 1;
         CameraRenderer cr;
         camera.addComponent(cr=new CameraRenderer(960/resRed, 640/resRed));
-        //cr.enableFXAA();
+        cr.enableFXAA();
         camera.addComponent(new Transform(new Vector3f(0,4f,5f), new Vector3f(1), new Quaternionf().identity()));
         camera.addComponent(new CameraController());
         camera.addComponent(new FocusCamera());
 
 
         Entity light = ecs.createEntity();
-        light.addComponent(new Transform(new Vector3f(0,2,0)));
+        light.addComponent(new Transform(new Vector3f(1,2,0)));
         light.addComponent(new DirectionalLight(new Vector3f(0.1f), new Vector3f(1), new Vector3f(1)));
         light.addComponent(new DaylightCycle());
 
         Entity c2 = light.createChild();
-        c2.addComponent(new PerspectiveLense(60, 960/640f, 0.01f, 100f));
-        //c2.addComponent(new CameraRenderer(960, 640));
-        c2.addComponent(new Transform(new Vector3f(0,0,1f), new Vector3f(1), new Quaternionf()));
+        c2.addComponent(new Transform());
+        c2.addComponent(new PerspectiveLense(60, 960f/640f, 0.01f, 5));
+        c2.addComponent(new CameraRenderer(960, 640));
+        c2.addComponent(new LookAtCenter());
 
         ecs.addEntitySystem(new CameraControllerSystem(ecs, getMouse(), getKeyboard()));
-        ecs.addEntitySystem(new DaylightSystem(ecs));
+        ecs.addEntitySystem(new DaylightSystem(ecs, getKeyboard()));
+        ecs.addEntitySystem(new LookAtCenterSystem(ecs));
     }
 }

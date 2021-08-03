@@ -110,7 +110,6 @@ public class Mesh implements Component {
 
     public Mesh(Primitive primitive, int flags){
         this(primitive.getVertexCount(), primitive.getDrawCount(), flags);
-        System.out.println(Arrays.toString(primitive.getPositions()));
         if(positions != null && primitive.getPositions()!=null)
             setPositions(0, primitive.getPositions());
         if(textureCoords != null && primitive.getTextureCoords()!=null)
@@ -133,7 +132,6 @@ public class Mesh implements Component {
         if (vao != null) return new IndexedVao(vao, getDrawCount());
         meshOps.clear();
         vao = new Vao(gfx, vertexCount, ibo = new Ibo(gfx, getIndices(), dynamicIndices), layout);
-        System.out.println(Arrays.toString(positions));
         if (positions != null) vao.bufferLocation(gfx, 0, positions);
         if (textureCoords != null) vao.bufferLocation(gfx, 1, textureCoords);
         if (normals != null) vao.bufferLocation(gfx, 2, normals);

@@ -21,7 +21,7 @@ public final class LightUpdatePass extends RenderPass {
 
     @Override
     protected void render(Graphics gfx) {
-        lights.get().updateUbo(gfx);
+        lights.get().updateUbos(gfx);
     }
 
     @Override

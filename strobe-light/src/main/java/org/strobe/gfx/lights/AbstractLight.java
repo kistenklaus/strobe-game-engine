@@ -9,6 +9,8 @@ public abstract class AbstractLight {
     private final Vector3f specular;
     private final Vector3f position;
 
+    private boolean shadowCasting = true;
+
     public AbstractLight(Vector3f ambient, Vector3f diffuse, Vector3f specular,
                          Vector3f position) {
         this.ambient = new Vector3f(ambient);
@@ -47,5 +49,9 @@ public abstract class AbstractLight {
 
     public void setPosition(Vector3f position){
         this.position.set(position);
+    }
+
+    public boolean isShadowCasting(){
+        return shadowCasting;
     }
 }

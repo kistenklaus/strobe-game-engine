@@ -10,14 +10,12 @@ import static org.lwjgl.opengl.GL30.glFramebufferTexture2D;
 
 class FramebufferTextureAttachment extends FramebufferAttachment {
 
-    private final int attachment;
     private final TextureOptions options;
     @Debug
     private Texture2D tex;
 
-    public FramebufferTextureAttachment(int attachment, TextureOptions textureOptions, boolean hasDepth, boolean hasStencil) {
-        super(true, hasDepth, hasStencil);
-        this.attachment = attachment;
+    public FramebufferTextureAttachment(int attachment, TextureOptions textureOptions, boolean isDrawBuffer, boolean hasDepth, boolean hasStencil) {
+        super(attachment, true, isDrawBuffer, hasDepth, hasStencil);
         this.options = textureOptions;
     }
 

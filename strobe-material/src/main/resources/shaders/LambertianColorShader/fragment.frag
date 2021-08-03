@@ -1,6 +1,5 @@
 #version 420 core
 
-const int POINT_LIGHT_COUNT = 10;
 const int DIRECTIONAL_LIGHT_COUNT = 3;
 
 in vec3 normal;
@@ -15,17 +14,13 @@ layout(std140, binding=0) uniform camera{
 };
 
 layout(std140, binding=1) uniform lights{
-    vec3 ambientLight;
     int directionalLightCount;
     vec3[DIRECTIONAL_LIGHT_COUNT] directionalLightDir;
+    vec3[DIRECTIONAL_LIGHT_COUNT] directionalLightAmbient;
     vec3[DIRECTIONAL_LIGHT_COUNT] directionalLightDiffuse;
     vec3[DIRECTIONAL_LIGHT_COUNT] directionalLightSpecular;
-
-    vec3[POINT_LIGHT_COUNT] pointLightPositions;
-    vec3[POINT_LIGHT_COUNT] pointLightAttenuations;
-    vec3[POINT_LIGHT_COUNT] pointLightDiffuses;
-    vec3[POINT_LIGHT_COUNT] pointLightSpeculars;
 };
+
 
 struct Material{
     vec3 diffuseColor;

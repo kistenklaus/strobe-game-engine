@@ -34,8 +34,12 @@ public class CameraSubmissionSystem extends EntitySystem {
             cameraRenderer.setTransform(entity.get(TRANSFORM));
             cameraRenderer.setLense(entity.get(CAMERA_LENSE));
             cameraRenderer.update();
-            if (cameraRenderer.getAbstractCamera() != null)
+            if (cameraRenderer.getAbstractCamera() != null){
                 renderer.getCameraManager().submitCamera(cameraRenderer.getAbstractCamera());
+                if(cameraRenderer.isRenderingShadows()){
+                    renderer.getLightManager().submitShadowCamera(cameraRenderer.getAbstractCamera());
+                }
+            }
             cameraRenderer.enqueueCameraOps(renderer);
         }
         if(!focusedCameras.isEmpty()){

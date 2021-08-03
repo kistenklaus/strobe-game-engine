@@ -52,6 +52,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
     private final LightUpdatePass lightUpdatePass;
     private final CameraDebugPass cameraDebugPass;
     private final LightDebugPass lightDebugPass;
+    private final ShadowQueue shadowQueue;
 
     private final Resource<CameraManager> globalCameraResource;
     private final Resource<Framebuffer> globalBackBuffer;
@@ -77,6 +78,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
         lightUpdatePass = new LightUpdatePass();
         cameraDebugPass = new CameraDebugPass(gfx);
         lightDebugPass = new LightDebugPass(gfx);
+        shadowQueue = new ShadowQueue(gfx);
 
         addPass(clearCamerasPass);
         addPass(cameraUpdatePass);
@@ -86,13 +88,15 @@ public final class EntityRenderer extends RenderGraphRenderer {
         addPass(lightUpdatePass);
         addPass(cameraDebugPass);
         addPass(lightDebugPass);
+        addPass(shadowQueue);
 
         globalCameraResource = registerResource(CameraManager.class, GLOBAL_CAMERA_RESOURCE, cameraManager);
         globalBackBuffer = registerResource(Framebuffer.class, GLOBAL_BACK_BUFFER_RESOURCE, Framebuffer.getBackBuffer(gfx));
         globalLightResource = registerResource(LightManager.class, GLOBAL_LIGHTS_RESOURCE, lightManager);
 
         addLinkage(globalLightResource, lightUpdatePass.getLightResource());
-        addLinkage(lightUpdatePass.getLightResource(), forwardQueue.getLightResource());
+        addLinkage(lightUpdatePass.getLightResource(), shadowQueue.getLightResource());
+        addLinkage(shadowQueue.getLightResource(), forwardQueue.getLightResource());
         addLinkage(forwardQueue.getLightResource(), lightDebugPass.getLightResource());
 
         addLinkage(globalCameraResource, clearCamerasPass.getCameraResource());
@@ -123,6 +127,10 @@ public final class EntityRenderer extends RenderGraphRenderer {
         return forwardQueue;
     }
 
+    public RenderQueue getShadowQueue(){
+        return shadowQueue;
+    }
+
     public void enqueueRenderOps(Collection<BiConsumer<Graphics, EntityRenderer>> renderOp){
         renderOps.addAll(renderOp);
     }
@@ -138,4 +146,5 @@ public final class EntityRenderer extends RenderGraphRenderer {
     public LightManager getLightManager() {
         return lightManager;
     }
+
 }
