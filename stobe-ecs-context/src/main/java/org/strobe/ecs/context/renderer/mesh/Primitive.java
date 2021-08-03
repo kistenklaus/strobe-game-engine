@@ -1,24 +1,24 @@
 package org.strobe.ecs.context.renderer.mesh;
 
 public enum Primitive {
-    XZ_QUAD(4, new float[]{
-            -0.5f, 0,0.5f,
-            -0.5f, 0f,-0.5f,
-            0.5f, 0f -0.5f,
-            0.5f, 0f,0.5f
+    XZ_PLANE(4, new float[]{
+            -0.5f, 0f, 0.5f,
+            -0.5f, 0f, -0.5f,
+            0.5f, 0f, -0.5f,
+            0.5f, 0f, 0.5f
     }, new float[]{
-            0,0,
-            0,1,
-            1,1,
-            1,0
+            0, 0,
+            0, 1,
+            1, 1,
+            1, 0
     }, new float[]{
-            0,1,0,
-            0,1,0,
-            0,1,0,
-            0,1,0
-    },null,null,  new int[]{
-            2,1,0,
-            0,3,2
+            0, 1, 0,
+            0, 1, 0,
+            0, 1, 0,
+            0, 1, 0
+    }, null, null, new int[]{
+            2, 1, 0,
+            0, 3, 2
     });
 
     private final int vertexCount;
@@ -66,11 +66,11 @@ public enum Primitive {
         return indices;
     }
 
-    public int getVertexCount(){
+    public int getVertexCount() {
         return vertexCount;
     }
 
-    public int getDrawCount(){
+    public int getDrawCount() {
         return indices.length;
     }
 }

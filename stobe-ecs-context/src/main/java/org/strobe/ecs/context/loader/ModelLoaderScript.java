@@ -62,9 +62,9 @@ public final class ModelLoaderScript extends ScriptComponent {
             transform = new Transform(node.position(), node.scale(), node.orientation());
             entity.addComponent(transform);
         }else{
-            transform.setPosition(node.position());
-            transform.setScale(node.scale());
-            transform.setOrientation(node.orientation());
+            //transform.setPosition(node.position());
+            //transform.setScale(node.scale());
+            //transform.setOrientation(node.orientation());
         }
 
         for(AssimpNode childNode : node.children()){
