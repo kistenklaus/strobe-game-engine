@@ -2,6 +2,7 @@ package org.strobe.gfx.opengl.bindables.ubo;
 
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import org.joml.Vector4f;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.Pool;
 import org.strobe.gfx.opengl.bindables.buffer.DataBuffer;
@@ -52,7 +53,9 @@ public class Ubo extends DataBuffer<UboPool> {
                     String subType = varType.substring(0, varType.indexOf("["));
                     array_size[i] = Integer.parseInt(varType.substring(varType.indexOf("[") + 1, varType.indexOf("]")));
                     alignment[i] = TypeUtil.getAlignmentOfGlslType(subType);
-                    byteSize = alignment[i] * array_size[i];
+                    int typeSize = TypeUtil.getSizeOfGlslType(subType);
+                    //align element size
+                    byteSize = (int) Math.ceil(typeSize / (float) alignment[i]) * alignment[i] * array_size[i];
                     types[i] = TypeUtil.glslTypeToClass(subType);
                 } else {
                     array_size[i] = -1;
@@ -62,6 +65,7 @@ public class Ubo extends DataBuffer<UboPool> {
                 }
 
                 int alignedOffset = (int) (Math.ceil(uboByteSize / (float) alignment[i]) * alignment[i]);
+                System.out.println(alignedOffset);
                 offsets[i] = alignedOffset;
                 nameMap.put(varName, i);
                 uboByteSize = alignedOffset + byteSize;
@@ -126,13 +130,15 @@ public class Ubo extends DataBuffer<UboPool> {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> Uniform<T> selectUniform(Type type, int offset){
+    private <T> Uniform<T> selectUniform(Type type, int offset) {
         if (type == Matrix4f.class) {
             return (Uniform<T>) new UboUniformMatrix4f(this, offset);
         } else if (type == Vector3f.class) {
             return (Uniform<T>) new UboUniformVector3f(this, offset);
         } else if (type == Integer.class || type == int.class) {
             return (Uniform<T>) new UboUniformInteger(this, offset);
+        } else if (type == Vector4f.class) {
+            return (Uniform<T>) new UboUniformVector4f(this, offset);
         }
         throw new UnsupportedOperationException();
     }
