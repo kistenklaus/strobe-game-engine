@@ -108,6 +108,19 @@ public class Mesh implements Component {
         this(vertexCount, drawCount, DYNAMIC_POSITIONS | DYNAMIC_NORMALS);
     }
 
+    public Mesh(Primitive primitive, int flags){
+        this(primitive.getVertexCount(), primitive.getDrawCount(), flags);
+        if(positions != null && primitive.getPositions()!=null)
+            setPositions(0, primitive.getPositions());
+        if(textureCoords != null && primitive.getTextureCoords()!=null)
+            setTextureCoords(0, primitive.getTextureCoords());
+        if(normals != null && primitive.getNormals()!=null)
+            setNormals(0, primitive.getNormals());
+        if(tangents != null && primitive.getTangents() != null
+            &&bitangents!=null && primitive.getBitangents() != null)
+            setTangents(0, primitive.getTangents(), primitive.getBitangents());
+    }
+
     void enqueueScheduledMeshOps(EntityRenderer renderer) {
         if (meshOps.isEmpty()) return;
         renderer.enqueueRenderOps(meshOps);
