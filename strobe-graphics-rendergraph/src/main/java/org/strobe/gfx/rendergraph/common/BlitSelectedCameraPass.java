@@ -32,6 +32,9 @@ public final class BlitSelectedCameraPass extends RenderPass {
             focusedCameras.getTarget().copyTo(gfx,
                     target.get(), GL_COLOR_BUFFER_BIT,
                     focusedCameras.isEnabledLinearScaling() ? GL_LINEAR : GL_NEAREST);
+            focusedCameras.getTarget().copyTo(gfx,
+                    target.get(), GL_DEPTH_BUFFER_BIT,
+                    GL_NEAREST);
         }else{
             glClearColor(1,1,0,1);
             glClear(GL_COLOR_BUFFER_BIT);

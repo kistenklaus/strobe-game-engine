@@ -95,8 +95,8 @@ public final class LightDebugPass extends RenderPass {
         AbstractCamera mainCam = cameras.get().getSelectedCamera();
         if (mainCam == null) return;
         gfx.bind(target.get());
-        glDisable(GL_DEPTH_TEST);
-        glDisable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
         gfx.bind(debugShader);
         proj.set(gfx, mainCam.getProjMatrix());
         view.set(gfx, mainCam.getViewMatrix());

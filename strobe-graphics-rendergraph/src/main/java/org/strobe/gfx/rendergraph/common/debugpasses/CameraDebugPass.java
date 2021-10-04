@@ -103,8 +103,8 @@ public final class CameraDebugPass extends RenderPass {
     protected void render(Graphics gfx) {
         AbstractCamera mainCam = cameras.get().getSelectedCamera();
         if (mainCam == null) return;
-        glDisable(GL_CULL_FACE);
-        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
         gfx.bind(debugShader);
         proj.set(gfx, mainCam.getProjMatrix());
         view.set(gfx, mainCam.getViewMatrix());

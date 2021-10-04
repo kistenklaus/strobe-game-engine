@@ -104,7 +104,6 @@ public final class EntityRenderer extends RenderGraphRenderer {
         addLinkage(cameraUpdatePass.getCameraResource(), forwardQueue.getCameraResource());
         addLinkage(forwardQueue.getCameraResource(), postProcessingPass.getCameraResource());
         addLinkage(postProcessingPass.getCameraResource(), blitCameraPass.getCameraResource());
-
         addLinkage(blitCameraPass.getCameraResource(), cameraDebugPass.getCameraResource());
         addLinkage(cameraDebugPass.getCameraResource(), lightDebugPass.getCameraResource());
 

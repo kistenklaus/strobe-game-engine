@@ -16,13 +16,9 @@ public class CameraPostProcessingPass extends FullScreenPass {
 
     private final Resource<CameraManager> cameras;
 
-    private final FXAAFilter fxaaFilter;
-
     public CameraPostProcessingPass(Graphics gfx){
         super(gfx);
         cameras = registerResource(CameraManager.class, "cameras");
-
-        fxaaFilter = new FXAAFilter(gfx);
     }
 
     @Override
@@ -47,8 +43,10 @@ public class CameraPostProcessingPass extends FullScreenPass {
                 screen.render(gfx);
                 filter.afterFSR(gfx);
                 gfx.unbind(camera.getBackTarget());
+                camera.getTarget().copyTo(gfx, camera.getBackTarget(), GL_DEPTH_BUFFER_BIT);
                 camera.swapBuffers();
             }
+
         }
     }
 

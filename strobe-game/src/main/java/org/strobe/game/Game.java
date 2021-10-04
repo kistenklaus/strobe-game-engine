@@ -70,7 +70,7 @@ public class Game extends EntityContext {
         camera2.addComponent(new Transform(new Vector3f(0,0,5)));
         camera2.addComponent(new CameraIndex(2));
         camera2.addComponent(new CameraController());
-        camera2.addComponent(new PerspectiveLense(60, 960f/640f, 0.01f, 10));
+        camera2.addComponent(new PerspectiveLense(60, 960f/640f, 0.01f, 100));
         camera2.addComponent(new CameraRenderer(960, 640));
         camera2.addComponent(new LookAtCenter());
 
