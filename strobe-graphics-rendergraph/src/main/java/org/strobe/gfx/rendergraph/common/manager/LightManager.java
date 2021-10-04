@@ -61,8 +61,8 @@ public final class LightManager {
             int[] indices = new int[directionalLights.size()];
             int k = 0;
             for (int j = 0; j < directionalLights.size() && k < dirCasterCount; j++) {
-                DirectionalLight light = directionalLights.get(j);
-                if (light.isShadowCasting()) {
+                DirectionalLight dirLight = directionalLights.get(j);
+                if (dirLight.isShadowCasting()) {
                     indices[j] = k;
                     //defines the region of the shadow map where the data for this light is stored
                     shadowDims[k] = new Vector4f(0, 0, 1, 1);
@@ -70,10 +70,10 @@ public final class LightManager {
 
                     //creates a view matrix that sits at the center of the camera view frustum(cuboid)
                     //and looks in the direction of the directional light.
-                    Matrix4f lightView = new Matrix4f().lookAt(light.getPosition(),
+                    Matrix4f lightView = new Matrix4f().lookAt(dirLight.getPosition(),
                             //dir (0,1,0) or any other also works for the up vector
                             new Vector3f(0), shadowCamera.getViewMatrix().transformPosition(new Vector3f(0,1,0)));
-                    lightView.translate(light.getPosition());
+                    lightView.translate(dirLight.getPosition());
                     Vector3f viewFrustumCenter = frustum.calculateCenter();
                     lightView.translate(-viewFrustumCenter.x, -viewFrustumCenter.y, -viewFrustumCenter.z);
 
@@ -98,7 +98,7 @@ public final class LightManager {
                     }
 
                     //TODO add shadow near plane offset to account for objects that are behind the near plane to cast shadows
-                    Matrix4f lightProj = new Matrix4f().ortho(minX, maxX, minY, maxY, -maxZ-10, -minZ);
+                    Matrix4f lightProj = new Matrix4f().ortho(minX, maxX, minY, maxY, -maxZ-dirLight.getShadowFrustumOffset(), -minZ);
                     lightSpaces[k] = lightProj.mul(lightView);
                     k++;
                 } else {

@@ -11,7 +11,7 @@ import java.util.function.BiConsumer;
 
 abstract class LightComponent implements Component {
 
-    private final AbstractLight light;
+    protected final AbstractLight light;
 
     private final ArrayList<BiConsumer<Graphics, EntityRenderer>> lightOps = new ArrayList<>();
 
