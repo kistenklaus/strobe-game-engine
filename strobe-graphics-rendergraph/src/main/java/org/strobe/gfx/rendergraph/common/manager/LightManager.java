@@ -72,7 +72,7 @@ public final class LightManager {
                     //and looks in the direction of the directional light.
                     Matrix4f lightView = new Matrix4f().lookAt(light.getPosition(),
                             //dir (0,1,0) or any other also works for the up vector
-                            new Vector3f(0), shadowCamera.getViewMatrix().transformPosition(new Vector3f(0,-1,0)));
+                            new Vector3f(0), shadowCamera.getViewMatrix().transformPosition(new Vector3f(0,1,0)));
                     lightView.translate(light.getPosition());
                     Vector3f viewFrustumCenter = frustum.calculateCenter();
                     lightView.translate(-viewFrustumCenter.x, -viewFrustumCenter.y, -viewFrustumCenter.z);
@@ -85,6 +85,7 @@ public final class LightManager {
                     float maxY = Float.NEGATIVE_INFINITY;
                     float minZ = Float.POSITIVE_INFINITY;
                     float maxZ = Float.NEGATIVE_INFINITY;
+
                     for (int l = 0; l < lsFrustumArray.length; l += 3) {
                         minX = Math.min(lsFrustumArray[l], minX);
                         maxX = Math.max(lsFrustumArray[l], maxX);
@@ -96,11 +97,8 @@ public final class LightManager {
                         maxZ = Math.max(lsFrustumArray[l + 2], maxZ);
                     }
 
-                    //TODO the near and far plane of the lightSpace frustum are not perfectly tight (WHY?idk-idc)
                     //TODO add shadow near plane offset to account for objects that are behind the near plane to cast shadows
-                    //this is a bit of a compromise solves the second problem in some cases but the frustum is to big by a worst case factor of 2.
-                    Matrix4f lightProj = new Matrix4f().ortho(minX, maxX, minY, maxY, -(maxZ-minZ), (maxZ-minZ));
-                    //Matrix4f lightProj = new Matrix4f().ortho(minX, maxX, minY, maxY, minZ, maxZ);
+                    Matrix4f lightProj = new Matrix4f().ortho(minX, maxX, minY, maxY, -maxZ-10, -minZ);
                     lightSpaces[k] = lightProj.mul(lightView);
                     k++;
                 } else {
