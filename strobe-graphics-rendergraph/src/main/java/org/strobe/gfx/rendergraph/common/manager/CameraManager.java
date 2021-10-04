@@ -32,7 +32,6 @@ public final class CameraManager {
         return selectedCamera;
     }
 
-
     public void selectCamera(AbstractCamera camera) {
         selectedCamera = camera;
     }

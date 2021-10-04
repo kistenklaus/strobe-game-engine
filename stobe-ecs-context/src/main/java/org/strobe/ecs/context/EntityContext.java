@@ -39,19 +39,19 @@ public abstract class EntityContext extends StrobeContext {
 
 
     @Override
-    public void render(Graphics gfx) {
+    public final void render(Graphics gfx) {
     }
 
     @Override
-    public void update(float dt) {
+    public final void update(float dt) {
         ecs.update(dt);
     }
 
-    public WindowMouse getMouse(){
+    public final WindowMouse getMouse(){
         return mouse;
     }
 
-    public WindowKeyboard getKeyboard(){
+    public final WindowKeyboard getKeyboard(){
         return keyboard;
     }
 

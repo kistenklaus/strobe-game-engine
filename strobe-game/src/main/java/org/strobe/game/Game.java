@@ -14,6 +14,7 @@ import org.strobe.ecs.context.renderer.light.DirectionalLight;
 import org.strobe.ecs.context.renderer.materials.LambertianMaterial;
 import org.strobe.ecs.context.renderer.mesh.Mesh;
 import org.strobe.ecs.context.renderer.mesh.MeshRenderer;
+import org.strobe.ecs.context.renderer.mesh.Primitive;
 import org.strobe.ecs.context.renderer.transform.Transform;
 import org.strobe.gfx.Graphics;
 import org.strobe.window.glfw.GlfwWindow;
@@ -31,10 +32,8 @@ public class Game extends EntityContext {
 
         Entity renderable = ecs.createEntity();
         renderable.addComponent(new Transform());
-        Mesh mesh = new Mesh(4, 6);
-        mesh.setPositions(0, new float[]{-0.5f, -0.5f, 0f, -0.5f, 0.5f, 0f, 0.5f, 0.5f, 0f, 0.5f, -0.5f, 0f});
-        mesh.setNormals(0, new float[]{0,0,1,0,0,1,0,0,1,0,0,1});
-        mesh.setIndices(0, new int[]{2, 1, 0, 0, 3, 2});
+        Mesh mesh = new Mesh(Primitive.CUBE,Mesh.ALLOCATE_POSITIONS|Mesh.ALLOCATE_NORMALS|Mesh.ALLOCATE_TEXTURE_COORDS);
+
         renderable.addComponent(mesh);
         LambertianMaterial mat = new LambertianMaterial(1,0,1);
         mat.setDiffuseColor(new Vector3f(1,1,0));
@@ -56,6 +55,7 @@ public class Game extends EntityContext {
         CameraRenderer cr;
         camera.addComponent(cr=new CameraRenderer(960/resRed, 640/resRed));
         cr.enableFXAA();
+        camera.addComponent(new CameraIndex(1));
         camera.addComponent(new Transform(new Vector3f(0,4f,5f), new Vector3f(1), new Quaternionf().identity()));
         camera.addComponent(new CameraController());
         camera.addComponent(new FocusCamera());
@@ -66,14 +66,16 @@ public class Game extends EntityContext {
         light.addComponent(new DirectionalLight(new Vector3f(0.1f), new Vector3f(1), new Vector3f(1)));
         light.addComponent(new DaylightCycle());
 
-        Entity c2 = light.createChild();
-        c2.addComponent(new Transform());
-        c2.addComponent(new PerspectiveLense(60, 960f/640f, 0.01f, 5));
-        c2.addComponent(new CameraRenderer(960, 640));
-        c2.addComponent(new LookAtCenter());
+        Entity camera2 = ecs.createEntity();
+        camera2.addComponent(new Transform(new Vector3f(0,0,5)));
+        camera2.addComponent(new CameraIndex(2));
+        camera2.addComponent(new CameraController());
+        camera2.addComponent(new PerspectiveLense(60, 960f/640f, 0.01f, 10));
+        camera2.addComponent(new CameraRenderer(960, 640));
+        camera2.addComponent(new LookAtCenter());
 
         ecs.addEntitySystem(new CameraControllerSystem(ecs, getMouse(), getKeyboard()));
-        ecs.addEntitySystem(new DaylightSystem(ecs, getKeyboard()));
-        ecs.addEntitySystem(new LookAtCenterSystem(ecs));
+        ecs.addEntitySystem(new CameraFocusChanger(ecs, getKeyboard()));
+        //ecs.addEntitySystem(new LookAtCenterSystem(ecs));
     }
 }

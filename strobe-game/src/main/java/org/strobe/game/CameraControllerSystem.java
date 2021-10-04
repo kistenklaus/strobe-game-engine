@@ -3,6 +3,7 @@ package org.strobe.game;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.strobe.ecs.*;
+import org.strobe.ecs.context.renderer.camera.FocusCamera;
 import org.strobe.ecs.context.renderer.transform.Transform;
 import org.strobe.window.WindowButton;
 import org.strobe.window.WindowKey;
@@ -25,7 +26,7 @@ public final class CameraControllerSystem extends EntitySystem {
         super(ecs);
         this.mouse = mouse;
         this.keyboard = keyboard;
-        controllerPool = ecs.createPool(EntityFilter.requireAll(CameraController.class));
+        controllerPool = ecs.createPool(EntityFilter.requireAll(CameraController.class, FocusCamera.class));
     }
 
     @Override
@@ -45,7 +46,6 @@ public final class CameraControllerSystem extends EntitySystem {
             if(keyboard.isKeyDown(WindowKey.KEY_S)){
                 translation.add(transform.getBack().mul(new Vector3f(1,0,1).normalize()));
             }
-
             if(keyboard.isKeyDown(WindowKey.KEY_A)){
                 translation.add(transform.getLeft().mul(new Vector3f(1,0,1).normalize()));
             }

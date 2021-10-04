@@ -37,13 +37,12 @@ vec3 calcDirLight(vec3 lightDir, vec3 lightDiffuse, vec3 normal, vec3 materialDi
 void main(){
     vec3 norm = normalize(normal);
 
-    vec3 combined = vec3(0);
+    vec3 combined = vec3(material.diffuseColor*0.1f);
 
     for (int i=0;i<directionalLightCount;i++){
         combined += calcDirLight(-directionalLightDir[i], directionalLightDiffuse[i], norm, material.diffuseColor);
     }
-
-    //TODO point lights and spot lights
-
     fragColor = vec4(combined, 1.0f);
+    //fragColor = vec4((normal+vec3(1)*0.5f), 1.0f);
+
 }
