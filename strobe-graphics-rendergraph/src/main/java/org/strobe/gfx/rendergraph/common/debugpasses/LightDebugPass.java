@@ -5,7 +5,9 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.camera.AbstractCamera;
+import org.strobe.gfx.camera.FrustumBox;
 import org.strobe.gfx.lights.DirectionalLight;
+import org.strobe.gfx.lights.ShadowUbo;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.opengl.bindables.mapper.Uniform;
 import org.strobe.gfx.opengl.bindables.shader.Shader;
@@ -37,6 +39,10 @@ public final class LightDebugPass extends RenderPass {
     private final Uniform<Matrix4f> model;
 
     private final IndexedVao dirLightVao;
+
+
+    private final Vao shadowFrustumVao;
+    private final IndexedVao shadowFrustum;
 
     public LightDebugPass(Graphics gfx) {
         debugShader = ShaderLoader.loadShader(gfx, "shaders/debugLine/");
@@ -76,6 +82,27 @@ public final class LightDebugPass extends RenderPass {
         }
         vao.bufferLocation(gfx, 0, circlePos);
         dirLightVao = new IndexedVao(vao, precision*2*2, GL_LINES);
+
+
+
+
+        shadowFrustumVao = new Vao(gfx, 8, new Ibo(gfx, new int[]{
+                0, 1,
+                1, 2,
+                2, 3,
+                3, 0,
+
+                4, 5,
+                5, 6,
+                6, 7,
+                7, 4,
+
+                0, 4,
+                1, 5,
+                2, 6,
+                3, 7
+        }, true),"layout(location=0,usage=static) in vec3");
+        shadowFrustum = new IndexedVao(shadowFrustumVao, 24, GL_LINES);
     }
 
     @Override
@@ -113,6 +140,21 @@ public final class LightDebugPass extends RenderPass {
             this.model.set(gfx, model);
             dirLightVao.render(gfx);
         }
+
+        model.identity();
+        this.model.set(gfx, model);
+        for(int i=0;i<lights.get().shadowCameraCount();i++){
+            ShadowUbo shadowUbo = lights.get().shadowUbos()[i];
+            Matrix4f[] dirLightSpaces = shadowUbo.getDirLightSpaces(gfx);
+
+            for(Matrix4f lightSpace : dirLightSpaces){
+                FrustumBox frustum = FrustumBox.getFromProjView(lightSpace);
+                shadowFrustumVao.bufferLocation(gfx, 0, frustum.toFloatArray_vec3aligned());
+                shadowFrustum.render(gfx);
+            }
+
+        }
+
         gfx.unbind(debugShader);
         gfx.unbind(target.get());
     }

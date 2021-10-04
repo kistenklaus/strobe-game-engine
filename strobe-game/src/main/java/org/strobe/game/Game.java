@@ -6,10 +6,9 @@ import org.strobe.core.Strobe;
 import org.strobe.debug.imgui.ImGuiDebugger;
 import org.strobe.ecs.Entity;
 import org.strobe.ecs.context.*;
-import org.strobe.ecs.context.loader.ModelLoaderScript;
 import org.strobe.ecs.context.renderer.camera.CameraRenderer;
 import org.strobe.ecs.context.renderer.camera.FocusCamera;
-import org.strobe.ecs.context.renderer.camera.PerspectiveLense;
+import org.strobe.ecs.context.renderer.camera.PerspectiveLens;
 import org.strobe.ecs.context.renderer.light.DirectionalLight;
 import org.strobe.ecs.context.renderer.materials.LambertianMaterial;
 import org.strobe.ecs.context.renderer.mesh.Mesh;
@@ -50,10 +49,11 @@ public class Game extends EntityContext {
 
 
         Entity camera = ecs.createEntity();
-        camera.addComponent(new PerspectiveLense(60, 960f/640, 0.01f, 100));
+        camera.addComponent(new PerspectiveLens(60, 960f/640, 0.01f, 100));
         int resRed = 1;
         CameraRenderer cr;
         camera.addComponent(cr=new CameraRenderer(960/resRed, 640/resRed));
+        cr.disableShadows();
         cr.enableFXAA();
         camera.addComponent(new CameraIndex(1));
         camera.addComponent(new Transform(new Vector3f(0,4f,5f), new Vector3f(1), new Quaternionf().identity()));
@@ -70,12 +70,12 @@ public class Game extends EntityContext {
         camera2.addComponent(new Transform(new Vector3f(0,0,5)));
         camera2.addComponent(new CameraIndex(2));
         camera2.addComponent(new CameraController());
-        camera2.addComponent(new PerspectiveLense(60, 960f/640f, 0.01f, 100));
+        camera2.addComponent(new PerspectiveLens(60, 960f/640f, 0.01f, 10));
         camera2.addComponent(new CameraRenderer(960, 640));
         camera2.addComponent(new LookAtCenter());
 
         ecs.addEntitySystem(new CameraControllerSystem(ecs, getMouse(), getKeyboard()));
         ecs.addEntitySystem(new CameraFocusChanger(ecs, getKeyboard()));
-        //ecs.addEntitySystem(new LookAtCenterSystem(ecs));
+        ecs.addEntitySystem(new DaylightSystem(ecs, getKeyboard()));
     }
 }

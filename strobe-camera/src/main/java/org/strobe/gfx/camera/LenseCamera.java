@@ -50,17 +50,7 @@ public final class LenseCamera extends AbstractCamera{
     }
 
     @Override
-    public CameraFrustum getFrustumBox() {
-
-        Matrix4f projView = projMatrix.mul(viewMatrix, new Matrix4f());
-        return new CameraFrustum(
-                projView.frustumCorner(Matrix4f.CORNER_NXNYNZ,new Vector3f()),
-                projView.frustumCorner(Matrix4f.CORNER_NXPYNZ, new Vector3f()),
-                projView.frustumCorner(Matrix4f.CORNER_PXPYNZ, new Vector3f()),
-                projView.frustumCorner(Matrix4f.CORNER_PXNYNZ, new Vector3f()),
-                projView.frustumCorner(Matrix4f.CORNER_NXNYPZ, new Vector3f()),
-                projView.frustumCorner(Matrix4f.CORNER_NXPYPZ, new Vector3f()),
-                projView.frustumCorner(Matrix4f.CORNER_PXPYPZ, new Vector3f()),
-                projView.frustumCorner(Matrix4f.CORNER_PXNYPZ, new Vector3f()));
+    public FrustumBox getFrustumBox() {
+        return FrustumBox.getFromProjView(projMatrix.mul(viewMatrix, new Matrix4f()));
     }
 }

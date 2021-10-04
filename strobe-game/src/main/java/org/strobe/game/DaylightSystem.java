@@ -10,7 +10,7 @@ public final class DaylightSystem extends EntitySystem {
     private final EntityPool pool;
     private final WindowKeyboard keyboard;
 
-    private float cycle = 0.1f;
+    private float cycle = 0.001f;
 
     public DaylightSystem(EntityComponentSystem ecs, WindowKeyboard keyboard) {
         super(ecs);
@@ -28,7 +28,7 @@ public final class DaylightSystem extends EntitySystem {
         if(keyboard.isKeyDown(WindowKey.KEY_V))cycle += dt * 0.75f;
         for(Entity entity : pool){
             Transform transform = entity.get(Transform.class);
-            transform.setPosition((float)Math.cos(cycle)*0, (float) Math.cos(cycle)*3,
+            transform.setPosition((float)Math.sin(cycle)*1, (float) Math.cos(cycle)*3,
                     (float)Math.sin(cycle)*3);
         }
     }

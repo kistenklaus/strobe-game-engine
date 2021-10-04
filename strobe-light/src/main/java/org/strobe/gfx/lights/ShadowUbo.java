@@ -49,4 +49,12 @@ public final class ShadowUbo extends Ubo {
     public void uniformDirLightCastingCount(Graphics gfx, int dirCastingCount) {
         dirLightCastingCount.set(gfx, dirCastingCount);
     }
+
+    public Matrix4f[] getDirLightSpaces(Graphics gfx){
+        Matrix4f[] lightSpaces = new Matrix4f[dirLightLightSpace.length];
+        for(int i=0;i<lightSpaces.length;i++){
+            lightSpaces[i] = dirLightLightSpace[i].get(gfx);
+        }
+        return lightSpaces;
+    }
 }
