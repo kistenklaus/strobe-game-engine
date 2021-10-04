@@ -35,7 +35,7 @@ public class Texture2DDebugger extends TypeDebugger {
             int nw = (int) Math.floor((w / (float) h) * nh);
             float midY = getBoxHeight() / 2.0f;
             ImGui.setCursorPos(10, 15+(getBoxHeight()-15) / 2.0f - nh / 2.0f);
-            ImGui.image(tex2D.getID(), nw, nh);
+            ImGui.image(tex2D.getID(), nw, nh, 0,1,1,0);
 
             ImGui.setCursorPos(nw+COL_ONE_OFFSET, midY - ImGui.getFontSize());
             ImGui.text("width: " + tex2D.getWidth());
