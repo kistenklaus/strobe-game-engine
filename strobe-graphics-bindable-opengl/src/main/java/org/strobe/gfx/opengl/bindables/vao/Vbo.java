@@ -18,7 +18,7 @@ public class Vbo extends DataBuffer<VboPool> {
     private static int calculateSize(int[] strides, int[] types) {
         int size = 0;
         for (int i = 0; i < strides.length; i++) {
-            size += strides[i] * TypeUtil.getSizeOfGlTypeEnum(types[i]);
+            size += strides[i] * TypeUtil.getByteSizeOfGlTypeEnum(types[i]);
         }
         return size;
     }
@@ -61,7 +61,7 @@ public class Vbo extends DataBuffer<VboPool> {
         int offset = 0;
         for (int i = 0; i < attribCount; i++) {
             offsets[i] = offset;
-            offset += strides[i] * coverages[i] * TypeUtil.getSizeOfGlTypeEnum(types[i]);
+            offset += strides[i] * coverages[i] * TypeUtil.getByteSizeOfGlTypeEnum(types[i]);
         }
     }
 
@@ -72,7 +72,7 @@ public class Vbo extends DataBuffer<VboPool> {
             for (int j = 0; j < coverages[i]; j++) {
                 int location = locations[i] + j;
                 glEnableVertexAttribArray(location);
-                glVertexAttribPointer(location, strides[i], types[i], false, vertexSize, offsets[i] + j * strides[i] * TypeUtil.getSizeOfGlTypeEnum(types[i]));
+                glVertexAttribPointer(location, strides[i], types[i], false, vertexSize, offsets[i] + j * strides[i] * TypeUtil.getByteSizeOfGlTypeEnum(types[i]));
                 glVertexAttribDivisor(location, divisors[i]);
                 glDisableVertexAttribArray(location);
             }

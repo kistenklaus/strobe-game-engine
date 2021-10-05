@@ -30,7 +30,7 @@ public class Game extends EntityContext {
 
 
         Entity renderable = ecs.createEntity();
-        renderable.addComponent(new Transform());
+        renderable.addComponent(new Transform(new Vector3f(0,0.5f,0)));
         Mesh mesh = new Mesh(Primitive.CUBE,Mesh.ALLOCATE_POSITIONS|Mesh.ALLOCATE_NORMALS|Mesh.ALLOCATE_TEXTURE_COORDS);
 
         renderable.addComponent(mesh);
@@ -45,7 +45,7 @@ public class Game extends EntityContext {
         //model.addComponent(new ModelLoaderScript("assets/backpack/backpack.obj"));
 
         Entity ground = ecs.createEntity();
-        //ground.addComponent(new GroundGenScript());
+        ground.addComponent(new GroundGenScript());
 
 
         Entity camera = ecs.createEntity();
@@ -64,7 +64,7 @@ public class Game extends EntityContext {
         Entity light = ecs.createEntity();
         light.addComponent(new Transform(new Vector3f(1,2,0)));
         DirectionalLight dirLightComp = new DirectionalLight(new Vector3f(0.1f), new Vector3f(1), new Vector3f(1));
-        dirLightComp.setShadowFrustumOffset(2);
+        dirLightComp.setShadowFrustumOffset(0);
         light.addComponent(dirLightComp);
         light.addComponent(new DaylightCycle());
 
@@ -73,7 +73,7 @@ public class Game extends EntityContext {
         camera2.addComponent(new CameraIndex(2));
         camera2.addComponent(new CameraController());
         camera2.addComponent(new PerspectiveLens(60, 960f/640f, 0.01f, 10));
-        camera2.addComponent(cr=new CameraRenderer(960, 640));
+        camera2.addComponent(new CameraRenderer(960, 640));
         camera2.addComponent(new LookAtCenter());
 
         ecs.addEntitySystem(new CameraControllerSystem(ecs, getMouse(), getKeyboard()));

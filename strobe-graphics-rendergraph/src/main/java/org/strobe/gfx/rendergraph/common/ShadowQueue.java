@@ -12,6 +12,8 @@ import org.strobe.gfx.rendergraph.core.RenderQueue;
 import org.strobe.gfx.rendergraph.core.Resource;
 import org.strobe.gfx.transform.AbstractTransform;
 
+import java.util.Arrays;
+
 import static org.lwjgl.opengl.GL11.*;
 
 public final class ShadowQueue extends RenderQueue {
@@ -52,7 +54,8 @@ public final class ShadowQueue extends RenderQueue {
             Framebuffer shadowMapFbo = lights.get().getShadowMapByIndex(i);
             gfx.bind(shadowUbo);
             gfx.bind(shadowMapFbo);
-            glClear(GL_DEPTH_BUFFER_BIT);
+            glClearColor(0.1f,0.1f,0.1f, 1.0f);
+            glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
             for(int j=0;j<lights.get().getDirCasterCount();j++){
                 shadowMapShader.uniformLightIndex(gfx, j);

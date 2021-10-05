@@ -21,6 +21,11 @@ public final class UboUniformInteger implements Uniform<Integer> {
         ubo.bufferSubData(gfx, offset, this.value);
     }
 
+    /**
+     * this unbinds the ubo after retrieving the data
+     * @param gfx the graphics
+     * @return
+     */
     @Override
     public Integer get(Graphics gfx) {
         int[] value = ubo.getBufferSubDataAsIntegerArray(gfx, offset, 1);

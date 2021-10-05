@@ -210,13 +210,13 @@ public class Shader extends Bindable<ShaderPool> {
                             String[] split = structLine.split(" ");
                             String attribType = split[0];
                             String attribName = split[1].substring(0, split[1].indexOf(";"));
-                            Class varClass = (Class) TypeUtil.glslTypeToClass(attribType);
+                            Class varClass = (Class) TypeUtil.glslTypeToJavaType(attribType);
                             ShaderUniform uniform = ShaderUniformLoader.getShaderUniformFor(gfx,
                                     shader, varClass, name + "." + attribName);
                             uniforms.put(name + "." + attribName, uniform);
                         }
                     } else {
-                        Class<?> varClass = (Class<?>) TypeUtil.glslTypeToClass(varType);
+                        Class<?> varClass = (Class<?>) TypeUtil.glslTypeToJavaType(varType);
                         ShaderUniform uniform = ShaderUniformLoader.getShaderUniformFor(gfx, shader, varClass, name);
                         uniforms.put(name, uniform);
                     }

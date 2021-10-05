@@ -33,6 +33,6 @@ public final class LambertianColorShader extends MaterialShader{
 
     @Override
     public void uniformShadowMap(Graphics gfx, Texture2D shadowMap) {
-        //dirShadowMap.set(gfx, shadowMap);
+        dirShadowMap.set(gfx, shadowMap);
     }
 }

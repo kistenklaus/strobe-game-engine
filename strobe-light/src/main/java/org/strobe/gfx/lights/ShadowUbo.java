@@ -36,6 +36,7 @@ public final class ShadowUbo extends Ubo {
             dirLightLightSpaces[i].set(gfx, lightSpaces[i]);
             dirLightLightSpacesLocal[i] = lightSpaces[i];
         }
+
         //TODO probably not needed because the data is not used
         Matrix4f identity = new Matrix4f().identity();
         for(int i = lightSpaces.length; i<LightConstants.MAX_DIR_CASTING_LIGHTS; i++){
@@ -70,19 +71,31 @@ public final class ShadowUbo extends Ubo {
         dirLightCastingCountLocal = dirCastingCount;
     }
 
-    public int[] nativeFetchDirLightIndices(Graphics gfx){
-        int[] out = new int[LightConstants.DIRECTIONAL_LIGHT_COUNT];
-        for(int i=0;i<LightConstants.DIRECTIONAL_LIGHT_COUNT;i++){
-            out[i] = dirLightIndices[i].get(gfx);
-        }
-        return out;
-    }
-
     public Matrix4f[] getDirLightSpaces() {
         return dirLightLightSpacesLocal;
     }
 
     public int getDirLightCastingCount() {
         return dirLightCastingCountLocal;
+    }
+
+    public Matrix4f[] nativeFetchDirLightSpaces(Graphics gfx){
+        Matrix4f[] out = new Matrix4f[LightConstants.MAX_DIR_CASTING_LIGHTS];
+        for(int i=0;i<LightConstants.MAX_DIR_CASTING_LIGHTS;i++){
+            out[i] = dirLightLightSpaces[i].get(gfx);
+        }
+        return out;
+    }
+
+    public int[] nativeFetchDirIndices(Graphics gfx){
+        int[] indices = new int[LightConstants.DIRECTIONAL_LIGHT_COUNT];
+        for(int i=0;i<LightConstants.DIRECTIONAL_LIGHT_COUNT;i++){
+            indices[i] = dirLightIndices[i].get(gfx);
+        }
+        return indices;
+    }
+
+    public int nativeFetchDirCastingCount(Graphics gfx) {
+        return dirLightCastingCount.get(gfx);
     }
 }

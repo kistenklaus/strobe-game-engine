@@ -62,7 +62,9 @@ public class CameraForwardQueue extends RenderQueue {
 
             ShadowUbo shadowUbo = lights.get().getCameraShadowUbo(camera);
             Framebuffer shadowMap = lights.get().getCameraShadowMap(camera);
+
             if(shadowUbo != null && shadowMap != null){
+                System.out.println(shadowUbo.nativeFetchDirCastingCount(gfx));
                 gfx.bind(shadowUbo);
                 currentShadowMap = shadowMap.getAttachmentTexture(Framebuffer.Attachment.DEPTH_ATTACHMENT);
             }else{

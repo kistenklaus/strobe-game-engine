@@ -25,6 +25,11 @@ public final class UboUniformVector4f implements Uniform<Vector4f> {
         ubo.bufferSubData(gfx, offset, this.value);
     }
 
+    /**
+     * this unbinds the ubo after retrieving the data
+     * @param gfx the graphics
+     * @return
+     */
     @Override
     public Vector4f get(Graphics gfx) {
         float[] value = ubo.getBufferSubDataAsFloatArray(gfx, offset,4);

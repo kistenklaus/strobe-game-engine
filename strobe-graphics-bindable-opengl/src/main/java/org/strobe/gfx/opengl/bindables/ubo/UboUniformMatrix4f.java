@@ -21,6 +21,11 @@ public class UboUniformMatrix4f implements Uniform<Matrix4f> {
         ubo.bufferSubData(gfx, offset, mat4_array);
     }
 
+    /**
+     * this unbinds the ubo after retrieving the data
+     * @param gfx the graphics
+     * @return
+     */
     @Override
     public Matrix4f get(Graphics gfx) {
         float[] value = ubo.getBufferSubDataAsFloatArray(gfx, offset, 16);

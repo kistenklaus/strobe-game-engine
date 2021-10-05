@@ -44,13 +44,16 @@ vec3 calcDirLight(vec3 lightDir, vec3 lightDiffuse, vec3 normal, vec3 materialDi
     return (lightDiffuse * diff) * materialDiffuse;
 }
 
-float calcShadow(vec4 dlsFragPos){
+float calcShadow(vec4 dlsFragPos, sampler2D shadowMap){
     //perspective division per pixel.
-    vec3 projDLSFragPos = dlsFragPos.xyz / dlsFragPos.w;
+    vec3 projDLSFragPos = dlsFragPos.xyz / 1.0f;
     //normalize (to NDC)
-    vec3 NDCFragPos = projDLSFragPos*0.5f+0.5f;
+    vec3 NDCFragPos = projDLSFragPos * 0.5f + vec3(0.5f);
+    float shadowDepth = texture(shadowMap, NDCFragPos.xy).r;
+    float dlsDepth = NDCFragPos.z;
+    float shadow = dlsDepth > shadowDepth ? 1.0f : 0.0f;
 
-    return 1;
+    return shadow;
 }
 
 void main(){
@@ -62,16 +65,12 @@ void main(){
         vec3 light = calcDirLight(-directionalLightDir[i], directionalLightDiffuse[i], norm, material.diffuseColor);
         if (directionalLightIndices[i] != -1){
             int casterIndex = directionalLightIndices[i];
-            mat4 lightSpace = directionalLightLightSpace[casterIndex];
-            vec4 shadowDim = directionalLightShadowDim[casterIndex];
-            float shadow = calcShadow(fragmentPositionsDirLightSpace[casterIndex]);
+            //vec4 shadowDim = directionalLightShadowDim[casterIndex];
+            float shadow = calcShadow(fragmentPositionsDirLightSpace[0], dirShadowMap);
             combined += (1.0f-shadow) * light;
         } else {
             combined += light;
         }
     }
     fragColor = vec4(combined, 1.0f);
-    //float d = texture2D(dirShadowMap, uv).r;
-    //fragColor = vec4(d,d,d, 1.0f);
-
 }

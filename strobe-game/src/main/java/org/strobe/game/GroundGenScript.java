@@ -17,7 +17,7 @@ public class GroundGenScript extends ScriptComponent {
                 Mesh.ALLOCATE_POSITIONS | Mesh.ALLOCATE_NORMALS);
         getEntity().addComponent(mesh);
         getEntity().addComponent(new MeshRenderer());
-        getEntity().addComponent(new LambertianMaterial(1,1,1));
+        getEntity().addComponent(new LambertianMaterial(new Vector3f(0.25f)));
         getEntity().addComponent(new Transform(null,
                 new Vector3f(100), null));
     }

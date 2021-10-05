@@ -11,7 +11,7 @@ import static org.lwjgl.opengl.GL41.GL_FIXED;
 
 public final class TypeUtil {
 
-    public static int getSizeOfGlTypeEnum(int glType) {
+    public static int getByteSizeOfGlTypeEnum(int glType) {
         //check if array of?
         return switch (glType) {
             case GL_BYTE -> 1;
@@ -22,7 +22,7 @@ public final class TypeUtil {
         };
     }
 
-    public static int getAlignmentOfGlslType(String glslType){
+    public static int getByteAlignmentOfGlslType(String glslType){
         return switch(glslType){
             case "int", "float" -> 4;
             case "vec2" -> 8;
@@ -31,19 +31,19 @@ public final class TypeUtil {
         };
     }
 
-    public static int getSizeOfGlslType(String glslType){
+    public static int getByteSizeOfGlslType(String glslType){
         return switch(glslType){
             case "int","float"->4;
             case "vec2" -> 8;
             case "vec3" -> 12;
             case "vec4" -> 16;
-            case "mat4" -> 64;
             case "mat3" -> 48;
+            case "mat4" -> 64;
             default -> throw new IllegalArgumentException("not a valid glsl type descriptor");
         };
     }
 
-    public static Type glslTypeToClass(String glslType){
+    public static Type glslTypeToJavaType(String glslType){
         return switch(glslType){
             case "int" -> int.class;
             case "bool" -> boolean.class;
@@ -58,7 +58,7 @@ public final class TypeUtil {
         };
     }
 
-    public static Type glslTypeToClassArray(String glslType){
+    public static Type glslTypeToJavaTypeArray(String glslType){
         return switch(glslType){
             case "int" -> int[].class;
             case "float" -> float[].class;
@@ -72,4 +72,11 @@ public final class TypeUtil {
         };
     }
 
+    public static int getByteSizeOfJavaType(Type type) {
+        if(type.equals(Matrix4f.class))return 64;
+        else if(type.equals(Vector4f.class))return 16;
+        else if(type.equals(Vector3f.class))return 12;
+        else if(type.equals(Integer.class)||type.equals(int.class))return 4;
+        throw new IllegalArgumentException("getBytSizeJavaType doesn't support type : " + type);
+    }
 }

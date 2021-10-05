@@ -23,6 +23,11 @@ public class UboUniformVector3f implements Uniform<Vector3f> {
         ubo.bufferSubData(gfx, offset, vec3_array);
     }
 
+    /**
+     * this unbinds the ubo after retrieving the data
+     * @param gfx the graphics
+     * @return
+     */
     @Override
     public Vector3f get(Graphics gfx) {
         float[] value = ubo.getBufferSubDataAsFloatArray(gfx, offset, 3);

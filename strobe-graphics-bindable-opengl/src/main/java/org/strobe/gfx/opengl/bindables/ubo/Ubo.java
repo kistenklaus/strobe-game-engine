@@ -52,16 +52,16 @@ public class Ubo extends DataBuffer<UboPool> {
                 if (varType.matches("[a-zA-Z0-9]+\\[[1-9][0-9]*]")) {
                     String subType = varType.substring(0, varType.indexOf("["));
                     array_size[i] = Integer.parseInt(varType.substring(varType.indexOf("[") + 1, varType.indexOf("]")));
-                    alignment[i] = TypeUtil.getAlignmentOfGlslType(subType);
-                    int typeSize = TypeUtil.getSizeOfGlslType(subType);
+                    alignment[i] = TypeUtil.getByteAlignmentOfGlslType(subType);
+                    int typeSize = TypeUtil.getByteSizeOfGlslType(subType);
                     //align element size
                     byteSize = (int) Math.ceil(typeSize / (float) alignment[i]) * alignment[i] * array_size[i];
-                    types[i] = TypeUtil.glslTypeToClass(subType);
+                    types[i] = TypeUtil.glslTypeToJavaType(subType);
                 } else {
                     array_size[i] = -1;
-                    alignment[i] = TypeUtil.getAlignmentOfGlslType(varType);
-                    byteSize = TypeUtil.getSizeOfGlslType(varType);
-                    types[i] = TypeUtil.glslTypeToClass(varType);
+                    alignment[i] = TypeUtil.getByteAlignmentOfGlslType(varType);
+                    byteSize = TypeUtil.getByteSizeOfGlslType(varType);
+                    types[i] = TypeUtil.glslTypeToJavaType(varType);
                 }
 
                 int alignedOffset = (int) (Math.ceil(uboByteSize / (float) alignment[i]) * alignment[i]);
@@ -104,7 +104,7 @@ public class Ubo extends DataBuffer<UboPool> {
         if (index == null) throw new IllegalArgumentException("ubo doesn't have a variable called [" + name + "]");
         if (types[index] != type) throw new IllegalArgumentException(name + " is not of type " + type.getSimpleName());
         if (array_size[index] != -1) {
-            //TODO array UboUniforms
+            //TODO array UboUniforms for directly changing the information of a complete region of the buffer
             throw new UnsupportedOperationException();
         } else {
             return selectUniform(type, offsets[index]);
@@ -123,7 +123,7 @@ public class Ubo extends DataBuffer<UboPool> {
         int offset = offsets[index];
         for (int i = 0; i < uniforms.length; i++) {
             uniforms[i] = selectUniform(types[index], offset);
-            offset += alignment[index];
+            offset += Math.ceil(TypeUtil.getByteSizeOfJavaType(types[index])/(float)alignment[index])*alignment[index];
         }
         return uniforms;
     }

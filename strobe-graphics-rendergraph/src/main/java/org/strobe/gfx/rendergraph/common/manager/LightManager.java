@@ -31,7 +31,8 @@ public final class LightManager {
         for (int i = 0; i < shadowUbos.length; i++) {
             shadowUbos[i] = new ShadowUbo(gfx);
             shadowMaps[i] = new Framebuffer(gfx, LightConstants.SHADOW_MAP_RESOLUTION,
-                    LightConstants.SHADOW_MAP_RESOLUTION, Framebuffer.Attachment.DEPTH_ATTACHMENT);
+                    LightConstants.SHADOW_MAP_RESOLUTION, Framebuffer.Attachment.DEPTH_ATTACHMENT,
+                    Framebuffer.Attachment.COLOR_RGBA_ATTACHMENT_0);
         }
     }
 
@@ -111,9 +112,11 @@ public final class LightManager {
                 indices[J] = -1;
             }
             shadowUbo.uniformDirLightLightSpaces(gfx, lightSpaces);
+
             shadowUbo.uniformDirLightShadowDims(gfx, shadowDims);
             shadowUbo.uniformDirLightIndices(gfx, indices);
             shadowUbo.uniformDirLightCastingCount(gfx, dirCasterCount);
+
 
         }
     }

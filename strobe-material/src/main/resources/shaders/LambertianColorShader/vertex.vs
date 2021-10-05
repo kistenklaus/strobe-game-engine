@@ -37,8 +37,9 @@ void main(){
     gl_Position = proj * view * worldPos;
 
     vec4[MAX_CASTING_DIR_LIGHT] dlsFragPos;
+    //fixme probably a problem with the ubo offset
     for (int i=0;i<directionalLightCastingCount;i++)  {
-        dlsFragPos[i] = directionalLightLightSpace[i] * worldPos;
+        dlsFragPos[i] = directionalLightLightSpace[i] * vec4(worldPos.xyz, 1.0f);
     }
     fragmentPositionsDirLightSpace = dlsFragPos;
 
