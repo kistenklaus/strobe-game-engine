@@ -84,6 +84,10 @@ public final class ShadowUbo extends Ubo {
         return dirLightCastingCountLocal;
     }
 
+    public Vector4f[] getDirLightShadowDims(){
+        return dirLightShadowDimsLocal;
+    }
+
     public Matrix4f[] nativeFetchDirLightSpaces(Graphics gfx){
         Matrix4f[] out = new Matrix4f[LightConstants.MAX_DIR_CASTING_LIGHTS];
         for(int i=0;i<LightConstants.MAX_DIR_CASTING_LIGHTS;i++){

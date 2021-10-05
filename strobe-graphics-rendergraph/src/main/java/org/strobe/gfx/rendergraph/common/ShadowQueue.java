@@ -1,5 +1,6 @@
 package org.strobe.gfx.rendergraph.common;
 
+import org.joml.Vector4f;
 import org.strobe.gfx.Bindable;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.Renderable;
@@ -51,7 +52,10 @@ public final class ShadowQueue extends RenderQueue {
         gfx.bind(shadowMapShader);
         for (int i = 0; i < lights.get().getShadowCameraCount(); i++) {
             ShadowUbo shadowUbo = lights.get().getShadowUboByIndex(i);
+            Vector4f[] viewportDims = shadowUbo.getDirLightShadowDims();
             Framebuffer shadowMapFbo = lights.get().getShadowMapByIndex(i);
+            int sw = shadowMapFbo.getWidth();
+            int sh = shadowMapFbo.getHeight();
             gfx.bind(shadowUbo);
             gfx.bind(shadowMapFbo);
             glClearColor(0.1f,0.1f,0.1f, 1.0f);
@@ -63,6 +67,8 @@ public final class ShadowQueue extends RenderQueue {
 
             for(int j=0;j<lights.get().getDirCasterCount();j++){
                 shadowMapShader.uniformLightIndex(gfx, j);
+                Vector4f viewportDim = viewportDims[j];
+                glViewport((int)(sw*viewportDim.x), (int)(sh*viewportDim.y), (int)(sw*viewportDim.z), (int)(sh*viewportDim.w));
                 for (RenderQueue.Job job : queue) job.execute(gfx);
             }
 

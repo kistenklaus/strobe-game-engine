@@ -60,13 +60,13 @@ public final class LightManager {
             Vector4f[] shadowDims = new Vector4f[dirCasterCount];
             int[] indices = new int[LightConstants.DIRECTIONAL_LIGHT_COUNT];
             int k = 0, j;
+            int smpl = (int) Math.ceil(Math.sqrt(dirCasterCount));
+            float smdls = 1.0f / smpl;
             for (j = 0; j < directionalLights.size() && k < dirCasterCount; j++) {
                 DirectionalLight dirLight = directionalLights.get(j);
                 if (dirLight.isShadowCasting()) {
                     indices[j] = k;
                     //defines the region of the shadow map where the data for this light is stored
-                    shadowDims[k] = new Vector4f(0, 0, 1, 1);
-                    //TODO implement proper light space adjustment based on camera frustum box.
 
                     //creates a view matrix that sits at the center of the camera view frustum(cuboid)
                     //and looks in the direction of the directional light.
@@ -107,9 +107,14 @@ public final class LightManager {
                      */
 
 
-                    //TODO add shadow near plane offset to account for objects that are behind the near plane to cast shadows
                     Matrix4f lightProj = new Matrix4f().ortho(minX, maxX, minY, maxY, -maxZ - dirLight.getShadowFrustumOffset(), -minZ);
                     lightSpaces[k] = lightProj.mul(lightView);
+
+                    //TODO dynamic scaling and resizing
+                    float x = k % smpl;
+                    float y = Math.floorDiv(k, smpl);
+                    shadowDims[k] = new Vector4f(x * smdls, y * smdls, smdls, smdls);
+
                     k++;
                 } else {
                     indices[j] = -1;

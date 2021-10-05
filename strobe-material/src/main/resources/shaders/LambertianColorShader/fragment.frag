@@ -46,12 +46,12 @@ vec3 calcDirLight(vec3 lightDir, vec3 lightDiffuse, vec3 normal, vec3 materialDi
     return (lightDiffuse * diff) * materialDiffuse;
 }
 
-float calcShadow(vec4 dlsFragPos, sampler2D shadowMap){
+float calcShadow(vec4 dlsFragPos, sampler2D shadowMap, vec4 lightShadowDim){
     //perspective division per pixel.
     vec3 projDLSFragPos = dlsFragPos.xyz / 1.0f;
     //normalize (to NDC)
     vec3 NDCFragPos = projDLSFragPos * 0.5f + vec3(0.5f);
-    float shadowDepth = texture(shadowMap, NDCFragPos.xy).r;
+    float shadowDepth = texture(shadowMap, lightShadowDim.xy + NDCFragPos.xy * lightShadowDim.zw).r;
     float dlsDepth = NDCFragPos.z;
 
     float shadow = dlsDepth > shadowDepth ? 1.0f : 0.0f;
@@ -68,8 +68,8 @@ void main(){
         vec3 light = calcDirLight(directionalLightDir[i], directionalLightDiffuse[i], norm, material.diffuseColor);
         if (directionalLightIndices[i] != -1){
             int casterIndex = directionalLightIndices[i];
-            //vec4 shadowDim = directionalLightShadowDim[casterIndex];
-            float shadow = calcShadow(fragmentPositionsDirLightSpace[i], dirShadowMap);
+            vec4 shadowDim = directionalLightShadowDim[casterIndex];
+            float shadow = calcShadow(fragmentPositionsDirLightSpace[i], dirShadowMap, shadowDim);
             combined += (1.0f-shadow) * light;
         } else {
             combined += light;
