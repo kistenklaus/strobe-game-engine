@@ -49,12 +49,11 @@ public class Game extends EntityContext {
 
 
         Entity camera = ecs.createEntity();
-        camera.addComponent(new PerspectiveLens(60, 960f/640, 0.01f, 100));
-        int resRed = 1;
+        camera.addComponent(new PerspectiveLens(60, 960f/640, 0.01f, 25));
+        int resRed = 8;
         CameraRenderer cr;
         camera.addComponent(cr=new CameraRenderer(960/resRed, 640/resRed));
-        cr.disableShadows();
-        cr.enableFXAA();
+        cr.disableFXAA();
         camera.addComponent(new CameraIndex(1));
         camera.addComponent(new Transform(new Vector3f(0,4f,5f), new Vector3f(1), new Quaternionf().identity()));
         camera.addComponent(new CameraController());
@@ -64,16 +63,23 @@ public class Game extends EntityContext {
         Entity light = ecs.createEntity();
         light.addComponent(new Transform(new Vector3f(1,2,0)));
         DirectionalLight dirLightComp = new DirectionalLight(new Vector3f(0.1f), new Vector3f(1), new Vector3f(1));
-        dirLightComp.setShadowFrustumOffset(0);
+        dirLightComp.setShadowFrustumOffset(10);
         light.addComponent(dirLightComp);
         light.addComponent(new DaylightCycle());
+
+        Entity light2 = ecs.createEntity();
+        light2.addComponent(new Transform(new Vector3f(-1,2,0)));
+        dirLightComp = new DirectionalLight(new Vector3f(0.1f), new Vector3f(1), new Vector3f(1));
+        dirLightComp.setShadowFrustumOffset(10);
+        light2.addComponent(dirLightComp);
 
         Entity camera2 = ecs.createEntity();
         camera2.addComponent(new Transform(new Vector3f(0,0,5)));
         camera2.addComponent(new CameraIndex(2));
         camera2.addComponent(new CameraController());
-        camera2.addComponent(new PerspectiveLens(60, 960f/640f, 0.01f, 10));
-        camera2.addComponent(new CameraRenderer(960, 640));
+        camera2.addComponent(new PerspectiveLens(60, 960f/640f, 0.01f, 5));
+        camera2.addComponent(cr=new CameraRenderer(960, 640));
+        cr.enableFXAA();
         camera2.addComponent(new LookAtCenter());
 
         ecs.addEntitySystem(new CameraControllerSystem(ecs, getMouse(), getKeyboard()));

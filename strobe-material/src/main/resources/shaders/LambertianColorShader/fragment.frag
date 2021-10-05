@@ -2,6 +2,8 @@
 
 const int DIRECTIONAL_LIGHT_COUNT = require(DIRECTIONAL_LIGHT_COUNT);
 const int MAX_CASTING_DIR_LIGHT = require(MAX_CASTING_DIR_LIGHTS);
+const float shadowAcneBiasFactor = 0.004f;
+const float minShadowAcneBias = 0.002f;
 
 in vec2 uv;
 in vec3 normal;
@@ -51,6 +53,7 @@ float calcShadow(vec4 dlsFragPos, sampler2D shadowMap){
     vec3 NDCFragPos = projDLSFragPos * 0.5f + vec3(0.5f);
     float shadowDepth = texture(shadowMap, NDCFragPos.xy).r;
     float dlsDepth = NDCFragPos.z;
+
     float shadow = dlsDepth > shadowDepth ? 1.0f : 0.0f;
 
     return shadow;
@@ -62,11 +65,11 @@ void main(){
     vec3 combined = vec3(material.diffuseColor*0.1f);
 
     for (int i=0;i<directionalLightCount;i++){
-        vec3 light = calcDirLight(-directionalLightDir[i], directionalLightDiffuse[i], norm, material.diffuseColor);
+        vec3 light = calcDirLight(directionalLightDir[i], directionalLightDiffuse[i], norm, material.diffuseColor);
         if (directionalLightIndices[i] != -1){
             int casterIndex = directionalLightIndices[i];
             //vec4 shadowDim = directionalLightShadowDim[casterIndex];
-            float shadow = calcShadow(fragmentPositionsDirLightSpace[0], dirShadowMap);
+            float shadow = calcShadow(fragmentPositionsDirLightSpace[i], dirShadowMap);
             combined += (1.0f-shadow) * light;
         } else {
             combined += light;

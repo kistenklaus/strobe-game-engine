@@ -11,7 +11,7 @@ public final class DirectionalLight extends AbstractLight{
     }
 
     public Vector3f getDirection() {
-        return getPosition();
+        return getPosition().mul(-1, new Vector3f());
     }
 
     public float getShadowFrustumOffset(){

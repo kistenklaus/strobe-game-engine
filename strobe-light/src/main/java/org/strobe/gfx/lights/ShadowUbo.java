@@ -8,6 +8,8 @@ import org.strobe.gfx.opengl.bindables.mapper.Uniform;
 import org.strobe.gfx.opengl.bindables.ubo.Ubo;
 import org.strobe.gfx.opengl.bindables.ubo.UboPool;
 
+import java.util.Arrays;
+
 @Pool(UboPool.class)
 public final class ShadowUbo extends Ubo {
 
@@ -29,6 +31,9 @@ public final class ShadowUbo extends Ubo {
         dirLightShadowDims = getUniformArray(Vector4f.class, "directionalLightShadowDim");
         dirLightIndices = getUniformArray(int.class, "directionalLightIndex");
         dirLightCastingCount = getUniform(int.class, "directionalLightCastingCount");
+
+
+        System.out.println(Arrays.toString(getOffsets()));
     }
 
     public void uniformDirLightLightSpaces(Graphics gfx, Matrix4f[] lightSpaces) {

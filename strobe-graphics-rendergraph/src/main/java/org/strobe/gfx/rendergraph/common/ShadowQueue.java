@@ -57,14 +57,21 @@ public final class ShadowQueue extends RenderQueue {
             glClearColor(0.1f,0.1f,0.1f, 1.0f);
             glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
+
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(1f, 10000f);
+
             for(int j=0;j<lights.get().getDirCasterCount();j++){
                 shadowMapShader.uniformLightIndex(gfx, j);
                 for (RenderQueue.Job job : queue) job.execute(gfx);
             }
 
+            glDisable(GL_POLYGON_OFFSET_FILL);
+
             gfx.unbind(shadowMapFbo);
             gfx.unbind(shadowUbo);
         }
+        glCullFace(GL_BACK);
         gfx.unbind(shadowMapShader);
     }
 
