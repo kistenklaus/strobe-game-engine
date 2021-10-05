@@ -192,7 +192,8 @@ public class Framebuffer extends Bindable<FramebufferPool> implements Debuggable
                 new TextureOptions(1, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, TextureFormat.STENCIL_INDEX8_FLOAT),
                 false, false, true)),
         DEPTH_RBO_ATTACHMENT("depthRbo", () -> new FramebufferRboAttachment(GL_DEPTH_COMPONENT,
-                GL_DEPTH_ATTACHMENT, 1, true, false));
+                GL_DEPTH_ATTACHMENT, 1, true, false)),
+        SHADOW_DEPTH_ATTACHMENT("shadowDepth", ()->new FramebufferShadowDepthAttachment());
 
         private final Supplier<FramebufferAttachment> constructor;
         private final String shortName;

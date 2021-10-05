@@ -8,10 +8,8 @@ import org.strobe.gfx.camera.AbstractCamera;
 import org.strobe.gfx.camera.FrustumBox;
 import org.strobe.gfx.lights.*;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
-import org.strobe.gfx.opengl.bindables.ubo.Ubo;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 
 public final class LightManager {
@@ -31,8 +29,7 @@ public final class LightManager {
         for (int i = 0; i < shadowUbos.length; i++) {
             shadowUbos[i] = new ShadowUbo(gfx);
             shadowMaps[i] = new Framebuffer(gfx, LightConstants.SHADOW_MAP_RESOLUTION,
-                    LightConstants.SHADOW_MAP_RESOLUTION, Framebuffer.Attachment.DEPTH_ATTACHMENT,
-                    Framebuffer.Attachment.COLOR_RGBA_ATTACHMENT_0);
+                    LightConstants.SHADOW_MAP_RESOLUTION, Framebuffer.Attachment.SHADOW_DEPTH_ATTACHMENT);
         }
     }
 
@@ -62,8 +59,8 @@ public final class LightManager {
             Matrix4f[] lightSpaces = new Matrix4f[dirCasterCount];
             Vector4f[] shadowDims = new Vector4f[dirCasterCount];
             int[] indices = new int[LightConstants.DIRECTIONAL_LIGHT_COUNT];
-            int k = 0,j;
-            for (j=0;j < directionalLights.size() && k < dirCasterCount; j++) {
+            int k = 0, j;
+            for (j = 0; j < directionalLights.size() && k < dirCasterCount; j++) {
                 DirectionalLight dirLight = directionalLights.get(j);
                 if (dirLight.isShadowCasting()) {
                     indices[j] = k;
@@ -75,7 +72,7 @@ public final class LightManager {
                     //and looks in the direction of the directional light.
                     Matrix4f lightView = new Matrix4f().lookAt(dirLight.getPosition(),
                             //dir (0,1,0) or any other also works for the up vector
-                            new Vector3f(0), shadowCamera.getViewMatrix().transformPosition(new Vector3f(0,1,0)));
+                            new Vector3f(0), shadowCamera.getViewMatrix().transformPosition(new Vector3f(0, 1, 0)));
                     lightView.translate(dirLight.getPosition());
                     Vector3f viewFrustumCenter = frustum.calculateCenter();
                     lightView.translate(-viewFrustumCenter.x, -viewFrustumCenter.y, -viewFrustumCenter.z);
@@ -100,15 +97,25 @@ public final class LightManager {
                         maxZ = Math.max(lsFrustumArray[l + 2], maxZ);
                     }
 
+
+                    /*
+                    float texelSize = 1.0f/LightConstants.SHADOW_MAP_RESOLUTION;
+                    minX = (float)Math.ceil(minX / texelSize) * texelSize;
+                    maxX = (float)Math.ceil(maxX / texelSize) * texelSize;
+                    minY = (float)Math.ceil(minY / texelSize) * texelSize;
+                    maxY = (float)Math.ceil(maxY / texelSize) * texelSize;
+                     */
+
+
                     //TODO add shadow near plane offset to account for objects that are behind the near plane to cast shadows
-                    Matrix4f lightProj = new Matrix4f().ortho(minX, maxX, minY, maxY, -maxZ-dirLight.getShadowFrustumOffset(), -minZ);
+                    Matrix4f lightProj = new Matrix4f().ortho(minX, maxX, minY, maxY, -maxZ - dirLight.getShadowFrustumOffset(), -minZ);
                     lightSpaces[k] = lightProj.mul(lightView);
                     k++;
                 } else {
                     indices[j] = -1;
                 }
             }
-            for(int J=j;J<LightConstants.DIRECTIONAL_LIGHT_COUNT;J++) {
+            for (int J = j; J < LightConstants.DIRECTIONAL_LIGHT_COUNT; J++) {
                 indices[J] = -1;
             }
             shadowUbo.uniformDirLightLightSpaces(gfx, lightSpaces);
@@ -121,15 +128,15 @@ public final class LightManager {
         }
     }
 
-    public ShadowUbo getCameraShadowUbo(AbstractCamera shadowCamera){
+    public ShadowUbo getCameraShadowUbo(AbstractCamera shadowCamera) {
         Integer index = cameraIndices.get(shadowCamera);
-        if(index == null)return null;
+        if (index == null) return null;
         return shadowUbos[index];
     }
 
     public Framebuffer getCameraShadowMap(AbstractCamera shadowCamera) {
         Integer index = cameraIndices.get(shadowCamera);
-        if(index == null)return null;
+        if (index == null) return null;
         return shadowMaps[index];
     }
 
@@ -137,7 +144,7 @@ public final class LightManager {
         return dirCasterCount;
     }
 
-    public int getDirLightCount(){
+    public int getDirLightCount() {
         return directionalLights.size();
     }
 
@@ -146,18 +153,18 @@ public final class LightManager {
     }
 
     /**
-     * @deprecated use getCameraShadowUbo instead
      * @param index
      * @return
+     * @deprecated use getCameraShadowUbo instead
      */
     public Framebuffer getShadowMapByIndex(int index) {
         return shadowMaps[index];
     }
 
     /**
-     * @deprecated use getCameraShadowMap instead
      * @param index
      * @return
+     * @deprecated use getCameraShadowMap instead
      */
     public ShadowUbo getShadowUboByIndex(int index) {
         return shadowUbos[index];

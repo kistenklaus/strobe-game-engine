@@ -52,7 +52,7 @@ public class Ubo extends DataBuffer<UboPool> {
                 if (varType.matches("[a-zA-Z0-9]+\\[[1-9][0-9]*]")) {
                     String subType = varType.substring(0, varType.indexOf("["));
                     array_size[i] = Integer.parseInt(varType.substring(varType.indexOf("[") + 1, varType.indexOf("]")));
-                    alignment[i] = TypeUtil.getByteAlignmentOfGlslType(subType);
+                    alignment[i] = Math.max(TypeUtil.getByteAlignmentOfGlslType(subType),16);
                     int typeSize = TypeUtil.getByteSizeOfGlslType(subType);
                     //align element size
                     byteSize = (int) Math.ceil(typeSize / (float) alignment[i]) * alignment[i] * array_size[i];
