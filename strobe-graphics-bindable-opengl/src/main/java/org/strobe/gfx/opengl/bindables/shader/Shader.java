@@ -6,9 +6,7 @@ import org.strobe.gfx.Pool;
 import org.strobe.gfx.opengl.bindables.ubo.Ubo;
 import org.strobe.gfx.opengl.bindables.util.TypeUtil;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.StringReader;
+import java.io.*;
 import java.util.*;
 
 import static org.lwjgl.opengl.GL11.GL_FALSE;
@@ -27,10 +25,16 @@ public class Shader extends Bindable<ShaderPool> {
     //for Sampler Uniforms
     protected int samplerCount = 0;
 
-    public Shader(Graphics gfx, String vertexSrc, String fragmentSrc) {
+    public Shader(Graphics gfx, String vertexSrc, String fragmentSrc){
+        this(gfx, vertexSrc, fragmentSrc, ShaderCompileConstantSet.getEmptySet());
+    }
+
+    public Shader(Graphics gfx, String vertexSrc, String fragmentSrc, ShaderCompileConstantSet constantSet) {
         super(gfx);
         Shader pooledShader = pool.getShader(vertexSrc, fragmentSrc);
         if (pooledShader == null) {
+            vertexSrc = insertConstants(vertexSrc, constantSet);
+            fragmentSrc = insertConstants(fragmentSrc, constantSet);
             int vsID = compile(vertexSrc, GL_VERTEX_SHADER);
             int fsID = compile(fragmentSrc, GL_FRAGMENT_SHADER);
             ID = link(vsID, fsID);
@@ -126,9 +130,36 @@ public class Shader extends Bindable<ShaderPool> {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName()+"{" +
+        return getClass().getSimpleName() + "{" +
                 "ID=" + ID +
                 '}';
+    }
+
+    private static String insertConstants(String shaderSrc, ShaderCompileConstantSet constantSet) {
+        if(constantSet.isEmpty())return shaderSrc;
+        StringBuilder bw = new StringBuilder(shaderSrc.length());
+        try {
+            BufferedReader br = new BufferedReader(new StringReader(shaderSrc));
+            String line;
+            while ((line = br.readLine()) != null){
+                line = line.trim();
+                if(line.matches(
+                        "^const (bool|int|float|double|ivec2|ivec3|ivec4|vec2|vec3|vec4|mat2|mat3|mat4) [^\s]*\s*=\s*require\\(.+\\);$")){
+                    int start = line.indexOf("require") + "require".length()+1;
+                    int end = line.lastIndexOf(")");
+                    String constName = line.substring(start, end).trim();
+                    String constValue = constantSet.getConstantValueString(constName);
+                    String glslDeclaration = line.substring(0, line.indexOf("=")+1);
+                    bw.append(glslDeclaration).append(" ").append(constValue).append(";");
+                }else{
+                    bw.append(line).append("\n");
+                }
+            }
+            br.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return bw.toString();
     }
 
     private static Map<String, ShaderUniform> parseProgramUniformSet(Graphics gfx, Shader shader, String vertexSrc, String fragmentSrc) {
@@ -163,7 +194,7 @@ public class Shader extends Bindable<ShaderPool> {
                     structs.put(structName, structure);
                 }
                 if (structure != null) {
-                    if(line.matches("[a-z]+[1-9]* [a-z|A-Z|0-9]+;")){
+                    if (line.matches("[a-z]+[1-9]* [a-z|A-Z|0-9]+;")) {
                         structure.add(line);
                     }
                 }
@@ -174,17 +205,17 @@ public class Shader extends Bindable<ShaderPool> {
                     String rest = line.substring("uniform".length() + 1, line.length() - 1);
                     String varType = rest.substring(0, rest.indexOf(" "));
                     String name = rest.substring(rest.lastIndexOf(" ") + 1);
-                    if(structs.containsKey(varType)){
-                        for(String structLine : structs.get(varType)){
+                    if (structs.containsKey(varType)) {
+                        for (String structLine : structs.get(varType)) {
                             String[] split = structLine.split(" ");
                             String attribType = split[0];
                             String attribName = split[1].substring(0, split[1].indexOf(";"));
                             Class varClass = (Class) TypeUtil.glslTypeToClass(attribType);
                             ShaderUniform uniform = ShaderUniformLoader.getShaderUniformFor(gfx,
-                                    shader, varClass, name+"."+attribName);
-                            uniforms.put(name+"."+attribName, uniform);
+                                    shader, varClass, name + "." + attribName);
+                            uniforms.put(name + "." + attribName, uniform);
                         }
-                    }else{
+                    } else {
                         Class<?> varClass = (Class<?>) TypeUtil.glslTypeToClass(varType);
                         ShaderUniform uniform = ShaderUniformLoader.getShaderUniformFor(gfx, shader, varClass, name);
                         uniforms.put(name, uniform);

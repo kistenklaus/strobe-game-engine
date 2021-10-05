@@ -1,6 +1,6 @@
 #version 420 core
 
-const int DIRECTIONAL_LIGHT_COUNT = 3;
+const int DIRECTIONAL_LIGHT_COUNT = require(DIRECTIONAL_LIGHT_COUNT);
 
 in vec3 normal;
 in vec3 fragmentPosition;
@@ -20,7 +20,6 @@ layout(std140, binding=1) uniform lights{
     vec3[DIRECTIONAL_LIGHT_COUNT] directionalLightDiffuse;
     vec3[DIRECTIONAL_LIGHT_COUNT] directionalLightSpecular;
 };
-
 
 struct Material{
     vec3 diffuseColor;

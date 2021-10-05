@@ -4,7 +4,10 @@ import org.strobe.gfx.Bindable;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.Renderable;
 import org.strobe.gfx.camera.AbstractCamera;
+import org.strobe.gfx.lights.LightConstants;
+import org.strobe.gfx.lights.ShadowUbo;
 import org.strobe.gfx.materials.shaders.MaterialShader;
+import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.rendergraph.common.manager.CameraManager;
 import org.strobe.gfx.rendergraph.common.manager.LightManager;
 import org.strobe.gfx.rendergraph.core.RenderQueue;
@@ -18,11 +21,17 @@ public class CameraForwardQueue extends RenderQueue {
     private final Resource<CameraManager> cameras = registerResource(CameraManager.class, "cameras");
     private final Resource<LightManager> lights = registerResource(LightManager.class, "lights");
 
+    private ShadowUbo noShadowUbo;
 
     @Override
     protected void complete(Graphics gfx) {
         if(cameras.get()==null)throw new IllegalStateException();
         if(lights.get()==null)throw new IllegalStateException();
+
+        noShadowUbo = new ShadowUbo(gfx);
+        int[] lightIndices = new int[LightConstants.DIRECTIONAL_LIGHT_COUNT];
+        for(int i=0;i<lightIndices.length;i++)lightIndices[i] = -1;
+        noShadowUbo.uniformDirLightIndices(gfx, lightIndices);
     }
 
     @Override
@@ -43,7 +52,27 @@ public class CameraForwardQueue extends RenderQueue {
         for(AbstractCamera camera : cameras.get().cameras()){
             gfx.bind(camera.getTarget());
             gfx.bind(camera.getCameraUbo());
+
+            ShadowUbo shadowUbo = lights.get().getCameraShadowUbo(camera);
+            Framebuffer shadowMap = lights.get().getCameraShadowMap(camera);
+            if(shadowUbo != null && shadowMap != null){
+                gfx.bind(shadowUbo);
+                gfx.bind(shadowMap.getAttachmentTexture(Framebuffer.Attachment.DEPTH_ATTACHMENT));
+            }else{
+                gfx.bind(noShadowUbo);
+            }
+
+
             for(RenderQueue.Job job : queue)job.execute(gfx);
+
+
+            if(shadowUbo != null && shadowMap != null){
+                gfx.unbind(shadowUbo);
+                gfx.unbind(shadowMap.getAttachmentTexture(Framebuffer.Attachment.DEPTH_ATTACHMENT));
+            }else{
+                gfx.unbind(noShadowUbo);
+            }
+
             gfx.unbind(camera.getCameraUbo());
             gfx.unbind(camera.getTarget());
         }

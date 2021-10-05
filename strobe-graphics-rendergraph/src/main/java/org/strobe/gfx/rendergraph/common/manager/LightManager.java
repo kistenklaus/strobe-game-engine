@@ -11,18 +11,19 @@ import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.opengl.bindables.ubo.Ubo;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public final class LightManager {
 
-    private ArrayList<AbstractCamera> shadowCameras = new ArrayList<>();
-
+    private final LightUbo ubo;
     private ArrayList<DirectionalLight> directionalLights = new ArrayList<>();
 
-    private final LightUbo ubo;
+    private ArrayList<AbstractCamera> shadowCameras = new ArrayList<>();
+    private final HashMap<AbstractCamera, Integer> cameraIndices = new HashMap<>();
     private final ShadowUbo[] shadowUbos = new ShadowUbo[LightConstants.MAX_SHADOW_RENDERER];
     private final Framebuffer[] shadowMaps = new Framebuffer[LightConstants.MAX_SHADOW_RENDERER];
-
     private int dirCasterCount;
+
 
     public LightManager(Graphics gfx) {
         ubo = new LightUbo(gfx);
@@ -46,6 +47,7 @@ public final class LightManager {
 
     public void submitShadowCamera(AbstractCamera camera) {
         if (shadowCameras.size() >= LightConstants.MAX_SHADOW_RENDERER) return;
+        cameraIndices.put(camera, shadowCameras.size());
         this.shadowCameras.add(camera);
     }
 
@@ -58,9 +60,9 @@ public final class LightManager {
             ShadowUbo shadowUbo = shadowUbos[i];
             Matrix4f[] lightSpaces = new Matrix4f[dirCasterCount];
             Vector4f[] shadowDims = new Vector4f[dirCasterCount];
-            int[] indices = new int[directionalLights.size()];
-            int k = 0;
-            for (int j = 0; j < directionalLights.size() && k < dirCasterCount; j++) {
+            int[] indices = new int[LightConstants.DIRECTIONAL_LIGHT_COUNT];
+            int k = 0,j;
+            for (j=0;j < directionalLights.size() && k < dirCasterCount; j++) {
                 DirectionalLight dirLight = directionalLights.get(j);
                 if (dirLight.isShadowCasting()) {
                     indices[j] = k;
@@ -105,12 +107,27 @@ public final class LightManager {
                     indices[j] = -1;
                 }
             }
+            for(int J=j;J<LightConstants.DIRECTIONAL_LIGHT_COUNT;J++) {
+                indices[J] = -1;
+            }
             shadowUbo.uniformDirLightLightSpaces(gfx, lightSpaces);
             shadowUbo.uniformDirLightShadowDims(gfx, shadowDims);
             shadowUbo.uniformDirLightIndices(gfx, indices);
             shadowUbo.uniformDirLightCastingCount(gfx, dirCasterCount);
 
         }
+    }
+
+    public ShadowUbo getCameraShadowUbo(AbstractCamera shadowCamera){
+        Integer index = cameraIndices.get(shadowCamera);
+        if(index == null)return null;
+        return shadowUbos[index];
+    }
+
+    public Framebuffer getCameraShadowMap(AbstractCamera shadowCamera) {
+        Integer index = cameraIndices.get(shadowCamera);
+        if(index == null)return null;
+        return shadowMaps[index];
     }
 
     public int getDirCasterCount() {
@@ -121,10 +138,20 @@ public final class LightManager {
         return shadowCameras.size();
     }
 
+    /**
+     * @deprecated use getCameraShadowUbo instead
+     * @param index
+     * @return
+     */
     public Framebuffer getShadowMap(int index) {
         return shadowMaps[index];
     }
 
+    /**
+     * @deprecated use getCameraShadowMap instead
+     * @param index
+     * @return
+     */
     public Ubo getShadowUbo(int index) {
         return shadowUbos[index];
     }
@@ -136,6 +163,7 @@ public final class LightManager {
     public void clearFrame() {
         directionalLights.clear();
         shadowCameras.clear();
+        cameraIndices.clear();
         dirCasterCount = 0;
     }
 

@@ -23,6 +23,10 @@
             <groupId>strobe</groupId>
             <artifactId>strobe-utils</artifactId>
         </dependency>
+        <dependency>
+            <groupId>strobe</groupId>
+            <artifactId>strobe-light</artifactId>
+        </dependency>
     </dependencies>
 
     <properties>

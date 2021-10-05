@@ -41,7 +41,8 @@ public final class ShadowUbo extends Ubo {
     }
 
     public void uniformDirLightIndices(Graphics gfx, int[] lightIndices) {
-        for (int i = 0; i < dirLightIndices.length && i < lightIndices.length; i++) {
+        if (lightIndices.length != LightConstants.DIRECTIONAL_LIGHT_COUNT) throw new IllegalArgumentException();
+        for (int i = 0; i < dirLightIndices.length; i++) {
             dirLightIndices[i].set(gfx, lightIndices[i]);
         }
     }
@@ -50,9 +51,9 @@ public final class ShadowUbo extends Ubo {
         dirLightCastingCount.set(gfx, dirCastingCount);
     }
 
-    public Matrix4f[] getDirLightSpaces(Graphics gfx){
+    public Matrix4f[] getDirLightSpaces(Graphics gfx) {
         Matrix4f[] lightSpaces = new Matrix4f[dirLightLightSpace.length];
-        for(int i=0;i<lightSpaces.length;i++){
+        for (int i = 0; i < lightSpaces.length; i++) {
             lightSpaces[i] = dirLightLightSpace[i].get(gfx);
         }
         return lightSpaces;

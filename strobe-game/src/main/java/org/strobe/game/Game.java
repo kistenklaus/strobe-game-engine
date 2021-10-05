@@ -64,7 +64,7 @@ public class Game extends EntityContext {
         Entity light = ecs.createEntity();
         light.addComponent(new Transform(new Vector3f(1,2,0)));
         DirectionalLight dirLightComp = new DirectionalLight(new Vector3f(0.1f), new Vector3f(1), new Vector3f(1));
-        dirLightComp.setShadowFrustumOffset(10);
+        dirLightComp.setShadowFrustumOffset(0);
         light.addComponent(dirLightComp);
         light.addComponent(new DaylightCycle());
 
