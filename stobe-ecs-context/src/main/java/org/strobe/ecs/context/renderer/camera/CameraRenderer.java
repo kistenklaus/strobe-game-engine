@@ -71,4 +71,8 @@ public final class CameraRenderer implements Component {
     public void disableShadows() {
         renderShadows = false;
     }
+
+    public void enableShadows(){
+        renderShadows = true;
+    }
 }

@@ -119,6 +119,7 @@ public final class LightDebugPass extends RenderPass {
 
     @Override
     protected void render(Graphics gfx) {
+
         AbstractCamera mainCam = cameras.get().getSelectedCamera();
         if (mainCam == null) return;
         gfx.bind(target.get());
@@ -145,9 +146,10 @@ public final class LightDebugPass extends RenderPass {
         this.model.set(gfx, model);
         for(int i=0;i<lights.get().shadowCameraCount();i++){
             ShadowUbo shadowUbo = lights.get().shadowUbos()[i];
-            Matrix4f[] dirLightSpaces = shadowUbo.getDirLightSpaces(gfx);
+            Matrix4f[] dirLightSpaces = shadowUbo.getDirLightSpaces();
 
-            for(Matrix4f lightSpace : dirLightSpaces){
+            for(int j=0;j<shadowUbo.getDirLightCastingCount();j++){
+                Matrix4f lightSpace = dirLightSpaces[j];
                 FrustumBox frustum = FrustumBox.getFromProjView(lightSpace);
                 shadowFrustumVao.bufferLocation(gfx, 0, frustum.toFloatArray_vec3aligned());
                 shadowFrustum.render(gfx);

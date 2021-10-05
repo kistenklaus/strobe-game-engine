@@ -23,7 +23,7 @@ public final class ShadowMapShader extends MaterialShader{
         this.modelMatrix.set(gfx, modelMatrix);
     }
 
-    public void uniformLightIndex(Graphics gfx, int lightIndex){
-
+    public void uniformLightIndex(Graphics gfx, int index){
+        lightIndex.set(gfx, index);
     }
 }

@@ -11,32 +11,49 @@ import org.strobe.gfx.opengl.bindables.ubo.UboPool;
 @Pool(UboPool.class)
 public final class ShadowUbo extends Ubo {
 
-    private final Uniform<Matrix4f>[] dirLightLightSpace;
-    private final Uniform<Vector4f>[] dirLightShadowDim;
+    private final Uniform<Matrix4f>[] dirLightLightSpaces;
+    private final Matrix4f[] dirLightLightSpacesLocal = new Matrix4f[LightConstants.MAX_DIR_CASTING_LIGHTS];
+    private final Uniform<Vector4f>[] dirLightShadowDims;
+    private final Vector4f[] dirLightShadowDimsLocal = new Vector4f[LightConstants.MAX_DIR_CASTING_LIGHTS];
     private final Uniform<Integer>[] dirLightIndices;
     private final Uniform<Integer> dirLightCastingCount;
+    private int dirLightCastingCountLocal = 0;
 
     public ShadowUbo(Graphics gfx) {
         super(gfx, "shadows", 2, true,
-                "mat4[" + LightConstants.MAX_CASTING_LIGHTS + "] directionalLightLightSpace",
-                "vec4[" + LightConstants.MAX_CASTING_LIGHTS + "] directionalLightShadowDim",
+                "mat4[" + LightConstants.MAX_DIR_CASTING_LIGHTS + "] directionalLightLightSpace",
+                "vec4[" + LightConstants.MAX_DIR_CASTING_LIGHTS + "] directionalLightShadowDim",
                 "int[" + LightConstants.DIRECTIONAL_LIGHT_COUNT + "] directionalLightIndex",
                 "int directionalLightCastingCount");
-        dirLightLightSpace = getUniformArray(Matrix4f.class, "directionalLightLightSpace");
-        dirLightShadowDim = getUniformArray(Vector4f.class, "directionalLightShadowDim");
+        dirLightLightSpaces = getUniformArray(Matrix4f.class, "directionalLightLightSpace");
+        dirLightShadowDims = getUniformArray(Vector4f.class, "directionalLightShadowDim");
         dirLightIndices = getUniformArray(int.class, "directionalLightIndex");
         dirLightCastingCount = getUniform(int.class, "directionalLightCastingCount");
     }
 
     public void uniformDirLightLightSpaces(Graphics gfx, Matrix4f[] lightSpaces) {
         for (int i = 0; i < lightSpaces.length; i++) {
-            dirLightLightSpace[i].set(gfx, lightSpaces[i]);
+            dirLightLightSpaces[i].set(gfx, lightSpaces[i]);
+            dirLightLightSpacesLocal[i] = lightSpaces[i];
+        }
+        //TODO probably not needed because the data is not used
+        Matrix4f identity = new Matrix4f().identity();
+        for(int i = lightSpaces.length; i<LightConstants.MAX_DIR_CASTING_LIGHTS; i++){
+            dirLightLightSpaces[i].set(gfx, identity);
+            dirLightLightSpacesLocal[i] = identity;
         }
     }
 
     public void uniformDirLightShadowDims(Graphics gfx, Vector4f[] shadowDims) {
         for (int i = 0; i < shadowDims.length; i++) {
-            dirLightShadowDim[i].set(gfx, shadowDims[i]);
+            dirLightShadowDims[i].set(gfx, shadowDims[i]);
+            dirLightShadowDimsLocal[i] = shadowDims[i];
+        }
+        //TODO probably not needed because the data is not used
+        Vector4f def = new Vector4f(0);
+        for(int i = shadowDims.length; i<LightConstants.MAX_DIR_CASTING_LIGHTS; i++){
+            dirLightShadowDims[i].set(gfx, def);
+            dirLightShadowDimsLocal[i] = def;
         }
     }
 
@@ -48,14 +65,24 @@ public final class ShadowUbo extends Ubo {
     }
 
     public void uniformDirLightCastingCount(Graphics gfx, int dirCastingCount) {
+        if(dirCastingCount < 0)throw new IllegalArgumentException();
         dirLightCastingCount.set(gfx, dirCastingCount);
+        dirLightCastingCountLocal = dirCastingCount;
     }
 
-    public Matrix4f[] getDirLightSpaces(Graphics gfx) {
-        Matrix4f[] lightSpaces = new Matrix4f[dirLightLightSpace.length];
-        for (int i = 0; i < lightSpaces.length; i++) {
-            lightSpaces[i] = dirLightLightSpace[i].get(gfx);
+    public int[] nativeFetchDirLightIndices(Graphics gfx){
+        int[] out = new int[LightConstants.DIRECTIONAL_LIGHT_COUNT];
+        for(int i=0;i<LightConstants.DIRECTIONAL_LIGHT_COUNT;i++){
+            out[i] = dirLightIndices[i].get(gfx);
         }
-        return lightSpaces;
+        return out;
+    }
+
+    public Matrix4f[] getDirLightSpaces() {
+        return dirLightLightSpacesLocal;
+    }
+
+    public int getDirLightCastingCount() {
+        return dirLightCastingCountLocal;
     }
 }

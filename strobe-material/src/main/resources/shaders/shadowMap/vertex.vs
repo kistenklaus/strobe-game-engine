@@ -1,6 +1,7 @@
 #version 420 core
-const int DIRECTIONAL_LIGHT_COUNT = 3;
-const int SHADOW_CASTER_COUNT = 1;
+
+const int DIRECTIONAL_LIGHT_COUNT = require(DIRECTIONAL_LIGHT_COUNT);
+const int SHADOW_CASTER_COUNT = require(MAX_CASTING_DIR_LIGHTS);
 
 layout(location=0) in vec3 in_position;
 

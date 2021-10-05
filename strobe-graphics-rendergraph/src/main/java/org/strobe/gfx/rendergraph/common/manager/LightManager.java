@@ -11,6 +11,7 @@ import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.opengl.bindables.ubo.Ubo;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 public final class LightManager {
@@ -30,8 +31,7 @@ public final class LightManager {
         for (int i = 0; i < shadowUbos.length; i++) {
             shadowUbos[i] = new ShadowUbo(gfx);
             shadowMaps[i] = new Framebuffer(gfx, LightConstants.SHADOW_MAP_RESOLUTION,
-                    LightConstants.SHADOW_MAP_RESOLUTION, Framebuffer.Attachment.DEPTH_ATTACHMENT,
-                    Framebuffer.Attachment.COLOR_RGBA_ATTACHMENT_0);
+                    LightConstants.SHADOW_MAP_RESOLUTION, Framebuffer.Attachment.DEPTH_ATTACHMENT);
         }
     }
 
@@ -134,6 +134,10 @@ public final class LightManager {
         return dirCasterCount;
     }
 
+    public int getDirLightCount(){
+        return directionalLights.size();
+    }
+
     public int getShadowCameraCount() {
         return shadowCameras.size();
     }
@@ -143,7 +147,7 @@ public final class LightManager {
      * @param index
      * @return
      */
-    public Framebuffer getShadowMap(int index) {
+    public Framebuffer getShadowMapByIndex(int index) {
         return shadowMaps[index];
     }
 
@@ -152,7 +156,7 @@ public final class LightManager {
      * @param index
      * @return
      */
-    public Ubo getShadowUbo(int index) {
+    public ShadowUbo getShadowUboByIndex(int index) {
         return shadowUbos[index];
     }
 

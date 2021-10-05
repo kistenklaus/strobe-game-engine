@@ -150,7 +150,7 @@ public class Shader extends Bindable<ShaderPool> {
                     String constName = line.substring(start, end).trim();
                     String constValue = constantSet.getConstantValueString(constName);
                     String glslDeclaration = line.substring(0, line.indexOf("=")+1);
-                    bw.append(glslDeclaration).append(" ").append(constValue).append(";");
+                    bw.append(glslDeclaration).append(" ").append(constValue).append(";\n");
                 }else{
                     bw.append(line).append("\n");
                 }

@@ -1,9 +1,12 @@
 #version 420 core
 
 const int DIRECTIONAL_LIGHT_COUNT = require(DIRECTIONAL_LIGHT_COUNT);
+const int MAX_CASTING_DIR_LIGHT = require(MAX_CASTING_DIR_LIGHTS);
 
+in vec2 uv;
 in vec3 normal;
 in vec3 fragmentPosition;
+in vec4[MAX_CASTING_DIR_LIGHT] fragmentPositionsDirLightSpace;
 
 out vec4 fragColor;
 
@@ -21,6 +24,15 @@ layout(std140, binding=1) uniform lights{
     vec3[DIRECTIONAL_LIGHT_COUNT] directionalLightSpecular;
 };
 
+layout(std140, binding=2) uniform shadows {
+    mat4[MAX_CASTING_DIR_LIGHT] directionalLightLightSpace;
+    vec4[MAX_CASTING_DIR_LIGHT] directionalLightShadowDim;
+    int[DIRECTIONAL_LIGHT_COUNT] directionalLightIndices;
+    int directionalLightCastingCount;
+};
+
+uniform sampler2D dirShadowMap;
+
 struct Material{
     vec3 diffuseColor;
 };
@@ -32,6 +44,14 @@ vec3 calcDirLight(vec3 lightDir, vec3 lightDiffuse, vec3 normal, vec3 materialDi
     return (lightDiffuse * diff) * materialDiffuse;
 }
 
+float calcShadow(vec4 dlsFragPos){
+    //perspective division per pixel.
+    vec3 projDLSFragPos = dlsFragPos.xyz / dlsFragPos.w;
+    //normalize (to NDC)
+    vec3 NDCFragPos = projDLSFragPos*0.5f+0.5f;
+
+    return 1;
+}
 
 void main(){
     vec3 norm = normalize(normal);
@@ -39,9 +59,19 @@ void main(){
     vec3 combined = vec3(material.diffuseColor*0.1f);
 
     for (int i=0;i<directionalLightCount;i++){
-        combined += calcDirLight(-directionalLightDir[i], directionalLightDiffuse[i], norm, material.diffuseColor);
+        vec3 light = calcDirLight(-directionalLightDir[i], directionalLightDiffuse[i], norm, material.diffuseColor);
+        if (directionalLightIndices[i] != -1){
+            int casterIndex = directionalLightIndices[i];
+            mat4 lightSpace = directionalLightLightSpace[casterIndex];
+            vec4 shadowDim = directionalLightShadowDim[casterIndex];
+            float shadow = calcShadow(fragmentPositionsDirLightSpace[casterIndex]);
+            combined += (1.0f-shadow) * light;
+        } else {
+            combined += light;
+        }
     }
     fragColor = vec4(combined, 1.0f);
-    //fragColor = vec4((normal+vec3(1)*0.5f), 1.0f);
+    //float d = texture2D(dirShadowMap, uv).r;
+    //fragColor = vec4(d,d,d, 1.0f);
 
 }
