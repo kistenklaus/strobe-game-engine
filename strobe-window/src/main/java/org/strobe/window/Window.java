@@ -14,6 +14,22 @@ public abstract class Window {
         this.title = title;
         this.width = width;
         this.height = height;
+        windowEventHandler.addWindowEventListener(new WindowEventListener() {
+            @Override
+            public void onResize(int width, int height) {
+                mouse.setWindowSize(width, height);
+            }
+
+            @Override
+            public void onFocusChange(boolean focus) {
+                //stub
+            }
+
+            @Override
+            public void onPositionChange(int xpos, int ypos) {
+                //stub
+            }
+        });
     }
 
     public abstract void create();

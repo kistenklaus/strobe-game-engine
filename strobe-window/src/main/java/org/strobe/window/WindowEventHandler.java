@@ -25,4 +25,12 @@ public class WindowEventHandler implements WindowEventListener {
     public void onPositionChange(int xpos, int ypos) {
         for (WindowEventListener l : listeners) l.onPositionChange(xpos, ypos);
     }
+
+    public void addWindowEventListener(WindowEventListener listener){
+        this.listeners.add(listener);
+    }
+
+    public boolean removeWindowEventListener(WindowEventListener listener){
+        return this.listeners.remove(listener);
+    }
 }

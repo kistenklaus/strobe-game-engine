@@ -1,10 +1,8 @@
 package org.strobe.engine.release;
 
 import org.strobe.ecs.context.EntityContext;
-import org.strobe.engine.StrobeContext;
 import org.strobe.engine.StrobeEngine;
 import org.strobe.gfx.Graphics;
-import org.strobe.gfx.opengl.OpenGlContext;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.window.WindowConfiguration;
 import org.strobe.window.glfw.GlfwWindow;

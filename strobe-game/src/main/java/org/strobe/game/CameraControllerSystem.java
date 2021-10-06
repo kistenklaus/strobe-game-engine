@@ -16,7 +16,7 @@ public final class CameraControllerSystem extends EntitySystem {
     private static final ComponentMapper<Transform> TRANSFORM = ComponentMapper.getFor(Transform.class);
 
     private static final float MOVEMENT_SPEED = 10;
-    private static final float MOUSE_SENSITIVITY = 25;
+    private static final float MOUSE_SENSITIVITY = 20000;
 
     private final EntityPool controllerPool;
     private final WindowMouse mouse;
@@ -65,7 +65,7 @@ public final class CameraControllerSystem extends EntitySystem {
 
             if(mouse.isButtonDown(WindowButton.LEFT)){
                 orientation.mul(new Quaternionf().fromAxisAngleDeg(1,0,0, (float) (mouse.getDY()* MOUSE_SENSITIVITY *dt)));
-                orientation.premul(new Quaternionf().fromAxisAngleDeg(0,1,0, (float) (mouse.getDX() * MOUSE_SENSITIVITY * dt)));
+                orientation.premul(new Quaternionf().fromAxisAngleDeg(0,1,0, (float) (mouse.getDX() * mouse.getWindowAspect() * MOUSE_SENSITIVITY * dt)));
             }
             transform.setOrientation(orientation);
 

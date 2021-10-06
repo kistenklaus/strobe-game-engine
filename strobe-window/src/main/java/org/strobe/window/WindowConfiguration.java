@@ -62,7 +62,7 @@ public final class WindowConfiguration {
         return this;
     }
 
-    public WindowConfiguration enableResizable(){
+    public WindowConfiguration enableResizing(){
         resizable = true;
         return this;
     }

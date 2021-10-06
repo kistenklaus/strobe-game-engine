@@ -10,6 +10,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>strobe-window</artifactId>
+    <dependencies>
+        <dependency>
+            <groupId>org.joml</groupId>
+            <artifactId>joml</artifactId>
+        </dependency>
+    </dependencies>
 
 
 </project>
