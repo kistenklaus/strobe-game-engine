@@ -11,7 +11,7 @@ import java.util.Objects;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryStack.stackPush;
 
-public final class GlfwWindow extends Window {
+public class GlfwWindow extends Window {
 
     private static final WindowButton[] BUTTON_MAPPING = new WindowButton[GLFW_MOUSE_BUTTON_LAST+1];
 
@@ -109,7 +109,8 @@ public final class GlfwWindow extends Window {
 
     }
 
-    private static final String CONTEXT_VERSION = "3.3";
+    protected static final String CONTEXT_VERSION = "3.2";
+    protected static final String GLSL_VERSION = "#version 420 core";
     private static boolean GLFW_INITIALIZED = false;
 
     private static void setupGlfw() {
@@ -159,6 +160,8 @@ public final class GlfwWindow extends Window {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, major);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minor);
 
+        configureWindowHints();
+
         window = glfwCreateWindow(getWidth(), getHeight(), getTitle(), monitor, 0);
 
         if (window == 0) throw new IllegalStateException("can't create glfw window");
@@ -180,6 +183,8 @@ public final class GlfwWindow extends Window {
 
         //window events
         glfwSetWindowSizeCallback(window, (window, width, height) -> {
+            setWidth(width);
+            setHeight(height);
             windowEventHandler.onResize(width, height);
         });
         glfwSetWindowFocusCallback(window, (window, focus) -> {
@@ -215,6 +220,10 @@ public final class GlfwWindow extends Window {
 
 
         glfwShowWindow(window);
+    }
+
+    protected void configureWindowHints(){
+
     }
 
     @Override
