@@ -4,14 +4,14 @@ import org.strobe.gfx.Graphics;
 import org.strobe.window.Window;
 
 
-public abstract class StrobeEngine implements Runnable {
+public abstract class StrobeEngine<T extends StrobeContext> implements Runnable {
 
     private final Thread thread;
-    private final StrobeContext context;
+    protected final T context;
     private final Graphics gfx;
     private boolean running = false;
 
-    public StrobeEngine(StrobeContext context, Window window) {
+    public StrobeEngine(T context, Window window) {
         context.linkToEngine(this);
         this.context = context;
         this.thread = new Thread(this);
@@ -48,6 +48,7 @@ public abstract class StrobeEngine implements Runnable {
     }
 
     private void loop(float dt) {
+        gfx.newFrame();
         context.render(gfx);
         //render
         beforeRender(gfx);
@@ -56,13 +57,12 @@ public abstract class StrobeEngine implements Runnable {
         //context render (submit)
         //render debug
         //logic
-        gfx.pollEvents();
         beforeUpdate(dt);
         context.update(dt);
         afterUpdate(dt);
         //swapping buffers (syncing of gpu and cpu)
         beforeSwapBuffers(gfx);
-        gfx.swapBuffers();
+        gfx.endFrame();
         afterSwapBuffers(gfx);
     }
 

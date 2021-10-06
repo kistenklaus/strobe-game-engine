@@ -105,6 +105,7 @@ public final class CameraDebugPass extends RenderPass {
         if (mainCam == null) return;
         glEnable(GL_DEPTH_TEST);
         glDisable(GL_BLEND);
+        glLineWidth(2f);
         gfx.bind(debugShader);
         proj.set(gfx, mainCam.getProjMatrix());
         view.set(gfx, mainCam.getViewMatrix());

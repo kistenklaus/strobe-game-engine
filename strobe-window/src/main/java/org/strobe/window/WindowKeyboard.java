@@ -28,4 +28,12 @@ public final class WindowKeyboard implements WindowKeyListener {
     public boolean isKeyDown(WindowKey key) {
         return keys[key.ordinal()];
     }
+
+    public void addKeyListener(WindowKeyListener keyListener){
+        listeners.add(keyListener);
+    }
+
+    public boolean removeKeyListener(WindowKeyListener keyListener){
+        return listeners.remove(keyListener);
+    }
 }

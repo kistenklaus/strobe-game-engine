@@ -1,16 +1,18 @@
 package org.strobe.entry;
 
+import org.strobe.ecs.context.EntityContext;
 import org.strobe.engine.StrobeContext;
 import org.strobe.engine.StrobeEngine;
 import org.strobe.engine.development.DevelopmentEngine;
 import org.strobe.engine.release.ReleaseEngine;
+import org.strobe.gfx.opengl.OpenGlContext;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.function.Function;
 
 public final class Strobe {
 
-    public static <T extends StrobeContext> void start(Class<T> contextClass, String[] args) {
+    public static <T extends EntityContext> void start(Class<T> contextClass, String[] args) {
         //parse args
         EngineMode mode = EngineMode.RELEASE;
         for (String arg : args) {
@@ -43,13 +45,13 @@ public final class Strobe {
         DEVELOPMENT(DevelopmentEngine::new),
         RELEASE(ReleaseEngine::new);
 
-        private Function<StrobeContext, StrobeEngine> engineConstructor;
+        private Function<EntityContext, StrobeEngine> engineConstructor;
 
-        EngineMode(Function<StrobeContext, StrobeEngine> engineConstructor) {
+        EngineMode(Function<EntityContext, StrobeEngine> engineConstructor) {
             this.engineConstructor = engineConstructor;
         }
 
-        public StrobeEngine createEngineInstance(StrobeContext context) {
+        public StrobeEngine createEngineInstance(EntityContext context) {
             return engineConstructor.apply(context);
         }
     }

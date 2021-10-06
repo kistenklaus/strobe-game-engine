@@ -53,6 +53,14 @@ public final class Graphics implements Debuggable {
         return window.shouldClose();
     }
 
+    public void newFrame(){
+        window.newFrame();
+    }
+
+    public void endFrame(){
+        window.endFrame();
+    }
+
     public void pollEvents() {
         window.pollEvents();
     }

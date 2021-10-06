@@ -60,7 +60,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
 
     private final LinkedList<BiConsumer<Graphics, EntityRenderer>> renderOps = new LinkedList<>();
 
-    public EntityRenderer(Graphics gfx, EntityComponentSystem ecs) {
+    public EntityRenderer(Graphics gfx, EntityComponentSystem ecs, Framebuffer target) {
         ecs.addEntitySystem(new MeshRendererSystem(ecs, this));
         ecs.addEntitySystem(new MaterialSystem(ecs, this));
         ecs.addEntitySystem(new TransformSystem(ecs));
@@ -91,7 +91,7 @@ public final class EntityRenderer extends RenderGraphRenderer {
         addPass(shadowQueue);
 
         globalCameraResource = registerResource(CameraManager.class, GLOBAL_CAMERA_RESOURCE, cameraManager);
-        globalBackBuffer = registerResource(Framebuffer.class, GLOBAL_BACK_BUFFER_RESOURCE, Framebuffer.getBackBuffer(gfx));
+        globalBackBuffer = registerResource(Framebuffer.class, GLOBAL_BACK_BUFFER_RESOURCE, target);
         globalLightResource = registerResource(LightManager.class, GLOBAL_LIGHTS_RESOURCE, lightManager);
 
         addLinkage(globalLightResource, lightUpdatePass.getLightResource());

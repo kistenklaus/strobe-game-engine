@@ -4,11 +4,13 @@ import org.strobe.ecs.EntityComponentSystem;
 import org.strobe.ecs.context.renderer.EntityRenderer;
 import org.strobe.engine.StrobeContext;
 import org.strobe.gfx.Graphics;
+import org.strobe.gfx.opengl.OpenGlContext;
+import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.window.WindowKeyboard;
 import org.strobe.window.WindowMouse;
 import org.strobe.ecs.context.scripts.ScriptSystem;
 
-public abstract class EntityContext extends StrobeContext {
+public abstract class EntityContext extends OpenGlContext {
 
     private EntityRenderer renderer = null;
     private WindowMouse mouse = null;
@@ -16,13 +18,14 @@ public abstract class EntityContext extends StrobeContext {
     protected final EntityComponentSystem ecs = new EntityComponentSystem();
 
     public EntityContext(String title, int width, int height){
-        super(title, width, height);
+        super(title, width, height, Framebuffer.Attachment.COLOR_RGB_ATTACHMENT_0, Framebuffer.Attachment.DEPTH_RBO_ATTACHMENT);
     }
 
 
     @Override
     public void init(Graphics gfx) {
-        renderer = new EntityRenderer(gfx, ecs);
+        super.init(gfx);
+        renderer = new EntityRenderer(gfx, ecs, target);
         gfx.addRenderer(0, renderer);
 
         mouse = gfx.getWindow().getMouse();

@@ -18,6 +18,14 @@ public abstract class Window {
 
     public abstract void create();
 
+    public void newFrame(){
+        pollEvents();
+    }
+
+    public void endFrame(){
+        swapBuffers();
+    }
+
     public final void pollEvents(){
         mouse.beforePoll();
         poolEventsImpl();
