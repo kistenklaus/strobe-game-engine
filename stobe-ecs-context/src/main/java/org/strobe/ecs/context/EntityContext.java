@@ -1,8 +1,8 @@
 package org.strobe.ecs.context;
 
-import org.strobe.core.StrobeContext;
 import org.strobe.ecs.EntityComponentSystem;
 import org.strobe.ecs.context.renderer.EntityRenderer;
+import org.strobe.engine.StrobeContext;
 import org.strobe.gfx.Graphics;
 import org.strobe.window.WindowKeyboard;
 import org.strobe.window.WindowMouse;
@@ -15,8 +15,8 @@ public abstract class EntityContext extends StrobeContext {
     private WindowKeyboard keyboard = null;
     protected final EntityComponentSystem ecs = new EntityComponentSystem();
 
-    public EntityContext(){
-
+    public EntityContext(String title, int width, int height){
+        super(title, width, height);
     }
 
 
@@ -39,11 +39,11 @@ public abstract class EntityContext extends StrobeContext {
 
 
     @Override
-    public final void render(Graphics gfx) {
+    public void render(Graphics gfx) {
     }
 
     @Override
-    public final void update(float dt) {
+    public void update(float dt) {
         ecs.update(dt);
     }
 

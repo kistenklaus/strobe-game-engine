@@ -1,33 +1,29 @@
-package org.strobe.core;
+package org.strobe.engine;
 
-import org.strobe.debug.Debuggable;
-import org.strobe.debug.Debugger;
-import org.strobe.debug.MasterDebugger;
 import org.strobe.gfx.Graphics;
 import org.strobe.window.Window;
 
 
-class StrobeEngine implements Runnable{
+public abstract class StrobeEngine implements Runnable {
 
     private final Thread thread;
     private final StrobeContext context;
     private final Graphics gfx;
-    private final MasterDebugger masterDebugger = new MasterDebugger();
     private boolean running = false;
 
-    StrobeEngine(StrobeContext context, Window window){
+    public StrobeEngine(StrobeContext context, Window window) {
         context.linkToEngine(this);
         this.context = context;
         this.thread = new Thread(this);
         this.gfx = new Graphics(window);
     }
 
-    void start(){
+    void start() {
         running = true;
         thread.start();
     }
 
-    void stop(){
+    void stop() {
         running = false;
         try {
             thread.join();
@@ -41,7 +37,7 @@ class StrobeEngine implements Runnable{
         context.init(gfx);
 
         long last = System.nanoTime();
-        while(running && !gfx.shouldClose()){
+        while (running && !gfx.shouldClose()) {
             long curr = System.nanoTime();
             float dt = (curr - last) * 1e-9f;
             last = curr;
@@ -49,29 +45,42 @@ class StrobeEngine implements Runnable{
         }
         running = false;
         gfx.dispose();
-        masterDebugger.dispose();
     }
 
-    private void loop(float dt){
+    private void loop(float dt) {
         context.render(gfx);
-        masterDebugger.debug(gfx);
         //render
+        beforeRender(gfx);
         gfx.render();
-        masterDebugger.render();
+        afterRender(gfx);
         //context render (submit)
         //render debug
         //logic
         gfx.pollEvents();
+        beforeUpdate(dt);
         context.update(dt);
+        afterUpdate(dt);
         //swapping buffers (syncing of gpu and cpu)
+        beforeSwapBuffers(gfx);
         gfx.swapBuffers();
+        afterSwapBuffers(gfx);
     }
 
-    public void debug(Debuggable debuggable){
-        masterDebugger.debug(debuggable);
+    protected void beforeRender(Graphics gfx) {
     }
 
-    public void addDebugger(Debugger debugger){
-        masterDebugger.addDebugger(debugger);
+    protected void afterRender(Graphics gfx) {
+    }
+
+    protected void beforeUpdate(float dt) {
+    }
+
+    protected void afterUpdate(float dt) {
+    }
+
+    protected void beforeSwapBuffers(Graphics gfx) {
+    }
+
+    protected void afterSwapBuffers(Graphics gfx) {
     }
 }

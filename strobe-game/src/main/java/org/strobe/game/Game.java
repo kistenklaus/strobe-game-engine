@@ -2,7 +2,6 @@ package org.strobe.game;
 
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-import org.strobe.core.Strobe;
 import org.strobe.debug.imgui.ImGuiDebugger;
 import org.strobe.ecs.Entity;
 import org.strobe.ecs.context.*;
@@ -21,7 +20,12 @@ import org.strobe.window.glfw.GlfwWindow;
 public class Game extends EntityContext {
 
     public static void main(String[] args) {
-        Strobe.start(new Game(), new GlfwWindow("game-window", 960, 640));
+        Game game = new Game();
+        //select game engine (development/release)
+    }
+
+    private Game(){
+        super("game-window", 640, 480);
     }
 
     @Override

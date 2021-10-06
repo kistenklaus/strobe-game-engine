@@ -27,7 +27,9 @@
         <module>strobe-material</module>
         <module>strobe-game</module>
         <module>strobe-assimp</module>
-        <module>strobe-engine-core</module>
+        <module>strobe-development-engine</module>
+        <module>strobe-release-engine</module>
+        <module>strobe-window-imgui</module>
     </modules>
 
     <properties>
