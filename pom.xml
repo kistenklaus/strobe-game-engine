@@ -30,6 +30,7 @@
         <module>strobe-development-engine</module>
         <module>strobe-release-engine</module>
         <module>strobe-window-imgui</module>
+        <module>strobe-entry</module>
     </modules>
 
     <properties>

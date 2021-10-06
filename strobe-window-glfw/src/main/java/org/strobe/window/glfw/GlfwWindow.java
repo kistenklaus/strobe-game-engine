@@ -9,6 +9,7 @@ import java.nio.IntBuffer;
 import java.util.Objects;
 
 import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.system.MemoryStack.stackGet;
 import static org.lwjgl.system.MemoryStack.stackPush;
 
 public class GlfwWindow extends Window {
@@ -123,13 +124,12 @@ public class GlfwWindow extends Window {
         return bool ? GLFW_TRUE : GLFW_FALSE;
     }
 
-    private boolean resizable = false;
-    private boolean fullscreen = false;
-    private boolean vsync = false;
+    private final WindowConfiguration config;
     private long window;
 
-    public GlfwWindow(String title, int width, int height) {
+    public GlfwWindow(String title, int width, int height, WindowConfiguration config) {
         super(title, width, height);
+        this.config = config;
     }
 
     @Override
@@ -137,14 +137,27 @@ public class GlfwWindow extends Window {
         setupGlfw();
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_VISIBLE, cast(false));
+
+
+        boolean resizable = config.isResizableEnabled() && !config.isNativeFullscreenEnabled();
         glfwWindowHint(GLFW_RESIZABLE, cast(resizable));
 
         long monitor = 0;
-        if (fullscreen) {
+
+        GLFWVidMode vidMode = Objects.requireNonNull(glfwGetVideoMode(glfwGetPrimaryMonitor()));
+
+        if (config.isNativeFullscreenEnabled()) {
             monitor = glfwGetPrimaryMonitor();
-            GLFWVidMode vidMode = glfwGetVideoMode(monitor);
             setWidth(vidMode.width());
             setHeight(vidMode.height());
+        }else if(config.isBorderlessFullscreenEnabled()){
+            glfwWindowHint(GLFW_RED_BITS, vidMode.redBits());
+            glfwWindowHint(GLFW_GREEN_BITS, vidMode.greenBits());
+            glfwWindowHint(GLFW_BLUE_BITS, vidMode.blueBits());
+            glfwWindowHint(GLFW_REFRESH_RATE, vidMode.refreshRate());
+            setWidth(vidMode.width());
+            setHeight(vidMode.height());
+            glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
 
         String[] versionSplit = CONTEXT_VERSION.split("\\.");
@@ -166,18 +179,36 @@ public class GlfwWindow extends Window {
 
         if (window == 0) throw new IllegalStateException("can't create glfw window");
 
-        try (MemoryStack stack = stackPush()) {
-            final IntBuffer pwidth = stack.mallocInt(1);
-            final IntBuffer pheight = stack.mallocInt(1);
 
-            glfwGetWindowSize(window, pwidth, pheight);
+        if(config.isMaximizeEnabled() && !config.isNativeFullscreenEnabled() && !config.isBorderlessFullscreenEnabled()) {
+            final int o1 = 31;
+            final int o2 = 73;
+            glfwSetWindowSize(window, vidMode.width(), vidMode.height()-o2);
+            glfwSetWindowPos(window, 0,o1);
+            setWidth(vidMode.width());
+            setHeight(vidMode.height()-o2);
+        }else{
+            //center the window recompute the size
+            try (MemoryStack stack = stackPush()) {
+                final IntBuffer pwidth = stack.mallocInt(1);
+                final IntBuffer pheight = stack.mallocInt(1);
 
-            final GLFWVidMode vidmode = Objects.requireNonNull(glfwGetVideoMode(glfwGetPrimaryMonitor()));
-            glfwSetWindowPos(window, (vidmode.width() - pwidth.get(0)) / 2, (vidmode.height() - pheight.get(0)) / 2);
+                glfwGetWindowSize(window, pwidth, pheight);
+
+                setWidth(pwidth.get(0));
+                setHeight(pheight.get(0));
+
+                glfwSetWindowPos(window, (vidMode.width() - pwidth.get(0)) / 2, (vidMode.height() - pheight.get(0)) / 2);
+            }
         }
+
+
+
         glfwMakeContextCurrent(window);
 
-        glfwSwapInterval(cast(vsync));
+        glfwSwapInterval(cast(config.isVSyncEnabled()));
+
+
         GL.createCapabilities();
 
 

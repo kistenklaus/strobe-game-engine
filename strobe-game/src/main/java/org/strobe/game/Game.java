@@ -14,23 +14,21 @@ import org.strobe.ecs.context.renderer.mesh.Mesh;
 import org.strobe.ecs.context.renderer.mesh.MeshRenderer;
 import org.strobe.ecs.context.renderer.mesh.Primitive;
 import org.strobe.ecs.context.renderer.transform.Transform;
+import org.strobe.entry.Strobe;
 import org.strobe.gfx.Graphics;
-import org.strobe.window.glfw.GlfwWindow;
 
 public class Game extends EntityContext {
 
     public static void main(String[] args) {
-        Game game = new Game();
-        //select game engine (development/release)
+        Strobe.start(Game.class, args);
     }
 
-    private Game(){
-        super("game-window", 640, 480);
+    public Game(){
+        super("game-window", 960, 720);
     }
 
     @Override
     public void setup(Graphics gfx) {
-        addDebugger(new ImGuiDebugger(gfx));
 
 
         Entity renderable = ecs.createEntity();

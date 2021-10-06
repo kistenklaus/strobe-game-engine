@@ -9,6 +9,7 @@ import imgui.flag.ImGuiWindowFlags;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
 import imgui.type.ImBoolean;
+import org.strobe.window.WindowConfiguration;
 import org.strobe.window.glfw.GlfwWindow;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -18,13 +19,8 @@ public final class ImGuiWindow extends GlfwWindow {
     private final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
     private final ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
 
-    public ImGuiWindow(String title, int width, int height) {
-        super(title, width, height);
-    }
-
-    @Override
-    protected void configureWindowHints() {
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    public ImGuiWindow(String title, int width, int height, WindowConfiguration config) {
+        super(title, width, height, config);
     }
 
     @Override
