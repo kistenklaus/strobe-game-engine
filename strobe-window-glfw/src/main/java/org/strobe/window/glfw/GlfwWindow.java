@@ -14,9 +14,9 @@ import static org.lwjgl.system.MemoryStack.stackPush;
 
 public class GlfwWindow extends Window {
 
-    private static final WindowButton[] BUTTON_MAPPING = new WindowButton[GLFW_MOUSE_BUTTON_LAST+1];
+    protected static final WindowButton[] BUTTON_MAPPING = new WindowButton[GLFW_MOUSE_BUTTON_LAST+1];
 
-    private static final WindowKey[] KEY_MAPPING = new WindowKey[GLFW_KEY_LAST+1];
+    protected static final WindowKey[] KEY_MAPPING = new WindowKey[GLFW_KEY_LAST+1];
 
     static{
         BUTTON_MAPPING[GLFW_MOUSE_BUTTON_RIGHT] = WindowButton.RIGHT;
@@ -213,48 +213,60 @@ public class GlfwWindow extends Window {
 
 
         //window events
-        glfwSetWindowSizeCallback(window, (window, width, height) -> {
-            setWidth(width);
-            setHeight(height);
-            windowEventHandler.onResize(width, height);
-        });
-        glfwSetWindowFocusCallback(window, (window, focus) -> {
-            windowEventHandler.onFocusChange(focus);
-        });
-        glfwSetWindowPosCallback(window, (window, xpos, ypos) -> {
-            windowEventHandler.onPositionChange(xpos, ypos);
-        });
+        glfwSetWindowSizeCallback(window, this::windowSizeCallback);
+        glfwSetWindowFocusCallback(window, this::windowFocusCallback);
+        glfwSetWindowPosCallback(window, this::windowPosCallback);
 
         //key listener
-        glfwSetKeyCallback(window, (p, k, s, a, m) -> {
-            WindowKey key = KEY_MAPPING[k];
-            if(key == null) return;
-            if (a == GLFW_PRESS) keyboard.keyDown(key);
-            else if (a == GLFW_RELEASE) keyboard.keyUp(key);
-        });
+        glfwSetKeyCallback(window, this::keyCallback);
 
         //cursor position listener
-        glfwSetCursorPosCallback(window, (p, x, y) -> {
-            mouse.onMove(x, y);
-        });
+        glfwSetCursorPosCallback(window, this::mousePosCallback);
         //mouse button listener
-        glfwSetMouseButtonCallback(window, (p, b, a, m) -> {
-            WindowButton button = BUTTON_MAPPING[b];
-            if(button == null)return;
-            if(a == GLFW_PRESS)mouse.onButtonDown(button);
-            else if(a == GLFW_RELEASE)mouse.onButtonUp(button);
-        });
+        glfwSetMouseButtonCallback(window, this::mouseButtonCallback);
         //scroll listener
-        glfwSetScrollCallback(window, (p, x, y) -> {
-            mouse.onScroll(x, y);
-        });
-
+        glfwSetScrollCallback(window, this::scrollCallback);
 
         glfwShowWindow(window);
     }
 
     protected void configureWindowHints(){
+    }
 
+    protected void windowSizeCallback(long window, int width, int height) {
+        setWidth(width);
+        setHeight(height);
+        windowEventHandler.onResize(width, height);
+    }
+
+    protected void windowFocusCallback(long window, boolean focus){
+        windowEventHandler.onFocusChange(focus);
+    }
+
+    protected void windowPosCallback(long window, int xpos, int ypos){
+        windowEventHandler.onPositionChange(xpos, ypos);
+    }
+
+    protected void keyCallback(long window, int key, int scancode, int action, int mods){
+        WindowKey wKey = KEY_MAPPING[key];
+        if(wKey == null) return;
+        if (action == GLFW_PRESS) keyboard.keyDown(wKey);
+        else if (action == GLFW_RELEASE) keyboard.keyUp(wKey);
+    }
+
+    protected void mousePosCallback(long window, double xpos, double ypos){
+        mouse.onMove(xpos, ypos);
+    }
+
+    protected void mouseButtonCallback(long window, int button, int action, int mods){
+        WindowButton wbutton = BUTTON_MAPPING[button];
+        if(wbutton == null)return;
+        if(action == GLFW_PRESS)mouse.onButtonDown(wbutton);
+        else if(action == GLFW_RELEASE)mouse.onButtonUp(wbutton);
+    }
+
+    protected void scrollCallback(long window, double xOffset, double yOffset){
+        mouse.onScroll(xOffset, yOffset);
     }
 
     @Override

@@ -32,9 +32,17 @@ public abstract class StrobeEngine<T extends StrobeContext> implements Runnable 
         }
     }
 
+    public void beforeInit(Graphics gfx) {
+    }
+
+    public void afterInit(Graphics gfx) {
+    }
+
     public void run() {
         gfx.init();
+        beforeInit(gfx);
         context.init(gfx);
+        afterInit(gfx);
 
         long last = System.nanoTime();
         while (running && !gfx.shouldClose()) {

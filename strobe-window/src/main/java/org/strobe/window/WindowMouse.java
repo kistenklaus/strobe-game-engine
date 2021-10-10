@@ -1,8 +1,5 @@
 package org.strobe.window;
 
-import org.joml.Vector2f;
-import org.joml.Vector2i;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,10 +11,11 @@ public final class WindowMouse implements WindowMouseListener {
     private float windowWidth;
     private float windowHeight;
 
-    private MouseViewportTransform viewportTransform = null;
+    private WindowContentRegion contentRegion = null;
 
     private double cxpos = 0, cypos = 0, lxpos = 0, lypos = 0;
     private double dxpos = 0, dypos = 0;
+    private double cmx = 0, cmy = 0;
     private double cxscroll = 0, cyscroll = 0;
     private final boolean[] buttons = new boolean[WindowButton.values().length];
 
@@ -40,19 +38,22 @@ public final class WindowMouse implements WindowMouseListener {
     @Override
     public void onMove(double xpos, double ypos) {
         //normalize mouse coordinates
-        xpos = (xpos/windowWidth)*2+1;
-        ypos = (ypos/windowHeight)*2+1;
+        xpos = (xpos / windowWidth) * 2 - 1;
+        ypos = (ypos / windowHeight) * 2 - 1;
 
-        if(viewportTransform != null){
-            Vector2f tpos = viewportTransform.transformMousePosition((float)xpos, (float)ypos);
-            if(tpos == null)return;
-            xpos = tpos.x;
-            ypos = tpos.y;
+        if (contentRegion != null) {
+            contentRegion.updateContentMousePos((float) xpos, (float) ypos);
+            xpos = contentRegion.getRelativeMouseX();
+            ypos = contentRegion.getRelativeMouseY();
         }
 
         for (WindowMouseListener l : listeners) l.onMove(xpos, ypos);
         cxpos = xpos;
         cypos = ypos;
+        if (contentRegion == null || contentRegion.isContentFocused()) {
+            cmx = cxpos;
+            cmy = cypos;
+        }
     }
 
     @Override
@@ -66,16 +67,18 @@ public final class WindowMouse implements WindowMouseListener {
     public void onButtonDown(WindowButton button) {
         for (WindowMouseListener l : listeners) l.onButtonDown(button);
         buttons[button.ordinal()] = true;
+        if (contentRegion != null) contentRegion.updateContentMouseButton(true);
     }
 
     @Override
     public void onButtonUp(WindowButton button) {
         for (WindowMouseListener l : listeners) l.onButtonUp(button);
         buttons[button.ordinal()] = false;
+        if (contentRegion != null) contentRegion.updateContentMouseButton(false);
     }
 
-    public void setViewportTransform(MouseViewportTransform viewportTransform){
-        this.viewportTransform = viewportTransform;
+    protected void setContentRegion(WindowContentRegion viewportTransform) {
+        this.contentRegion = viewportTransform;
     }
 
     public boolean isButtonDown(WindowButton button) {
@@ -83,35 +86,39 @@ public final class WindowMouse implements WindowMouseListener {
     }
 
     public double getX() {
-        return cxpos;
+        return cmy;
     }
 
     public double getY() {
-        return cypos;
+        return cmx;
     }
 
     public double getDX() {
+        if (contentRegion != null && !contentRegion.isContentFocused()) return 0;
         return dxpos;
     }
 
     public double getDY() {
+        if (contentRegion != null && !contentRegion.isContentFocused()) return 0;
         return dypos;
     }
 
     public double getXScroll() {
+        if(contentRegion != null && !contentRegion.isContentFocused())return 0;
         return cxscroll;
     }
 
     public double getYScroll() {
+        if(contentRegion != null && !contentRegion.isContentFocused())return 0;
         return cyscroll;
     }
 
-    protected void setWindowSize(float windowWidth, float windowHeight){
+    protected void setWindowSize(float windowWidth, float windowHeight) {
         this.windowWidth = windowWidth;
         this.windowHeight = windowHeight;
     }
 
     public float getWindowAspect() {
-        return windowWidth/windowHeight;
+        return windowWidth / windowHeight;
     }
 }

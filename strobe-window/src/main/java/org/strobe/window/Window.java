@@ -10,6 +10,8 @@ public abstract class Window {
     protected WindowKeyboard keyboard = new WindowKeyboard();
     protected WindowEventHandler windowEventHandler = new WindowEventHandler();
 
+    protected WindowContentRegion contentRegion = null;
+
     public Window(String title, int width, int height) {
         this.title = title;
         this.width = width;
@@ -90,5 +92,15 @@ public abstract class Window {
 
     public WindowKeyboard getKeyboard() {
         return keyboard;
+    }
+
+    public void setContentRegion(WindowContentRegion contentRegion){
+        this.contentRegion = contentRegion;
+        mouse.setContentRegion(contentRegion);
+        keyboard.setContentRegion(contentRegion);
+    }
+
+    public WindowContentRegion getContentRegion(){
+        return contentRegion;
     }
 }
