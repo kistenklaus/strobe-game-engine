@@ -28,7 +28,7 @@ public class EntityComponentSystem {
     public EntityComponentSystem() {
     }
 
-    public Entity createEntity() {
+    public Entity createEntity(String name) {
         int entityIndex = entities.getNextFreeIndex();
         Entity entity;
         if (!deadEntities.isEmpty()) {
@@ -36,7 +36,7 @@ public class EntityComponentSystem {
         } else {
             entity = new Entity(this);
         }
-        entity.respawn(entityIndex);
+        entity.respawn(entityIndex, name);
         entities.set(entityIndex, entity);
         return entity;
     }
@@ -148,7 +148,7 @@ public class EntityComponentSystem {
         }
     }
 
-    protected Entity getEntity(int entityIndex) {
+    public Entity getEntity(int entityIndex) {
         return entities.get(entityIndex);
     }
 
@@ -158,6 +158,10 @@ public class EntityComponentSystem {
 
     public void enableInstantUpdate() {
         instantUpdateOutOfCycle = true;
+    }
+
+    public Iterable<Entity> entities(){
+        return entities;
     }
 
     private enum Phase{

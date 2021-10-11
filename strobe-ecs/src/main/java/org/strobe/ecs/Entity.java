@@ -20,6 +20,8 @@ public final class Entity {
     private int parent = -1;
     private final HashSet<Integer> children = new HashSet<>();
 
+    private String name = null;
+
     protected Entity(EntityComponentSystem ecs) {
         this.ecs = ecs;
     }
@@ -155,8 +157,8 @@ public final class Entity {
     }
 
 
-    public Entity createChild(){
-        Entity entity = ecs.createEntity();
+    public Entity createChild(String name){
+        Entity entity = ecs.createEntity(name);
         entity.parent = entityIndex;
         children.add(entity.getEntityIndex());
         return entity;
@@ -192,6 +194,10 @@ public final class Entity {
         };
     }
 
+    public boolean hasChildren(){
+        return !children.isEmpty();
+    }
+
     public void relocate(Entity entity){
         if(parent != -1){
             Entity parentEntity = ecs.getEntity(parent);
@@ -201,8 +207,9 @@ public final class Entity {
         entity.children.add(entityIndex);
     }
 
-    protected void respawn(int entityIndex) {
+    protected void respawn(int entityIndex, String name) {
         this.entityIndex = entityIndex;
+        this.name = name;
         alive = true;
     }
 
@@ -213,6 +220,7 @@ public final class Entity {
             parent = -1;
         }
         entityIndex = -1;
+        name = null;
         componentAddedObservers.clear();
         componentRemovedObserver.clear();
         components.clear();
@@ -257,6 +265,22 @@ public final class Entity {
         componentRemovedObserver.remove(observer);
     }
 
+    public String getName(){
+        return name;
+    }
+
+    public void setName(String name){
+        this.name = name;
+    }
+
+    public Iterable<Component> components(){
+        return components;
+    }
+
+    public boolean hasAnyComponent() {
+        return !components.isEmpty();
+    }
+
     protected void notifyObservers(ComponentType componentType, boolean added) {
         if(added){
             for(ComponentObserver observer : componentAddedObservers){
@@ -268,4 +292,5 @@ public final class Entity {
             }
         }
     }
+
 }

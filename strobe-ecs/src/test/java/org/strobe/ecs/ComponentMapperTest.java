@@ -16,7 +16,7 @@ public final class ComponentMapperTest {
 
     @Test
     void componentMapperTesting(){
-        Entity entity = ecs.createEntity();
+        Entity entity = ecs.createEntity("entity");
         entity.addComponent(new OtherComponent());
     }
 

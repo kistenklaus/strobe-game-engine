@@ -6,7 +6,7 @@ import org.strobe.utils.UnboundedArray;
 import java.util.HashMap;
 import java.util.Objects;
 
-final class ComponentType {
+public final class ComponentType {
 
     private static final UnboundedArray<ComponentType> componentTypes = new UnboundedArray<>(8);
     private static final HashMap<Class<? extends Component>, Integer> componentIndexMap = new HashMap<>();
@@ -34,6 +34,10 @@ final class ComponentType {
         }
     }
 
+    public static int getIndexFor(Class<? extends Component> componentClass){
+        return getFor(componentClass).getIndex();
+    }
+
     private final int componentIndex;
     private final Class<? extends Component> componentClass;
 
@@ -45,6 +49,7 @@ final class ComponentType {
     public int getIndex() {
         return componentIndex;
     }
+
 
     public Class<? extends Component> getComponentClass(){
         return componentClass;

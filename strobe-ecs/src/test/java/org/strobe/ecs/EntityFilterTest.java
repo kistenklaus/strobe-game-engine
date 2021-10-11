@@ -70,7 +70,7 @@ public class EntityFilterTest {
     @Test
     void requireAllFilterTest(){
         EntityFilter f1 = EntityFilter.requireAll(OtherComponent.class, AnotherComponent.class);
-        Entity e = ecs.createEntity();
+        Entity e = ecs.createEntity("e");
         Assertions.assertFalse(f1.eval(e));
         e.addComponent(new OtherComponent());
         Assertions.assertFalse(f1.eval(e));

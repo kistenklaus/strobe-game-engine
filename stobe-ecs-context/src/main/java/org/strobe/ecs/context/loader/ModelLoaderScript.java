@@ -30,7 +30,7 @@ public final class ModelLoaderScript extends ScriptComponent {
 
     private void processNode(AssimpNode node, Entity entity) {
         for (AssimpMesh assimpMesh : node.meshes()) {
-            Entity meshChild = entity.createChild();
+            Entity meshChild = entity.createChild("mesh-child");
             //AssimpMesh -> Mesh (Component)
             int flag = 0;
             if (assimpMesh.hasPositions()) flag |= Mesh.ALLOCATE_POSITIONS;
@@ -67,7 +67,7 @@ public final class ModelLoaderScript extends ScriptComponent {
         }
 
         for(AssimpNode childNode : node.children()){
-            Entity childEntity = entity.createChild();
+            Entity childEntity = entity.createChild("child-entity");
             processNode(childNode, childEntity);
         }
 

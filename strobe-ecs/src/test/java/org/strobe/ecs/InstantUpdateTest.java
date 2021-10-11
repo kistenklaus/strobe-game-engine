@@ -17,7 +17,7 @@ public final class InstantUpdateTest {
     @Test
     void instantUpdateTesting(){
         EntityPool pool = ecs.createPool(EntityFilter.requireAll(OtherComponent.class));
-        Entity entity = ecs.createEntity();
+        Entity entity = ecs.createEntity("e");
         entity.addComponent(new OtherComponent());
         Assertions.assertTrue(entity.has(OtherComponent.class));
         Assertions.assertTrue(pool.contains(entity));

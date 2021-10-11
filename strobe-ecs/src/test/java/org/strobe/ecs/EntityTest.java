@@ -23,7 +23,7 @@ public final class EntityTest {
 
     @Test
     void hasTest(){
-        Entity entity = ecs.createEntity();
+        Entity entity = ecs.createEntity("entity");
         entity.addComponent(new OtherComponent());
         entity.addComponent(new ChildComponent());
         ecs.update(DT);
@@ -35,7 +35,7 @@ public final class EntityTest {
 
     @Test
     void removeTest(){
-        Entity entity = ecs.createEntity();
+        Entity entity = ecs.createEntity("entity");
         entity.addComponent(new OtherComponent());
         entity.addComponent(new ChildComponent());
         ecs.update(DT);

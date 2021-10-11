@@ -58,4 +58,8 @@ public abstract class EntityContext extends OpenGlContext {
         return keyboard;
     }
 
+    public final EntityComponentSystem getEcs(){
+        return ecs;
+    }
+
 }

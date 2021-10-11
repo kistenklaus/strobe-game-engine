@@ -141,6 +141,10 @@ public abstract class AbstractTransform {
         this.scale.set(scale);
     }
 
+    public synchronized void setScale(float x, float y, float z){
+        this.scale.set(x,y,z);
+    }
+
     public synchronized void setSX(float sx) {
         this.scale.x = sx;
     }
@@ -202,6 +206,9 @@ public abstract class AbstractTransform {
         orientation.rotateAxis(angle, axis);
     }
 
+    public synchronized Vector3f getEulerRotation(){
+        return orientation.getEulerAnglesXYZ(new Vector3f());
+    }
 
     private static final class RootTransform extends AbstractTransform {
 

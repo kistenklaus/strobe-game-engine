@@ -53,6 +53,14 @@
             <groupId>strobe</groupId>
             <artifactId>strobe-window-glfw</artifactId>
         </dependency>
+        <dependency>
+            <groupId>strobe</groupId>
+            <artifactId>strobe-graphics</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>strobe</groupId>
+            <artifactId>strobe-utils</artifactId>
+        </dependency>
     </dependencies>
 
     <properties>

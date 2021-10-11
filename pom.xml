@@ -32,6 +32,7 @@
         <module>strobe-window-imgui</module>
         <module>strobe-entry</module>
         <module>strobe-opengl-context</module>
+        <module>strobe-imgui-utils</module>
     </modules>
 
     <properties>

@@ -31,26 +31,23 @@ public class Game extends EntityContext {
     public void setup(Graphics gfx) {
 
 
-        Entity renderable = ecs.createEntity();
+        Entity renderable = ecs.createEntity("renderable");
         renderable.addComponent(new Transform(new Vector3f(0,0.5f,0)));
         Mesh mesh = new Mesh(Primitive.CUBE,Mesh.ALLOCATE_POSITIONS|Mesh.ALLOCATE_NORMALS|Mesh.ALLOCATE_TEXTURE_COORDS);
-
         renderable.addComponent(mesh);
         LambertianMaterial mat = new LambertianMaterial(1,0,1);
         mat.setDiffuseColor(new Vector3f(1,1,0));
         renderable.addComponent(mat);
         renderable.addComponent(new MeshRenderer());
 
+        Entity c1 = renderable.createChild("renderable-child");
+        Entity c2 = c1.createChild("renderable-child-child");
 
-        //Entity model = ecs.createEntity();
-        //model.addComponent(new Transform(new Vector3f(0,5,0)));
-        //model.addComponent(new ModelLoaderScript("assets/backpack/backpack.obj"));
-
-        Entity ground = ecs.createEntity();
+        Entity ground = ecs.createEntity("ground");
         ground.addComponent(new GroundGenScript());
 
 
-        Entity camera = ecs.createEntity();
+        Entity camera = ecs.createEntity("camera");
         camera.addComponent(new PerspectiveLens(60, 960f/640, 0.01f, 40));
         int resRed = 1;
         CameraRenderer cr;
@@ -62,7 +59,7 @@ public class Game extends EntityContext {
         camera.addComponent(new FocusCamera());
 
 
-        Entity light = ecs.createEntity();
+        Entity light = ecs.createEntity("light");
         light.addComponent(new Transform(new Vector3f(1,2,3)));
         DirectionalLight dirLightComp = new DirectionalLight(new Vector3f(0.1f), new Vector3f(1), new Vector3f(1));
         dirLightComp.setShadowFrustumOffset(10);
@@ -85,7 +82,7 @@ public class Game extends EntityContext {
 
          */
 
-        Entity camera2 = ecs.createEntity();
+        Entity camera2 = ecs.createEntity("camera2");
         camera2.addComponent(new Transform(new Vector3f(0,0,5)));
         camera2.addComponent(new CameraIndex(2));
         camera2.addComponent(new CameraController());

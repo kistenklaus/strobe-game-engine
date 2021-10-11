@@ -17,7 +17,7 @@ public final class EntityPoolEventTest {
     @Test
     void addEventTesting(){
         ecs.disableInstantUpdate();
-        Entity entity = ecs.createEntity();
+        Entity entity = ecs.createEntity("entity");
         EntityPool pool = ecs.createPool(EntityFilter.requireAll(OtherComponent.class));
         final boolean[] received = {false};
         EntityPoolObserver addObserver;
@@ -40,7 +40,7 @@ public final class EntityPoolEventTest {
     @Test
     void removeEventTesting(){
         ecs.disableInstantUpdate();
-        Entity entity = ecs.createEntity();
+        Entity entity = ecs.createEntity("entity");
         EntityPool pool = ecs.createPool(EntityFilter.requireAll(OtherComponent.class));
         final boolean[] received = {false};
         EntityPoolObserver removeObserver;
@@ -65,7 +65,7 @@ public final class EntityPoolEventTest {
     @Test
     void chainTesting(){
         ecs.disableInstantUpdate();
-        Entity entity = ecs.createEntity();
+        Entity entity = ecs.createEntity("entity");
         EntityPool pool = ecs.createPool(EntityFilter.requireAll(OtherComponent.class));
 
         pool.addEntityAddedObserver(ent->{

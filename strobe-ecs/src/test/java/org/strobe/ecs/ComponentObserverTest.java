@@ -18,7 +18,7 @@ public class ComponentObserverTest {
 
     @Test
     void observerTest(){
-        Entity entity = ecs.createEntity();
+        Entity entity = ecs.createEntity("entity");
         boolean[] registerAdd = {false};
         ComponentObserver addObserver = (e,cc)->{
             registerAdd[0] = true;
@@ -58,7 +58,7 @@ public class ComponentObserverTest {
 
     @Test
     void observerAddAddTest(){
-        Entity entity = ecs.createEntity();
+        Entity entity = ecs.createEntity("entity");
         boolean[] registerAdd = {false};
         ComponentObserver addObserver = (e,cc)->{
             registerAdd[0] = true;

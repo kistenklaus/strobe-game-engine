@@ -16,13 +16,13 @@ public final class EntityHierarchyTesting {
 
     @Test
     void testEntityHierarchy(){
-        Entity parent = ecs.createEntity();
+        Entity parent = ecs.createEntity("parent");
 
-        Entity child = parent.createChild();
+        Entity child = parent.createChild("child");
         Assertions.assertTrue(parent.hasChild(child));
         Assertions.assertTrue(child.isChildOf(parent));
 
-        Entity other = ecs.createEntity();
+        Entity other = ecs.createEntity("other");
         child.relocate(other);
 
         Assertions.assertFalse(parent.hasChild(child));

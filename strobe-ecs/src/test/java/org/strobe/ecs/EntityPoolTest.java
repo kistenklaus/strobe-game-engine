@@ -22,7 +22,7 @@ public final class EntityPoolTest {
     @Test
     void poolContainsTesting(){
         EntityPool pool = ecs.createPool(EntityFilter.requireAll(OtherComponent.class));
-        Entity entity = ecs.createEntity();
+        Entity entity = ecs.createEntity("abc");
         entity.addComponent(new OtherComponent());
         Assertions.assertEquals(0, pool.getSize());
         Assertions.assertFalse(pool.contains(entity));
@@ -77,7 +77,7 @@ public final class EntityPoolTest {
     @Test
     void requireAllPoolTest(){
         EntityPool p1 = ecs.createPool(EntityFilter.requireAll(OtherComponent.class, AnotherComponent.class));
-        Entity ent = ecs.createEntity();
+        Entity ent = ecs.createEntity("ent");
         ent.addComponent(new OtherComponent());
         ent.addComponent(new AnotherComponent());
         ecs.update(DT);
@@ -86,7 +86,7 @@ public final class EntityPoolTest {
 
     @Test
     void latePoolCreation(){
-        Entity e = ecs.createEntity();
+        Entity e = ecs.createEntity("e");
         e.addComponent(new OtherComponent());
         ecs.update(0);
         EntityPool pool = ecs.createPool(EntityFilter.requireAll(OtherComponent.class));

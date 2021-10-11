@@ -10,8 +10,13 @@ import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFWErrorCallbackI;
 import org.lwjgl.glfw.GLFWNativeWin32;
 import org.lwjgl.glfw.GLFWVidMode;
+import org.strobe.gfx.Graphics;
+import org.strobe.utils.ResourceLoader;
 import org.strobe.window.WindowConfiguration;
 import org.strobe.window.glfw.GlfwWindow;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -74,10 +79,12 @@ public final class ImGuiWindow extends GlfwWindow {
     private double time = 0.0f;
 
     private final String iniFile;
+    private final ImGuiStyle style;
 
-    public ImGuiWindow(String title, String iniFile, int width, int height, WindowConfiguration config) {
+    public ImGuiWindow(String title, String iniFile, int width, int height, WindowConfiguration config, ImGuiStyle style) {
         super(title, width, height, config);
         this.iniFile = iniFile;
+        this.style = style;
     }
 
     @Override
@@ -137,6 +144,34 @@ public final class ImGuiWindow extends GlfwWindow {
         if (IS_WINDOWS) {
             imGuiViewport.setPlatformHandleRaw(GLFWNativeWin32.glfwGetWin32Window(pointer()));
         }
+
+        if(style != null && style.getFontResource()!=null){
+            final ImFontGlyphRangesBuilder rangesBuilder = new ImFontGlyphRangesBuilder();
+            rangesBuilder.addRanges(io.getFonts().getGlyphRangesDefault());
+            final short[] glyphRanges = rangesBuilder.buildRanges();
+
+            final ImFontConfig fontConfig = new ImFontConfig();
+            fontConfig.setGlyphRanges(glyphRanges);
+            fontConfig.setMergeMode(false);
+            fontConfig.setPixelSnapH(false);
+
+
+            try {
+                ByteBuffer ttfBuffer = ResourceLoader.ioResourceToByteBuffer(style.getFontResource());
+                byte[] ttf = new byte[ttfBuffer.capacity()];
+                ttfBuffer.position(0);
+                for (int i = 0; i < ttfBuffer.capacity(); i++) ttf[i] = ttfBuffer.get();
+
+                io.getFonts().addFontFromMemoryTTF(ttf, 16.0f, fontConfig,glyphRanges);
+                io.getFonts().addFontDefault();
+
+                io.getFonts().build();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            fontConfig.destroy();
+        }
+
 
         imGuiGl3.init(GLSL_VERSION);
 
@@ -262,6 +297,7 @@ public final class ImGuiWindow extends GlfwWindow {
         updateMouse();
 
         ImGui.newFrame();
+        style.push();
         beginDockSpace();
     }
 
@@ -332,6 +368,7 @@ public final class ImGuiWindow extends GlfwWindow {
 
     public void endFrame() {
         endDockSpace();
+        style.pop();
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
 
@@ -364,6 +401,10 @@ public final class ImGuiWindow extends GlfwWindow {
 
     private void endDockSpace() {
         ImGui.end();
+    }
+
+    public ImGuiStyle getStyle(){
+        return style;
     }
 
     @Override
