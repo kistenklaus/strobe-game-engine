@@ -28,10 +28,33 @@ public final class PerspectiveLens extends CameraLense {
         return near;
     }
 
+    public void setNear(float near){
+        this.near = near;
+    }
+
     @Override
     public float getFar() {
         return far;
     }
 
+    public void setFar(float far){
+        this.far = far;
+    }
+
+    public void setAspect(float aspect){
+        this.aspect = aspect;
+    }
+
+    public float getAspect(){
+        return aspect;
+    }
+
+    public void setFov(float fov){
+        this.fov = fov;
+    }
+
+    public float getFov(){
+        return fov;
+    }
 }
 

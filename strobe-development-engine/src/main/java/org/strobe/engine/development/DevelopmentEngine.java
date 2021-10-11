@@ -1,5 +1,6 @@
 package org.strobe.engine.development;
 
+import imgui.ImGui;
 import org.strobe.ecs.context.EntityContext;
 import org.strobe.engine.StrobeEngine;
 import org.strobe.engine.development.inspector.InspectorPanel;
@@ -46,6 +47,7 @@ public final class DevelopmentEngine extends StrobeEngine<EntityContext> {
         viewport.draw(gfx);
         hierarchy.draw(gfx);
         inspector.draw(gfx);
+        ImGui.showDemoWindow();
     }
 
 

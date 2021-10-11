@@ -31,12 +31,24 @@ abstract class LightComponent implements Component {
         lightOps.add((gfx,r)->light.setAmbient(ambientColor));
     }
 
+    public Vector3f getAmbientColor(){
+        return light.getAmbient();
+    }
+
     public void setDiffuseColor(Vector3f diffuseColor){
         lightOps.add((gfx,r)->light.setDiffuse(diffuseColor));
     }
 
+    public Vector3f getDiffuseColor(){
+        return light.getDiffuse();
+    }
+
     public void setSpecularColor(Vector3f specularColor){
         lightOps.add((gfx,r)->light.setSpecular(specularColor));
+    }
+
+    public Vector3f getSpecularColor(){
+        return light.getSpecular();
     }
 
     AbstractLight getAbstractLight(){

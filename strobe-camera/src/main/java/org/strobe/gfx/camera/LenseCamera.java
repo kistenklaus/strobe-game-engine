@@ -49,6 +49,7 @@ public final class LenseCamera extends AbstractCamera{
         return lense.get().getFar();
     }
 
+
     @Override
     public FrustumBox getFrustumBox() {
         return FrustumBox.getFromProjView(projMatrix.mul(viewMatrix, new Matrix4f()));
