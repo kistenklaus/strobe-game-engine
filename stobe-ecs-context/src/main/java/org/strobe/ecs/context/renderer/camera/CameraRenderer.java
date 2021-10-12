@@ -35,6 +35,14 @@ public final class CameraRenderer implements Component {
         cameraOps.add((gfx,r)->camera.disableLinearScaling());
     }
 
+    public boolean isLinearScalingEnabled() {
+        return camera.isEnabledLinearScaling();
+    }
+
+    public boolean isFxaaEnabled(){
+        return camera.isEnabledFXAA();
+    }
+
     public void enableFXAA(){
         cameraOps.add((gfx,r)->camera.enableFXAA(gfx));
     }
@@ -75,4 +83,19 @@ public final class CameraRenderer implements Component {
     public void enableShadows(){
         renderShadows = true;
     }
+
+    public int getHorResolution(){
+        return camera.getHorResolution();
+    }
+
+    public int getVerResolution(){
+        return camera.getVerResolution();
+    }
+
+    public void setResolution(int horResolution, int verResolution) {
+        cameraOps.add((gfx, r)->{
+            camera.changeResolution(gfx, horResolution, verResolution);
+        });
+    }
 }
+

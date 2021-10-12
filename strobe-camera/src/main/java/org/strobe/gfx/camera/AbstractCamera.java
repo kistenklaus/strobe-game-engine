@@ -1,6 +1,7 @@
 package org.strobe.gfx.camera;
 
 import org.joml.Matrix4f;
+import org.joml.Vector2i;
 import org.joml.Vector3f;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.camera.filters.FXAAFilter;
@@ -35,9 +36,12 @@ public abstract class AbstractCamera {
     private FXAAFilter fxaaFilter = null;
     private boolean fxaaEnabled = false;
 
+    private final Vector2i resolution;
+
     public AbstractCamera(Graphics gfx, int horResolution, int verResolution) {
         frontTarget = new Framebuffer(gfx, horResolution, verResolution, DEFAULT_ATTACHMENTS);
         backTarget = new Framebuffer(gfx, horResolution, verResolution, DEFAULT_ATTACHMENTS);
+        this.resolution = new Vector2i(horResolution, verResolution);
         ubo = new CameraUbo(gfx);
     }
 
@@ -125,4 +129,26 @@ public abstract class AbstractCamera {
     }
 
     public abstract FrustumBox getFrustumBox();
+
+    public int getHorResolution(){
+        return resolution.x;
+    }
+
+    public int getVerResolution(){
+        return resolution.y;
+    }
+
+    public void changeResolution(Graphics gfx, int horResolution, int verResolution) {
+        resolution.set(horResolution, verResolution);
+        //create
+        Framebuffer oldFront = frontTarget;
+        Framebuffer oldBack = backTarget;
+        frontTarget = new Framebuffer(gfx,horResolution, verResolution, DEFAULT_ATTACHMENTS);
+        backTarget = new Framebuffer(gfx,horResolution, verResolution, DEFAULT_ATTACHMENTS);
+        //todo copy?
+
+        //dispose
+        gfx.dispose(oldFront);
+        gfx.dispose(oldBack);
+    }
 }

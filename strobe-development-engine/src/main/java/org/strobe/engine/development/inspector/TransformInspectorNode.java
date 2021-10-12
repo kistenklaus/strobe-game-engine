@@ -52,7 +52,6 @@ public final class TransformInspectorNode extends ComponentInspectorNode<Transfo
         ImGui.setCursorPos(cp.x, cp.y + 51);
         ImGui.bulletText("rotation");
         Vector3f euler = transform.getEulerRotation();
-        System.out.println(euler);
         float[] rot = new float[]{euler.x, euler.y, euler.z};
         ImGui.pushID("rotation");
         ImGui.pushItemWidth(200);

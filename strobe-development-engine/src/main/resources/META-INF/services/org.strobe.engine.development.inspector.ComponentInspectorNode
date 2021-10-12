@@ -1,3 +1,4 @@
 org.strobe.engine.development.inspector.TransformInspectorNode
 org.strobe.engine.development.inspector.DirectionalLightInspectorNode
 org.strobe.engine.development.inspector.PerspectiveLensInspectorNode
+org.strobe.engine.development.inspector.CameraRendererInspectorNode
