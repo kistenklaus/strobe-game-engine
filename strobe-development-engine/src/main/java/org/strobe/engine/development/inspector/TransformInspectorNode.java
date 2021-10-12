@@ -45,6 +45,7 @@ public final class TransformInspectorNode extends ComponentInspectorNode<Transfo
         ImGui.pushItemWidth(200);
         ImGui.setCursorPos(cp.x+100, cp.y+25);
         confirmed = ImGui.inputFloat3("", scale, "%.4g", ImGuiInputTextFlags.EnterReturnsTrue);
+        ImGui.popItemWidth();
         ImGui.popID();
         if(confirmed) transform.setScale(scale[0], scale[1], scale[2]);
 
@@ -57,6 +58,7 @@ public final class TransformInspectorNode extends ComponentInspectorNode<Transfo
         ImGui.pushItemWidth(200);
         ImGui.setCursorPos(cp.x+100, cp.y + 50);
         confirmed = ImGui.inputFloat3("", rot, "%.4g", ImGuiInputTextFlags.EnterReturnsTrue);
+        ImGui.popItemWidth();
         ImGui.popID();
         if(confirmed){
             double cx = Math.cos(rot[0] * 0.5f);

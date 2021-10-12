@@ -28,6 +28,7 @@ public final class DirectionalLightInspectorNode extends ComponentInspectorNode<
         ImGui.pushItemWidth(200);
         ImGui.colorEdit3("", ambient);
         ImGui.popID();
+        ImGui.popItemWidth();
         Vector3f ambientMod = new Vector3f(ambient);
         if (!ambientMod.equals(light.getAmbientColor(), 0.01f))
             light.setAmbientColor(ambientMod);
@@ -41,6 +42,7 @@ public final class DirectionalLightInspectorNode extends ComponentInspectorNode<
         ImGui.pushItemWidth(200);
         ImGui.colorEdit3("", diffuse);
         ImGui.popID();
+        ImGui.popItemWidth();
 
         Vector3f diffuseMod = new Vector3f(diffuse);
         if(!diffuseMod.equals(light.getDiffuseColor(), 0.01f))
@@ -55,6 +57,7 @@ public final class DirectionalLightInspectorNode extends ComponentInspectorNode<
         ImGui.setCursorPos(cp.x+100, cp.y+50);
         ImGui.pushItemWidth(200);
         ImGui.colorEdit3("", specular);
+        ImGui.popItemWidth();
         ImGui.popID();
         Vector3f specularMod = new Vector3f(specular);
         if(!specularMod.equals(light.getSpecularColor(), 0.01f))

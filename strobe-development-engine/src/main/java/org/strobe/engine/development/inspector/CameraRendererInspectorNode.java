@@ -51,7 +51,7 @@ public final class CameraRendererInspectorNode extends ComponentInspectorNode<Ca
             if (modeMod.get() == 0) cameraRenderer.enableLinearScaling();
             else if (modeMod.get() == 1) cameraRenderer.disableLinearScaling();
         }
-
+        ImGui.popItemWidth();
         ImGui.popID();
 
 

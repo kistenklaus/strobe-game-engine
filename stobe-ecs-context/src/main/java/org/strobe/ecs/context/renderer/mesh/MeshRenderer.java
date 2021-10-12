@@ -15,9 +15,6 @@ public final class MeshRenderer implements Component {
 
     private Technique materialTechnique = null;
 
-
-    private final int renderFlags = 0;
-
     public MeshRenderer() {
 
     }

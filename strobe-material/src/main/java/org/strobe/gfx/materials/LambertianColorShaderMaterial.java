@@ -13,6 +13,8 @@ public final class LambertianColorShaderMaterial extends ShaderMaterial {
     private ShadowMapShader shadowMapShader;
     private ShaderUniformSet uniformSet;
 
+    private final Vector3f diffuseColor = new Vector3f(1);
+
     public LambertianColorShaderMaterial(Graphics gfx) {
         super(gfx);
     }
@@ -30,6 +32,11 @@ public final class LambertianColorShaderMaterial extends ShaderMaterial {
     }
 
     public void setDiffuseColor(Vector3f diffuseColor) {
+        this.diffuseColor.set(diffuseColor);
         uniformSet.set("material.diffuseColor", diffuseColor);
+    }
+
+    public Vector3f getDiffuseColor(){
+        return diffuseColor;
     }
 }

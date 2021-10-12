@@ -10,7 +10,6 @@ public final class LambertianMaterial extends Material{
 
     private LambertianColorShaderMaterial shaderMaterial;
 
-
     public LambertianMaterial(Vector3f diffuseColor){
         super();
         setDiffuseColor(diffuseColor);
@@ -28,5 +27,9 @@ public final class LambertianMaterial extends Material{
 
     public void setDiffuseColor(Vector3f diffuseColor){
         materialOps.add((gfx,r)->shaderMaterial.setDiffuseColor(diffuseColor));
+    }
+
+    public Vector3f getDiffuseColor(){
+        return shaderMaterial.getDiffuseColor();
     }
 }
