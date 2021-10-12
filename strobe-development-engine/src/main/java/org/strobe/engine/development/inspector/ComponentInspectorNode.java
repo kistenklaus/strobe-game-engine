@@ -19,6 +19,16 @@ public abstract class ComponentInspectorNode<T extends Component> {
 
     public abstract Class<? extends T>[] getInspectorTargets();
 
+    private final boolean isLeaf;
+
+    protected ComponentInspectorNode(boolean isLeaf){
+        this.isLeaf = isLeaf;
+    }
+
+    public ComponentInspectorNode(){
+        this(false);
+    }
+
     public final void drawInspector(Graphics gfx, DevelopmentStyle style, T component, Entity entity){
         BitSet os = openState.get(entity.getEntityIndex());
         if(os == null){
@@ -29,7 +39,7 @@ public abstract class ComponentInspectorNode<T extends Component> {
 
         if(ImGuiUtils.iconTreeNodeButton(ImGui.getID(entity.getEntityIndex()+component.getClass().getSimpleName()),
                 getDisplayName(component), -1,20,
-                os.get(componentIndex),
+                os.get(componentIndex), isLeaf,
                 true, style.getDarkColor(),
                 style.getOpenTreeIcon().getID(), style.getClosedTreeIcon().getID(),
                 getDisplayIcon(component, style))){
@@ -41,7 +51,7 @@ public abstract class ComponentInspectorNode<T extends Component> {
             }
         }
         ImGui.pushID(entity.getEntityIndex()+component.getClass().getSimpleName());
-        if(os.get(componentIndex))drawInspectorNode(gfx,style, component, entity);
+        if(!isLeaf&&os.get(componentIndex))drawInspectorNode(gfx,style, component, entity);
         ImGui.popID();
     }
 

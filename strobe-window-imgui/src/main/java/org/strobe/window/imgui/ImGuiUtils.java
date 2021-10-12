@@ -25,7 +25,7 @@ public final class ImGuiUtils {
 
 
 
-    public static boolean iconTreeNodeButton(int id, String label, int width, int height, boolean open,
+    public static boolean iconTreeNodeButton(int id, String label, int width, int height, boolean open, boolean leaf,
                                              boolean highlight, int highlightColor,
                                              int openTexId, int closedTexId, int iconTexId){
         ImVec2 region = ImGui.getContentRegionAvail();
@@ -45,8 +45,10 @@ public final class ImGuiUtils {
             pressed = ImGui.invisibleButton("", width==-1?region.x:width, height);
         }
 
-        ImGui.setCursorPos(cp.x+height/4, cp.y+height/4);
-        ImGuiUtils.image(open?openTexId:closedTexId, height/2,height/2);
+        if(!leaf){
+            ImGui.setCursorPos(cp.x+height/4, cp.y+height/4);
+            ImGuiUtils.image(open?openTexId:closedTexId, height/2,height/2);
+        }
 
         ImGui.setCursorPos(cp.x + height*1.1f, cp.y+height*0.1f);
         ImGuiUtils.image(iconTexId, height*0.8f,height*0.8f);
