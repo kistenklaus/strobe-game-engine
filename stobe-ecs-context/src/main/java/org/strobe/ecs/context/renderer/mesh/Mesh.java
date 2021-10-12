@@ -8,12 +8,8 @@ import org.strobe.gfx.opengl.bindables.vao.Ibo;
 import org.strobe.gfx.opengl.bindables.vao.Vao;
 import org.strobe.gfx.renderables.opengl.IndexedVao;
 
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.function.BiConsumer;
-
-import static org.lwjgl.opengl.GL11.GL_TRIANGLES;
-import static org.lwjgl.opengl.GL11.GL_UNSIGNED_INT;
 
 public class Mesh implements Component {
 
@@ -108,16 +104,16 @@ public class Mesh implements Component {
         this(vertexCount, drawCount, DYNAMIC_POSITIONS | DYNAMIC_NORMALS);
     }
 
-    public Mesh(Primitive primitive, int flags){
+    public Mesh(Primitive primitive, int flags) {
         this(primitive.getVertexCount(), primitive.getDrawCount(), flags);
-        if(positions != null && primitive.getPositions()!=null)
+        if (positions != null && primitive.getPositions() != null)
             setPositions(0, primitive.getPositions());
-        if(textureCoords != null && primitive.getTextureCoords()!=null)
+        if (textureCoords != null && primitive.getTextureCoords() != null)
             setTextureCoords(0, primitive.getTextureCoords());
-        if(normals != null && primitive.getNormals()!=null)
+        if (normals != null && primitive.getNormals() != null)
             setNormals(0, primitive.getNormals());
-        if(tangents != null && primitive.getTangents() != null
-            &&bitangents!=null && primitive.getBitangents() != null)
+        if (tangents != null && primitive.getTangents() != null
+                && bitangents != null && primitive.getBitangents() != null)
             setTangents(0, primitive.getTangents(), primitive.getBitangents());
         setIndices(0, primitive.getIndices());
     }
@@ -158,7 +154,7 @@ public class Mesh implements Component {
         if (positions.length % 3 != 0) throw new IllegalArgumentException();
         if (positions.length + start > this.positions.length) throw new IllegalArgumentException();
         for (int i = 0; i < positions.length; i++) this.positions[i + start] = positions[i];
-        meshOps.add((gfx,renderer) -> {
+        meshOps.add((gfx, renderer) -> {
             if (vao != null) vao.bufferLocation(gfx, 0, this.positions);
         });
     }
@@ -169,7 +165,7 @@ public class Mesh implements Component {
         if (textureCoords.length % 2 != 0) throw new IllegalArgumentException();
         if (textureCoords.length + start > this.textureCoords.length) throw new IllegalArgumentException();
         for (int i = 0; i < textureCoords.length; i++) this.textureCoords[i + start] = textureCoords[i];
-        meshOps.add((gfx,renderer) -> {
+        meshOps.add((gfx, renderer) -> {
             if (vao != null) vao.bufferLocation(gfx, 1, this.textureCoords);
         });
     }
@@ -180,8 +176,30 @@ public class Mesh implements Component {
         if (normals.length % 3 != 0) throw new IllegalArgumentException();
         if (normals.length + start > this.normals.length) throw new IllegalArgumentException();
         for (int i = 0; i < normals.length; i++) this.normals[i + start] = normals[i];
-        meshOps.add((gfx,renderer) -> {
+        meshOps.add((gfx, renderer) -> {
             if (vao != null) vao.bufferLocation(gfx, 2, this.normals);
+        });
+    }
+
+    public void setTangents(int start, float[] tangents) {
+        if (this.tangents == null) throw new IllegalStateException();
+        start*=3;
+        if(tangents.length % 3 != 0)throw new IllegalArgumentException();
+        if(tangents.length + start > this.tangents.length)throw new IllegalArgumentException();
+        for(int i=0;i<tangents.length;i++)this.tangents[i+start] = tangents[i];
+        meshOps.add((gfx,renderer)->{
+            if(vao!=null)vao.bufferLocation(gfx, 3, this.tangents);
+        });
+    }
+
+    public void setBitangents(int start, float[] bitangents){
+        if(this.bitangents == null)throw new IllegalStateException();
+        start*=3;
+        if(bitangents.length %3!=0)throw new IllegalArgumentException();
+        if(bitangents.length + start > this.bitangents.length)throw new IllegalArgumentException();
+        for(int i=0;i<bitangents.length;i++)this.bitangents[i+start] = bitangents[i];
+        meshOps.add((gfx, renderer)->{
+           if(vao!=null)vao.bufferLocation(gfx, 4, this.bitangents);
         });
     }
 
@@ -195,7 +213,7 @@ public class Mesh implements Component {
             this.tangents[i + start] = tangents[i];
             this.bitangents[i + start] = bitangents[i];
         }
-        meshOps.add((gfx,renderer) -> {
+        meshOps.add((gfx, renderer) -> {
             if (vao != null) {
                 vao.bufferLocation(gfx, 3, this.tangents);
                 vao.bufferLocation(gfx, 4, this.bitangents);
@@ -209,9 +227,39 @@ public class Mesh implements Component {
         if (indices.length % 3 != 0) throw new IllegalArgumentException();
         if (indices.length + start > this.indices.length) throw new IllegalArgumentException();
         for (int i = 0; i < indices.length; i++) this.indices[i + start] = indices[i];
-        meshOps.add((gfx,renderer) -> {
+        meshOps.add((gfx, renderer) -> {
             if (vao != null) ibo.bufferSubData(gfx, start, indices);
         });
+    }
+
+    public float[] nativeFetchPosition(Graphics gfx){
+        if(positions==null)return null;
+        return vao.getVboForLocation(0).getBufferAsFloatArray(gfx);
+    }
+
+    public float[] nativeFetchTextureCoords(Graphics gfx) {
+        if(textureCoords==null)return null;
+        return vao.getVboForLocation(1).getBufferAsFloatArray(gfx);
+    }
+
+    public float[] nativeFetchNormals(Graphics gfx){
+        if(normals == null)return null;
+        return vao.getVboForLocation(2).getBufferAsFloatArray(gfx);
+    }
+
+    public float[] nativeFetchTangents(Graphics gfx){
+        if(tangents == null)return null;
+        return vao.getVboForLocation(3).getBufferAsFloatArray(gfx);
+    }
+
+    public float[] nativeFetchBitangents(Graphics gfx){
+        if(bitangents == null)return null;
+        return vao.getVboForLocation(4).getBufferAsFloatArray(gfx);
+    }
+
+    public int[] nativeFetchIndices(Graphics gfx){
+        if(indices == null)return null;
+        return ibo.getBufferAsIntegerArray(gfx);
     }
 
     public float[] getPositions() {

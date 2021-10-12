@@ -66,16 +66,25 @@ public class DevelopmentStyle implements ImGuiStyle {
         ImGui.pushStyleColor(ImGuiCol.MenuBarBg, darkColor);
 
         ImGui.pushStyleColor(ImGuiCol.FrameBg, darkColor);
+        ImGui.pushStyleColor(ImGuiCol.FrameBgHovered, darkColor);
+        ImGui.pushStyleColor(ImGuiCol.FrameBgActive, darkColor);
+
+        ImGui.pushStyleColor(ImGuiCol.ButtonHovered, darkColor);
+
+        ImGui.pushStyleColor(ImGuiCol.Header, mainColor);
+        ImGui.pushStyleColor(ImGuiCol.HeaderHovered, darkColor);
+        ImGui.pushStyleColor(ImGuiCol.HeaderActive, brightColor);
 
         ImGui.pushStyleColor(ImGuiCol.Separator, darkColor);
 
         ImGui.pushStyleVar(ImGuiStyleVar.FrameRounding, 2);
+
     }
 
     @Override
     public void pop() {
         ImGui.popStyleVar();
-        ImGui.popStyleColor(9);
+        ImGui.popStyleColor(15);
     }
 
     public int getDarkColor() {
