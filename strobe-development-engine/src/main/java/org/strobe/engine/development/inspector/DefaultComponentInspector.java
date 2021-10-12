@@ -1,14 +1,13 @@
 package org.strobe.engine.development.inspector;
 
-import imgui.ImGui;
 import org.strobe.ecs.Component;
 import org.strobe.ecs.Entity;
 import org.strobe.engine.development.DevelopmentStyle;
 import org.strobe.gfx.Graphics;
 
-public final class DefaultComponentInspectorNode extends ComponentInspectorNode<Component>{
+public final class DefaultComponentInspector extends ComponentInspector<Component> {
 
-    public DefaultComponentInspectorNode(){
+    public DefaultComponentInspector(){
         super(true);
     }
 

@@ -21,8 +21,8 @@ public final class InspectorPanel extends Panel {
     private final HierarchyPanel hierarchy;
     private final DevelopmentStyle style;
 
-    private final HashMap<Class<? extends Component>, ComponentInspectorNode> componentInspectors = new HashMap<>();
-    private final ComponentInspectorNode<Component> defaultInspector = new DefaultComponentInspectorNode();
+    private final HashMap<Class<? extends Component>, ComponentInspector> componentInspectors = new HashMap<>();
+    private final ComponentInspector<Component> defaultInspector = new DefaultComponentInspector();
 
     private final ImString entityNameStr = new ImString(100);
 
@@ -30,7 +30,7 @@ public final class InspectorPanel extends Panel {
         this.hierarchy = hierarchyPanel;
         this.style = style;
 
-        ServiceLoader<ComponentInspectorNode> serviceLoader = ServiceLoader.load(ComponentInspectorNode.class);
+        ServiceLoader<ComponentInspector> serviceLoader = ServiceLoader.load(ComponentInspector.class);
         serviceLoader.stream().forEach(p -> {
             for (Class<? extends Component> targetClass : p.get().getInspectorTargets()) {
                 componentInspectors.put(targetClass, p.get());
@@ -75,7 +75,7 @@ public final class InspectorPanel extends Panel {
 
             for (Component component : entity.components()) {
                 ImGui.separator();
-                ComponentInspectorNode inspector = componentInspectors.get(component.getClass());
+                ComponentInspector inspector = componentInspectors.get(component.getClass());
                 if (inspector != null) {
                     inspector.drawInspector(gfx, style, component, entity);
                 } else {

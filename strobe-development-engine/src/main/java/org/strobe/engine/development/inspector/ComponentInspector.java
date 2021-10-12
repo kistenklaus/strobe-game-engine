@@ -11,7 +11,7 @@ import org.strobe.window.imgui.ImGuiUtils;
 
 import java.util.BitSet;
 
-public abstract class ComponentInspectorNode<T extends Component> {
+public abstract class ComponentInspector<T extends Component> {
 
     private double lastPress = 0.0f;
     private final UnboundedArray<BitSet> openState = new UnboundedArray<>(8);
@@ -21,11 +21,11 @@ public abstract class ComponentInspectorNode<T extends Component> {
 
     private final boolean isLeaf;
 
-    protected ComponentInspectorNode(boolean isLeaf){
+    protected ComponentInspector(boolean isLeaf){
         this.isLeaf = isLeaf;
     }
 
-    public ComponentInspectorNode(){
+    public ComponentInspector(){
         this(false);
     }
 

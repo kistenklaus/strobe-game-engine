@@ -3,13 +3,12 @@ package org.strobe.engine.development.inspector;
 import imgui.ImGui;
 import imgui.ImVec2;
 import org.joml.Vector3f;
-import org.strobe.ecs.Component;
 import org.strobe.ecs.Entity;
 import org.strobe.ecs.context.renderer.materials.LambertianMaterial;
 import org.strobe.engine.development.DevelopmentStyle;
 import org.strobe.gfx.Graphics;
 
-public class LambertianMaterialInspectorNode extends ComponentInspectorNode<LambertianMaterial>{
+public class LambertianMaterialInspector extends ComponentInspector<LambertianMaterial> {
 
     @Override
     public Class[] getInspectorTargets() {

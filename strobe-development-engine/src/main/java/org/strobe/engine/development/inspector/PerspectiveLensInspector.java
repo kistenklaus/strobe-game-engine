@@ -7,7 +7,7 @@ import org.strobe.ecs.context.renderer.camera.PerspectiveLens;
 import org.strobe.engine.development.DevelopmentStyle;
 import org.strobe.gfx.Graphics;
 
-public final class PerspectiveLensInspectorNode extends ComponentInspectorNode<PerspectiveLens> {
+public final class PerspectiveLensInspector extends ComponentInspector<PerspectiveLens> {
 
     @Override
     public Class<? extends PerspectiveLens>[] getInspectorTargets() {

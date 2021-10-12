@@ -8,7 +8,7 @@ import org.strobe.ecs.context.renderer.light.DirectionalLight;
 import org.strobe.engine.development.DevelopmentStyle;
 import org.strobe.gfx.Graphics;
 
-public final class DirectionalLightInspectorNode extends ComponentInspectorNode<DirectionalLight> {
+public final class DirectionalLightInspector extends ComponentInspector<DirectionalLight> {
     @Override
     public Class<? extends DirectionalLight>[] getInspectorTargets() {
         return new Class[]{DirectionalLight.class};

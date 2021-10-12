@@ -9,7 +9,7 @@ import org.strobe.ecs.context.renderer.camera.CameraRenderer;
 import org.strobe.engine.development.DevelopmentStyle;
 import org.strobe.gfx.Graphics;
 
-public final class CameraRendererInspectorNode extends ComponentInspectorNode<CameraRenderer> {
+public final class CameraRendererInspector extends ComponentInspector<CameraRenderer> {
 
     private static final String[] SCALING_OPT = new String[]{"LINEAR_FILTERING", "NEAREST_FILTERING"};
 

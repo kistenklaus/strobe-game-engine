@@ -10,7 +10,7 @@ import org.strobe.ecs.context.renderer.transform.Transform;
 import org.strobe.engine.development.DevelopmentStyle;
 import org.strobe.gfx.Graphics;
 
-public final class TransformInspectorNode extends ComponentInspectorNode<Transform> {
+public final class TransformInspector extends ComponentInspector<Transform> {
 
 
     @Override
