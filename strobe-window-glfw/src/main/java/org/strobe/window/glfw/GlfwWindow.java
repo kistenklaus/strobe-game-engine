@@ -248,6 +248,7 @@ public class GlfwWindow extends Window {
     }
 
     protected void keyCallback(long window, int key, int scancode, int action, int mods){
+        if(key < 0 || key >= KEY_MAPPING.length)return;
         WindowKey wKey = KEY_MAPPING[key];
         if(wKey == null) return;
         if (action == GLFW_PRESS) keyboard.keyDown(wKey);
