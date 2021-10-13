@@ -8,7 +8,7 @@ public abstract class StrobeEngine<T extends StrobeContext> implements Runnable 
 
     private final Thread thread;
     protected final T context;
-    private final Graphics gfx;
+    protected final Graphics gfx;
     private boolean running = false;
 
     public StrobeEngine(T context, Window window) {

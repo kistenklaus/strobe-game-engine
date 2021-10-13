@@ -26,7 +26,7 @@ public final class DevelopmentEngine extends StrobeEngine<EntityContext> {
         super(context, new ImGuiWindow(context.getTitle(), "development.ini", context.getWidth(), context.getHeight(),
                 WindowConfiguration.get(false, false, true, true, false),
                 new DevelopmentStyle()));
-        console = new ConsolePanel();
+        console = new ConsolePanel((DevelopmentStyle) ((ImGuiWindow)gfx.getWindow()).getStyle());
         contentRegion = new WindowContentRegion(0, 0, 1, 1);
 
 
