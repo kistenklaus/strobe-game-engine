@@ -1,4 +1,4 @@
-package org.strobe.engine.development.inspector;
+package org.strobe.engine.development.ui.inspector;
 
 import imgui.ImGui;
 import imgui.ImVec2;
@@ -6,7 +6,7 @@ import imgui.type.ImBoolean;
 import imgui.type.ImInt;
 import org.strobe.ecs.Entity;
 import org.strobe.ecs.context.renderer.camera.CameraRenderer;
-import org.strobe.engine.development.DevelopmentStyle;
+import org.strobe.engine.development.ui.DevelopmentStyle;
 import org.strobe.gfx.Graphics;
 
 public final class CameraRendererInspector extends ComponentInspector<CameraRenderer> {

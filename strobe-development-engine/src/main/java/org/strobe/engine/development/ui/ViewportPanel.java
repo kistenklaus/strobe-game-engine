@@ -1,17 +1,18 @@
-package org.strobe.engine.development;
+package org.strobe.engine.development.ui;
 
 import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiWindowFlags;
+import org.strobe.engine.development.ui.UIPanel;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.opengl.OpenGlContext;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
 import org.strobe.gfx.opengl.bindables.texture.Texture2D;
 import org.strobe.window.WindowContentRegion;
 
-public final class ViewportPanel extends Panel{
+public final class ViewportPanel implements UIPanel {
 
     private final OpenGlContext context;
     private final WindowContentRegion contentRegion;

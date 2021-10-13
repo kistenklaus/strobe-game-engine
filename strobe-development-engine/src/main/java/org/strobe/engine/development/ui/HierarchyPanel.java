@@ -1,18 +1,13 @@
-package org.strobe.engine.development;
+package org.strobe.engine.development.ui;
 
 import imgui.ImGui;
-import imgui.ImGuiIO;
 import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
-import imgui.flag.ImGuiStyleVar;
-import imgui.flag.ImGuiWindowFlags;
-import org.joml.Vector4f;
 import org.strobe.ecs.Entity;
 import org.strobe.ecs.EntityComponentSystem;
 import org.strobe.ecs.context.EntityContext;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.opengl.bindables.texture.Texture2D;
-import org.strobe.gfx.opengl.bindables.texture.TextureLoader;
 import org.strobe.window.imgui.ImGuiUtils;
 
 import java.awt.*;
@@ -20,7 +15,7 @@ import java.util.BitSet;
 
 import static org.lwjgl.glfw.GLFW.glfwGetTime;
 
-public final class HierarchyPanel extends Panel {
+public final class HierarchyPanel implements UIPanel {
 
     private final BitSet hierarchyBits = new BitSet();
 

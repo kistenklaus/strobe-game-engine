@@ -1,8 +1,8 @@
-package org.strobe.engine.development.inspector;
+package org.strobe.engine.development.ui.inspector;
 
 import org.strobe.ecs.Component;
 import org.strobe.ecs.Entity;
-import org.strobe.engine.development.DevelopmentStyle;
+import org.strobe.engine.development.ui.DevelopmentStyle;
 import org.strobe.gfx.Graphics;
 
 public final class DefaultComponentInspector extends ComponentInspector<Component> {

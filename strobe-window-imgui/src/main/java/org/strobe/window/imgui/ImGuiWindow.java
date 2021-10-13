@@ -10,7 +10,6 @@ import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFWErrorCallbackI;
 import org.lwjgl.glfw.GLFWNativeWin32;
 import org.lwjgl.glfw.GLFWVidMode;
-import org.strobe.gfx.Graphics;
 import org.strobe.utils.ResourceLoader;
 import org.strobe.window.WindowConfiguration;
 import org.strobe.window.glfw.GlfwWindow;
@@ -79,12 +78,12 @@ public final class ImGuiWindow extends GlfwWindow {
     private double time = 0.0f;
 
     private final String iniFile;
-    private final ImGuiStyle style;
+    private final String fontResourcePath;
 
-    public ImGuiWindow(String title, String iniFile, int width, int height, WindowConfiguration config, ImGuiStyle style) {
+    public ImGuiWindow(String title, String iniFile, int width, int height, WindowConfiguration config, String fontResourcePath) {
         super(title, width, height, config);
         this.iniFile = iniFile;
-        this.style = style;
+        this.fontResourcePath = fontResourcePath;
     }
 
     @Override
@@ -145,7 +144,7 @@ public final class ImGuiWindow extends GlfwWindow {
             imGuiViewport.setPlatformHandleRaw(GLFWNativeWin32.glfwGetWin32Window(pointer()));
         }
 
-        if(style != null && style.getFontResource()!=null){
+        if(fontResourcePath != null){
             final ImFontGlyphRangesBuilder rangesBuilder = new ImFontGlyphRangesBuilder();
             rangesBuilder.addRanges(io.getFonts().getGlyphRangesDefault());
             final short[] glyphRanges = rangesBuilder.buildRanges();
@@ -157,7 +156,7 @@ public final class ImGuiWindow extends GlfwWindow {
 
 
             try {
-                ByteBuffer ttfBuffer = ResourceLoader.ioResourceToByteBuffer(style.getFontResource());
+                ByteBuffer ttfBuffer = ResourceLoader.ioResourceToByteBuffer(fontResourcePath);
                 byte[] ttf = new byte[ttfBuffer.capacity()];
                 ttfBuffer.position(0);
                 for (int i = 0; i < ttfBuffer.capacity(); i++) ttf[i] = ttfBuffer.get();
@@ -297,7 +296,6 @@ public final class ImGuiWindow extends GlfwWindow {
         updateMouse();
 
         ImGui.newFrame();
-        style.push();
         beginDockSpace();
     }
 
@@ -368,7 +366,6 @@ public final class ImGuiWindow extends GlfwWindow {
 
     public void endFrame() {
         endDockSpace();
-        style.pop();
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
 
@@ -401,10 +398,6 @@ public final class ImGuiWindow extends GlfwWindow {
 
     private void endDockSpace() {
         ImGui.end();
-    }
-
-    public ImGuiStyle getStyle(){
-        return style;
     }
 
     @Override

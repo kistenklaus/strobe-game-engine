@@ -1,10 +1,10 @@
-package org.strobe.engine.development.inspector;
+package org.strobe.engine.development.ui.inspector;
 
 import imgui.ImGui;
 import imgui.ImVec2;
 import org.strobe.ecs.Entity;
 import org.strobe.ecs.context.renderer.camera.PerspectiveLens;
-import org.strobe.engine.development.DevelopmentStyle;
+import org.strobe.engine.development.ui.DevelopmentStyle;
 import org.strobe.gfx.Graphics;
 
 public final class PerspectiveLensInspector extends ComponentInspector<PerspectiveLens> {

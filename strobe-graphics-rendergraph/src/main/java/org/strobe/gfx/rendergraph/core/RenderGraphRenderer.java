@@ -90,8 +90,7 @@ public abstract class RenderGraphRenderer extends RenderPass implements Renderer
         graphOps.add(() -> linkages.clear());
     }
 
-    @Override
-    public void draw(Graphics gfx, GraphDrawable drawable) {
+    public void draw(GraphDrawable drawable) {
         if(drawable.getRenderable() == null || drawable.getTransform() == null || drawable.techniques().isEmpty())return;
         for(Technique technique : drawable.techniques()){
             if(!technique.isEnabled())continue;

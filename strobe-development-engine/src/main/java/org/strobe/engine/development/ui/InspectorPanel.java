@@ -1,4 +1,4 @@
-package org.strobe.engine.development.inspector;
+package org.strobe.engine.development.ui;
 
 import imgui.ImGui;
 import imgui.ImVec2;
@@ -6,9 +6,8 @@ import imgui.flag.ImGuiInputTextFlags;
 import imgui.type.ImString;
 import org.strobe.ecs.Component;
 import org.strobe.ecs.Entity;
-import org.strobe.engine.development.DevelopmentStyle;
-import org.strobe.engine.development.HierarchyPanel;
-import org.strobe.engine.development.Panel;
+import org.strobe.engine.development.ui.inspector.ComponentInspector;
+import org.strobe.engine.development.ui.inspector.DefaultComponentInspector;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.opengl.bindables.texture.Texture2D;
 import org.strobe.window.imgui.ImGuiUtils;
@@ -16,7 +15,7 @@ import org.strobe.window.imgui.ImGuiUtils;
 import java.util.HashMap;
 import java.util.ServiceLoader;
 
-public final class InspectorPanel extends Panel {
+public final class InspectorPanel implements UIPanel {
 
     private final HierarchyPanel hierarchy;
     private final DevelopmentStyle style;

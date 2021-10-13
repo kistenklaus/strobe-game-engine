@@ -1,4 +1,4 @@
-package org.strobe.engine.development.inspector;
+package org.strobe.engine.development.ui.inspector;
 
 import imgui.ImGui;
 import imgui.ImVec2;
@@ -7,7 +7,7 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.strobe.ecs.Entity;
 import org.strobe.ecs.context.renderer.transform.Transform;
-import org.strobe.engine.development.DevelopmentStyle;
+import org.strobe.engine.development.ui.DevelopmentStyle;
 import org.strobe.gfx.Graphics;
 
 public final class TransformInspector extends ComponentInspector<Transform> {

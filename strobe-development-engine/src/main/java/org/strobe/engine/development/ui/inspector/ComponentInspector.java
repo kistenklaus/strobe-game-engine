@@ -1,10 +1,10 @@
-package org.strobe.engine.development.inspector;
+package org.strobe.engine.development.ui.inspector;
 
 import imgui.ImGui;
 import org.strobe.ecs.Component;
 import org.strobe.ecs.ComponentType;
 import org.strobe.ecs.Entity;
-import org.strobe.engine.development.DevelopmentStyle;
+import org.strobe.engine.development.ui.DevelopmentStyle;
 import org.strobe.gfx.Graphics;
 import org.strobe.utils.UnboundedArray;
 import org.strobe.window.imgui.ImGuiUtils;

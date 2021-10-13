@@ -1,4 +1,4 @@
-package org.strobe.engine.development;
+package org.strobe.engine.development.ui;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiCol;
@@ -7,14 +7,11 @@ import org.strobe.ecs.Entity;
 import org.strobe.gfx.Graphics;
 import org.strobe.gfx.opengl.bindables.texture.Texture2D;
 import org.strobe.gfx.opengl.bindables.texture.TextureLoader;
-import org.strobe.window.imgui.ImGuiStyle;
 
 import java.awt.*;
 
-public class DevelopmentStyle implements ImGuiStyle {
+public final class DevelopmentStyle {
 
-
-    private final String fontResource = "fonts/JetBrainsMono/JetBrainsMono-SemiBold.ttf";
 
     private final Color windowColorAWT = new Color(36, 75, 199);
     private int windowColor;
@@ -33,6 +30,7 @@ public class DevelopmentStyle implements ImGuiStyle {
     private Texture2D transformEntityIcon;
 
     public void init(Graphics gfx){
+        System.out.println("initalize style");
         darkColor = ImGui.getColorU32(darkColorAWT.getRed() / 255f, darkColorAWT.getGreen() / 255f, darkColorAWT.getGreen() / 255f, darkColorAWT.getAlpha() / 255f);
         brightColor = ImGui.getColorU32(brightColorAWT.getRed() / 255f, brightColorAWT.getGreen() / 255f, brightColorAWT.getBlue() / 255f, brightColorAWT.getAlpha() / 255f);
         mainColor = ImGui.getColorU32(mainColorAWT.getRed() / 255f, mainColorAWT.getGreen() / 255f, mainColorAWT.getBlue() / 255f, mainColorAWT.getAlpha() / 255f);
@@ -47,19 +45,13 @@ public class DevelopmentStyle implements ImGuiStyle {
         transformEntityIcon = null;
     }
 
-    @Override
-    public String getFontResource() {
-        return fontResource;
-    }
-
-    @Override
     public void push() {
 
         ImGui.pushStyleColor(ImGuiCol.ChildBg, mainColor);
 
-        ImGui.pushStyleColor(ImGuiCol.Tab, brightColor);
-        ImGui.pushStyleColor(ImGuiCol.TabActive, darkColor);
-        ImGui.pushStyleColor(ImGuiCol.TabHovered, darkColor);
+        ImGui.pushStyleColor(ImGuiCol.Tab, darkColor);
+        ImGui.pushStyleColor(ImGuiCol.TabActive, brightColor);
+        ImGui.pushStyleColor(ImGuiCol.TabHovered, brightColor);
         ImGui.pushStyleColor(ImGuiCol.TabUnfocused, darkColor);
         ImGui.pushStyleColor(ImGuiCol.TabUnfocusedActive, brightColor);
 
@@ -81,7 +73,6 @@ public class DevelopmentStyle implements ImGuiStyle {
 
     }
 
-    @Override
     public void pop() {
         ImGui.popStyleVar();
         ImGui.popStyleColor(15);

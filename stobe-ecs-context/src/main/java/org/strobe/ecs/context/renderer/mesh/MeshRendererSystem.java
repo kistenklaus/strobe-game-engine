@@ -30,7 +30,7 @@ public final class MeshRendererSystem extends EntitySystem {
         for(Entity entity : pool){
             MeshRenderer meshRenderer = entity.get(MESH_RENDERER);
             meshRenderer.update(renderer, entity.get(TRANSFORM), entity.get(MESH), entity.get(MATERIAL));
-            renderer.enqueueRenderOp((gfx,r)->renderer.draw(gfx, meshRenderer.graphDrawable));
+            renderer.draw(meshRenderer.graphDrawable);
         }
     }
 

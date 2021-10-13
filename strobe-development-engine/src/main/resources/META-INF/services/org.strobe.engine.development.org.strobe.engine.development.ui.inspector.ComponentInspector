@@ -1,0 +1,6 @@
+org.strobe.engine.development.ui.inspector.TransformInspector
+org.strobe.engine.development.ui.inspector.DirectionalLightInspector
+org.strobe.engine.development.ui.inspector.PerspectiveLensInspector
+org.strobe.engine.development.ui.inspector.CameraRendererInspector
+org.strobe.engine.development.ui.inspector.LambertianMaterialInspector
+org.strobe.engine.development.ui.inspector.MeshInspector
