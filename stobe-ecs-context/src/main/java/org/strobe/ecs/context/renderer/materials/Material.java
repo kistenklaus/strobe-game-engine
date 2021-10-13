@@ -34,12 +34,12 @@ public abstract class Material implements Component {
         materialOps.clear();
     }
 
-    protected final void switchShaderMaterial(Supplier<ShaderMaterial> material){
+    protected final void switchShaderMaterial(final ShaderMaterial shaderMaterial){
         materialOps.add((gfx,r)->{
-            ShaderMaterial mat = material.get();
+            ShaderMaterial mat = shaderMaterial;
             if(mat == null)throw new IllegalStateException();
             if(mat != current){
-                technique.setSteps(createSteps(gfx, r,  material.get()));
+                technique.setSteps(createSteps(gfx, r,  shaderMaterial));
                 current = mat;
             }
         });

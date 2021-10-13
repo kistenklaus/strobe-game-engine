@@ -10,7 +10,6 @@ import org.strobe.gfx.opengl.bindables.shader.ShaderUniformSet;
 public final class LambertianColorShaderMaterial extends ShaderMaterial {
 
     private LambertianColorShader lambertianShader;
-    private ShadowMapShader shadowMapShader;
     private ShaderUniformSet uniformSet;
 
     private final Vector3f diffuseColor = new Vector3f(1);
@@ -23,8 +22,6 @@ public final class LambertianColorShaderMaterial extends ShaderMaterial {
     protected MaterialPass[] createPasses(Graphics gfx) {
         lambertianShader = new LambertianColorShader(gfx);
         uniformSet = lambertianShader.createShaderUniformSet(gfx);
-
-        shadowMapShader = new ShadowMapShader(gfx);
 
         return new MaterialPass[]{
                 new MaterialPass(lambertianShader, MaterialPass.FORWARD_PASS, uniformSet),

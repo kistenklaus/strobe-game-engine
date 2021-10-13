@@ -16,6 +16,8 @@ import org.strobe.ecs.context.renderer.mesh.Primitive;
 import org.strobe.ecs.context.renderer.transform.Transform;
 import org.strobe.entry.Strobe;
 import org.strobe.gfx.Graphics;
+import org.strobe.gfx.opengl.bindables.texture.Texture2D;
+import org.strobe.gfx.opengl.bindables.texture.TextureLoader;
 
 public class Game extends EntityContext {
 
@@ -35,8 +37,13 @@ public class Game extends EntityContext {
         renderable.addComponent(new Transform(new Vector3f(0,0.5f,0)));
         Mesh mesh = new Mesh(Primitive.CUBE,Mesh.ALLOCATE_POSITIONS|Mesh.ALLOCATE_NORMALS|Mesh.ALLOCATE_TEXTURE_COORDS);
         renderable.addComponent(mesh);
+
         LambertianMaterial mat = new LambertianMaterial(1,0,1);
         mat.setDiffuseColor(new Vector3f(1,1,0));
+        Texture2D dtex = TextureLoader.loadTexture(gfx, "assets/BallsOfSteel.png");
+        mat.setDiffuseTexture(dtex);
+
+
         renderable.addComponent(mat);
         renderable.addComponent(new MeshRenderer());
 

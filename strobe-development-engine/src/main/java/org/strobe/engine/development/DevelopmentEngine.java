@@ -9,6 +9,8 @@ import org.strobe.window.WindowContentRegion;
 import org.strobe.window.WindowConfiguration;
 import org.strobe.window.imgui.ImGuiWindow;
 
+import java.io.PrintStream;
+
 public final class DevelopmentEngine extends StrobeEngine<EntityContext> {
 
     private final WindowContentRegion contentRegion;
@@ -16,6 +18,7 @@ public final class DevelopmentEngine extends StrobeEngine<EntityContext> {
     private HierarchyPanel hierarchy;
     private ViewportPanel viewport;
     private InspectorPanel inspector;
+    private ConsolePanel console;
 
     private DevelopmentStyle style;
 
@@ -23,7 +26,9 @@ public final class DevelopmentEngine extends StrobeEngine<EntityContext> {
         super(context, new ImGuiWindow(context.getTitle(), "development.ini", context.getWidth(), context.getHeight(),
                 WindowConfiguration.get(false, false, true, true, false),
                 new DevelopmentStyle()));
+        console = new ConsolePanel();
         contentRegion = new WindowContentRegion(0, 0, 1, 1);
+
 
     }
 
@@ -37,6 +42,7 @@ public final class DevelopmentEngine extends StrobeEngine<EntityContext> {
         hierarchy = new HierarchyPanel(context, style);
         inspector = new InspectorPanel(hierarchy, style);
 
+        console.init(gfx);
         viewport.init(gfx);
         hierarchy.init(gfx);
         inspector.init(gfx);
@@ -47,6 +53,7 @@ public final class DevelopmentEngine extends StrobeEngine<EntityContext> {
         viewport.draw(gfx);
         hierarchy.draw(gfx);
         inspector.draw(gfx);
+        console.draw(gfx);
         ImGui.showDemoWindow();
     }
 

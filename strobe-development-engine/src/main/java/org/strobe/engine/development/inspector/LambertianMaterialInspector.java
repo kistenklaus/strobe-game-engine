@@ -29,7 +29,6 @@ public class LambertianMaterialInspector extends ComponentInspector<LambertianMa
         boolean confirm = ImGui.colorEdit3("", diffuse);
         Vector3f diffuseMod = new Vector3f(diffuse);
         if(confirm && !diffuseMod.equals(material.getDiffuseColor(), 0.0001f)){
-            System.out.println("change");
             material.setDiffuseColor(diffuseMod);
         }
         ImGui.popItemWidth();
