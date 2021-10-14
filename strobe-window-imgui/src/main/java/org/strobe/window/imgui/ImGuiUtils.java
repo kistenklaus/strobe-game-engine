@@ -23,6 +23,12 @@ public final class ImGuiUtils {
         ImGui.image(id, width, height, 0, 1, 1, 0);
     }
 
+    public static void image(int id, float width, float height, Color border) {
+        ImGui.image(id, width, height, 0, 1, 1, 0,1,1,1,1,
+                border.getRed()/255f,border.getGreen()/255f,border.getBlue()/255f,border.getAlpha()/255f
+        );
+    }
+
 
 
     public static boolean iconTreeNodeButton(int id, String label, int width, int height, boolean open, boolean leaf,

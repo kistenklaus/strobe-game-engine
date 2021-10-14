@@ -138,6 +138,10 @@ public class Framebuffer extends Bindable<FramebufferPool> implements Debuggable
         return indexMap.get(attachment) != null && getAttachmentTexture(attachment) != null;
     }
 
+    public FramebufferAttachment getAttachment(Attachment attachment){
+        return attachments[indexMap.get(attachment)];
+    }
+
     public boolean hasDepth() {
         return hasDepth;
     }
@@ -167,6 +171,10 @@ public class Framebuffer extends Bindable<FramebufferPool> implements Debuggable
                 ", hasDepth=" + hasDepth +
                 ", hasStencil=" + hasStencil +
                 '}';
+    }
+
+    public int getAttachmentCount() {
+        return attachments.length;
     }
 
     public enum Attachment {

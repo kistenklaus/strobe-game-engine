@@ -179,10 +179,6 @@ public class Ubo extends DataBuffer<UboPool> {
         return name;
     }
 
-    protected int getID() {
-        return ID;
-    }
-
     public int[] getOffsets() {
         return offsets;
     }

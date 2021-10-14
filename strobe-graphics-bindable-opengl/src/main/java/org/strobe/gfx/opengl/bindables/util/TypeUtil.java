@@ -22,6 +22,21 @@ public final class TypeUtil {
         };
     }
 
+    public static String getNameOfGlType(int glType){
+        return switch(glType){
+            case GL_BYTE -> "byte";
+            case GL_HALF_FLOAT -> "half_float";
+            case GL_SHORT -> "short";
+            case GL_UNSIGNED_SHORT -> "ushort";
+            case GL_FIXED -> "fixed";
+            case GL_FLOAT -> "float";
+            case GL_INT -> "int";
+            case GL_UNSIGNED_INT -> "uint";
+            case GL_DOUBLE -> "double";
+            default -> throw new IllegalArgumentException();
+        };
+    }
+
     public static int getByteAlignmentOfGlslType(String glslType){
         return switch(glslType){
             case "int", "float" -> 4;

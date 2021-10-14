@@ -32,4 +32,8 @@ public abstract class DataBufferPool<T extends DataBuffer> extends BindablePool<
     public Iterator<T> iterator() {
         return buffers.iterator();
     }
+
+    public Iterable<T> buffers(){
+        return buffers;
+    }
 }

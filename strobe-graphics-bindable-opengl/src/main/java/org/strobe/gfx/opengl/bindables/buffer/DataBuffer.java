@@ -130,4 +130,8 @@ public abstract class DataBuffer<T extends BindablePool> extends Bindable<T> {
     public int getTarget(){
         return target;
     }
+
+    public final int getID(){
+        return ID;
+    }
 }

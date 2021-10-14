@@ -40,6 +40,7 @@ public final class DevelopmentEngine extends StrobeEngine<EntityContext> {
         uiRenderer.addUI(new ConsolePanel(proxyPrintStream, uiRenderer.getStyle()));
         uiRenderer.addUI(new ProfilerPanel(uiRenderer.getStyle(), profiler));
         uiRenderer.addUI(new DemoPanel());
+        uiRenderer.addUI(new MemoryDebugger());
 
         uiRenderer.init(gfx);
         gfx.addRenderer(0, uiRenderer);

@@ -25,4 +25,8 @@ public class TexturePool2D extends BindablePool<Texture2D> implements Debuggable
     public Iterator<Texture2D> iterator() {
         return textures.iterator();
     }
+
+    public Iterable<Texture2D> textures(){
+        return textures;
+    }
 }
