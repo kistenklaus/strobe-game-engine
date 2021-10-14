@@ -55,7 +55,7 @@ public abstract class StrobeEngine<T extends StrobeContext> implements Runnable 
         gfx.dispose();
     }
 
-    private void loop(float dt) {
+    protected void loop(float dt) {
         gfx.newFrame();
         context.render(gfx);
         //render
@@ -69,9 +69,7 @@ public abstract class StrobeEngine<T extends StrobeContext> implements Runnable 
         context.update(dt);
         afterUpdate(dt);
         //swapping buffers (syncing of gpu and cpu)
-        beforeSwapBuffers(gfx);
         gfx.endFrame();
-        afterSwapBuffers(gfx);
     }
 
     protected void beforeRender(Graphics gfx) {
@@ -84,11 +82,5 @@ public abstract class StrobeEngine<T extends StrobeContext> implements Runnable 
     }
 
     protected void afterUpdate(float dt) {
-    }
-
-    protected void beforeSwapBuffers(Graphics gfx) {
-    }
-
-    protected void afterSwapBuffers(Graphics gfx) {
     }
 }

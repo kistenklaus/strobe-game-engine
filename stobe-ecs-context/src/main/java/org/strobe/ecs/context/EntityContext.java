@@ -15,18 +15,21 @@ public abstract class EntityContext extends OpenGlContext {
     private EntityRenderer renderer = null;
     private WindowMouse mouse = null;
     private WindowKeyboard keyboard = null;
-    protected final EntityComponentSystem ecs = new EntityComponentSystem();
+
+    protected EntityComponentSystem ecs;
 
     public EntityContext(String title, int width, int height){
         super(title, width, height, Framebuffer.Attachment.COLOR_RGB_ATTACHMENT_0, Framebuffer.Attachment.DEPTH_RBO_ATTACHMENT);
+    }
+
+    public void linkEntityComponentSystem(EntityComponentSystem ecs){
+        this.ecs = ecs;
     }
 
 
     @Override
     public void init(Graphics gfx) {
         super.init(gfx);
-        renderer = new EntityRenderer(gfx, ecs, target);
-        gfx.addRenderer(0, renderer);
 
         mouse = gfx.getWindow().getMouse();
         keyboard = gfx.getWindow().getKeyboard();

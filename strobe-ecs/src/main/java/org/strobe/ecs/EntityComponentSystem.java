@@ -72,13 +72,13 @@ public class EntityComponentSystem {
         inCycle = false;
     }
 
-    private void processSystemOperations(){
+    protected void processSystemOperations(){
         while(!systemOperationQueue.isEmpty()){
             systemOperationQueue.pop().run();
         }
     }
 
-    private void executeSystems(float dt) {
+    protected void executeSystems(float dt) {
         //TODO concurrent execution
         for (EntitySystem entitySystem : systems) {
             //TODO disabled systems could be optimized
@@ -86,13 +86,13 @@ public class EntityComponentSystem {
         }
     }
 
-    private void processEntityOperations() {
+    protected void processEntityOperations() {
         while (!entityOperationQueue.isEmpty()){
             entityOperationQueue.pop().run();
         }
     }
 
-    private void processEntityPoolChanges() {
+    protected void processEntityPoolChanges() {
         while(!scheduledForFullUpdate.isEmpty()){
             EntityPool pool = scheduledForFullUpdate.pop();
             for(Entity entity : entities){
@@ -105,14 +105,14 @@ public class EntityComponentSystem {
         }
     }
 
-    private void processEntityPoolEvents(){
+    protected void processEntityPoolEvents(){
         //process entity pool events
         for(EntityPool entityPool : entityPools){
             entityPool.processEvents();
         }
     }
 
-    private void processEntityComponentEvents(){
+    protected void processEntityComponentEvents(){
         //process entity component events
         while(!entityComponentEvents.isEmpty()){
             entityComponentEvents.pop().run();

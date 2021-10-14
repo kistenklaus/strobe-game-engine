@@ -35,9 +35,9 @@ public class CameraSubmissionSystem extends EntitySystem {
             cameraRenderer.setLense(entity.get(CAMERA_LENSE));
             cameraRenderer.update();
             if (cameraRenderer.getAbstractCamera() != null){
-                renderer.getCameraManager().submitCamera(cameraRenderer.getAbstractCamera());
+                renderer.submitCamera(cameraRenderer.getAbstractCamera());
                 if(cameraRenderer.isRenderingShadows()){
-                    renderer.getLightManager().submitShadowCamera(cameraRenderer.getAbstractCamera());
+                    renderer.submitShadowCamera(cameraRenderer.getAbstractCamera());
                 }
             }
             cameraRenderer.enqueueCameraOps(renderer);
@@ -45,8 +45,7 @@ public class CameraSubmissionSystem extends EntitySystem {
         if(!focusedCameras.isEmpty()){
             if(focusedCameras.getSize() != 1)
                 throw new IllegalStateException("only one camera can should ever have a FocusCamera component");
-            renderer.getCameraManager()
-                    .selectCamera(focusedCameras.getAny().get(CAMERA_RENDERER).getAbstractCamera());
+            renderer.selectCamera(focusedCameras.getAny().get(CAMERA_RENDERER).getAbstractCamera());
         }
     }
 

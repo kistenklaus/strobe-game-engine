@@ -1,16 +1,10 @@
 package org.strobe.ecs.context.renderer;
 
 import org.strobe.ecs.*;
-import org.strobe.ecs.context.renderer.camera.CameraSubmissionSystem;
-import org.strobe.ecs.context.renderer.light.LightSubmissionSystem;
-import org.strobe.ecs.context.renderer.materials.MaterialSystem;
-import org.strobe.ecs.context.renderer.mesh.MeshRendererSystem;
-import org.strobe.ecs.context.renderer.transform.TransformSystem;
 import org.strobe.gfx.Graphics;
+import org.strobe.gfx.camera.AbstractCamera;
+import org.strobe.gfx.lights.AbstractLight;
 import org.strobe.gfx.opengl.bindables.framebuffer.Framebuffer;
-import org.strobe.gfx.rendergraph.common.*;
-import org.strobe.gfx.rendergraph.common.debugpasses.CameraDebugPass;
-import org.strobe.gfx.rendergraph.common.debugpasses.LightDebugPass;
 import org.strobe.gfx.rendergraph.common.manager.CameraManager;
 import org.strobe.gfx.rendergraph.common.manager.LightManager;
 import org.strobe.gfx.rendergraph.core.RenderGraphRenderer;
@@ -21,95 +15,31 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.function.BiConsumer;
 
-import static org.lwjgl.opengl.GL11.*;
+public abstract class EntityRenderer extends RenderGraphRenderer {
 
-public final class EntityRenderer extends RenderGraphRenderer {
+    protected static final String GLOBAL_CAMERA_RESOURCE = "globalCameraResource";
+    protected static final String GLOBAL_LIGHTS_RESOURCE = "globalLightsResource";
+    protected static final String GLOBAL_BACK_BUFFER_RESOURCE = "globalBackBufferResource";
+    protected static final String GLOBAL_TARGET_BUFFER_RESOURCE = "globalTargetBufferResource";
+    protected static final String GLOBAL_POST_PROCESSING_BUFFER_RESOURCE = "globalPostProcessingBufferResource";
+    protected static final String GLOBAL_SHADOW_MAP_RESOURCE = "globalShadowMapResource";
 
-    private static final String GLOBAL_CAMERA_RESOURCE = "globalCameraResource";
-    private static final String GLOBAL_LIGHTS_RESOURCE = "globalLightsResource";
-    private static final String GLOBAL_BACK_BUFFER_RESOURCE = "globalBackBufferResource";
-    private static final String GLOBAL_TARGET_BUFFER_RESOURCE = "globalTargetBufferResource";
-    private static final String GLOBAL_POST_PROCESSING_BUFFER_RESOURCE = "globalPostProcessingBufferResource";
-    private static final String GLOBAL_SHADOW_MAP_RESOURCE = "globalShadowMapResource";
+    protected final LinkedList<BiConsumer<Graphics, EntityRenderer>> renderOps = new LinkedList<>();
 
+    protected final LightManager lightManager;
+    protected final CameraManager cameraManager;
 
-
-    private enum RendererState {
-        DISABLED_RENDERER,
-        RENDERER_3D,
-    }
-
-    private RendererState rendererState = RendererState.DISABLED_RENDERER;
-
-    private final CameraManager cameraManager;
-    private final LightManager lightManager;
-
-    private final ClearCamerasPass clearCamerasPass;
-    private final CameraUpdatePass cameraUpdatePass;
-    private final CameraForwardQueue forwardQueue;
-    private final CameraPostProcessingPass postProcessingPass;
-    private final BlitSelectedCameraPass blitCameraPass;
-    private final LightUpdatePass lightUpdatePass;
-    private final CameraDebugPass cameraDebugPass;
-    private final LightDebugPass lightDebugPass;
-    private final ShadowQueue shadowQueue;
-
-    private final Resource<CameraManager> globalCameraResource;
-    private final Resource<Framebuffer> globalBackBuffer;
-    private final Resource<LightManager> globalLightResource;
-
-    private final LinkedList<BiConsumer<Graphics, EntityRenderer>> renderOps = new LinkedList<>();
+    protected final Resource<CameraManager> globalCameraResource;
+    protected final Resource<Framebuffer> globalBackBuffer;
+    protected final Resource<LightManager> globalLightResource;
 
     public EntityRenderer(Graphics gfx, EntityComponentSystem ecs, Framebuffer target) {
-        ecs.addEntitySystem(new MeshRendererSystem(ecs, this));
-        ecs.addEntitySystem(new MaterialSystem(ecs, this));
-        ecs.addEntitySystem(new TransformSystem(ecs));
-        ecs.addEntitySystem(new CameraSubmissionSystem(ecs, this));
-        ecs.addEntitySystem(new LightSubmissionSystem(ecs, this));
-
-        cameraManager = new CameraManager(gfx);
-        lightManager = new LightManager(gfx);
-
-        clearCamerasPass = new ClearCamerasPass(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        cameraUpdatePass = new CameraUpdatePass();
-        forwardQueue = new CameraForwardQueue();
-        postProcessingPass = new CameraPostProcessingPass(gfx);
-        blitCameraPass = new BlitSelectedCameraPass();
-        lightUpdatePass = new LightUpdatePass();
-        cameraDebugPass = new CameraDebugPass(gfx);
-        lightDebugPass = new LightDebugPass(gfx);
-        shadowQueue = new ShadowQueue(gfx);
-
-        addPass(clearCamerasPass);
-        addPass(cameraUpdatePass);
-        addPass(forwardQueue);
-        addPass(postProcessingPass);
-        addPass(blitCameraPass);
-        addPass(lightUpdatePass);
-        addPass(cameraDebugPass);
-        addPass(lightDebugPass);
-        addPass(shadowQueue);
+        this.lightManager = new LightManager(gfx);
+        this.cameraManager = new CameraManager(gfx);
 
         globalCameraResource = registerResource(CameraManager.class, GLOBAL_CAMERA_RESOURCE, cameraManager);
         globalBackBuffer = registerResource(Framebuffer.class, GLOBAL_BACK_BUFFER_RESOURCE, target);
         globalLightResource = registerResource(LightManager.class, GLOBAL_LIGHTS_RESOURCE, lightManager);
-
-        addLinkage(globalLightResource, lightUpdatePass.getLightResource());
-        addLinkage(lightUpdatePass.getLightResource(), shadowQueue.getLightResource());
-        addLinkage(shadowQueue.getLightResource(), forwardQueue.getLightResource());
-        addLinkage(forwardQueue.getLightResource(), lightDebugPass.getLightResource());
-
-        addLinkage(globalCameraResource, clearCamerasPass.getCameraResource());
-        addLinkage(clearCamerasPass.getCameraResource(), cameraUpdatePass.getCameraResource());
-        addLinkage(cameraUpdatePass.getCameraResource(), forwardQueue.getCameraResource());
-        addLinkage(forwardQueue.getCameraResource(), postProcessingPass.getCameraResource());
-        addLinkage(postProcessingPass.getCameraResource(), blitCameraPass.getCameraResource());
-        addLinkage(blitCameraPass.getCameraResource(), cameraDebugPass.getCameraResource());
-        addLinkage(cameraDebugPass.getCameraResource(), lightDebugPass.getCameraResource());
-
-        addLinkage(globalBackBuffer, blitCameraPass.getTargetResource());
-        addLinkage(blitCameraPass.getTargetResource(), cameraDebugPass.getTargetResource());
-        addLinkage(cameraDebugPass.getTargetResource(), lightDebugPass.getTargetResource());
     }
 
     @Override
@@ -117,33 +47,34 @@ public final class EntityRenderer extends RenderGraphRenderer {
         while(!renderOps.isEmpty())renderOps.pop().accept(gfx, this);
     }
 
-    @Override
-    public void afterRender(Graphics gfx) {
-        cameraManager.clearFrame();
-        lightManager.clearFrame();
-    }
-    public RenderQueue getForwardQueue() {
-        return forwardQueue;
-    }
-
-    public RenderQueue getShadowQueue(){
-        return shadowQueue;
-    }
-
-    public void enqueueRenderOps(Collection<BiConsumer<Graphics, EntityRenderer>> renderOp){
+    public void enqueueRenderOps(Collection<BiConsumer<Graphics, EntityRenderer>> renderOp) {
         renderOps.addAll(renderOp);
     }
 
-    public void enqueueRenderOp(BiConsumer<Graphics, EntityRenderer> renderOp){
+    public void enqueueRenderOp(BiConsumer<Graphics, EntityRenderer> renderOp) {
         renderOps.add(renderOp);
     }
 
-    public CameraManager getCameraManager(){
-        return cameraManager;
+
+    public abstract RenderQueue getForwardQueue();
+
+    public abstract RenderQueue getShadowQueue();
+
+    public void submitCamera(AbstractCamera camera){
+        cameraManager.submitCamera(camera);
     }
 
-    public LightManager getLightManager() {
-        return lightManager;
+    public void submitShadowCamera(AbstractCamera camera){
+        lightManager.submitShadowCamera(camera);
+    }
+
+    public void selectCamera(AbstractCamera camera){
+        cameraManager.selectCamera(camera);
+    }
+
+    public void submitLight(AbstractLight light){
+        lightManager.submitLight(light);
     }
 
 }
+

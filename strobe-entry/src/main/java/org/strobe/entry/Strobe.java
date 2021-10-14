@@ -4,6 +4,7 @@ import org.strobe.ecs.context.EntityContext;
 import org.strobe.engine.StrobeContext;
 import org.strobe.engine.StrobeEngine;
 import org.strobe.engine.development.DevelopmentEngine;
+import org.strobe.engine.development.profiler.Profiler;
 import org.strobe.engine.release.ReleaseEngine;
 import org.strobe.gfx.opengl.OpenGlContext;
 
@@ -42,7 +43,7 @@ public final class Strobe {
     }
 
     private enum EngineMode {
-        DEVELOPMENT(DevelopmentEngine::new),
+        DEVELOPMENT(context->new DevelopmentEngine(context, new Profiler())),
         RELEASE(ReleaseEngine::new);
 
         private Function<EntityContext, StrobeEngine> engineConstructor;

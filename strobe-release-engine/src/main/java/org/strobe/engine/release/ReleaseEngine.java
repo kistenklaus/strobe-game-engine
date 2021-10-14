@@ -1,5 +1,6 @@
 package org.strobe.engine.release;
 
+import org.strobe.ecs.EntityComponentSystem;
 import org.strobe.ecs.context.EntityContext;
 import org.strobe.engine.StrobeEngine;
 import org.strobe.gfx.Graphics;
@@ -14,6 +15,12 @@ public final class ReleaseEngine extends StrobeEngine<EntityContext> {
     public ReleaseEngine(EntityContext context) {
         super(context, new GlfwWindow(context.getTitle(), context.getWidth(), context.getHeight(),
                 WindowConfiguration.get()));
+        context.linkEntityComponentSystem(new EntityComponentSystem());
+    }
+
+    @Override
+    public void afterInit(Graphics gfx) {
+        gfx.addRenderer(1, new ReleaseRenderer(gfx, context));
     }
 
     @Override

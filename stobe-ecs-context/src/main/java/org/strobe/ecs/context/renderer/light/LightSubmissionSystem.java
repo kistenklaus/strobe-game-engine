@@ -33,7 +33,7 @@ public final class LightSubmissionSystem extends EntitySystem {
             lightComponent.enqueueLightOps(renderer);
             AbstractLight light = lightComponent.getAbstractLight();
             light.setPosition(entity.get(TRANSFORM).getPosition());
-            renderer.getLightManager().submitLight(light);
+            renderer.submitLight(light);
         }
     }
 

@@ -121,9 +121,13 @@ public abstract class RenderGraphRenderer extends RenderPass implements Renderer
         }
         beforeRender(gfx);
         for (RenderPass pass : queue) {
-            pass.render(gfx);
+            executePass(gfx, pass);
         }
         afterRender(gfx);
+    }
+
+    protected void executePass(Graphics gfx, RenderPass pass){
+        pass.render(gfx);
     }
 
     public void afterRender(Graphics gfx) {

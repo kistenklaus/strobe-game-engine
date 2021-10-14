@@ -5,7 +5,7 @@ import org.strobe.gfx.Graphics;
 
 public abstract class StrobeContext {
 
-    private StrobeEngine engine;
+    protected StrobeEngine engine;
 
     private final String title;
     private final int width;

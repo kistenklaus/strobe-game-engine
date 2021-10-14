@@ -19,7 +19,7 @@ import java.nio.ByteBuffer;
 
 import static org.lwjgl.glfw.GLFW.*;
 
-public final class ImGuiWindow extends GlfwWindow {
+public class ImGuiWindow extends GlfwWindow {
 
     private static final boolean IS_WINDOWS;
 
@@ -60,7 +60,7 @@ public final class ImGuiWindow extends GlfwWindow {
     private boolean glfwHasPerMonitorDpi;
     private boolean glfwHasMonitorWorkArea;
 
-    private final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
+    protected final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
     private final int[] monitorX = new int[1];
     private final int[] monitorY = new int[1];
     private final int[] monitorWorkAreaX = new int[1];
@@ -378,7 +378,7 @@ public final class ImGuiWindow extends GlfwWindow {
         swapBuffers();
     }
 
-    private void beginDockSpace() {
+    protected void beginDockSpace() {
         int windowFlags =
                 ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoDocking |
                         ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse |
@@ -396,7 +396,7 @@ public final class ImGuiWindow extends GlfwWindow {
         ImGui.dockSpace(ImGui.getID("Dockspace"));
     }
 
-    private void endDockSpace() {
+    protected void endDockSpace() {
         ImGui.end();
     }
 

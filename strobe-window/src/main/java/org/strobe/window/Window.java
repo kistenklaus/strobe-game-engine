@@ -44,7 +44,7 @@ public abstract class Window {
         swapBuffers();
     }
 
-    public final void pollEvents(){
+    public void pollEvents(){
         mouse.beforePoll();
         poolEventsImpl();
         mouse.afterPoll();
