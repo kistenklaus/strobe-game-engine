@@ -1,0 +1,17 @@
+#pragma once
+#include "strb/apis/vulkan/vulkan.lib.hpp"
+//
+#include "strb/apis/vulkan/CommandBuffer.hpp"
+#include "strb/apis/vulkan/CommandPool.hpp"
+#include "strb/apis/vulkan/Device.hpp"
+#include "strb/apis/vulkan/Framebuffer.hpp"
+#include "strb/apis/vulkan/Instance.hpp"
+#include "strb/apis/vulkan/PhysicalDevice.hpp"
+#include "strb/apis/vulkan/Pipeline.hpp"
+#include "strb/apis/vulkan/Queue.hpp"
+#include "strb/apis/vulkan/QueueFamily.hpp"
+#include "strb/apis/vulkan/RenderPass.hpp"
+#include "strb/apis/vulkan/Semaphore.hpp"
+#include "strb/apis/vulkan/Shader.hpp"
+#include "strb/apis/vulkan/Surface.hpp"
+#include "strb/apis/vulkan/Swapchain.hpp"
