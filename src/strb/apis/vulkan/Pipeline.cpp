@@ -7,13 +7,11 @@
 namespace strb::vulkan {
 
 Pipeline::Pipeline(const Device &device, const RenderPass &renderPass,
-                   const uint32_t width, const uint32_t height,
-                   strb::optional<Shader> vertexShader,
+                   const VertexLayout &inputLayout, const uint32_t width,
+                   const uint32_t height, strb::optional<Shader> vertexShader,
                    strb::optional<Shader> fragmentShader)
-    : device(&device),
-      renderPass(&renderPass),
-      vertexShader(vertexShader),
-      fragmentShader(fragmentShader) {
+    : device(&device), renderPass(&renderPass), inputLayout(&inputLayout),
+      vertexShader(vertexShader), fragmentShader(fragmentShader) {
   // Create Pipeline layout
   VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo;
   pipelineLayoutCreateInfo.sType =
@@ -72,15 +70,42 @@ Pipeline::Pipeline(const Device &device, const RenderPass &renderPass,
 
   VkPipelineShaderStageCreateInfo shaderStages[] = {shaderStageCreateInfoVert,
                                                     shaderStageCreateInfoFrag};
+
+  strb::vector<VkVertexInputAttributeDescription> attribDesc;
+  strb::vector<VkVertexInputBindingDescription> bindingDesc;
+  for (uint32_t i = 0; i < this->inputLayout->bindingLayouts.size(); i++) {
+    VkVertexInputBindingDescription binding;
+    binding.binding = this->inputLayout->bindingLayouts[i].binding;
+    binding.inputRate = this->inputLayout->bindingLayouts[i].instanced
+                            ? VK_VERTEX_INPUT_RATE_INSTANCE
+                            : VK_VERTEX_INPUT_RATE_VERTEX;
+    binding.stride = this->inputLayout->bindingLayouts[i].vertexSize;
+    bindingDesc.push_back(binding);
+    for (uint32_t j = 0;
+         j < this->inputLayout->bindingLayouts[i].attribLayouts.size(); j++) {
+      VkVertexInputAttributeDescription attrib;
+      attrib.binding = binding.binding;
+      attrib.location =
+          this->inputLayout->bindingLayouts[i].attribLayouts[j].location;
+      attrib.offset =
+          this->inputLayout->bindingLayouts[i].attribLayouts[j].offset;
+      attrib.format =
+          this->inputLayout->bindingLayouts[i].attribLayouts[j].getVkFormat();
+      attribDesc.push_back(attrib);
+    }
+  }
+
   VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo;
   vertexInputCreateInfo.sType =
       VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   vertexInputCreateInfo.pNext = nullptr;
   vertexInputCreateInfo.flags = 0;
-  vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
-  vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
-  vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
-  vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+  vertexInputCreateInfo.vertexBindingDescriptionCount =
+      static_cast<uint32_t>(bindingDesc.size());
+  vertexInputCreateInfo.pVertexBindingDescriptions = bindingDesc.data();
+  vertexInputCreateInfo.vertexAttributeDescriptionCount =
+      static_cast<uint32_t>(attribDesc.size());
+  vertexInputCreateInfo.pVertexAttributeDescriptions = attribDesc.data();
 
   VkPipelineInputAssemblyStateCreateInfo inputAssemlyCreateInfo;
   inputAssemlyCreateInfo.sType =
@@ -147,13 +172,14 @@ Pipeline::Pipeline(const Device &device, const RenderPass &renderPass,
   colorBlendCreateInfo.pNext = nullptr;
   colorBlendCreateInfo.flags = 0;
   colorBlendCreateInfo.logicOpEnable = VK_FALSE;
-  colorBlendCreateInfo.logicOp = VK_LOGIC_OP_NO_OP;  // not used then VK_FALSE
+  colorBlendCreateInfo.logicOp = VK_LOGIC_OP_NO_OP; // not used then VK_FALSE
   colorBlendCreateInfo.attachmentCount = 1;
   colorBlendCreateInfo.pAttachments = &colorBlendAttachmentState;
   colorBlendCreateInfo.blendConstants[0] = 0.0;
   colorBlendCreateInfo.blendConstants[1] = 0.0;
   colorBlendCreateInfo.blendConstants[2] = 0.0;
   colorBlendCreateInfo.blendConstants[3] = 0.0;
+
   VkGraphicsPipelineCreateInfo pipelineCreateInfo;
   pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
   pipelineCreateInfo.pNext = nullptr;
@@ -278,15 +304,40 @@ void Pipeline::recreate(const uint32_t width, const uint32_t height) {
 
   VkPipelineShaderStageCreateInfo shaderStages[] = {shaderStageCreateInfoVert,
                                                     shaderStageCreateInfoFrag};
+
+  strb::vector<VkVertexInputAttributeDescription> attribDesc;
+  strb::vector<VkVertexInputBindingDescription> bindingDesc;
+  for (uint32_t i = 0; i < this->inputLayout->bindingLayouts.size(); i++) {
+    VkVertexInputBindingDescription binding;
+    binding.binding = this->inputLayout->bindingLayouts[i].binding;
+    binding.inputRate = this->inputLayout->bindingLayouts[i].instanced
+                            ? VK_VERTEX_INPUT_RATE_INSTANCE
+                            : VK_VERTEX_INPUT_RATE_VERTEX;
+    binding.stride = this->inputLayout->bindingLayouts[i].vertexSize;
+    bindingDesc.push_back(binding);
+    for (uint32_t j = 0;
+         j < this->inputLayout->bindingLayouts[i].attribLayouts.size(); j++) {
+      VkVertexInputAttributeDescription attrib;
+      attrib.binding = binding.binding;
+      attrib.location =
+          this->inputLayout->bindingLayouts[i].attribLayouts[j].location;
+      attrib.offset =
+          this->inputLayout->bindingLayouts[i].attribLayouts[j].offset;
+      attrib.format =
+          this->inputLayout->bindingLayouts[i].attribLayouts[j].getVkFormat();
+      attribDesc.push_back(attrib);
+    }
+  }
+
   VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo;
   vertexInputCreateInfo.sType =
       VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   vertexInputCreateInfo.pNext = nullptr;
   vertexInputCreateInfo.flags = 0;
-  vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
-  vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
-  vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
-  vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+  vertexInputCreateInfo.vertexBindingDescriptionCount = bindingDesc.size();
+  vertexInputCreateInfo.pVertexBindingDescriptions = bindingDesc.data();
+  vertexInputCreateInfo.vertexAttributeDescriptionCount = attribDesc.size();
+  vertexInputCreateInfo.pVertexAttributeDescriptions = attribDesc.data();
 
   VkPipelineInputAssemblyStateCreateInfo inputAssemlyCreateInfo;
   inputAssemlyCreateInfo.sType =
@@ -353,7 +404,7 @@ void Pipeline::recreate(const uint32_t width, const uint32_t height) {
   colorBlendCreateInfo.pNext = nullptr;
   colorBlendCreateInfo.flags = 0;
   colorBlendCreateInfo.logicOpEnable = VK_FALSE;
-  colorBlendCreateInfo.logicOp = VK_LOGIC_OP_NO_OP;  // not used then VK_FALSE
+  colorBlendCreateInfo.logicOp = VK_LOGIC_OP_NO_OP; // not used then VK_FALSE
   colorBlendCreateInfo.attachmentCount = 1;
   colorBlendCreateInfo.pAttachments = &colorBlendAttachmentState;
   colorBlendCreateInfo.blendConstants[0] = 0.0;
@@ -388,4 +439,4 @@ void Pipeline::recreate(const uint32_t width, const uint32_t height) {
   ASSERT_VKRESULT(result);
 }
 
-}  // namespace strb::vulkan
+} // namespace strb::vulkan

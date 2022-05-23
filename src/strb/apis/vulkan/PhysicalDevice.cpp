@@ -54,6 +54,9 @@ PhysicalDevice::PhysicalDevice(const Instance instance) {
     }
   }
   this->physicalDevice = physicalDevices[bestGpuIndex];
+  vkGetPhysicalDeviceMemoryProperties(
+      this->physicalDevice,
+      &this->m_memoryProperties); // fetch memory properties
   assert(this->physicalDevice != VK_NULL_HANDLE);
 }
 
@@ -64,4 +67,17 @@ uint64_t PhysicalDevice::getVRamSize() {
   return VRamSize;
 }
 
-}  // namespace strb::vulkan
+uint32_t
+PhysicalDevice::findMemoryTypeIndex(uint32_t typeFilter,
+                                    VkMemoryPropertyFlags properties) const {
+  for (uint32_t i = 0; i < this->m_memoryProperties.memoryTypeCount; i++) {
+    if (typeFilter & (1 << i) &&
+        (this->m_memoryProperties.memoryTypes[i].propertyFlags & properties) ==
+            properties) {
+      return i;
+    }
+  }
+  throw strb::runtime_exception("failed to find suitable memory type");
+}
+
+} // namespace strb::vulkan

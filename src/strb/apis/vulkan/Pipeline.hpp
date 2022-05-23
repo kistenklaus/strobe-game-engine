@@ -2,14 +2,16 @@
 #include "strb/apis/vulkan/Device.hpp"
 #include "strb/apis/vulkan/RenderPass.hpp"
 #include "strb/apis/vulkan/Shader.hpp"
+#include "strb/apis/vulkan/VertexInputLayout.hpp"
 #include "strb/apis/vulkan/vulkan.lib.hpp"
 
 namespace strb::vulkan {
 
 struct Pipeline {
- private:
+private:
   const Device *device;
   const RenderPass *renderPass;
+  const VertexLayout *inputLayout;
   VkPipelineLayout pipelineLayout;
   VkPipeline pipeline;
   uint32_t width;
@@ -17,15 +19,13 @@ struct Pipeline {
   strb::optional<Shader> vertexShader;
   strb::optional<Shader> fragmentShader;
 
- public:
+public:
   inline Pipeline()
-      : device(nullptr),
-        renderPass(nullptr),
-        pipelineLayout(VK_NULL_HANDLE),
+      : device(nullptr), renderPass(nullptr), pipelineLayout(VK_NULL_HANDLE),
         pipeline(VK_NULL_HANDLE) {}
   Pipeline(const Device &device, const RenderPass &renderPass,
-           const uint32_t width, const uint32_t height,
-           strb::optional<Shader> vertexShader,
+           const VertexLayout &inputLayout, const uint32_t width,
+           const uint32_t height, strb::optional<Shader> vertexShader,
            strb::optional<Shader> fragmentShader);
   void destroy();
   void bind(const CommandBuffer &commandBuffer);
@@ -38,4 +38,4 @@ struct Pipeline {
   void recreate(const uint32_t width, const uint32_t height);
 };
 
-}  // namespace strb::vulkan
+} // namespace strb::vulkan

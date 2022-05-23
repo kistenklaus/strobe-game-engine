@@ -7,19 +7,19 @@ namespace strb::vulkan {
 struct CommandBuffer {
   friend struct CommandPool;
 
- private:
+private:
   VkCommandBuffer commandBuffer;
   inline CommandBuffer(const VkCommandBuffer commandBuffer)
       : commandBuffer(commandBuffer) {}
 
- public:
+public:
   // pls dont use this explicitly
   inline CommandBuffer() : commandBuffer(VK_NULL_HANDLE) {}
   inline operator VkCommandBuffer() const { return this->commandBuffer; }
-  void begin();
+  void begin(uint32_t flag = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
   void end();
 
- public:
+public:
 };
 
-}  // namespace strb::vulkan
+} // namespace strb::vulkan

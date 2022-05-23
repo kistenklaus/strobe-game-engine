@@ -13,5 +13,7 @@
 #include "strb/apis/vulkan/RenderPass.hpp"
 #include "strb/apis/vulkan/Semaphore.hpp"
 #include "strb/apis/vulkan/Shader.hpp"
+#include "strb/apis/vulkan/StagedVertexBuffer.hpp"
 #include "strb/apis/vulkan/Surface.hpp"
 #include "strb/apis/vulkan/Swapchain.hpp"
+#include "strb/apis/vulkan/VertexBuffer.hpp"

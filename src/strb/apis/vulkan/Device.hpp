@@ -10,23 +10,22 @@ namespace strb::vulkan {
 struct Queue;
 
 struct Device {
- private:
-  const PhysicalDevice* physicalDevice;
+private:
+  const PhysicalDevice *physicalDevice;
   VkDevice device;
   QueueFamilyIndicies queueFamilyIndicies;
   strb::vector<Queue> graphicsQueues;
   strb::vector<Queue> transferQueues;
   strb::vector<Queue> computeQueues;
 
- public:
+public:
   inline Device()
-      : physicalDevice(nullptr),
-        device(VK_NULL_HANDLE),
+      : physicalDevice(nullptr), device(VK_NULL_HANDLE),
         queueFamilyIndicies({}) {}
-  Device(const PhysicalDevice& physicalDevice,
+  Device(const PhysicalDevice &physicalDevice,
          const uint32_t graphicsQueueCount, const uint32_t transferQueueCount,
          const uint32_t computeQueueCount);
-  Device(const PhysicalDevice& physicalDevice,
+  Device(const PhysicalDevice &physicalDevice,
          strb::vector<strb::string> deviceExtentions,
          const uint32_t graphicsQueueCount, const uint32_t transferQueueCount,
          const uint32_t computeQueueCount);
@@ -41,23 +40,28 @@ struct Device {
   inline strb::optional<uint32_t> getTransferQueueFamilyIndex() const {
     return queueFamilyIndicies.transferIndex;
   }
-  inline Queue& getGraphicsQueue(const uint32_t index) {
+  inline Queue &getGraphicsQueue(const uint32_t index) {
     return this->graphicsQueues[index];
   }
   inline uint32_t getGraphicsQueueCount() {
     return this->graphicsQueues.size();
   }
-  inline Queue& getTransferQueue(const uint32_t index) {
+  inline Queue &getTransferQueue(const uint32_t index) {
     return this->transferQueues[index];
   }
   inline uint32_t getTransferQueueCount() {
     return this->transferQueues.size();
   }
-  inline Queue& getComputeQueue(const uint32_t index) {
+  inline Queue &getComputeQueue(const uint32_t index) {
     return this->computeQueues[index];
   }
   inline uint32_t getComputeQueueCount() { return this->computeQueues.size(); }
   inline operator VkDevice() const { return this->device; }
+
+  inline uint32_t findMemoryTypeIndex(uint32_t typeFilter,
+                                      uint32_t properties) const {
+    return this->physicalDevice->findMemoryTypeIndex(typeFilter, properties);
+  }
 };
 
-}  // namespace strb::vulkan
+} // namespace strb::vulkan

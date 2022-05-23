@@ -6,7 +6,7 @@
 
 namespace strb::vulkan {
 
-void CommandBuffer::begin() {
+void CommandBuffer::begin(uint32_t flag) {
   assert(this->commandBuffer != VK_NULL_HANDLE);
   // TODO small overhead could only be created once.
   VkCommandBufferBeginInfo commandBufferBeginInfo;
@@ -25,4 +25,4 @@ void CommandBuffer::end() {
   ASSERT_VKRESULT(result);
 }
 
-}  // namespace strb::vulkan
+} // namespace strb::vulkan

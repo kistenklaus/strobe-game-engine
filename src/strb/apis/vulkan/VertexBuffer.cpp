@@ -1,45 +1,35 @@
 #include "strb/apis/vulkan/VertexBuffer.hpp"
+#include <cstring>
 
 namespace strb::vulkan {
 
-VertexBuffer::VertexBuffer(const Device& device) {
-  uint32_t vertexCount = 3;
-  uint32_t vertexSize = 2 * sizeof(float);
+VertexBuffer::VertexBuffer(const Device &device, uint32_t vertexCount,
+                           const VertexBindingLayout layout)
+    : VertexBuffer(device, vertexCount, layout,
+                   VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {}
 
-  VkVertexInputBindingDescription bindingDesc;
-  bindingDesc.binding = 0;
-  bindingDesc.stride = vertexSize;
-  bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-  VkVertexInputAttributeDescription posDesc = {};
-  posDesc.binding = 0;
-  posDesc.location = 0;
-  posDesc.format = VK_FORMAT_R32G32_SFLOAT;
-  posDesc.offset = 0;
-  VkPipelineVertexInputStateCreateInfo inputInfo;
-  inputInfo.vertexAttributeDescriptionCount = 1;
-  inputInfo.pVertexAttributeDescriptions = &posDesc;
-  inputInfo.vertexBindingDescriptionCount = 1;
-  inputInfo.pVertexBindingDescriptions = &bindingDesc;
+VertexBuffer::VertexBuffer(const Device &device, uint32_t vertexCount,
+                           const VertexBindingLayout layout,
+                           const VkBufferUsageFlags usage,
+                           const VkMemoryPropertyFlags properties)
+    : m_device(&device), m_layout(layout),
+      m_buffer(
+          Buffer(device, vertexCount * layout.vertexSize, usage, properties)) {}
 
-  VkBufferCreateInfo createInfo;
-  createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  createInfo.flags = 0;
-  createInfo.pNext = nullptr;
-  createInfo.size = vertexCount * vertexSize;
-  createInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-  createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-  VkResult result =
-      vkCreateBuffer(*this->device, &createInfo, nullptr, &this->vertexBuffer);
-  ASSERT_VKRESULT(result);
-
-  vkGetBufferMemoryRequirements(*this->device, this->vertexBuffer,
-                                &this->memory);
-  // TODO allocation
+void VertexBuffer::bind(const CommandBuffer &commandBuffer) {
+  VkBuffer buffers[] = {m_buffer};
+  VkDeviceSize offsets[] = {0};
+  vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
 }
 
-void VertexBuffer::destroy() {
-  vkDestroyBuffer(*this->device, this->vertexBuffer, nullptr);
+void VertexBuffer::mapMemory(void **content) {
+  m_buffer.mapMemory(0, m_buffer.getSize(), content);
 }
 
-}  // namespace strb::vulkan
+void VertexBuffer::unmapMemory() { m_buffer.unmapMemory(); }
+
+void VertexBuffer::destroy() { m_buffer.destroy(); }
+
+} // namespace strb::vulkan

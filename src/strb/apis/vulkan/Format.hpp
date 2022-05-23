@@ -12,6 +12,6 @@ namespace format {
 inline VkFormat toVkFormat(Format format) {
   return static_cast<VkFormat>(format);
 }
-}  // namespace format
+} // namespace format
 
-}  // namespace strb::vulkan
+} // namespace strb::vulkan

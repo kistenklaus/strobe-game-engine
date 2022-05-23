@@ -1,0 +1,30 @@
+@startuml
+
+!include ./theme.puml
+
+class Queue
+
+class Transform
+
+class RenderGraph
+RenderGraph --* RenderPass
+
+class RenderPass
+RenderPass --o Sink
+RenderPass --o Source
+
+class Sink
+class Source
+
+
+class Renderable
+Renderable --> Transform
+Renderable --* Technique
+
+class Technique
+Technique --* Step
+
+class Step
+
+
+@enduml

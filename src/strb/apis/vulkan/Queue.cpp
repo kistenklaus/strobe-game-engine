@@ -2,9 +2,9 @@
 
 namespace strb::vulkan {
 
-void Queue::submit(const CommandBuffer& commandBuffer,
-                   const strb::vector<Semaphore>& waitSemaphores,
-                   const strb::vector<Semaphore>& signalSemaphores) {
+void Queue::submit(const CommandBuffer &commandBuffer,
+                   const strb::vector<Semaphore> &waitSemaphores,
+                   const strb::vector<Semaphore> &signalSemaphores) {
   VkSubmitInfo submitInfo;
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.pNext = nullptr;
@@ -29,8 +29,8 @@ void Queue::submit(const CommandBuffer& commandBuffer,
   ASSERT_VKRESULT(result);
 }
 
-void Queue::present(const Swapchain& swapchain, const uint32_t frameIndex,
-                    const strb::vector<Semaphore>& waitSemaphores) {
+void Queue::present(const Swapchain &swapchain, const uint32_t frameIndex,
+                    const strb::vector<Semaphore> &waitSemaphores) {
   VkPresentInfoKHR presentInfo;
   presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
   presentInfo.pNext = nullptr;
@@ -47,4 +47,9 @@ void Queue::present(const Swapchain& swapchain, const uint32_t frameIndex,
   ASSERT_VKRESULT(result);
 }
 
-}  // namespace strb::vulkan
+void Queue::waitIdle() {
+  VkResult result = vkQueueWaitIdle(queue);
+  ASSERT_VKRESULT(result);
+}
+
+} // namespace strb::vulkan

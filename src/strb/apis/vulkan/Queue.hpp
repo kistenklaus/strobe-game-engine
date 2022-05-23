@@ -16,17 +16,18 @@ struct Swapchain;
 struct Queue {
   friend struct Device;
 
- private:
+private:
   VkQueue queue;
   Queue(VkQueue queue) : queue(queue) {}
 
- public:
+public:
   inline operator VkQueue() { return this->queue; }
-  void submit(const CommandBuffer& commandBuffer,
-              const strb::vector<Semaphore>& waitSemaphores,
-              const strb::vector<Semaphore>& signalSemaphores);
-  void present(const Swapchain& swapchain, const uint32_t frameIndex,
-               const strb::vector<Semaphore>& waitSemaphores);
+  void submit(const CommandBuffer &commandBuffer,
+              const strb::vector<Semaphore> &waitSemaphores,
+              const strb::vector<Semaphore> &signalSemaphores);
+  void present(const Swapchain &swapchain, const uint32_t frameIndex,
+               const strb::vector<Semaphore> &waitSemaphores);
+  void waitIdle();
 };
 
-}  // namespace strb::vulkan
+} // namespace strb::vulkan

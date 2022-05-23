@@ -5,14 +5,16 @@
 namespace strb::vulkan {
 
 struct PhysicalDevice {
- private:
+private:
   VkPhysicalDevice physicalDevice;
+  VkPhysicalDeviceMemoryProperties m_memoryProperties;
 
- public:
+public:
   inline PhysicalDevice() : physicalDevice(VK_NULL_HANDLE) {}
   PhysicalDevice(const Instance instance);
   uint64_t getVRamSize();
   inline operator VkPhysicalDevice() const { return this->physicalDevice; }
+  uint32_t findMemoryTypeIndex(uint32_t typeFilter, uint32_t properties) const;
 };
 
-}  // namespace strb::vulkan
+} // namespace strb::vulkan

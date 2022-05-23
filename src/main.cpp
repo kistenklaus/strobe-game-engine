@@ -12,10 +12,12 @@ static void recordCommandBuffer(strb::vulkan::CommandBuffer &commandBuffer,
                                 strb::vulkan::RenderPass &renderPass,
                                 strb::vulkan::Framebuffer &framebuffer,
                                 strb::vulkan::Pipeline &pipeline,
+                                strb::vulkan::StagedVertexBuffer &vbo,
                                 uint32_t width, uint32_t height) {
   commandBuffer.begin();
   renderPass.begin(commandBuffer, framebuffer, 0, 0, width, height);
   pipeline.bind(commandBuffer);
+  vbo.bind(commandBuffer);
   pipeline.executeDrawCall(commandBuffer, 3, 1, 0, 0);
   renderPass.end(commandBuffer);
   commandBuffer.end();
@@ -30,7 +32,7 @@ private:
   strb::vector<strb::vulkan::Framebuffer> &framebuffers;
   strb::vulkan::CommandPool &commandPool;
   strb::vector<strb::vulkan::CommandBuffer> &commandBuffers;
-  strb::vector<strb::vulkan::Shader> &shaders;
+  strb::vulkan::StagedVertexBuffer &vbo;
 
 public:
   WSizeCallback(strb::vulkan::Device &device,
@@ -40,11 +42,12 @@ public:
                 strb::vector<strb::vulkan::Framebuffer> &framebuffers,
                 strb::vulkan::CommandPool &commandPool,
                 strb::vector<strb::vulkan::CommandBuffer> &commandBuffers,
-                strb::vector<strb::vulkan::Shader> &shaders)
+                strb::vector<strb::vulkan::Shader> &shaders,
+                strb::vulkan::StagedVertexBuffer &vbo)
       : strb::window::WindowSizeCallback(), device(device),
         swapchain(swapchain), renderPass(renderPass), pipeline(pipeline),
         framebuffers(framebuffers), commandPool(commandPool),
-        commandBuffers(commandBuffers), shaders(shaders) {}
+        commandBuffers(commandBuffers), vbo(vbo) {}
   void callback(const uint32_t width, const uint32_t height) override {
     this->device.waitIdle();
     this->swapchain.recreate(width, height);
@@ -64,7 +67,7 @@ public:
     }
     for (unsigned int i = 0; i < this->commandBuffers.size(); i++) {
       recordCommandBuffer(this->commandBuffers[i], renderPass, framebuffers[i],
-                          pipeline, width, height);
+                          pipeline, vbo, width, height);
     }
   }
 };
@@ -101,9 +104,32 @@ int main() {
   strb::vulkan::RenderPass renderPass =
       strb::vulkan::RenderPass(device, strb::vulkan::Format::RGBA_UNORM);
 
-  strb::vulkan::Pipeline pipeline =
-      strb::vulkan::Pipeline(device, renderPass, window.getWidth(),
-                             window.getHeight(), vertexShader, fragmentShader);
+  const strb::vulkan::VertexLayout vertexLayout =
+      strb::vulkan::VertexLayout({strb::vulkan::VertexBindingLayout(
+          0,
+          {strb::vulkan::VertexAttributeLayout(
+               0, 0, strb::vulkan::VertexInputFormat::VEC2),
+           strb::vulkan::VertexAttributeLayout(
+               1, 2 * sizeof(float), strb::vulkan::VertexInputFormat::VEC3)},
+          false)
+
+      });
+
+  strb::vulkan::Pipeline pipeline = strb::vulkan::Pipeline(
+      device, renderPass, vertexLayout, window.getWidth(), window.getHeight(),
+      vertexShader, fragmentShader);
+
+  strb::vector<float> verticies = {0.0f, -0.5f, 1,     1,    1, 0.5f, 0.5f, 1,
+                                   1,    0,     -0.5f, 0.5f, 1, 1,    0};
+  // strb::vulkan::VertexBuffer vbo =
+  //     strb::vulkan::VertexBuffer(device, 3, vertexLayout.bindingLayouts[0]);
+  // void *maped;
+  // vbo.mapMemory(&maped);
+  // float *data = static_cast<float *>(maped);
+  // for (uint32_t i = 0; i < verticies.size(); i++) {
+  //   data[i] = verticies[i];
+  // }
+  // vbo.unmapMemory();
 
   strb::vector<strb::vulkan::Framebuffer> swapchainFramebuffers(
       swapchain.getImageCount());
@@ -119,9 +145,22 @@ int main() {
   strb::vector<strb::vulkan::CommandBuffer> commandBuffers =
       commandPool.allocate(swapchainFramebuffers.size());
 
+  strb::vulkan::StagedVertexBuffer staged = strb::vulkan::StagedVertexBuffer(
+      device, 3, vertexLayout.bindingLayouts[0]);
+  void *maped;
+  staged.mapStagedMemory(&maped);
+  float *data = static_cast<float *>(maped);
+  for (uint32_t i = 0; i < verticies.size(); i++) {
+    data[i] = verticies[i];
+  }
+  staged.unmapStagedMemory();
+
+  staged.commit(commandPool, device.getGraphicsQueue(0));
+
   for (unsigned int i = 0; i < commandBuffers.size(); i++) {
     recordCommandBuffer(commandBuffers[i], renderPass, swapchainFramebuffers[i],
-                        pipeline, window.getWidth(), window.getHeight());
+                        pipeline, staged, window.getWidth(),
+                        window.getHeight());
   }
   strb::vulkan::Semaphore semaphoreImageAvaiable =
       strb::vulkan::Semaphore(device);
@@ -131,7 +170,7 @@ int main() {
   strb::vector<strb::vulkan::Shader> shaders = {vertexShader, fragmentShader};
   WSizeCallback sizeCallback = WSizeCallback(
       device, swapchain, renderPass, pipeline, swapchainFramebuffers,
-      commandPool, commandBuffers, shaders);
+      commandPool, commandBuffers, shaders, staged);
   window.addWindowSizeCallback(&sizeCallback);
 
   // LOOP
@@ -152,6 +191,8 @@ int main() {
   window.removeWindowSizeCallback(&sizeCallback);
 
   device.waitIdle();
+
+  staged.destroy();
 
   semaphoreImageAvaiable.destroy();
   semaphoreRenderingDone.destroy();
