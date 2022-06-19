@@ -1,0 +1,13 @@
+@startuml
+!include ./theme.puml
+
+SwapchainFboSrcPass : 
+DrawTrianglePass :
+SwapchainFboDestPass : 
+
+SwapchainFboSrcPass --> DrawTrianglePass : Framebuffer
+
+DrawTrianglePass --> SwapchainFboDestPass : Framebuffer
+
+
+@enduml

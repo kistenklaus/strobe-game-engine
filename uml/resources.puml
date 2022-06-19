@@ -1,0 +1,15 @@
+@startuml
+
+!include ./theme.puml
+
+interface Resource{
+    +abstract create()
+    +abstract destroy()
+}
+
+abstract class Framebuffer implements Resource{
+
+}
+
+
+@enduml

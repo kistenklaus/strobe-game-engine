@@ -1,0 +1,30 @@
+@startuml
+
+!include ./theme.puml
+!include ./resources.puml
+
+abstract class Bindable extends Resource{
+    +abstract bind()
+}
+
+abstract class Shader extends Bindable{
+}
+
+abstract class Texture2D extends Bindable{
+}
+
+abstract class UniformBuffer extends Bindable{
+}
+
+abstract class VertexBuffer extends Bindable{
+}
+
+abstract class IndexBuffer extends Bindable{
+}
+
+abstract class VertexArrayBuffer extends Bindable{
+}
+
+
+
+@enduml

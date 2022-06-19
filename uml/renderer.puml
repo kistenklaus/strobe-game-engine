@@ -1,0 +1,28 @@
+@startuml 
+!include ./theme.puml
+!include ./rendergraph.puml
+
+abstract class Renderer{
+    +RendererBackend()
+    +{abstract} createTexture2D(u8[*] pixels, format) : Texture2D*
+    +{abstract} createVertexBuffer(u32 vCount, VertexBufferLayout, bool readOnly) : VertexBuffer*
+    +{abstract} createShaderProgram(u32[*] vsrc, u32[*] fsrc) : Shader*
+    +{abstract} createUniformBuffer(UniformBufferLayout) : UniformBuffer*
+    +{abstract} setRendergraph(Rendergraph) : void
+    +{abstract} beginFrame() : void
+    +submitRenderable(Renderable) : void
+    +{abstract} endFrame() : void
+    +{abstract} destroy() : void
+    ...
+    +{abstract} createForwardRenderPass() : RenderPass*
+    +{abstract} createFXXARenderPass() : RenderPass*
+    +{abstract} createShadowmapRenderPass() : RenderPass*
+    ...
+}
+
+Renderer --> "0..1" RenderGraph
+Renderer --> "*" Resource
+
+
+
+@enduml

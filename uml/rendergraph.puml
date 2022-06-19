@@ -1,30 +1,60 @@
 @startuml
 
 !include ./theme.puml
+!include ./bindables.puml
 
-class Queue
-
-class Transform
-
-class RenderGraph
+class RenderGraph{
+    +{abstract} create() : void
+    +{abstract} render() : void
+    +{abstract} dispose() : void
+}
 RenderGraph --* RenderPass
 
-class RenderPass
-RenderPass --o Sink
-RenderPass --o Source
+abstract class RenderPass{
+    +{abstract} recreate() : void
+    +{abstract} execute() : void
+}
 
-class Sink
-class Source
+RenderPass --> "*" Source
+RenderPass --> "*" Sink
+
+class Sink{}
+Sink --> Resource
+
+class Source{}
+Source --> Resource
+
+abstract class QueuePass extends RenderPass{
+    +{abstract} submit(DrawJob) : void
+    +execute() : void
+    +{abstract} beforeAll() : void
+    +{abstract} afterAll() : void
+    +{abstract} executeDrawJob(DrawJob) : void
+}
+
+QueuePass --> "*" DrawJob
 
 
-class Renderable
-Renderable --> Transform
-Renderable --* Technique
+abstract class Renderable{
+    +Transform transform
+    +Renderable()
+}
+Renderable *-- "*" Technique
 
-class Technique
-Technique --* Step
+class Technique{
+    +u8 enabled
+}
+Technique *-- "*" Step
 
-class Step
+class Step{
+}
 
+Step --> QueuePass
+Step *-- "*" Bindable
+
+class DrawJob{
+    +bindable : Bindable[*]
+    +drawCall : <?>
+}
 
 @enduml
