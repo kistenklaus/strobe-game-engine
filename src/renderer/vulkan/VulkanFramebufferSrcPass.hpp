@@ -7,24 +7,13 @@ namespace sge {
 
 class VulkanFramebufferSrcPass : public RenderPass {
  public:
-  VulkanFramebufferSrcPass(Renderer& renderer);
+  VulkanFramebufferSrcPass(RendererBackend* renderer);
   void setFramebuffer(VulkanFramebuffer& framebuffer);
   const u32 getFramebufferSourceId();
+  void execute() override;
 
  private:
   const u32 m_framebuffer_source_id;
 };
-
-VulkanFramebufferSrcPass::VulkanFramebufferSrcPass(Renderer& renderer)
-    : RenderPass(renderer),
-      m_framebuffer_source_id(registerSource<VulkanFramebuffer>()) {}
-
-void VulkanFramebufferSrcPass::setFramebuffer(VulkanFramebuffer& framebuffer) {
-  setSourceResource(m_framebuffer_source_id, framebuffer);
-}
-
-const u32 VulkanFramebufferSrcPass::getFramebufferSourceId() {
-  return m_framebuffer_source_id;
-}
 
 }  // namespace sge

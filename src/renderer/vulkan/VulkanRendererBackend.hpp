@@ -2,18 +2,21 @@
 #include <vulkan/vulkan.h>
 
 #include <cstring>
+#include <limits>
 #include <optional>
 #include <vector>
 
 #include "renderer/RendererBackend.hpp"
 #include "renderer/vulkan/VulkanAssertion.hpp"
+#include "renderer/vulkan/VulkanMasterRendergraph.hpp"
 #include "types/inttypes.hpp"
 #include "window/Window.hpp"
 #include "window/glfw/glfw.lib.hpp"
 
 namespace sge::vulkan {
+class VulkanMasterRendergraph;
 
-class VulkanRendererBackend : public RendererBackend {
+class VulkanRendererBackend : public sge::RendererBackend {
  public:
   VulkanRendererBackend(std::string application_name,
                         std::tuple<int, int, int> application_version,
@@ -58,6 +61,8 @@ class VulkanRendererBackend : public RendererBackend {
   void destroySemaphore(uint32_t semaphoreId);
   void drawCall(uint32_t vertexCount, uint32_t instanceCount,
                 uint32_t commandBufferId);
+  void acquireNextSwapchainFrame(u32 signalSemaphoreId);
+  void presentQueue(u32 queueId, const std::vector<u32>& waitSemaphoreId);
 
  private:
   VkImageView& getImageViewById(const uint32_t imageViewId);
@@ -71,10 +76,12 @@ class VulkanRendererBackend : public RendererBackend {
   VkSemaphore& getSemaphoreById(const uint32_t semaphoreId);
 
  private:
+  std::unique_ptr<VulkanMasterRendergraph> m_rendergraph;
   VkInstance m_instance;
   VkDevice m_device;
   VkSurfaceKHR m_surface;
   VkSwapchainKHR m_swapchain;
+  u32 m_swapchainFrameIndex;
   std::vector<uint32_t> m_swapchainImageViews;
   std::vector<VkQueue> m_graphics_queues;
   std::vector<VkQueue> m_transfer_queues;

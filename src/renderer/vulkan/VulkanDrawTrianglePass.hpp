@@ -6,7 +6,7 @@ namespace sge {
 
 class VulkanDrawTrianglePass : public RenderPass {
  public:
-  VulkanDrawTrianglePass(Renderer& renderer);
+  VulkanDrawTrianglePass(RendererBackend* renderer);
   void execute() override;
 
   const u32 getFramebufferSourceId();
@@ -16,22 +16,5 @@ class VulkanDrawTrianglePass : public RenderPass {
   const u32 m_framebuffer_sink_id;
   const u32 m_framebuffer_source_id;
 };
-
-VulkanDrawTrianglePass::VulkanDrawTrianglePass(Renderer& renderer)
-    : RenderPass(renderer),
-      m_framebuffer_sink_id(registerSink<VulkanFramebuffer>()),
-      m_framebuffer_source_id(registerSource<VulkanFramebuffer>()) {}
-
-void VulkanDrawTrianglePass::execute() {
-  // TODO implement
-}
-
-const u32 VulkanDrawTrianglePass::getFramebufferSinkId() {
-  return m_framebuffer_sink_id;
-}
-
-const u32 VulkanDrawTrianglePass::getFramebufferSourceId() {
-  return m_framebuffer_source_id;
-}
 
 }  // namespace sge

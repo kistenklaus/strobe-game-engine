@@ -349,6 +349,7 @@ VulkanRendererBackend::VulkanRendererBackend(
         swapchainImages[i], VulkanRendererBackend::SURFACE_COLOR_FORMAT);
     m_swapchainImageViews.push_back(imageViewId);
   }
+  m_rendergraph = std::make_unique<VulkanMasterRendergraph>(this);
 }
 
 VulkanRendererBackend::~VulkanRendererBackend() {
@@ -452,14 +453,17 @@ VulkanRendererBackend::~VulkanRendererBackend() {
 
 void VulkanRendererBackend::beginFrame() {
   //
+  m_rendergraph->beginFrame();
 }
 
 void VulkanRendererBackend::renderFrame() {
   //
+  m_rendergraph->execute();
 }
 
 void VulkanRendererBackend::endFrame() {
   //
+  m_rendergraph->endFrame();
 }
 
 uint32_t VulkanRendererBackend::createImageView(VkImage image,
@@ -999,6 +1003,33 @@ void VulkanRendererBackend::drawCall(uint32_t vertexCount,
                                      uint32_t commandBufferId) {
   vkCmdDraw(getCommandBufferById(commandBufferId), vertexCount, instanceCount,
             0, 0);
+}
+void VulkanRendererBackend::acquireNextSwapchainFrame(
+    u32 semaphoreImageAvaiable) {
+  VkResult result = vkAcquireNextImageKHR(
+      m_device, m_swapchain, std::numeric_limits<uint64_t>::max(),
+      getSemaphoreById(semaphoreImageAvaiable), VK_NULL_HANDLE,
+      &m_swapchainFrameIndex);
+  ASSERT_VKRESULT(result);
+}
+
+void VulkanRendererBackend::presentQueue(
+    u32 queueId, const std::vector<u32> &waitSemaphoreIds) {
+  VkPresentInfoKHR presentInfo;
+  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  presentInfo.pNext = nullptr;
+  presentInfo.waitSemaphoreCount = waitSemaphoreIds.size();
+  std::vector<VkSemaphore> waitSemaphores(waitSemaphoreIds.size());
+  for (u32 i = 0; i < waitSemaphoreIds.size(); i++) {
+    waitSemaphores[i] = getSemaphoreById(waitSemaphoreIds[i]);
+  }
+  presentInfo.pWaitSemaphores = waitSemaphores.data();
+  presentInfo.swapchainCount = 1;
+  presentInfo.pSwapchains = &m_swapchain;
+  presentInfo.pImageIndices = &m_swapchainFrameIndex;
+  presentInfo.pResults = nullptr;
+  VkResult result = vkQueuePresentKHR(getQueueById(queueId), &presentInfo);
+  ASSERT_VKRESULT(result);
 }
 
 VkImageView &VulkanRendererBackend::getImageViewById(

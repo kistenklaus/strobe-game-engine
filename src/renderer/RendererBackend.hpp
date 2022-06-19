@@ -3,7 +3,6 @@
 
 namespace sge {
 
-// Renderer Subclass interface class
 class RendererBackend {
  public:
   virtual ~RendererBackend() = default;
