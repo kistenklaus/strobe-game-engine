@@ -14,13 +14,13 @@ class Source;
 class ISink {
  public:
   RenderPass& getPass();
-  void link(ISource& source);
+  void link(ISource* p_source);
 
  protected:
   ISink(RenderPass& pass);
 
  protected:
-  ISource* m_source = nullptr;
+  ISource* mp_source = nullptr;
 
  private:
   RenderPass& m_pass;
@@ -30,10 +30,9 @@ template <class Resource_t>
 class Sink : public ISink {
  public:
   Sink(RenderPass& renderPass) : ISink(renderPass) {}
-  Resource_t& get() {
-    assert(m_source != nullptr);
-    Resource_t& resource = static_cast<Source<Resource_t>*>(m_source)->get();
-    return resource;
+  Resource_t* get() {
+    assert(mp_source != nullptr);
+    return static_cast<Source<Resource_t>*>(mp_source)->get();
   }
 };
 

@@ -14,9 +14,9 @@ class VectorPushBackPass : public RenderPass {
         m_outSrc(registerSource<std::vector<T>>()) {}
 
   void execute() override {
-    std::vector<T>& vec = getSinkResource<std::vector<T>>(m_vecSink);
-    vec.push_back(getSinkResource<T>(m_valueSink));
-    setSourceResource(m_outSrc, vec);
+    std::vector<T>* p_vec = *getSinkResource<std::vector<T>>(m_vecSink);
+    p_vec->push_back(getSinkResource<T>(m_valueSink));
+    setSourceResource(m_outSrc, p_vec);
   }
 
  private:

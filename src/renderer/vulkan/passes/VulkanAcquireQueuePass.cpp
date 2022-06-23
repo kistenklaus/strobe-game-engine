@@ -13,9 +13,7 @@ VulkanAcquireQueuePass::VulkanAcquireQueuePass(
       m_queueSource(registerSource<u32>()) {}
 
 void VulkanAcquireQueuePass::execute() {
-  print("VulkanAcquireQueuePass QUEUE-ID:");
-  println(m_vrenderer->getAnyGraphicsQueue());
-  setSourceResource(m_queueSource, [&]() -> u32 {
+  m_queueIndex = [&]() -> u32 {
     switch (m_queueType) {
       case GRAPHICS_QUEUE:
         return m_vrenderer->getAnyGraphicsQueue();
@@ -25,7 +23,8 @@ void VulkanAcquireQueuePass::execute() {
         return m_vrenderer->getAnyComputeQueue();
     }
     throw std::runtime_error("invalid queue target");
-  }());
+  }();
+  setSourceResource(m_queueSource, &m_queueIndex);
 }
 
 }  // namespace sge::vulkan

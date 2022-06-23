@@ -173,14 +173,17 @@ VulkanRendererBackend::VulkanRendererBackend(
     if (queue_family_properties[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
       graphics_queue_family_index = {index,
                                      queue_family_properties[index].queueCount};
+      m_gfxQueueFamilyIndex = index;
     } else if (queue_family_properties[index].queueFlags &
                VK_QUEUE_TRANSFER_BIT) {
       transfer_queue_family_index = {index,
                                      queue_family_properties[index].queueCount};
+      m_transferQueueFamilyIndex = index;
     } else if (queue_family_properties[index].queueFlags &
                VK_QUEUE_COMPUTE_BIT) {
       compute_queue_family_index = {index,
                                     queue_family_properties[index].queueCount};
+      m_computeQueueFamilyIndex = index;
     }
   }
 
@@ -889,13 +892,27 @@ void VulkanRendererBackend::destroyFramebuffer(uint32_t framebufferId) {
   m_emptyFramebufferIds.push_back(framebufferId);
 }
 
-uint32_t VulkanRendererBackend::createCommandPool(uint32_t queueFamilyIndex) {
+uint32_t VulkanRendererBackend::createCommandPool(QueueFamilyType queueFamily) {
+  u32 queueFamilyIndex = [&]() -> u32 {
+    switch (queueFamily) {
+      case QUEUE_FAMILY_GRAPHICS:
+        assert(m_gfxQueueFamilyIndex.has_value());
+        return m_gfxQueueFamilyIndex.value();
+      case QUEUE_FAMILY_TRANSFER:
+        assert(m_transferQueueFamilyIndex.has_value());
+        return m_transferQueueFamilyIndex.value();
+      case QUEUE_FAMILY_COMPUTE:
+        assert(m_computeQueueFamilyIndex.has_value());
+        return m_computeQueueFamilyIndex.value();
+    }
+  }();
+
   VkCommandPool commandPool;
   VkCommandPoolCreateInfo commandPoolCreateInfo;
   commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   commandPoolCreateInfo.pNext = nullptr;
   commandPoolCreateInfo.flags = 0;
-  commandPoolCreateInfo.queueFamilyIndex = 0;  // DOESN'T PROBABLY WORK =^(.
+  commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
   VkResult result = vkCreateCommandPool(m_device, &commandPoolCreateInfo,
                                         nullptr, &commandPool);
   ASSERT_VKRESULT(result);

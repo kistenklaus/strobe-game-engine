@@ -17,21 +17,19 @@ class ISource {
 
  protected:
   RenderPass& m_renderPass;
-  void* m_resource = nullptr;
+  void* mp_resource = nullptr;
 };
 
 template <class Resource_t>
 class Source : public ISource {
  public:
   Source(RenderPass& renderPass) : ISource(renderPass) {}
-  Resource_t& get() {
-    assert(m_resource != nullptr);
-    Resource_t& resource = *static_cast<Resource_t*>(m_resource);
-
-    return resource;
+  Resource_t* get() {
+    assert(mp_resource != nullptr);
+    return static_cast<Resource_t*>(mp_resource);
   }
-  void set(const Resource_t& resource) {
-    m_resource = const_cast<Resource_t*>(&resource);
+  void set(const Resource_t* p_resource) {
+    mp_resource = const_cast<Resource_t*>(p_resource);
   }
 };
 

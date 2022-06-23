@@ -13,8 +13,11 @@ void VulkanPresentQueuePass::execute() {
   print("VulkanPresnetQueuePass QUEUE-ID:");
   println(getSinkResource<u32>(m_queueSink));
 
-  m_vrenderer->presentQueue(getSinkResource<u32>(m_queueSink),
-                            getSinkResource<std::vector<u32>>(m_waitSemsSink));
+  u32* p_queue = getSinkResource<u32>(m_queueSink);
+  std::vector<u32>* p_semaphores =
+      getSinkResource<std::vector<u32>>(m_waitSemsSink);
+
+  m_vrenderer->presentQueue(*p_queue, *p_semaphores);
 }
 
 }  // namespace sge::vulkan

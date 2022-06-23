@@ -1,9 +1,6 @@
 #pragma once
 
 #include "renderer/Rendergraph.hpp"
-#include "renderer/vulkan/VulkanDrawTrianglePass.hpp"
-#include "renderer/vulkan/VulkanFramebufferDestPass.hpp"
-#include "renderer/vulkan/VulkanFramebufferSrcPass.hpp"
 #include "renderer/vulkan/VulkanRendererBackend.hpp"
 
 namespace sge::vulkan {

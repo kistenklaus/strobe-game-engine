@@ -18,6 +18,7 @@ class VulkanAcquireQueuePass : public RenderPass {
  private:
   const u32 m_queueType;
   const u32 m_queueSource;
+  u32 m_queueIndex;
 };
 
 }  // namespace sge::vulkan

@@ -14,12 +14,12 @@ class WrapWithVectorPass : public RenderPass {
 
   void execute() override {
     if (m_vec.size() == 0) {
-      m_vec.push_back(getSinkResource<T>(m_sink));
+      m_vec.push_back(*getSinkResource<T>(m_sink));
     } else {
       m_vec.resize(1);
-      m_vec[0] = getSinkResource<T>(m_sink);
+      m_vec[0] = *getSinkResource<T>(m_sink);
     }
-    setSourceResource(m_src, m_vec);
+    setSourceResource(m_src, &m_vec);
   }
 
   u32 getSingleSink() { return m_sink; }

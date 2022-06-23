@@ -52,7 +52,7 @@ class RenderPass {
   }
 
   template <class Resource_t>
-  Resource_t& getSinkResource(u32 sink_id) {
+  Resource_t* getSinkResource(u32 sink_id) {
     assert(sink_id < m_sinks.size());
     assert(m_sinks[sink_id]);  // raise if nullptr
     ISink* isink = m_sinks[sink_id].get();
@@ -60,12 +60,12 @@ class RenderPass {
     return sink->get();
   }
   template <class Resource_t>
-  void setSourceResource(u32 source_id, const Resource_t& resource) {
+  void setSourceResource(u32 source_id, const Resource_t* p_resource) {
     assert(source_id < m_sources.size());
     assert(m_sources[source_id]);  // raise if nullptr
-    ISource* isource = m_sources[source_id].get();
-    Source<Resource_t>* source = static_cast<Source<Resource_t>*>(isource);
-    source->set(resource);
+    ISource* p_isource = m_sources[source_id].get();
+    Source<Resource_t>* p_source = static_cast<Source<Resource_t>*>(p_isource);
+    p_source->set(p_resource);
   }
 
  protected:

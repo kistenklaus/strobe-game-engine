@@ -14,6 +14,13 @@
 #include "window/glfw/glfw.lib.hpp"
 
 namespace sge::vulkan {
+
+enum QueueFamilyType {
+  QUEUE_FAMILY_GRAPHICS,
+  QUEUE_FAMILY_TRANSFER,
+  QUEUE_FAMILY_COMPUTE
+};
+
 class VulkanMasterRendergraph;
 
 class VulkanRendererBackend : public sge::RendererBackend {
@@ -50,7 +57,7 @@ class VulkanRendererBackend : public sge::RendererBackend {
   uint32_t createFramebuffer(uint32_t renderPassId, uint32_t imageViewId,
                              uint32_t width, uint32_t height);
   void destroyFramebuffer(uint32_t framebufferId);
-  uint32_t createCommandPool(uint32_t queueFamilyIndex);
+  uint32_t createCommandPool(QueueFamilyType queueFamily);
   void destroyCommandPool(uint32_t commandPoolId);
   const std::vector<uint32_t> allocateCommandBuffers(uint32_t commandPoolId,
                                                      uint32_t count);
@@ -80,6 +87,9 @@ class VulkanRendererBackend : public sge::RendererBackend {
   VkQueue& getQueueById(const u32 queueId);
 
  private:
+  std::optional<u32> m_gfxQueueFamilyIndex;
+  std::optional<u32> m_transferQueueFamilyIndex;
+  std::optional<u32> m_computeQueueFamilyIndex;
   std::unique_ptr<VulkanMasterRendergraph> m_rendergraph;
   VkInstance m_instance;
   VkDevice m_device;

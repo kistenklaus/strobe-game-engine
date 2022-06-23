@@ -10,7 +10,7 @@ VulkanAcquireSwapchainFrame::VulkanAcquireSwapchainFrame(
 
 void VulkanAcquireSwapchainFrame::execute() {
   m_vrenderer->acquireNextSwapchainFrame(m_signalSem);
-  setSourceResource(m_singalSemSrc, m_signalSem);
+  setSourceResource(m_singalSemSrc, &m_signalSem);
 }
 
 }  // namespace sge::vulkan
