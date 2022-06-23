@@ -35,4 +35,31 @@ std::vector<u32> topologicialSort(std::vector<std::vector<u32>>& graph) {
   return stack;
 }
 
+std::vector<u32> selectiveReverseTopoligicalSort(
+    std::vector<std::vector<u32>>& graph, std::vector<u32>& startNodes) {
+  u32 n = graph.size();
+  for (std::vector<u32>& vec : graph) {
+    for (u32 v : vec) {
+      n = v > n ? v : n;
+    }
+  }
+  graph.resize(n);  // ensure adj list are avaiable in the graph
+  std::vector<bool> visited(n);
+  std::vector<u32> stack(0);
+  for (u32 s : startNodes) {
+    if (!visited[s]) {
+      topologicialSortRec(graph, s, visited, stack);
+    }
+  }
+  return stack;
+}
+
+std::vector<u32> selectiveTopoligicalSort(std::vector<std::vector<u32>>& graph,
+                                          std::vector<u32>& startNodes) {
+  // unnecessary copy!
+  std::vector<u32> res = selectiveReverseTopoligicalSort(graph, startNodes);
+  res.reserve(res.size());
+  return res;
+}
+
 }  // namespace sge

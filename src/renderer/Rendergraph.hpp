@@ -36,6 +36,8 @@ class Rendergraph : public RenderPass {
     return *reinterpret_cast<RenderPass_t*>(m_passes[pass_id].get());
   }
   RenderPass& getPassById(u32 pass_id);
+  void markPassAsRoot(const u32 passId);
+  void unmarkPassAsRoot(const u32 passId);
   void build();
 
  private:
@@ -43,6 +45,7 @@ class Rendergraph : public RenderPass {
   std::vector<std::pair<std::pair<u32, u32>, std::pair<u32, u32>>> m_linkages;
   std::vector<u32> m_execution_order;
   std::vector<std::unique_ptr<RenderPass>> m_passes;
+  std::vector<u32> m_rootPassIds;
   std::vector<std::unique_ptr<ISource>> m_global_resource_sources;
   boolean m_is_deprecated = true;
 };

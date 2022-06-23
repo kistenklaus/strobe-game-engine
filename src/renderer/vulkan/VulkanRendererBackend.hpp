@@ -61,19 +61,23 @@ class VulkanRendererBackend : public sge::RendererBackend {
   void destroySemaphore(uint32_t semaphoreId);
   void drawCall(uint32_t vertexCount, uint32_t instanceCount,
                 uint32_t commandBufferId);
-  void acquireNextSwapchainFrame(u32 signalSemaphoreId);
+  void acquireNextSwapchainFrame(u32 singalSem);
   void presentQueue(u32 queueId, const std::vector<u32>& waitSemaphoreId);
+  u32 getAnyGraphicsQueue();
+  u32 getAnyTransferQueue();
+  u32 getAnyComputeQueue();
 
  private:
-  VkImageView& getImageViewById(const uint32_t imageViewId);
-  VkPipelineLayout& getPipelineLayoutById(const uint32_t pipelineLayoutId);
-  VkPipeline& getPipelineById(const uint32_t pipelineId);
-  VkRenderPass& getRenderPassById(const uint32_t renderPassId);
-  VkShaderModule& getShaderById(const uint32_t shaderId);
-  VkFramebuffer& getFramebufferById(const uint32_t framebufferId);
-  VkCommandPool& getCommandPoolById(const uint32_t commandPoolId);
-  VkCommandBuffer& getCommandBufferById(const uint32_t commandBufferId);
-  VkSemaphore& getSemaphoreById(const uint32_t semaphoreId);
+  VkImageView& getImageViewById(const u32 imageViewId);
+  VkPipelineLayout& getPipelineLayoutById(const u32 pipelineLayoutId);
+  VkPipeline& getPipelineById(const u32 pipelineId);
+  VkRenderPass& getRenderPassById(const u32 renderPassId);
+  VkShaderModule& getShaderById(const u32 shaderId);
+  VkFramebuffer& getFramebufferById(const u32 framebufferId);
+  VkCommandPool& getCommandPoolById(const u32 commandPoolId);
+  VkCommandBuffer& getCommandBufferById(const u32 commandBufferId);
+  VkSemaphore& getSemaphoreById(const u32 semaphoreId);
+  VkQueue& getQueueById(const u32 queueId);
 
  private:
   std::unique_ptr<VulkanMasterRendergraph> m_rendergraph;
@@ -83,6 +87,8 @@ class VulkanRendererBackend : public sge::RendererBackend {
   VkSwapchainKHR m_swapchain;
   u32 m_swapchainFrameIndex;
   std::vector<uint32_t> m_swapchainImageViews;
+
+  std::vector<std::pair<u32, u32>> m_queueIds;
   std::vector<VkQueue> m_graphics_queues;
   std::vector<VkQueue> m_transfer_queues;
   std::vector<VkQueue> m_compute_queues;

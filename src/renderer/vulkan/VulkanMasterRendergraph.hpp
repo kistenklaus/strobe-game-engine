@@ -13,15 +13,16 @@ class VulkanRendererBackend;
 class VulkanMasterRendergraph : public Rendergraph {
  public:
   VulkanMasterRendergraph(VulkanRendererBackend* renderer);
-  void beginFrame() override;
-  void endFrame() override;
 
  private:
   const u32 m_imageAvaiableSemaphoreId;
   const u32 m_renderingDoneSemaphoreId;
-  const u32 m_swapchain_src_pass_id;
-  const u32 m_swapchain_dest_pass_id;
-  const u32 m_triangle_pass_id;
+
+  const u32 m_acquireSwapchainFramePass;
+  const u32 m_acquireQueuePass;
+  const u32 m_submitPass;
+  const u32 m_wrapWithVectorPass;
+  const u32 m_presentQueuePass;
 };
 
 }  // namespace sge::vulkan

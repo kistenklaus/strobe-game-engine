@@ -1,4 +1,6 @@
 #pragma once
+#include <cassert>
+
 #include "renderer/RenderPass.hpp"
 #include "renderer/Source.hpp"
 
@@ -18,7 +20,7 @@ class ISink {
   ISink(RenderPass& pass);
 
  protected:
-  ISource* m_source;
+  ISource* m_source = nullptr;
 
  private:
   RenderPass& m_pass;
@@ -29,7 +31,9 @@ class Sink : public ISink {
  public:
   Sink(RenderPass& renderPass) : ISink(renderPass) {}
   Resource_t& get() {
-    return static_cast<Source<Resource_t>*>(m_source)->get();
+    assert(m_source != nullptr);
+    Resource_t& resource = static_cast<Source<Resource_t>*>(m_source)->get();
+    return resource;
   }
 };
 

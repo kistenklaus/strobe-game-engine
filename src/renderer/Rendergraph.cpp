@@ -44,6 +44,19 @@ void Rendergraph::addLinkage(u32 source_pass_id, u32 source_id,
                                       std::make_pair(sink_pass_id, sink_id)));
 }
 
+void Rendergraph::markPassAsRoot(const u32 passId) {
+  m_rootPassIds.push_back(passId);
+}
+
+void Rendergraph::unmarkPassAsRoot(const u32 passId) {
+  for (u32 i = 0; i < m_rootPassIds.size(); i++) {
+    if (m_rootPassIds[i] == passId) {
+      m_rootPassIds.erase(m_rootPassIds.begin() + i);
+      return;
+    }
+  }
+}
+
 void Rendergraph::build() {
   // 1. link sinks to sources.
   for (const auto& linkage : m_linkages) {
@@ -63,10 +76,12 @@ void Rendergraph::build() {
     // const u32 source_id = linkage.first.second;
     const u32 sink_pass_id = linkage.second.first;
     // const u32 sink_id = linkage.second.second;
-    graph[source_pass_id].push_back(sink_pass_id);
+    graph[sink_pass_id].push_back(source_pass_id);
   }
   // TODO Topological sort
-  m_execution_order = topologicialSort(graph);
+  m_execution_order = selectiveReverseTopoligicalSort(graph, m_rootPassIds);
+  print("execution order:");
+  println(m_execution_order);
   m_is_deprecated = false;
 }
 

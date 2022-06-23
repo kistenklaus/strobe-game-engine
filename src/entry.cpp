@@ -12,7 +12,6 @@ int main() {
   while (!window.shouldClose()) {
     window.pollEvents();
     renderer.beginFrame();
-
     renderer.renderFrame();
     renderer.endFrame();
     window.swapBuffers();

@@ -7,6 +7,10 @@
 
 namespace sge::vulkan {
 
+#define GFX_QUEUE_IDENT 0
+#define TRANSFER_QUEUE_IDENT 1
+#define COMPUTE_QUEUE_IDENT 2
+
 static const u32 MIN_GRAPHICS_QUEUES = 1;
 static const u32 MAX_GRAPHICS_QUEUES = 2;
 static const u32 MIN_TRANSFER_QUEUES = 0;
@@ -252,16 +256,19 @@ VulkanRendererBackend::VulkanRendererBackend(
     m_graphics_queues.resize(i + 1);
     vkGetDeviceQueue(m_device, graphics_queue_family_index->first, i,
                      &m_graphics_queues[i]);
+    m_queueIds.emplace_back(GFX_QUEUE_IDENT, i);
   }
   for (u32 i = 0; i < transfer_queue_family_index->second; i++) {
     m_transfer_queues.resize(i + 1);
     vkGetDeviceQueue(m_device, transfer_queue_family_index->first, i,
                      &m_transfer_queues[i]);
+    m_queueIds.emplace_back(TRANSFER_QUEUE_IDENT, i);
   }
   for (u32 i = 0; i < compute_queue_family_index->second; i++) {
     m_compute_queues.resize(i + 1);
     vkGetDeviceQueue(m_device, compute_queue_family_index->first, i,
                      &m_compute_queues[i]);
+    m_queueIds.emplace_back(COMPUTE_QUEUE_IDENT, i);
   }
 
   // create surface and swapchain.
@@ -1004,12 +1011,10 @@ void VulkanRendererBackend::drawCall(uint32_t vertexCount,
   vkCmdDraw(getCommandBufferById(commandBufferId), vertexCount, instanceCount,
             0, 0);
 }
-void VulkanRendererBackend::acquireNextSwapchainFrame(
-    u32 semaphoreImageAvaiable) {
+void VulkanRendererBackend::acquireNextSwapchainFrame(u32 signalSem) {
   VkResult result = vkAcquireNextImageKHR(
       m_device, m_swapchain, std::numeric_limits<uint64_t>::max(),
-      getSemaphoreById(semaphoreImageAvaiable), VK_NULL_HANDLE,
-      &m_swapchainFrameIndex);
+      getSemaphoreById(signalSem), VK_NULL_HANDLE, &m_swapchainFrameIndex);
   ASSERT_VKRESULT(result);
 }
 
@@ -1030,6 +1035,31 @@ void VulkanRendererBackend::presentQueue(
   presentInfo.pResults = nullptr;
   VkResult result = vkQueuePresentKHR(getQueueById(queueId), &presentInfo);
   ASSERT_VKRESULT(result);
+}
+
+u32 VulkanRendererBackend::getAnyGraphicsQueue() {
+  for (u32 i = 0; i < m_queueIds.size(); i++) {
+    if (m_queueIds[i].first == GFX_QUEUE_IDENT) {
+      return i;
+    }
+  }
+  throw std::runtime_error("no graphics queue avaiable");
+}
+u32 VulkanRendererBackend::getAnyTransferQueue() {
+  for (u32 i = 0; i < m_queueIds.size(); i++) {
+    if (m_queueIds[i].first == TRANSFER_QUEUE_IDENT) {
+      return i;
+    }
+  }
+  throw std::runtime_error("no transfer queue avaiable");
+}
+u32 VulkanRendererBackend::getAnyComputeQueue() {
+  for (u32 i = 0; i < m_queueIds.size(); i++) {
+    if (m_queueIds[i].first == COMPUTE_QUEUE_IDENT) {
+      return i;
+    }
+  }
+  throw std::runtime_error("no compute queue avaiable");
 }
 
 VkImageView &VulkanRendererBackend::getImageViewById(
@@ -1079,6 +1109,24 @@ VkSemaphore &VulkanRendererBackend::getSemaphoreById(
     const uint32_t semaphoreId) {
   assert(semaphoreId < m_semaphores.size());
   return m_semaphores[semaphoreId];
+}
+
+VkQueue &VulkanRendererBackend::getQueueById(const u32 queueId) {
+  assert(queueId < m_queueIds.size());
+  const u32 type = m_queueIds[queueId].first;
+  const u32 index = m_queueIds[queueId].second;
+  switch (type) {
+    case GFX_QUEUE_IDENT:
+      assert(index < m_graphics_queues.size());
+      return m_graphics_queues[index];
+    case TRANSFER_QUEUE_IDENT:
+      assert(index < m_transfer_queues.size());
+      return m_transfer_queues[index];
+    case COMPUTE_QUEUE_IDENT:
+      assert(index < m_compute_queues.size());
+      return m_compute_queues[index];
+  }
+  throw std::runtime_error("how did we get here =^) !");
 }
 
 }  // namespace sge::vulkan
