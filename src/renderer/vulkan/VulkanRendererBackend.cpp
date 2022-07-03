@@ -356,17 +356,20 @@ VulkanRendererBackend::VulkanRendererBackend(
   m_swapchainImageViews.resize(n_swapchainImages);
   for (unsigned int i = 0; i < n_swapchainImages; i++) {
     uint32_t imageViewId = createImageView(
-        swapchainImages[i], VulkanRendererBackend::SURFACE_COLOR_FORMAT);
-    m_swapchainImageViews.push_back(imageViewId);
+        swapchainImages[i], window.getWidth(), window.getHeight(),
+        VulkanRendererBackend::SURFACE_COLOR_FORMAT);
+    m_swapchainImageViews[i] = imageViewId;
   }
   m_rendergraph = std::make_unique<VulkanMasterRendergraph>(this);
 }
 
 VulkanRendererBackend::~VulkanRendererBackend() {
+  VkResult result = vkDeviceWaitIdle(m_device);
+  ASSERT_VKRESULT(result);
   std::vector<uint32_t> allocatedBufferIds;
   for (uint32_t i = 0; i < m_commandBuffers.size(); i++) {
     bool allocated = true;
-    for (const uint32_t empty_id : m_emptySemaphoreIds) {
+    for (const uint32_t empty_id : m_emptyCommandBufferIds) {
       if (empty_id == i) {
         allocated = false;
         break;
@@ -376,7 +379,7 @@ VulkanRendererBackend::~VulkanRendererBackend() {
   }
   for (uint32_t i = 0; i < m_commandPools.size(); i++) {
     bool allocated = true;
-    for (const uint32_t empty_id : m_emptySemaphoreIds) {
+    for (const uint32_t empty_id : m_emptyCommandPoolIds) {
       if (empty_id == i) {
         allocated = false;
         break;
@@ -476,7 +479,8 @@ void VulkanRendererBackend::endFrame() {
   m_rendergraph->endFrame();
 }
 
-uint32_t VulkanRendererBackend::createImageView(VkImage image,
+uint32_t VulkanRendererBackend::createImageView(VkImage image, const u32 width,
+                                                const u32 height,
                                                 VkFormat format) {
   VkImageView imageView;
   VkImageViewCreateInfo imageViewCreateInfo;
@@ -500,11 +504,13 @@ uint32_t VulkanRendererBackend::createImageView(VkImage image,
 
   if (m_emptyImageViewIds.empty()) {
     m_imageViews.push_back(imageView);
+    m_imageViewDimensions.push_back({width, height});
     return m_imageViews.size() - 1;
   } else {
     uint32_t id = m_emptyImageViewIds.back();
     m_emptyImageViewIds.pop_back();
     m_imageViews[id] = imageView;
+    m_imageViewDimensions[id] = {width, height};
     return id;
   }
 }
@@ -512,6 +518,12 @@ uint32_t VulkanRendererBackend::createImageView(VkImage image,
 void VulkanRendererBackend::destroyImageView(uint32_t imageViewId) {
   vkDestroyImageView(m_device, getImageViewById(imageViewId), nullptr);
   m_emptyImageViewIds.push_back(imageViewId);
+}
+
+const std::pair<u32, u32> VulkanRendererBackend::getImageViewDimensions(
+    const u32 imageViewId) {
+  assert(imageViewId < m_imageViewDimensions.size());
+  return m_imageViewDimensions[imageViewId];
 }
 
 uint32_t VulkanRendererBackend::createShaderModule(
@@ -878,11 +890,13 @@ uint32_t VulkanRendererBackend::createFramebuffer(uint32_t renderPassId,
 
   if (m_emptyFramebufferIds.empty()) {
     m_framebuffers.push_back(framebuffer);
+    m_framebufferDimensions.push_back(std::make_pair(width, height));
     return m_framebuffers.size() - 1;
   } else {
     uint32_t id = m_emptyFramebufferIds.back();
     m_emptyFramebufferIds.pop_back();
     m_framebuffers[id] = framebuffer;
+    m_framebufferDimensions[id] = std::make_pair(width, height);
     return id;
   }
 }
@@ -890,6 +904,12 @@ uint32_t VulkanRendererBackend::createFramebuffer(uint32_t renderPassId,
 void VulkanRendererBackend::destroyFramebuffer(uint32_t framebufferId) {
   vkDestroyFramebuffer(m_device, getFramebufferById(framebufferId), nullptr);
   m_emptyFramebufferIds.push_back(framebufferId);
+}
+
+const std::pair<u32, u32> VulkanRendererBackend::getFramebufferDimensions(
+    const u32 framebufferId) {
+  assert(framebufferId < m_framebufferDimensions.size());
+  return m_framebufferDimensions[framebufferId];
 }
 
 uint32_t VulkanRendererBackend::createCommandPool(QueueFamilyType queueFamily) {
@@ -905,6 +925,7 @@ uint32_t VulkanRendererBackend::createCommandPool(QueueFamilyType queueFamily) {
         assert(m_computeQueueFamilyIndex.has_value());
         return m_computeQueueFamilyIndex.value();
     }
+    throw std::runtime_error("how did we get here!");
   }();
 
   VkCommandPool commandPool;
@@ -925,6 +946,20 @@ uint32_t VulkanRendererBackend::createCommandPool(QueueFamilyType queueFamily) {
     m_commandPools[id] = commandPool;
     return id;
   }
+}
+void VulkanRendererBackend::resetCommandPool(u32 commandPoolId) {
+  VkResult result =
+      vkResetCommandPool(m_device, getCommandPoolById(commandPoolId),
+                         VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+
+  // make all ids from the pool avaiable for reallocation.
+  for (u32 i = 0; i < m_commandBufferIdToPoolId.size(); i++) {
+    if (m_commandBufferIdToPoolId[i] == commandPoolId) {
+      m_emptyCommandBufferIds.push_back(i);
+    }
+  }
+
+  ASSERT_VKRESULT(result);
 }
 
 void VulkanRendererBackend::destroyCommandPool(uint32_t commandPoolId) {
@@ -949,9 +984,9 @@ const std::vector<uint32_t> VulkanRendererBackend::allocateCommandBuffers(
   std::vector<uint32_t> ids(count);
   for (uint32_t i = 0; i < count; i++) {
     if (m_emptyCommandBufferIds.empty()) {
+      ids[i] = m_commandBuffers.size();
       m_commandBuffers.push_back(buffer[i]);
-      m_emptyCommandBufferIds.push_back(commandPoolId);
-      ids[i] = m_commandBuffers.size() - 1;
+      m_commandBufferIdToPoolId.push_back(commandPoolId);
     } else {
       ids[i] = m_emptyCommandBufferIds.back();
       m_emptyCommandBufferIds.pop_back();
@@ -1035,6 +1070,14 @@ void VulkanRendererBackend::acquireNextSwapchainFrame(u32 signalSem) {
   ASSERT_VKRESULT(result);
 }
 
+u32 VulkanRendererBackend::getCurrentSwapchainImageView() {
+  return m_swapchainImageViews[m_swapchainFrameIndex];
+}
+
+u32 VulkanRendererBackend::getCurrentSwapchainFrameIndex() {
+  return m_swapchainFrameIndex;
+}
+
 void VulkanRendererBackend::presentQueue(
     u32 queueId, const std::vector<u32> &waitSemaphoreIds) {
   VkPresentInfoKHR presentInfo;
@@ -1051,6 +1094,79 @@ void VulkanRendererBackend::presentQueue(
   presentInfo.pImageIndices = &m_swapchainFrameIndex;
   presentInfo.pResults = nullptr;
   VkResult result = vkQueuePresentKHR(getQueueById(queueId), &presentInfo);
+  ASSERT_VKRESULT(result);
+}
+
+void VulkanRendererBackend::submitCommandBuffers(
+    u32 queueId, const std::vector<u32> &commandBufferIds,
+    const std::vector<u32> &waitSemaphoreIds,
+    const std::vector<u32> &signalSemaphoreIds,
+    const std::optional<u32> fence) {
+  std::vector<VkSemaphore> waitSemaphores(waitSemaphoreIds.size());
+  for (u32 i = 0; i < waitSemaphoreIds.size(); i++) {
+    waitSemaphores[i] = getSemaphoreById(waitSemaphoreIds[i]);
+  }
+
+  std::vector<VkCommandBuffer> buffers(commandBufferIds.size());
+  for (u32 i = 0; i < commandBufferIds.size(); i++) {
+    buffers[i] = getCommandBufferById(commandBufferIds[i]);
+  }
+
+  std::vector<VkSemaphore> signalSemaphore(signalSemaphoreIds.size());
+  for (u32 i = 0; i < signalSemaphoreIds.size(); i++) {
+    signalSemaphore[i] = getSemaphoreById(signalSemaphoreIds[i]);
+  }
+
+  VkSubmitInfo submitInfo;
+  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.pNext = nullptr;
+  submitInfo.waitSemaphoreCount = waitSemaphores.size();
+  submitInfo.pWaitSemaphores = waitSemaphores.data();
+  VkPipelineStageFlags waitStageMasks = {
+      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+  submitInfo.pWaitDstStageMask = &waitStageMasks;
+  submitInfo.commandBufferCount = buffers.size();
+  submitInfo.pCommandBuffers = buffers.data();
+  submitInfo.signalSemaphoreCount = signalSemaphore.size();
+  submitInfo.pSignalSemaphores = signalSemaphore.data();
+
+  VkFence vkFence = VK_NULL_HANDLE;
+  if (fence.has_value()) {
+    vkFence = getFenceById(fence.value());
+  }
+
+  VkResult result =
+      vkQueueSubmit(getQueueById(queueId), 1, &submitInfo, vkFence);
+  ASSERT_VKRESULT(result);
+}
+
+u32 VulkanRendererBackend::createFence() {
+  VkFenceCreateInfo createInfo;
+  createInfo.pNext = nullptr;
+  createInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  createInfo.flags = 0;
+  VkFence fence;
+  VkResult result = vkCreateFence(m_device, &createInfo, nullptr, &fence);
+  ASSERT_VKRESULT(result);
+  if (m_emptyFenceIds.empty()) {
+    m_fences.push_back(fence);
+    return m_fences.size() - 1;
+  } else {
+    u32 id = m_emptyFenceIds.back();
+    m_emptyFenceIds.pop_back();
+    m_fences[id] = fence;
+    return id;
+  }
+}
+
+void VulkanRendererBackend::destroyFence(const u32 fenceId) {
+  m_emptyFenceIds.push_back(fenceId);
+  vkDestroyFence(m_device, getFenceById(fenceId), nullptr);
+}
+
+void VulkanRendererBackend::waitForFence(const u32 fenceId) {
+  VkResult result = vkWaitForFences(m_device, 1, &getFenceById(fenceId), true,
+                                    std::numeric_limits<u64>::max());
   ASSERT_VKRESULT(result);
 }
 
@@ -1144,6 +1260,11 @@ VkQueue &VulkanRendererBackend::getQueueById(const u32 queueId) {
       return m_compute_queues[index];
   }
   throw std::runtime_error("how did we get here =^) !");
+}
+
+VkFence &VulkanRendererBackend::getFenceById(const u32 fenceId) {
+  assert(fenceId < m_fences.size());
+  return m_fences[fenceId];
 }
 
 }  // namespace sge::vulkan

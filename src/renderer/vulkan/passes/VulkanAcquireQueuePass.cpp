@@ -7,10 +7,11 @@
 namespace sge::vulkan {
 
 VulkanAcquireQueuePass::VulkanAcquireQueuePass(
-    VulkanRendererBackend* renderer, VulkanQueueAcquireTarget queueType)
-    : RenderPass(renderer),
+    VulkanRendererBackend* renderer, const std::string name,
+    VulkanQueueAcquireTarget queueType)
+    : RenderPass(renderer, name),
       m_queueType(queueType),
-      m_queueSource(registerSource<u32>()) {}
+      m_queueSource(registerSource<u32>("queue")) {}
 
 void VulkanAcquireQueuePass::execute() {
   m_queueIndex = [&]() -> u32 {

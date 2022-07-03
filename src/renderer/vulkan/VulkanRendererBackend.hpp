@@ -35,8 +35,10 @@ class VulkanRendererBackend : public sge::RendererBackend {
   void renderFrame() override;
   void endFrame() override;
 
-  uint32_t createImageView(VkImage image, VkFormat format);
+  uint32_t createImageView(VkImage image, const u32 width, const u32 height,
+                           VkFormat format);
   void destroyImageView(uint32_t imageViewId);
+  const std::pair<u32, u32> getImageViewDimensions(const u32 imageViewId);
 
   uint32_t createShaderModule(const std::vector<char> source_code);
   void destroyShaderModule(uint32_t shader_module_id);
@@ -57,7 +59,10 @@ class VulkanRendererBackend : public sge::RendererBackend {
   uint32_t createFramebuffer(uint32_t renderPassId, uint32_t imageViewId,
                              uint32_t width, uint32_t height);
   void destroyFramebuffer(uint32_t framebufferId);
+  const std::pair<u32, u32> getFramebufferDimensions(const u32 framebufferId);
+
   uint32_t createCommandPool(QueueFamilyType queueFamily);
+  void resetCommandPool(u32 commandPoolId);
   void destroyCommandPool(uint32_t commandPoolId);
   const std::vector<uint32_t> allocateCommandBuffers(uint32_t commandPoolId,
                                                      uint32_t count);
@@ -69,7 +74,18 @@ class VulkanRendererBackend : public sge::RendererBackend {
   void drawCall(uint32_t vertexCount, uint32_t instanceCount,
                 uint32_t commandBufferId);
   void acquireNextSwapchainFrame(u32 singalSem);
+  u32 getCurrentSwapchainImageView();
+  u32 getCurrentSwapchainFrameIndex();
+  u32 getSwapchainCount() { return m_swapchainImageViews.size(); }
   void presentQueue(u32 queueId, const std::vector<u32>& waitSemaphoreId);
+  void submitCommandBuffers(u32 queueId,
+                            const std::vector<u32>& commandBufferIds,
+                            const std::vector<u32>& waitSemaphoreIds,
+                            const std::vector<u32>& signalSemaphoreIds,
+                            const std::optional<u32> fence = std::nullopt);
+  u32 createFence();
+  void destroyFence(const u32 fenceId);
+  void waitForFence(const u32 fenceId);
   u32 getAnyGraphicsQueue();
   u32 getAnyTransferQueue();
   u32 getAnyComputeQueue();
@@ -85,6 +101,7 @@ class VulkanRendererBackend : public sge::RendererBackend {
   VkCommandBuffer& getCommandBufferById(const u32 commandBufferId);
   VkSemaphore& getSemaphoreById(const u32 semaphoreId);
   VkQueue& getQueueById(const u32 queueId);
+  VkFence& getFenceById(const u32 fenceId);
 
  private:
   std::optional<u32> m_gfxQueueFamilyIndex;
@@ -104,6 +121,7 @@ class VulkanRendererBackend : public sge::RendererBackend {
   std::vector<VkQueue> m_compute_queues;
 
   std::vector<VkImageView> m_imageViews;
+  std::vector<std::pair<u32, u32>> m_imageViewDimensions;
   std::vector<uint32_t> m_emptyImageViewIds;
 
   std::vector<VkShaderModule> m_shaders;
@@ -116,6 +134,7 @@ class VulkanRendererBackend : public sge::RendererBackend {
   std::vector<uint32_t> m_emptyPipelineLayoutIds;
   std::vector<VkFramebuffer> m_framebuffers;
   std::vector<uint32_t> m_emptyFramebufferIds;
+  std::vector<std::pair<u32, u32>> m_framebufferDimensions;
   std::vector<VkCommandPool> m_commandPools;
   std::vector<uint32_t> m_emptyCommandPoolIds;
   std::vector<VkCommandBuffer> m_commandBuffers;
@@ -123,6 +142,9 @@ class VulkanRendererBackend : public sge::RendererBackend {
   std::vector<uint32_t> m_commandBufferIdToPoolId;
   std::vector<VkSemaphore> m_semaphores;
   std::vector<uint32_t> m_emptySemaphoreIds;
+
+  std::vector<VkFence> m_fences;
+  std::vector<u32> m_emptyFenceIds;
 
   static const VkFormat SURFACE_COLOR_FORMAT = VK_FORMAT_B8G8R8A8_UNORM;
   static const u32 MAX_SWAPCHAIN_IMAGES = 3;

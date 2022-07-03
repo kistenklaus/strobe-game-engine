@@ -34,10 +34,12 @@ void print(const T& value) {
   }
 }
 
+void println();
+
 template <typename T>
 void println(T value) {
   print(value);
-  print(NL);
+  println();
 }
 
 template <typename T>

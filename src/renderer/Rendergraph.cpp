@@ -3,11 +3,13 @@
 #include <iostream>
 
 #include "algorithms/graph.hpp"
+#include "logging/log.hpp"
 #include "logging/print.hpp"
 
 namespace sge {
 
-Rendergraph::Rendergraph(RendererBackend* renderer) : RenderPass(renderer) {}
+Rendergraph::Rendergraph(RendererBackend* renderer, const std::string name)
+    : RenderPass(renderer, name) {}
 
 void Rendergraph::beginFrame() {
   if (m_is_deprecated) {
@@ -42,6 +44,22 @@ void Rendergraph::addLinkage(u32 source_pass_id, u32 source_id,
   assert(sink_pass_id <= m_passes.size());
   m_linkages.push_back(std::make_pair(std::make_pair(source_pass_id, source_id),
                                       std::make_pair(sink_pass_id, sink_id)));
+}
+
+void Rendergraph::addLinkage(const std::string source, const std::string sink) {
+  u32 sindex = source.find('@');
+  const std::string sourcePassName = source.substr(0, sindex);
+  const std::string sourceName = source.substr(sindex + 1);
+  sindex = sink.find('@');
+  const std::string sinkPassName = sink.substr(0, sindex);
+  const std::string sinkName = sink.substr(sindex + 1);
+  const u32 sourcePassId = getPassIdByName(sourcePassName);
+  const u32 sinkPassId = getPassIdByName(sinkPassName);
+  const RenderPass& sourcePass = getPassById(sourcePassId);
+  const u32 sourceId = sourcePass.getSourceIdByName(sourceName);
+  const RenderPass& sinkPass = getPassById(sinkPassId);
+  const u32 sinkId = sinkPass.getSinkIdByName(sinkName);
+  addLinkage(sourcePassId, sourceId, sinkPassId, sinkId);
 }
 
 void Rendergraph::markPassAsRoot(const u32 passId) {
@@ -80,8 +98,16 @@ void Rendergraph::build() {
   }
   // TODO Topological sort
   m_execution_order = selectiveReverseTopoligicalSort(graph, m_rootPassIds);
-  print("execution order:");
-  println(m_execution_order);
+  static const LogChannel channel = createLogChannel("rendergraph", true);
+  if (channel.isActive()) {
+    std::vector<std::string> exeuction_names(m_execution_order.size());
+    for (u32 i = 0; i < exeuction_names.size(); i++) {
+      exeuction_names[i] = getPassById(i).getName();
+    }
+    log("execution_order: ", channel);
+    log(exeuction_names, channel);
+  }
+
   m_is_deprecated = false;
 }
 
@@ -89,4 +115,27 @@ RenderPass& Rendergraph::getPassById(u32 pass_id) {
   assert(pass_id <= m_passes.size());
   return *m_passes[pass_id];
 }
+
+RenderPass& Rendergraph::getPassByName(const std::string name) {
+  for (const std::unique_ptr<RenderPass>& pass : m_passes) {
+    if (pass->getName() == name) {
+      return *pass;
+    }
+  }
+  throw std::runtime_error(std::string("Rendergraph:[") + getName() +
+                           std::string("] doesn't have a pass named: [") +
+                           name + std::string("]"));
+}
+
+u32 Rendergraph::getPassIdByName(const std::string name) {
+  for (u32 i = 0; i < m_passes.size(); i++) {
+    if (m_passes[i]->getName() == name) {
+      return i;
+    }
+  }
+  throw std::runtime_error(std::string("Rendergraph:[") + getName() +
+                           std::string("] doesn't have a pass named: [") +
+                           name + std::string("]"));
+}
+
 }  // namespace sge

@@ -1,13 +1,46 @@
 @startuml
 !include ./theme.puml
 
-SwapchainFboSrcPass : 
-DrawTrianglePass :
-SwapchainFboDestPass : 
 
-SwapchainFboSrcPass --> DrawTrianglePass : Framebuffer
+AcquireSwapchainFramePass :
+AcquireGraphicsQueuePass : 
+CmdPoolSourcePass :
+ResetCmdPoolPass : 
+AllocateCmdBufferPass : 
+BeginCmdBuffPass :
+EndCmdBuffPass :
+TriangleRenderPass : 
+SubmitCmdBufferPass:
+PresentQueuePass :
+RenderPassSourcePass :
+FramebufferCachedSourcePass: 
+PipelineLayoutSourcePass : 
 
-DrawTrianglePass --> SwapchainFboDestPass : Framebuffer
+
+CmdPoolSourcePass --> ResetCmdPoolPass : pool
+ResetCmdPoolPass --> AllocateCmdBufferPass : pool
+AllocateCmdBufferPass --> BeginCmdBuffPass : cbuff
+BeginCmdBuffPass --> TriangleRenderPass : cbuff
+TriangleRenderPass --> EndCmdBuffPass : cbuff
+EndCmdBuffPass --> SubmitCmdBufferPass : cbuff
+SubmitCmdBufferPass --> PresentQueuePass : renderingDoneSemaphore
+
+
+AcquireGraphicsQueuePass --> SubmitCmdBufferPass : queue
+AcquireGraphicsQueuePass --> PresentQueuePass : queue
+
+RenderPassSourcePass --> TriangleRenderPass : renderPass
+
+RenderPassSourcePass --> FramebufferCachedSourcePass : renderPass
+FramebufferCachedSourcePass --> TriangleRenderPass : framebuffer
+
+AcquireSwapchainFramePass --> FramebufferCachedSourcePass : imageView
+
+PipelineLayoutSourcePass --> TriangleRenderPass : pipelineLayout
+
+AcquireSwapchainFramePass --> SubmitCmdBufferPass : imageAvaiableSemaphore
+
+
 
 
 @enduml

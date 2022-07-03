@@ -4,4 +4,6 @@
 namespace sge {
 
 void flushPrint() { std::cout.flush(); }
+
+void println() { print(NL); }
 }  // namespace sge

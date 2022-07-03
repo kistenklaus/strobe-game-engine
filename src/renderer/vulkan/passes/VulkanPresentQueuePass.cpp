@@ -4,16 +4,15 @@
 
 namespace sge::vulkan {
 
-VulkanPresentQueuePass::VulkanPresentQueuePass(VulkanRendererBackend* renderer)
-    : RenderPass(renderer),
-      m_queueSink(registerSink<u32>()),
-      m_waitSemsSink(registerSink<std::vector<u32>>()) {}
+VulkanPresentQueuePass::VulkanPresentQueuePass(VulkanRendererBackend* renderer,
+                                               const std::string name)
+    : RenderPass(renderer, name),
+      m_queueSink(registerSink<u32>("queue")),
+      m_waitSemsSink(registerSink<std::vector<u32>>("wait")) {}
 
 void VulkanPresentQueuePass::execute() {
-  print("VulkanPresnetQueuePass QUEUE-ID:");
-  println(getSinkResource<u32>(m_queueSink));
-
   u32* p_queue = getSinkResource<u32>(m_queueSink);
+
   std::vector<u32>* p_semaphores =
       getSinkResource<std::vector<u32>>(m_waitSemsSink);
 

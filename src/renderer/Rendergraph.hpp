@@ -1,6 +1,7 @@
 #pragma once
 
 #include <set>
+#include <string>
 #include <vector>
 
 #include "renderer/RenderPass.hpp"
@@ -14,7 +15,7 @@ namespace sge {
 
 class Rendergraph : public RenderPass {
  public:
-  Rendergraph(RendererBackend* renderer);
+  Rendergraph(RendererBackend* renderer, const std::string name);
 
   virtual void beginFrame() override;
   virtual void execute() override;
@@ -22,6 +23,8 @@ class Rendergraph : public RenderPass {
   virtual void dispose() override;
 
  protected:
+  void addLinkage(const std::string source, const std::string sink);
+
   void addLinkage(u32 source_pass_id, u32 source_id, u32 sink_pass_id,
                   u32 sink_id);
   template <class RenderPass_t, typename... Args>
@@ -36,6 +39,8 @@ class Rendergraph : public RenderPass {
     return *reinterpret_cast<RenderPass_t*>(m_passes[pass_id].get());
   }
   RenderPass& getPassById(u32 pass_id);
+  RenderPass& getPassByName(const std::string name);
+  u32 getPassIdByName(const std::string name);
   void markPassAsRoot(const u32 passId);
   void unmarkPassAsRoot(const u32 passId);
   void build();

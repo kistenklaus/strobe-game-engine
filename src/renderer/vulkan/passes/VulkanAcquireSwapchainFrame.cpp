@@ -3,14 +3,21 @@
 namespace sge::vulkan {
 
 VulkanAcquireSwapchainFrame::VulkanAcquireSwapchainFrame(
-    VulkanRendererBackend* renderer)
-    : RenderPass(renderer),
-      m_signalSem(m_vrenderer->createSemaphore()),
-      m_singalSemSrc(registerSource<u32>()) {}
+    VulkanRendererBackend* renderer, const std::string name)
+    : RenderPass(renderer, name),
+      m_singalSemaphoresSource(registerSource<std::vector<u32>>("signal")),
+      m_swapchainImageViewSource(registerSource<u32>("imageview")),
+      m_signalSemphores({m_vrenderer->createSemaphore()}),
+      m_swapchainFrameIndexSource(registerSource<u32>("frameindex")) {
+  setSourceResource(m_singalSemaphoresSource, &m_signalSemphores);
+  setSourceResource(m_swapchainImageViewSource, &m_imageView);
+  setSourceResource(m_swapchainFrameIndexSource, &m_frameIndex);
+}
 
 void VulkanAcquireSwapchainFrame::execute() {
-  m_vrenderer->acquireNextSwapchainFrame(m_signalSem);
-  setSourceResource(m_singalSemSrc, &m_signalSem);
+  m_vrenderer->acquireNextSwapchainFrame(m_signalSemphores[0]);
+  m_imageView = m_vrenderer->getCurrentSwapchainImageView();
+  m_frameIndex = m_vrenderer->getCurrentSwapchainFrameIndex();
 }
 
 }  // namespace sge::vulkan
