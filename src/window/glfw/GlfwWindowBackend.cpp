@@ -70,6 +70,7 @@ GlfwWindowBackend::GlfwWindowBackend(
     throw std::runtime_error("could not initalize GLFWwindow");
   }
   instanceMapping[ptr] = this;
+  glfwSwapInterval(0);
   glfwSetCursorPosCallback(ptr, mousePosCallback);
   glfwSetMouseButtonCallback(ptr, mouseButtonCallback);
   glfwSetKeyCallback(ptr, keyCallback);

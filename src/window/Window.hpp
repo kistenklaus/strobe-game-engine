@@ -23,6 +23,9 @@ class Window {
   const u32 getWidth() const;
   const u32 getHeight() const;
 
+  void addWindowSizeCallback(WindowSizeCallback* windowSizeCallback);
+  void removeWindowSizeCallback(WindowSizeCallback* windowSizeCallback);
+
  private:
   std::unique_ptr<WindowBackend> m_backend;
   WindowBackendAPI m_window_backend_api;

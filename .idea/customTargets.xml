@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CLionExternalBuildManager">
+    <target id="8d1fa5f0-b55c-48fc-aab4-bc6db484754f" name="strobe-vim" defaultType="TOOL">
+      <configuration id="2f5fbb15-39dd-48b8-9bee-d1ecd4eae4b7" name="strobe-vim">
+        <build type="TOOL">
+          <tool actionId="Tool_External Tools_vim-compile" />
+        </build>
+        <clean type="TOOL">
+          <tool actionId="Tool_External Tools_vim-run" />
+        </clean>
+      </configuration>
+    </target>
+  </component>
+</project>

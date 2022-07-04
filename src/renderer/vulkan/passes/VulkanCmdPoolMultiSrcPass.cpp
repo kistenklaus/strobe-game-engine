@@ -17,7 +17,7 @@ VulkanCmdPoolMultiSrcPass::VulkanCmdPoolMultiSrcPass(
   setSourceResource(m_poolsSource, &m_pools);
 }
 
-VulkanCmdPoolMultiSrcPass::~VulkanCmdPoolMultiSrcPass() {
+void VulkanCmdPoolMultiSrcPass::dispose() {
   for (u32 i = 0; i < m_pools.size(); i++) {
     m_vrenderer->destroyCommandPool(m_pools[i]);
   }

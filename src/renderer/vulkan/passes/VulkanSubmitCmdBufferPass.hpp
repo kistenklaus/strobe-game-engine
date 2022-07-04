@@ -13,12 +13,8 @@ class VulkanSubmitCmdBufferPass : public RenderPass {
 
   void execute() override;
 
-  u32 getQueueSink() const { return m_queueSink; }
-  u32 getCommandBuffersSink() const { return m_commandBuffersSink; }
-  u32 getWaitSemaphoresSink() const { return m_waitSemaphoresSink; }
-  u32 getSignalSemaphoreSource() const { return m_signalSemaphoresSource; }
-
  private:
+  const u32 m_fenceSink;
   const u32 m_queueSink;
   const u32 m_commandBuffersSink;
   const u32 m_waitSemaphoresSink;

@@ -7,8 +7,8 @@ namespace sge::vulkan {
 
 class VulkanBeginCmdBuffPass : public RenderPass {
  public:
-  VulkanBeginCmdBuffPass(VulkanRendererBackend* renderer,
-                         const std::string name);
+  explicit VulkanBeginCmdBuffPass(VulkanRendererBackend* renderer,
+                                  const std::string name);
   void execute() override;
 
   u32 getCmdBuffSink() const { return m_cmdBufferSink; }

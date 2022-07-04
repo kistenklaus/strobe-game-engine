@@ -7,12 +7,11 @@ namespace sge::vulkan {
 
 class VulkanRenderPassSourcePass : public RenderPass {
  public:
-  VulkanRenderPassSourcePass(VulkanRendererBackend* renderer,
-                             const std::string name,
-                             const VkFormat colorFormat);
-  ~VulkanRenderPassSourcePass();
+  explicit VulkanRenderPassSourcePass(VulkanRendererBackend* renderer,
+                                      const std::string name,
+                                      const VkFormat colorFormat);
 
-  u32 getRenderPassSource() const { return m_renderPassSource; }
+  void dispose() override;
 
  private:
   const u32 m_renderPass;

@@ -11,7 +11,7 @@ VulkanRenderPassSourcePass::VulkanRenderPassSourcePass(
   setSourceResource(m_renderPassSource, &m_renderPass);
 }
 
-VulkanRenderPassSourcePass::~VulkanRenderPassSourcePass() {
+void VulkanRenderPassSourcePass::dispose() {
   setSourceResource<u32>(m_renderPassSource, nullptr);
   m_vrenderer->destroyRenderPass(m_renderPass);
 }

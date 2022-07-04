@@ -21,7 +21,8 @@ static const u32 MAX_COMPUTE_QUEUES = 0;
 VulkanRendererBackend::VulkanRendererBackend(
     std::string application_name, std::tuple<int, int, int> application_version,
     std::string engine_name, std::tuple<int, int, int> engine_version,
-    const Window &window) {
+    Window *window)
+    : mp_window(window) {
   //
   VkApplicationInfo appInfo;
   appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -70,7 +71,7 @@ VulkanRendererBackend::VulkanRendererBackend(
   std::vector<std::string> window_extentions =
       [&]() -> std::vector<std::string> {
     //
-    switch (window.getBackendAPI()) {
+    switch (window->getBackendAPI()) {
       case GLFW_WINDOW_BACKEND:
         uint32_t count;
         const char **glfw_ext = glfwGetRequiredInstanceExtensions(&count);
@@ -154,6 +155,7 @@ VulkanRendererBackend::VulkanRendererBackend(
     }
   }
   assert(selectedPhysicalDevice);  // raise if nullptr
+  m_physicalDevice = selectedPhysicalDevice;
 
   // TODO select a the queue with a bit more BRAIN !!!
   // i want one queue for transfer one for rendering and one for computes if
@@ -275,9 +277,9 @@ VulkanRendererBackend::VulkanRendererBackend(
   }
 
   // create surface and swapchain.
-  if (window.getBackendAPI() == GLFW_WINDOW_BACKEND) {
+  if (window->getBackendAPI() == GLFW_WINDOW_BACKEND) {
     const glfw::GlfwWindowBackend &backend =
-        static_cast<const glfw::GlfwWindowBackend &>(window.getBackend());
+        static_cast<const glfw::GlfwWindowBackend &>(window->getBackend());
     result = glfwCreateWindowSurface(
         m_instance, const_cast<GLFWwindow *>(backend.pointer()), nullptr,
         &m_surface);
@@ -285,86 +287,32 @@ VulkanRendererBackend::VulkanRendererBackend(
   } else
     throw std::runtime_error("unsupported window backend");
 
-  VkSurfaceCapabilitiesKHR sufaceCapabilities;
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(selectedPhysicalDevice, m_surface,
-                                            &sufaceCapabilities);
-  uint32_t n_formats;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(selectedPhysicalDevice, m_surface,
-                                       &n_formats, nullptr);
-  std::vector<VkSurfaceFormatKHR> formats(n_formats);
-  vkGetPhysicalDeviceSurfaceFormatsKHR(selectedPhysicalDevice, m_surface,
-                                       &n_formats, formats.data());
+  updateSwapchainSupport();
   // check if VK_FORMAT_B8G8R8A8_UNORM is supported.
   bool supportsFormat = false;
-  for (VkSurfaceFormatKHR format : formats) {
+  for (VkSurfaceFormatKHR format : m_swapchainSupport.formats) {
     if (format.format == SURFACE_COLOR_FORMAT) {
       supportsFormat = true;
     }
   }
   assert(supportsFormat);
 
-  uint32_t n_presentationModes;
-  result = vkGetPhysicalDeviceSurfacePresentModesKHR(
-      selectedPhysicalDevice, m_surface, &n_presentationModes, nullptr);
-  ASSERT_VKRESULT(result);
-  std::vector<VkPresentModeKHR> presentationModes(n_presentationModes);
-  result = vkGetPhysicalDeviceSurfacePresentModesKHR(
-      selectedPhysicalDevice, m_surface, &n_presentationModes,
-      presentationModes.data());
-  ASSERT_VKRESULT(result);
-
-  VkSwapchainCreateInfoKHR swapchainCreateInfo;
-  swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-  swapchainCreateInfo.pNext = nullptr;
-  swapchainCreateInfo.flags = 0;
-  swapchainCreateInfo.surface = m_surface;
-  swapchainCreateInfo.minImageCount = std::min(sufaceCapabilities.minImageCount,
-                                               (uint32_t)MAX_SWAPCHAIN_IMAGES);
-  swapchainCreateInfo.imageFormat = VulkanRendererBackend::SURFACE_COLOR_FORMAT;
-  swapchainCreateInfo.imageColorSpace =
-      VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;  // TODO check if valid.
-  swapchainCreateInfo.imageExtent = {window.getWidth(), window.getHeight()};
-  swapchainCreateInfo.imageArrayLayers = 1;
-  swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-  swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  swapchainCreateInfo.queueFamilyIndexCount = 0;
-  swapchainCreateInfo.pQueueFamilyIndices = nullptr;
-  swapchainCreateInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-  swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-  swapchainCreateInfo.presentMode =
-      VK_PRESENT_MODE_FIFO_KHR;  // TODO try if MAILBOX WORKS.
-  swapchainCreateInfo.clipped = VK_TRUE;
-  swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
-
   VkBool32 surfaceSupport = false;
   result = vkGetPhysicalDeviceSurfaceSupportKHR(selectedPhysicalDevice, 0,
                                                 m_surface, &surfaceSupport);
   ASSERT_VKRESULT(result);
   assert(surfaceSupport);
-  result = vkCreateSwapchainKHR(m_device, &swapchainCreateInfo, nullptr,
-                                &m_swapchain);
-  ASSERT_VKRESULT(result);
-  uint32_t n_swapchainImages;
-  result = vkGetSwapchainImagesKHR(m_device, m_swapchain, &n_swapchainImages,
-                                   nullptr);
-  ASSERT_VKRESULT(result);
-  std::vector<VkImage> swapchainImages(n_swapchainImages);
-  result = vkGetSwapchainImagesKHR(m_device, m_swapchain, &n_swapchainImages,
-                                   swapchainImages.data());
-  ASSERT_VKRESULT(result);
 
-  m_swapchainImageViews.resize(n_swapchainImages);
-  for (unsigned int i = 0; i < n_swapchainImages; i++) {
-    uint32_t imageViewId = createImageView(
-        swapchainImages[i], window.getWidth(), window.getHeight(),
-        VulkanRendererBackend::SURFACE_COLOR_FORMAT);
-    m_swapchainImageViews[i] = imageViewId;
-  }
+  createSwapchain();
+
   m_rendergraph = std::make_unique<VulkanMasterRendergraph>(this);
 }
 
 VulkanRendererBackend::~VulkanRendererBackend() {
   VkResult result = vkDeviceWaitIdle(m_device);
+  m_rendergraph->dispose();
+  m_rendergraph.reset();
+
   ASSERT_VKRESULT(result);
   std::vector<uint32_t> allocatedBufferIds;
   for (uint32_t i = 0; i < m_commandBuffers.size(); i++) {
@@ -462,6 +410,19 @@ VulkanRendererBackend::~VulkanRendererBackend() {
   vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
   vkDestroyDevice(m_device, nullptr);
   vkDestroyInstance(m_instance, nullptr);
+}
+
+void VulkanRendererBackend::recreateSwapchain() {
+  //
+  vkDeviceWaitIdle(m_device);
+  for (const u32 imageView : m_swapchainImageViews) {
+    destroyImageView(imageView);
+  }
+
+  VkSwapchainKHR oldSwapchain = m_swapchain;
+  createSwapchain();
+
+  vkDestroySwapchainKHR(m_device, oldSwapchain, nullptr);
 }
 
 void VulkanRendererBackend::beginFrame() {
@@ -932,7 +893,7 @@ uint32_t VulkanRendererBackend::createCommandPool(QueueFamilyType queueFamily) {
   VkCommandPoolCreateInfo commandPoolCreateInfo;
   commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   commandPoolCreateInfo.pNext = nullptr;
-  commandPoolCreateInfo.flags = 0;
+  commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
   commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
   VkResult result = vkCreateCommandPool(m_device, &commandPoolCreateInfo,
                                         nullptr, &commandPool);
@@ -1019,7 +980,7 @@ void VulkanRendererBackend::beginCommandBuffer(uint32_t commandBufferId) {
   VkCommandBufferBeginInfo commandBufferBeginInfo;
   commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   commandBufferBeginInfo.pNext = nullptr;
-  commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+  commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
   commandBufferBeginInfo.pInheritanceInfo = nullptr;
 
   VkResult result = vkBeginCommandBuffer(getCommandBufferById(commandBufferId),
@@ -1063,11 +1024,14 @@ void VulkanRendererBackend::drawCall(uint32_t vertexCount,
   vkCmdDraw(getCommandBufferById(commandBufferId), vertexCount, instanceCount,
             0, 0);
 }
-void VulkanRendererBackend::acquireNextSwapchainFrame(u32 signalSem) {
+boolean VulkanRendererBackend::acquireNextSwapchainFrame(u32 signalSem) {
   VkResult result = vkAcquireNextImageKHR(
       m_device, m_swapchain, std::numeric_limits<uint64_t>::max(),
       getSemaphoreById(signalSem), VK_NULL_HANDLE, &m_swapchainFrameIndex);
+  if (result == VK_ERROR_OUT_OF_DATE_KHR) return true;
+  if (result == VK_SUBOPTIMAL_KHR) return false;
   ASSERT_VKRESULT(result);
+  return false;
 }
 
 u32 VulkanRendererBackend::getCurrentSwapchainImageView() {
@@ -1078,7 +1042,7 @@ u32 VulkanRendererBackend::getCurrentSwapchainFrameIndex() {
   return m_swapchainFrameIndex;
 }
 
-void VulkanRendererBackend::presentQueue(
+boolean VulkanRendererBackend::presentQueue(
     u32 queueId, const std::vector<u32> &waitSemaphoreIds) {
   VkPresentInfoKHR presentInfo;
   presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -1094,7 +1058,11 @@ void VulkanRendererBackend::presentQueue(
   presentInfo.pImageIndices = &m_swapchainFrameIndex;
   presentInfo.pResults = nullptr;
   VkResult result = vkQueuePresentKHR(getQueueById(queueId), &presentInfo);
+  if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR) {
+    return true;
+  }
   ASSERT_VKRESULT(result);
+  return false;
 }
 
 void VulkanRendererBackend::submitCommandBuffers(
@@ -1164,11 +1132,18 @@ void VulkanRendererBackend::destroyFence(const u32 fenceId) {
   vkDestroyFence(m_device, getFenceById(fenceId), nullptr);
 }
 
+void VulkanRendererBackend::resetFence(const u32 fenceId) {
+  VkResult result = vkResetFences(m_device, 1, &getFenceById(fenceId));
+  ASSERT_VKRESULT(result);
+}
+
 void VulkanRendererBackend::waitForFence(const u32 fenceId) {
   VkResult result = vkWaitForFences(m_device, 1, &getFenceById(fenceId), true,
                                     std::numeric_limits<u64>::max());
   ASSERT_VKRESULT(result);
 }
+
+void VulkanRendererBackend::waitDeviceIdle() { vkDeviceWaitIdle(m_device); }
 
 u32 VulkanRendererBackend::getAnyGraphicsQueue() {
   for (u32 i = 0; i < m_queueIds.size(); i++) {
@@ -1193,6 +1168,105 @@ u32 VulkanRendererBackend::getAnyComputeQueue() {
     }
   }
   throw std::runtime_error("no compute queue avaiable");
+}
+
+void VulkanRendererBackend::updateSwapchainSupport() {
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physicalDevice, m_surface,
+                                            &m_swapchainSupport.capabilities);
+
+  uint32_t formatCount;
+  vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_surface,
+                                       &formatCount, nullptr);
+
+  if (formatCount != 0) {
+    m_swapchainSupport.formats.resize(formatCount);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_surface,
+                                         &formatCount,
+                                         m_swapchainSupport.formats.data());
+  }
+
+  uint32_t presentModeCount;
+  vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, m_surface,
+                                            &presentModeCount, nullptr);
+
+  if (presentModeCount != 0) {
+    m_swapchainSupport.presentModes.resize(presentModeCount);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+        m_physicalDevice, m_surface, &presentModeCount,
+        m_swapchainSupport.presentModes.data());
+  }
+}
+
+void VulkanRendererBackend::createSwapchain() {
+  updateSwapchainSupport();
+
+  VkExtent2D extend;
+
+  if (m_swapchainSupport.capabilities.currentExtent.width !=
+      std::numeric_limits<uint32_t>::max()) {
+    extend = m_swapchainSupport.capabilities.currentExtent;
+  } else {
+    int width = mp_window->getWidth(), height = mp_window->getHeight();
+    // glfwGetFramebufferSize(window, &width, &height);
+
+    VkExtent2D actualExtent = {static_cast<uint32_t>(width),
+                               static_cast<uint32_t>(height)};
+
+    actualExtent.width =
+        std::clamp(actualExtent.width,
+                   m_swapchainSupport.capabilities.minImageExtent.width,
+                   m_swapchainSupport.capabilities.maxImageExtent.width);
+    actualExtent.height =
+        std::clamp(actualExtent.height,
+                   m_swapchainSupport.capabilities.minImageExtent.height,
+                   m_swapchainSupport.capabilities.maxImageExtent.height);
+
+    extend = actualExtent;
+  }
+
+  VkSwapchainCreateInfoKHR swapchainCreateInfo;
+  swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+  swapchainCreateInfo.pNext = nullptr;
+  swapchainCreateInfo.flags = 0;
+  swapchainCreateInfo.surface = m_surface;
+  swapchainCreateInfo.minImageCount =
+      std::min(m_swapchainSupport.capabilities.minImageCount,
+               (uint32_t)MAX_SWAPCHAIN_IMAGES);
+  swapchainCreateInfo.imageFormat =
+      VulkanRendererBackend::SURFACE_COLOR_FORMAT;  // TODO select dynamicly
+  swapchainCreateInfo.imageColorSpace =
+      VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;  // TODO check if valid.
+  swapchainCreateInfo.imageExtent = extend;
+  swapchainCreateInfo.imageArrayLayers = 1;
+  swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+  swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  swapchainCreateInfo.queueFamilyIndexCount = 0;
+  swapchainCreateInfo.pQueueFamilyIndices = nullptr;
+  swapchainCreateInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+  swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  swapchainCreateInfo.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+  swapchainCreateInfo.clipped = VK_TRUE;
+  swapchainCreateInfo.oldSwapchain = m_swapchain;
+
+  VkResult result = vkCreateSwapchainKHR(m_device, &swapchainCreateInfo,
+                                         nullptr, &m_swapchain);
+  ASSERT_VKRESULT(result);
+  uint32_t n_swapchainImages;
+  result = vkGetSwapchainImagesKHR(m_device, m_swapchain, &n_swapchainImages,
+                                   nullptr);
+  ASSERT_VKRESULT(result);
+  std::vector<VkImage> swapchainImages(n_swapchainImages);
+  result = vkGetSwapchainImagesKHR(m_device, m_swapchain, &n_swapchainImages,
+                                   swapchainImages.data());
+  ASSERT_VKRESULT(result);
+
+  m_swapchainImageViews.resize(n_swapchainImages);
+  for (unsigned int i = 0; i < n_swapchainImages; i++) {
+    uint32_t imageViewId =
+        createImageView(swapchainImages[i], extend.width, extend.height,
+                        VulkanRendererBackend::SURFACE_COLOR_FORMAT);
+    m_swapchainImageViews[i] = imageViewId;
+  }
 }
 
 VkImageView &VulkanRendererBackend::getImageViewById(

@@ -20,15 +20,21 @@ VulkanTriangleRenderPass::VulkanTriangleRenderPass(
   m_fragmentShader = m_vrenderer->createShaderModule(fragmentSrc);
 }
 
-VulkanTriangleRenderPass::~VulkanTriangleRenderPass() {}
+void VulkanTriangleRenderPass::recreate() {
+  if (m_current.has_value()) {
+    m_current = std::nullopt;
+    m_vrenderer->destroyPipeline(m_pipeline);
+  }
+}
+
+void VulkanTriangleRenderPass::dispose() {}
 
 void VulkanTriangleRenderPass::execute() {
   const u32* p_framebuffer = getSinkResource<u32>(m_framebufferSink);
   const u32* p_renderPass = getSinkResource<u32>(m_renderPassSink);
   const u32* p_pipelineLayout = getSinkResource<u32>(m_pipelineLayoutSink);
 
-  const std::tuple<u32, u32, u32> expected = {*p_framebuffer, *p_renderPass,
-                                              *p_pipelineLayout};
+  const std::tuple<u32, u32> expected = {*p_renderPass, *p_pipelineLayout};
 
   if (m_current.has_value() && expected != m_current) {
     m_vrenderer->destroyPipeline(m_pipeline);

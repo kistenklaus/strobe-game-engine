@@ -1,5 +1,7 @@
 #include "renderer/vulkan/passes/VulkanAcquireSwapchainFrame.hpp"
 
+#include "renderer/RendergraphResourcesDeprecatedException.hpp"
+
 namespace sge::vulkan {
 
 VulkanAcquireSwapchainFrame::VulkanAcquireSwapchainFrame(
@@ -15,7 +17,12 @@ VulkanAcquireSwapchainFrame::VulkanAcquireSwapchainFrame(
 }
 
 void VulkanAcquireSwapchainFrame::execute() {
-  m_vrenderer->acquireNextSwapchainFrame(m_signalSemphores[0]);
+  const boolean deprecated =
+      m_vrenderer->acquireNextSwapchainFrame(m_signalSemphores[0]);
+  if (deprecated) {
+    throw RendergraphResourcesDeprecatedException();
+  }
+
   m_imageView = m_vrenderer->getCurrentSwapchainImageView();
   m_frameIndex = m_vrenderer->getCurrentSwapchainFrameIndex();
 }

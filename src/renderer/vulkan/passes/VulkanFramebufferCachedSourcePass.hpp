@@ -8,11 +8,12 @@ namespace sge::vulkan {
 
 class VulkanFramebufferCachedSourcePass : public RenderPass {
  public:
-  VulkanFramebufferCachedSourcePass(VulkanRendererBackend* renderer,
-                                    const std::string name);
-  ~VulkanFramebufferCachedSourcePass();
+  explicit VulkanFramebufferCachedSourcePass(VulkanRendererBackend* renderer,
+                                             const std::string name);
 
   void execute() override;
+  void recreate() override;
+  void dispose() override;
 
   u32 getImageViewSink() const { return m_imageViewSink; }
   u32 getRenderPassSink() const { return m_renderPassSink; }

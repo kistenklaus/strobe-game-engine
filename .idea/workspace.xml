@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeRunConfigurationManager">
+    <generated>
+      <config projectName="strobe" targetName="lvulkan" />
+    </generated>
+  </component>
+  <component name="CMakeSettings">
+    <configurations>
+      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" />
+    </configurations>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="bfcedd8d-3f01-4a74-8192-6b424b1c7563" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/src/entry.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/entry.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/Renderer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/Renderer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/Renderer.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/Renderer.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/Rendergraph.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/Rendergraph.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/Rendergraph.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/Rendergraph.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/VulkanMasterRendergraph.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/VulkanMasterRendergraph.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/VulkanMasterRendergraph.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/VulkanMasterRendergraph.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/VulkanRendererBackend.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/VulkanRendererBackend.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/VulkanRendererBackend.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/VulkanRendererBackend.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanAcquireSwapchainFrame.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanAcquireSwapchainFrame.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanAllocateCmdBuffPass.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanAllocateCmdBuffPass.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanBeginCmdBuffPass.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanBeginCmdBuffPass.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanCmdPoolMultiSrcPass.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanCmdPoolMultiSrcPass.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanCmdPoolMultiSrcPass.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanCmdPoolMultiSrcPass.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanCmdPoolSrcPass.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanCmdPoolSrcPass.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanEndCmdBuffPass.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanEndCmdBuffPass.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanFramebufferCachedSourcePass.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanFramebufferCachedSourcePass.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanFramebufferCachedSourcePass.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanFramebufferCachedSourcePass.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanPipelineLayoutSourcePass.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanPipelineLayoutSourcePass.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanPipelineLayoutSourcePass.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanPipelineLayoutSourcePass.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanPresentQueuePass.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanPresentQueuePass.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanPresentQueuePass.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanPresentQueuePass.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanRenderPassSourcePass.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanRenderPassSourcePass.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanRenderPassSourcePass.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanRenderPassSourcePass.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanResetCmdPoolPass.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanResetCmdPoolPass.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanResetCmdPoolPass.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanResetCmdPoolPass.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanSubmitCmdBufferPass.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanSubmitCmdBufferPass.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanSubmitCmdBufferPass.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanSubmitCmdBufferPass.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanTriangleRenderPass.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanTriangleRenderPass.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanTriangleRenderPass.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer/vulkan/passes/VulkanTriangleRenderPass.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/window/Window.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/window/Window.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/window/Window.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/window/Window.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/window/glfw/GlfwWindowBackend.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/window/glfw/GlfwWindowBackend.cpp" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectApplicationVersion">
+    <option name="ide" value="CLion" />
+    <option name="majorVersion" value="2022" />
+    <option name="minorVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="2BUOTFHDDqfn9AySe3AUYnh3YbC" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "cf.advertisement.text.has.clang-format": "true",
+    "cf.advertisement.text.overridden": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "cmake.loaded.for.project": "true",
+    "last_opened_file_path": "/home/karl/Documents/strobe",
+    "settings.editor.selected.configurable": "advanced.settings"
+  }
+}]]></component>
+  <component name="RunManager" selected="Custom Build Application.strobe-vim">
+    <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
+      <method v="2">
+        <option name="CLION.EXTERNAL.BUILD" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="strobe-vim" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="strobe" TARGET_NAME="strobe-vim" CONFIG_NAME="strobe-vim" RUN_PATH="$PROJECT_DIR$/target/lvulkan">
+      <method v="2">
+        <option name="CLION.EXTERNAL.BUILD" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="debug" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" RUN_PATH="$PROJECT_DIR$/target/lvulkan" EXPLICIT_BUILD_TARGET_NAME="all">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="gdb" type="com.jetbrains.cidr.remote.gdbserver.type" factoryName="com.jetbrains.cidr.remote.gdbserver.factory" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" version="1" RUN_PATH="$PROJECT_DIR$/target/lvulkan">
+      <custom-gdb-server version="1" gdb-connect="" executable="" warmup-ms="0" download-type="ALWAYS" uploadFile="/tmp/CLion/debug/lvulkan" defaultGdbServerArgs=":1234 /tmp/CLion/debug/lvulkan">
+        <debugger kind="GDB" isBundled="true" />
+      </custom-gdb-server>
+      <method v="2">
+        <option name="CLION.COMPOUND.BUILD" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="CMake Application.debug" />
+      <item itemvalue="Custom Build Application.strobe-vim" />
+      <item itemvalue="Remote GDB Server.gdb" />
+    </list>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="bfcedd8d-3f01-4a74-8192-6b424b1c7563" name="Changes" comment="" />
+      <created>1656957202997</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1656957202997</updated>
+      <workItem from="1656957204635" duration="2503000" />
+      <workItem from="1656964030856" duration="603000" />
+      <workItem from="1656964660174" duration="3128000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

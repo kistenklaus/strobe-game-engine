@@ -1,0 +1,61 @@
+@startuml
+!include ./theme.puml
+
+
+AcqSwapchainFrame : 
+StaticCmdPoolMultiSrc : noexec
+SelectCmdPool :  
+CachedAllocCmdBuff :
+
+SubmitCmdBuffers :
+PresentQueue : 
+
+BeginCmdBuff : 
+EndCmdBuff : 
+
+StaticFenceMultiSrc : noexec
+SelectFence : 
+
+StaticGfxQueueRefSrc :
+StaticRenderPassSrc : 
+CachedFramebufferSrc : 
+BeginRenderPass : 
+EndRenderPass :
+
+ExecuteCmdBuff :
+
+RecordForwardQueue :
+RecordDeferredQueue : 
+RecordShadowQueue : 
+StaticRecordFXAA :
+
+AcqSwapchainFrame --> SelectCmdPool : frameindex
+StaticCmdPoolMultiSrc --> SelectCmdPool : cmdpools
+SelectCmdPool --> CachedAllocCmdBuff : cmdpool
+
+StaticFenceMultiSrc --> SelectFence : fences
+AcqSwapchainFrame --> SelectFence : frameindex
+
+
+SelectFence --> BeginCmdBuff : fence
+CachedAllocCmdBuff --> BeginCmdBuff : cmdbuffer
+
+
+EndCmdBuff --> SubmitCmdBuffers : cmdbuffer
+StaticGfxQueueRefSrc --> SubmitCmdBuffers : queue
+SubmitCmdBuffers --> PresentQueue : semaphore, queue
+
+StaticRenderPassSrc --> CachedFramebufferSrc : renderpass
+AcqSwapchainFrame --> CachedFramebufferSrc : imageview
+CachedFramebufferSrc --> BeginRenderPass : framebuffer
+StaticRenderPassSrc --> BeginRenderPass : renderpass
+BeginCmdBuff --> BeginRenderPass : cmdbuffer
+BeginRenderPass --> ExecuteForwardCmdBuff : renderpass, framebuffer, primary
+ExecuteForwardCmdBuff --> ExecuteFXXACmdBuff : renderpass, framebuffer, cmdbuffer
+ExecuteFXXACmdBuff --> EndRenderPass : renderpass, cmdbuffer
+EndRenderPass --> EndCmdBuff : cmdbuffer
+
+BeginCmdBuff --> SubmitCmdBuffers : fence
+
+
+@enduml

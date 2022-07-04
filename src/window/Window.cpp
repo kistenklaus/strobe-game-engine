@@ -42,4 +42,12 @@ const u32 Window::getWidth() const { return m_backend->getWidth(); }
 
 const u32 Window::getHeight() const { return m_backend->getHeight(); }
 
+void Window::addWindowSizeCallback(WindowSizeCallback* windowSizeCallback) {
+  m_backend->addWindowSizeCallback(windowSizeCallback);
+}
+
+void Window::removeWindowSizeCallback(WindowSizeCallback* windowSizeCallback) {
+  m_backend->removeWindowSizeCallback(windowSizeCallback);
+}
+
 }  // namespace sge

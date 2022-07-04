@@ -1,6 +1,7 @@
 #include "renderer/vulkan/passes/VulkanPresentQueuePass.hpp"
 
 #include "logging/print.hpp"
+#include "renderer/RendergraphResourcesDeprecatedException.hpp"
 
 namespace sge::vulkan {
 
@@ -16,7 +17,10 @@ void VulkanPresentQueuePass::execute() {
   std::vector<u32>* p_semaphores =
       getSinkResource<std::vector<u32>>(m_waitSemsSink);
 
-  m_vrenderer->presentQueue(*p_queue, *p_semaphores);
+  const boolean deprecated = m_vrenderer->presentQueue(*p_queue, *p_semaphores);
+  if (deprecated) {
+    throw RendergraphResourcesDeprecatedException();
+  }
 }
 
 }  // namespace sge::vulkan

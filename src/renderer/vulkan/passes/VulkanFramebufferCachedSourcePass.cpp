@@ -9,10 +9,17 @@ VulkanFramebufferCachedSourcePass::VulkanFramebufferCachedSourcePass(
       m_renderPassSink(registerSink<u32>("renderpass")),
       m_framebufferSource(registerSource<u32>("framebuffer")) {}
 
-VulkanFramebufferCachedSourcePass::~VulkanFramebufferCachedSourcePass() {
+void VulkanFramebufferCachedSourcePass::dispose() {
   for (auto const& [key, value] : m_cache) {
     m_vrenderer->destroyFramebuffer(value);
   }
+}
+
+void VulkanFramebufferCachedSourcePass::recreate() {
+  for (const auto& [key, framebuffer] : m_cache) {
+    m_vrenderer->destroyFramebuffer(framebuffer);
+  }
+  m_cache.clear();
 }
 
 void VulkanFramebufferCachedSourcePass::execute() {

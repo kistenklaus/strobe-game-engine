@@ -10,7 +10,7 @@ VulkanPipelineLayoutSourcePass::VulkanPipelineLayoutSourcePass(
   setSourceResource(m_pipelineLayoutSource, &m_pipelineLayout);
 }
 
-VulkanPipelineLayoutSourcePass::~VulkanPipelineLayoutSourcePass() {
+void VulkanPipelineLayoutSourcePass::dispose() {
   m_vrenderer->destroyPipelineLayout(m_pipelineLayout);
   setSourceResource<u32>(m_pipelineLayoutSource, nullptr);
 }

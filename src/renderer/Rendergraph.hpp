@@ -17,6 +17,7 @@ class Rendergraph : public RenderPass {
  public:
   Rendergraph(RendererBackend* renderer, const std::string name);
 
+  virtual void recreate() override;
   virtual void beginFrame() override;
   virtual void execute() override;
   virtual void endFrame() override;
@@ -44,9 +45,10 @@ class Rendergraph : public RenderPass {
   void markPassAsRoot(const u32 passId);
   void unmarkPassAsRoot(const u32 passId);
   void build();
+  void scheduleRecreation() { m_requireRecreation = true; }
 
  private:
- private:
+  boolean m_requireRecreation = false;
   std::vector<std::pair<std::pair<u32, u32>, std::pair<u32, u32>>> m_linkages;
   std::vector<u32> m_execution_order;
   std::vector<std::unique_ptr<RenderPass>> m_passes;

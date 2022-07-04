@@ -4,7 +4,7 @@
 
 using namespace sge;
 
-Renderer::Renderer(RendererBackendAPI backendApi, const Window& window)
+Renderer::Renderer(RendererBackendAPI backendApi, Window* window)
     : m_backend([&]() {
         std::string application_name = "name_placeholder";
         std::tuple<int, int, int> application_version = {0, 0, 0};

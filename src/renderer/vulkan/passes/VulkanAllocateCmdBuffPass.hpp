@@ -9,8 +9,8 @@ namespace sge::vulkan {
 
 class VulkanAllocateCmdBuffPass : public RenderPass {
  public:
-  VulkanAllocateCmdBuffPass(VulkanRendererBackend* renderer,
-                            const std::string name);
+  explicit VulkanAllocateCmdBuffPass(VulkanRendererBackend* renderer,
+                                     const std::string name);
   void execute() override;
 
   u32 getPoolSink() const { return m_poolSink; }

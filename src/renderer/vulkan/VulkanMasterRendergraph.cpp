@@ -13,6 +13,7 @@
 #include "renderer/vulkan/passes/VulkanCmdPoolMultiSrcPass.hpp"
 #include "renderer/vulkan/passes/VulkanCmdPoolSrcPass.hpp"
 #include "renderer/vulkan/passes/VulkanEndCmdBuffPass.hpp"
+#include "renderer/vulkan/passes/VulkanFenceMultiSrcPass.hpp"
 #include "renderer/vulkan/passes/VulkanFramebufferCachedSourcePass.hpp"
 #include "renderer/vulkan/passes/VulkanPipelineLayoutSourcePass.hpp"
 #include "renderer/vulkan/passes/VulkanPresentQueuePass.hpp"
@@ -34,7 +35,8 @@ VulkanMasterRendergraph::VulkanMasterRendergraph(
       m_renderPassSourcePass(createPass<VulkanRenderPassSourcePass>(
           renderer, "renderpass-src", VK_FORMAT_B8G8R8A8_UNORM)),
       m_poolMultiSrcPass(createPass<VulkanCmdPoolMultiSrcPass>(
-          renderer, "cmdpool-multi-src", QUEUE_FAMILY_GRAPHICS, 4)),
+          renderer, "cmdpool-multi-src", QUEUE_FAMILY_GRAPHICS,
+          m_vrenderer->getSwapchainCount())),
       m_resetPoolPass(
           createPass<VulkanResetCmdPoolPass>(renderer, "reset-cmdpool")),
       m_allocateCmdBufferPass(
@@ -59,7 +61,12 @@ VulkanMasterRendergraph::VulkanMasterRendergraph(
       m_wrapWithVectorPass(
           createPass<WrapWithVectorPass<u32>>(renderer, "wrap-with-vector")),
       m_vectorAtIndexPass(
-          createPass<VectorAtIndexPass<u32>>(renderer, "select-pool")) {
+          createPass<VectorAtIndexPass<u32>>(renderer, "select-pool")),
+      m_fenceMultiSrcPass(createPass<VulkanFenceMultiSrcPass>(
+          renderer, "fence-multi-src", m_vrenderer->getSwapchainCount())),
+      m_selectFencePass(
+          createPass<VectorAtIndexPass<u32>>(renderer, "select-fence")),
+      m_windowSizeCallback(MasterRendergraphWindowSizeCallback(this)) {
   markPassAsRoot(m_presentQueuePass);
 
   // cmd-buffer route
@@ -95,6 +102,18 @@ VulkanMasterRendergraph::VulkanMasterRendergraph(
   // semaphores.
   addLinkage("acq-swapchain-frame@signal", "submit-cmdbuffer@wait");
   addLinkage("submit-cmdbuffer@signal", "present-queue@wait");
+
+  addLinkage("fence-multi-src@fences", "select-fence@vector");
+  addLinkage("acq-swapchain-frame@frameindex", "select-fence@index");
+  addLinkage("select-fence@value", "reset-cmdpool@fence");
+  addLinkage("reset-cmdpool@fence", "submit-cmdbuffer@fence");
+
+  m_vrenderer->getWindowPtr()->addWindowSizeCallback(&m_windowSizeCallback);
+}
+
+void VulkanMasterRendergraph::recreate() {
+  m_vrenderer->recreateSwapchain();
+  Rendergraph::recreate();
 }
 
 }  // namespace sge::vulkan

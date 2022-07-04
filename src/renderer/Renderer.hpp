@@ -11,7 +11,7 @@ namespace sge {
 
 class Renderer {
  public:
-  Renderer(RendererBackendAPI backendApi, const Window& window);
+  Renderer(RendererBackendAPI backendApi, Window* window);
   void beginFrame();
   void renderFrame();
   void endFrame();

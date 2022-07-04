@@ -6,11 +6,10 @@ namespace sge::vulkan {
 
 class VulkanPipelineLayoutSourcePass : public RenderPass {
  public:
-  VulkanPipelineLayoutSourcePass(VulkanRendererBackend* renderer,
-                                 const std::string name);
-  ~VulkanPipelineLayoutSourcePass();
+  explicit VulkanPipelineLayoutSourcePass(VulkanRendererBackend* renderer,
+                                          const std::string name);
 
-  u32 getPipelineLayoutSource() const { return m_pipelineLayoutSource; }
+  void dispose() override;
 
  private:
   const u32 m_pipelineLayout;

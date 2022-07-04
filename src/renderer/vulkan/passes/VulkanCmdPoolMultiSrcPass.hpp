@@ -6,10 +6,11 @@ namespace sge::vulkan {
 
 class VulkanCmdPoolMultiSrcPass : public RenderPass {
  public:
-  VulkanCmdPoolMultiSrcPass(VulkanRendererBackend* renderer,
-                            const std::string name,
-                            const QueueFamilyType queueFamily, const u32 count);
-  ~VulkanCmdPoolMultiSrcPass() override;
+  explicit VulkanCmdPoolMultiSrcPass(VulkanRendererBackend* renderer,
+                                     const std::string name,
+                                     const QueueFamilyType queueFamily,
+                                     const u32 count);
+  void dispose() override;
 
  private:
   const std::vector<u32> m_pools;

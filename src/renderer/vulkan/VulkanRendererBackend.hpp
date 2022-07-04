@@ -29,12 +29,13 @@ class VulkanRendererBackend : public sge::RendererBackend {
                         std::tuple<int, int, int> application_version,
                         std::string engine_name,
                         std::tuple<int, int, int> engine_version,
-                        const Window& window);
+                        Window* window);
   ~VulkanRendererBackend() override;
   void beginFrame() override;
   void renderFrame() override;
   void endFrame() override;
 
+  void recreateSwapchain();
   uint32_t createImageView(VkImage image, const u32 width, const u32 height,
                            VkFormat format);
   void destroyImageView(uint32_t imageViewId);
@@ -73,11 +74,13 @@ class VulkanRendererBackend : public sge::RendererBackend {
   void destroySemaphore(uint32_t semaphoreId);
   void drawCall(uint32_t vertexCount, uint32_t instanceCount,
                 uint32_t commandBufferId);
-  void acquireNextSwapchainFrame(u32 singalSem);
+  /// returns true if the swapchain KHR is deprecated (suboptional)
+  // and a recreation of the swapchain is required.
+  boolean acquireNextSwapchainFrame(u32 singalSem);
   u32 getCurrentSwapchainImageView();
   u32 getCurrentSwapchainFrameIndex();
   u32 getSwapchainCount() { return m_swapchainImageViews.size(); }
-  void presentQueue(u32 queueId, const std::vector<u32>& waitSemaphoreId);
+  boolean presentQueue(u32 queueId, const std::vector<u32>& waitSemaphoreId);
   void submitCommandBuffers(u32 queueId,
                             const std::vector<u32>& commandBufferIds,
                             const std::vector<u32>& waitSemaphoreIds,
@@ -86,11 +89,23 @@ class VulkanRendererBackend : public sge::RendererBackend {
   u32 createFence();
   void destroyFence(const u32 fenceId);
   void waitForFence(const u32 fenceId);
+  void resetFence(const u32 fenceId);
+  void waitDeviceIdle();
   u32 getAnyGraphicsQueue();
   u32 getAnyTransferQueue();
   u32 getAnyComputeQueue();
+  Window* getWindowPtr() { return mp_window; }
 
  private:
+  typedef struct SwapChainSupportDetails {
+    VkSurfaceCapabilitiesKHR capabilities;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
+  } SwapChainSupportDetails;
+
+ private:
+  void createSwapchain();
+  void updateSwapchainSupport();
   VkImageView& getImageViewById(const u32 imageViewId);
   VkPipelineLayout& getPipelineLayoutById(const u32 pipelineLayoutId);
   VkPipeline& getPipelineById(const u32 pipelineId);
@@ -108,10 +123,13 @@ class VulkanRendererBackend : public sge::RendererBackend {
   std::optional<u32> m_transferQueueFamilyIndex;
   std::optional<u32> m_computeQueueFamilyIndex;
   std::unique_ptr<VulkanMasterRendergraph> m_rendergraph;
+  Window* mp_window;
   VkInstance m_instance;
+  VkPhysicalDevice m_physicalDevice;
   VkDevice m_device;
   VkSurfaceKHR m_surface;
-  VkSwapchainKHR m_swapchain;
+  SwapChainSupportDetails m_swapchainSupport;
+  VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
   u32 m_swapchainFrameIndex;
   std::vector<uint32_t> m_swapchainImageViews;
 

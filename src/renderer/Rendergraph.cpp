@@ -1,19 +1,35 @@
 #include "renderer/Rendergraph.hpp"
 
+#include <chrono>
 #include <iostream>
 
 #include "algorithms/graph.hpp"
 #include "logging/log.hpp"
 #include "logging/print.hpp"
+#include "renderer/RendergraphResourcesDeprecatedException.hpp"
 
 namespace sge {
 
 Rendergraph::Rendergraph(RendererBackend* renderer, const std::string name)
     : RenderPass(renderer, name) {}
 
+void Rendergraph::recreate() {
+  if (m_is_deprecated) {
+    build();
+  }
+
+  for (const u32 pass_id : m_execution_order) {
+    getPassById(pass_id).recreate();
+  }
+  m_requireRecreation = false;
+}
+
 void Rendergraph::beginFrame() {
   if (m_is_deprecated) {
     build();
+  }
+  if (m_requireRecreation) {
+    recreate();
   }
   for (const u32 pass_id : m_execution_order) {
     getPassById(pass_id).beginFrame();
@@ -21,8 +37,12 @@ void Rendergraph::beginFrame() {
 }
 
 void Rendergraph::execute() {
-  for (const u32 pass_id : m_execution_order) {
-    getPassById(pass_id).execute();
+  try {
+    for (const u32 pass_id : m_execution_order) {
+      getPassById(pass_id).execute();
+    }
+  } catch (const RendergraphResourcesDeprecatedException& e) {
+    recreate();
   }
 }
 
@@ -33,7 +53,9 @@ void Rendergraph::endFrame() {
 }
 
 void Rendergraph::dispose() {
-  for (const u32 pass_id : m_execution_order) {
+  std::vector<u32> rev = m_execution_order;
+  rev.reserve(rev.size());
+  for (const u32 pass_id : rev) {
     getPassById(pass_id).dispose();
   }
 }
