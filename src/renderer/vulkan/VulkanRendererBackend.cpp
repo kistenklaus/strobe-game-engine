@@ -893,7 +893,7 @@ uint32_t VulkanRendererBackend::createCommandPool(QueueFamilyType queueFamily) {
   VkCommandPoolCreateInfo commandPoolCreateInfo;
   commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   commandPoolCreateInfo.pNext = nullptr;
-  commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+  commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
   VkResult result = vkCreateCommandPool(m_device, &commandPoolCreateInfo,
                                         nullptr, &commandPool);
@@ -974,6 +974,14 @@ void VulkanRendererBackend::freeCommandBuffers(
   }
   vkFreeCommandBuffers(m_device, getCommandPoolById(poolId.value()),
                        buffers.size(), buffers.data());
+}
+
+void VulkanRendererBackend::resetCommandBuffer(const u32 commandBufferId,
+                                               const boolean releaseResources) {
+  const VkResult result = vkResetCommandBuffer(
+      getCommandBufferById(commandBufferId),
+      (releaseResources ? VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT : 0));
+  ASSERT_VKRESULT(result);
 }
 
 void VulkanRendererBackend::beginCommandBuffer(uint32_t commandBufferId) {

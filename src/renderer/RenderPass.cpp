@@ -2,8 +2,9 @@
 
 namespace sge {
 
-RenderPass::RenderPass(RendererBackend* renderer, const std::string name)
-    : m_renderer(renderer), m_name(name) {}
+RenderPass::RenderPass(RendererBackend* renderer, const std::string name,
+                       const boolean executable)
+    : m_renderer(renderer), m_name(name), m_exectuable(executable) {}
 
 void RenderPass::linkSink(u32 sink_id, RenderPass& source_pass, u32 source_id) {
   assert(sink_id < m_sinks.size());

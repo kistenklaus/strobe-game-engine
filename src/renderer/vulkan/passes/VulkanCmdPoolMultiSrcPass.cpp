@@ -5,7 +5,7 @@ namespace sge::vulkan {
 VulkanCmdPoolMultiSrcPass::VulkanCmdPoolMultiSrcPass(
     VulkanRendererBackend* renderer, const std::string name,
     const QueueFamilyType queueFamily, const u32 count)
-    : RenderPass(renderer, name),
+    : RenderPass(renderer, name, false),
       m_poolsSource(registerSource<std::vector<u32>>("cmdpools")),
       m_pools([&]() {
         std::vector<u32> pools(count);

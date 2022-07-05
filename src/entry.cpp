@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "logging/log.hpp"
+#include "profiling/Profiler.hpp"
 #include "renderer/Renderer.hpp"
 #include "window/Window.hpp"
 using namespace sge;
@@ -15,15 +16,13 @@ int main() {
   Renderer renderer = Renderer(VULKAN_RENDER_BACKEND, &window);
 
   while (!window.shouldClose()) {
-    auto start = std::chrono::high_resolution_clock::now();
+    Profiler::beginFrame();
     window.pollEvents();
     renderer.beginFrame();
     renderer.renderFrame();
     renderer.endFrame();
     window.swapBuffers();
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start);
-    println(duration.count() / 1e9);
+    Profiler::endFrame();
+    Profiler::logInfo();
   }
 }

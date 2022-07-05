@@ -5,7 +5,7 @@ namespace sge::vulkan {
 VulkanRenderPassSourcePass::VulkanRenderPassSourcePass(
     VulkanRendererBackend* renderer, const std::string name,
     const VkFormat colorFormat)
-    : RenderPass(renderer, name),
+    : RenderPass(renderer, name, false),
       m_renderPass(m_vrenderer->createRenderPass(colorFormat)),
       m_renderPassSource(registerSource<u32>("renderpass")) {
   setSourceResource(m_renderPassSource, &m_renderPass);

@@ -28,27 +28,31 @@ class VulkanMasterRendergraph : public Rendergraph {
   };
   MasterRendergraphWindowSizeCallback m_windowSizeCallback;
   // resources.
-  const u32 m_imageAvaiableSemaphoreId;
-  const u32 m_renderingDoneSemaphoreId;
+  u32 m_imageAvaiableSemaphoreId;
+  u32 m_renderingDoneSemaphoreId;
 
   // passes
-  const u32 m_acquireSwapchainFramePass;
-  const u32 m_renderPassSourcePass;
-  const u32 m_poolMultiSrcPass;
-  const u32 m_resetPoolPass;
-  const u32 m_allocateCmdBufferPass;
-  const u32 m_beginCmdBuffPass;
-  const u32 m_pipelineLayoutSourcePass;
-  const u32 m_framebufferCachedSourcePass;
-  const u32 m_trianglePass;
-  const u32 m_endCmdBuffPass;
-  const u32 m_acquireQueuePass;
-  const u32 m_submitPass;
-  const u32 m_presentQueuePass;
-  const u32 m_wrapWithVectorPass;
-  const u32 m_vectorAtIndexPass;
-  const u32 m_fenceMultiSrcPass;
-  const u32 m_selectFencePass;
+  u32 m_acquireSwapchainFramePass;
+  u32 m_renderPassSourcePass;
+  u32 m_poolMultiSrcPass;
+  u32 m_resetPoolPass;
+  u32 m_allocateCmdBufferPass;
+  u32 m_beginCmdBuffPass;
+  u32 m_pipelineLayoutSourcePass;
+  u32 m_framebufferCachedSourcePass;
+  u32 m_trianglePass;
+  u32 m_endCmdBuffPass;
+  u32 m_acquireQueuePass;
+  u32 m_submitPass;
+  u32 m_presentQueuePass;
+  u32 m_wrapWithVectorPass;
+  u32 m_vectorAtIndexPass;
+  u32 m_fenceMultiSrcPass;
+  u32 m_selectFencePass;
+  u32 m_resetCmdBuffPass;
+  u32 m_selectCmdBuffPass;
+  u32 m_cmdbufferMultiSrcPass;
+  u32 m_poolSrcPass;
 };
 
 }  // namespace sge::vulkan

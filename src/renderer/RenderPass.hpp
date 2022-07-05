@@ -7,6 +7,8 @@
 
 #include "renderer/Renderer.hpp"
 #include "renderer/Sink.hpp"
+#include "renderer/SinkNotLinkedException.hpp"
+#include "renderer/SinkNullPointerException.hpp"
 #include "renderer/Source.hpp"
 #include "types/inttypes.hpp"
 
@@ -20,7 +22,8 @@ class Sink;
 
 class RenderPass {
  public:
-  RenderPass(RendererBackend* renderer, const std::string name);
+  RenderPass(RendererBackend* renderer, const std::string name,
+             const boolean executable = true);
   virtual ~RenderPass() = default;
   RenderPass(RenderPass&) = delete;
   RenderPass(RenderPass&&) = default;
@@ -36,8 +39,21 @@ class RenderPass {
 
   const std::string getName() const { return m_name; }
 
+  const std::string getSinkNameById(const u32 sinkId) const {
+    return m_sinkNames[sinkId];
+  }
+  const std::string getSourceNameById(const u32 sourceId) const {
+    return m_sourceNames[sourceId];
+  }
+  const ISink* const getSinkById(const u32 sinkId) const {
+    return m_sinks[sinkId].get();
+  }
+  const ISource* const getSourceById(const u32 sourceId) const {
+    return m_sources[sourceId].get();
+  }
   u32 getSinkIdByName(const std::string name) const;
   u32 getSourceIdByName(const std::string name) const;
+  const boolean isExecutable() const { return m_exectuable; }
 
  protected:
   template <class Resource_t>
@@ -51,10 +67,10 @@ class RenderPass {
   }
 
   template <class Resource_t>
-  u32 registerSink(const std::string name) {
+  u32 registerSink(const std::string name, const boolean nullable = false) {
     u32 id = m_sinks.size();
-    std::unique_ptr<ISink> sink =
-        std::unique_ptr<Sink<Resource_t>>(new Sink<Resource_t>(*this));
+    std::unique_ptr<ISink> sink = std::unique_ptr<Sink<Resource_t>>(
+        new Sink<Resource_t>(*this, nullable));
     m_sinks.push_back(std::move(sink));
     m_sinkNames.push_back(name);
     return id;
@@ -66,7 +82,20 @@ class RenderPass {
     assert(m_sinks[sink_id]);  // raise if nullptr
     ISink* isink = m_sinks[sink_id].get();
     Sink<Resource_t>* sink = static_cast<Sink<Resource_t>*>(isink);
-    return sink->get();
+    Resource_t* p_value = nullptr;
+    try {
+      p_value = sink->get();
+    } catch (const SinkNotLinkedException& e) {
+      throw SinkNotLinkedException(
+          std::string("tried to access unlinked sink :[") + m_name +
+          std::string("@") + m_sinkNames[sink_id] + std::string("]"));
+    } catch (const SinkNullPointerException& e) {
+      throw SinkNullPointerException(
+          std::string("Sink :[") + m_name + std::string("@") +
+          m_sinkNames[sink_id] +
+          std::string("] is NULL(nullptr), but not marked nullable"));
+    }
+    return p_value;
   }
   template <class Resource_t>
   void setSourceResource(u32 source_id, const Resource_t* p_resource) {
@@ -83,6 +112,7 @@ class RenderPass {
 
  private:
   const std::string m_name;
+  const boolean m_exectuable;
   std::vector<std::unique_ptr<ISink>> m_sinks;
   std::vector<std::string> m_sinkNames;
   std::vector<std::unique_ptr<ISource>> m_sources;

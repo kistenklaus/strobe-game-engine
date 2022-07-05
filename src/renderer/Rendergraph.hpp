@@ -51,6 +51,7 @@ class Rendergraph : public RenderPass {
  private:
   boolean m_requireRecreation = false;
   std::vector<std::pair<std::pair<u32, u32>, std::pair<u32, u32>>> m_linkages;
+  std::vector<u32> m_dependencyOrder;
   std::vector<u32> m_execution_order;
   std::vector<std::unique_ptr<RenderPass>> m_passes;
   std::vector<u32> m_rootPassIds;

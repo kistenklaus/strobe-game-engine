@@ -6,6 +6,7 @@
 #include "algorithms/graph.hpp"
 #include "logging/log.hpp"
 #include "logging/print.hpp"
+#include "renderer/IncompatibleLinkageException.hpp"
 #include "renderer/RendergraphResourcesDeprecatedException.hpp"
 
 namespace sge {
@@ -17,8 +18,8 @@ void Rendergraph::create() {
   if (m_is_deprecated) {
     build();
   }
-  for (const u32 pass_id : m_execution_order) {
-    getPassById(pass_id).recreate();
+  for (const u32 pass_id : m_dependencyOrder) {
+    getPassById(pass_id).create();
   }
 }
 
@@ -27,7 +28,7 @@ void Rendergraph::recreate() {
     build();
   }
 
-  for (const u32 pass_id : m_execution_order) {
+  for (const u32 pass_id : m_dependencyOrder) {
     getPassById(pass_id).recreate();
   }
   m_requireRecreation = false;
@@ -62,7 +63,7 @@ void Rendergraph::endFrame() {
 }
 
 void Rendergraph::dispose() {
-  std::vector<u32> rev = m_execution_order;
+  std::vector<u32> rev = m_dependencyOrder;
   rev.reserve(rev.size());
   for (const u32 pass_id : rev) {
     getPassById(pass_id).dispose();
@@ -73,6 +74,16 @@ void Rendergraph::addLinkage(u32 source_pass_id, u32 source_id,
                              u32 sink_pass_id, u32 sink_id) {
   assert(source_pass_id <= m_passes.size());
   assert(sink_pass_id <= m_passes.size());
+  // check for types!
+  if (getPassById(source_pass_id).getSourceById(source_id)->getResourceType() !=
+      getPassById(sink_pass_id).getSinkById(sink_id)->getResourceType()) {
+    throw IncompatibleLinkageException(
+        "typeof [" + getPassById(source_pass_id).getName() + "@" +
+        getPassById(source_pass_id).getSourceNameById(source_id) +
+        "] doesn't match the typeof [" + getPassById(sink_pass_id).getName() +
+        "@" + getPassById(sink_pass_id).getSinkNameById(sink_id) + "]");
+  }
+
   m_linkages.push_back(std::make_pair(std::make_pair(source_pass_id, source_id),
                                       std::make_pair(sink_pass_id, sink_id)));
 }
@@ -115,27 +126,38 @@ void Rendergraph::build() {
     const u32 sink_id = linkage.second.second;
     m_passes[sink_pass_id]->linkSink(sink_id, getPassById(source_pass_id),
                                      source_id);
-    m_execution_order.clear();
   }
   std::vector<u32> sort;
 
   std::vector<std::vector<u32>> graph(m_passes.size());
   for (const auto& linkage : m_linkages) {
     const u32 source_pass_id = linkage.first.first;
-    // const u32 source_id = linkage.first.second;
     const u32 sink_pass_id = linkage.second.first;
-    // const u32 sink_id = linkage.second.second;
     graph[sink_pass_id].push_back(source_pass_id);
   }
   // TODO Topological sort
-  m_execution_order = selectiveReverseTopoligicalSort(graph, m_rootPassIds);
-  static const LogChannel channel = createLogChannel("rendergraph", true);
-  if (channel.isActive()) {
-    std::vector<std::string> exeuction_names(m_execution_order.size());
-    for (u32 i = 0; i < exeuction_names.size(); i++) {
-      exeuction_names[i] = getPassById(i).getName();
+  m_dependencyOrder.clear();
+  m_dependencyOrder = selectiveReverseTopoligicalSort(graph, m_rootPassIds);
+  m_execution_order.clear();
+  for (const u32 pass : m_dependencyOrder) {
+    if (getPassById(pass).isExecutable()) {
+      m_execution_order.push_back(pass);
     }
-    log("execution_order: ", channel);
+  }
+  static const LogChannel channel =
+      createLogChannel("rendergraph-execution-order", true);
+  if (channel.isActive()) {
+    std::vector<std::string> exeuction_names(m_dependencyOrder.size());
+
+    for (u32 i = 0; i < exeuction_names.size(); i++) {
+      exeuction_names[i] =
+          std::string("\n\t") +
+          (getPassById(m_dependencyOrder[i]).isExecutable() ? "" : "(") +
+          getPassById(m_dependencyOrder[i]).getName() + std::string("[") +
+          std::to_string(m_dependencyOrder[i]) + std::string("]") +
+          (getPassById(m_dependencyOrder[i]).isExecutable() ? "" : ")") +
+          (i == m_dependencyOrder.size() - 1 ? "\n" : "");
+    }
     log(exeuction_names, channel);
   }
 

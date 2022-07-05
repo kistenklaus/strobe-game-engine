@@ -68,6 +68,9 @@ class VulkanRendererBackend : public sge::RendererBackend {
   const std::vector<uint32_t> allocateCommandBuffers(uint32_t commandPoolId,
                                                      uint32_t count);
   void freeCommandBuffers(const std::vector<uint32_t>& commandBufferIds);
+  void resetCommandBuffer(const u32 commandBufferId,
+                          const boolean releaseResources = true);
+
   uint32_t createSemaphore();
   void beginCommandBuffer(uint32_t commandBufferId);
   void endCommandBuffer(uint32_t commandBufferId);

@@ -9,7 +9,7 @@ VulkanSubmitCmdBufferPass::VulkanSubmitCmdBufferPass(
     : RenderPass(renderer, name),
       m_fenceSink(registerSink<u32>("fence")),
       m_queueSink(registerSink<u32>("queue")),
-      m_commandBuffersSink(registerSink<std::vector<u32>>("cmdbuffer")),
+      m_commandBuffersSink(registerSink<u32>("cmdbuffer")),
       m_waitSemaphoresSink(registerSink<std::vector<u32>>("wait")),
       m_signalSemaphoresSource(registerSource<std::vector<u32>>("signal")),
       m_signalSemaphores({m_vrenderer->createSemaphore()}) {
@@ -19,8 +19,7 @@ VulkanSubmitCmdBufferPass::VulkanSubmitCmdBufferPass(
 void VulkanSubmitCmdBufferPass::execute() {
   const u32* p_queue = getSinkResource<u32>(m_queueSink);
 
-  const std::vector<u32>* p_commandBuffers =
-      getSinkResource<std::vector<u32>>(m_commandBuffersSink);
+  const u32* p_commandBuffer = getSinkResource<u32>(m_commandBuffersSink);
 
   const std::vector<u32>* p_waitSemaphores =
       getSinkResource<std::vector<u32>>(m_waitSemaphoresSink);
@@ -30,7 +29,8 @@ void VulkanSubmitCmdBufferPass::execute() {
   if (p_fence != nullptr) {
     fence = *p_fence;
   }
-  m_vrenderer->submitCommandBuffers(*p_queue, *p_commandBuffers,
+
+  m_vrenderer->submitCommandBuffers(*p_queue, {*p_commandBuffer},
                                     *p_waitSemaphores, m_signalSemaphores,
                                     fence);
 }
