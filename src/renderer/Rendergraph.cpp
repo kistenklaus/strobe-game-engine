@@ -13,6 +13,15 @@ namespace sge {
 Rendergraph::Rendergraph(RendererBackend* renderer, const std::string name)
     : RenderPass(renderer, name) {}
 
+void Rendergraph::create() {
+  if (m_is_deprecated) {
+    build();
+  }
+  for (const u32 pass_id : m_execution_order) {
+    getPassById(pass_id).recreate();
+  }
+}
+
 void Rendergraph::recreate() {
   if (m_is_deprecated) {
     build();

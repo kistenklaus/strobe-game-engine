@@ -109,6 +109,7 @@ VulkanMasterRendergraph::VulkanMasterRendergraph(
   addLinkage("reset-cmdpool@fence", "submit-cmdbuffer@fence");
 
   m_vrenderer->getWindowPtr()->addWindowSizeCallback(&m_windowSizeCallback);
+  create();
 }
 
 void VulkanMasterRendergraph::recreate() {

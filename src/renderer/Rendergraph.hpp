@@ -17,6 +17,7 @@ class Rendergraph : public RenderPass {
  public:
   Rendergraph(RendererBackend* renderer, const std::string name);
 
+  virtual void create() override;
   virtual void recreate() override;
   virtual void beginFrame() override;
   virtual void execute() override;

@@ -25,6 +25,7 @@ class RenderPass {
   RenderPass(RenderPass&) = delete;
   RenderPass(RenderPass&&) = default;
   RenderPass& operator=(RenderPass&) = delete;
+  virtual void create() {}
   virtual void recreate() {}
   virtual void beginFrame() {}
   virtual void execute() {}
