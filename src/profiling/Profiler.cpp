@@ -37,10 +37,9 @@ void Profiler::logInfoInternal() {
   if (m_topIndex == 0) {
     print("frametime:");
     print(getAverageFrametimeInternal().count() / 1e6);
-    print(" ---> ");
+    print("ms ---> ");
     print((int)(1.0 / (getAverageFrametimeInternal().count() / 1e9)));
-    print(" FPS");
-    println("ms");
+    println(" FPS");
   }
 }
 
