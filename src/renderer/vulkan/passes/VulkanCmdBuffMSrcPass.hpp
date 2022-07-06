@@ -1,13 +1,13 @@
 #pragma once
 
 #include "renderer/RenderPass.hpp"
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 namespace sge::vulkan {
 
 class VulkanCmdBuffMSrcPass : public RenderPass {
  public:
-  VulkanCmdBuffMSrcPass(VulkanRendererBackend* renderer, const std::string name,
+  VulkanCmdBuffMSrcPass(VRendererBackend* renderer, const std::string name,
                         const u32 count);
 
   void create() override;

@@ -26,8 +26,7 @@
 
 namespace sge::vulkan {
 
-VulkanMasterRendergraph::VulkanMasterRendergraph(
-    VulkanRendererBackend* renderer)
+VulkanMasterRendergraph::VulkanMasterRendergraph(VRendererBackend* renderer)
     : Rendergraph(reinterpret_cast<RendererBackend*>(renderer),
                   "master-rendergraph"),
       m_imageAvaiableSemaphoreId(m_vrenderer->createSemaphore()),

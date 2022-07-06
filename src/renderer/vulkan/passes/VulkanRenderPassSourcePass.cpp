@@ -3,7 +3,7 @@
 namespace sge::vulkan {
 
 VulkanRenderPassSourcePass::VulkanRenderPassSourcePass(
-    VulkanRendererBackend* renderer, const std::string name,
+    VRendererBackend* renderer, const std::string name,
     const VkFormat colorFormat)
     : RenderPass(renderer, name, false),
       m_renderPass(m_vrenderer->createRenderPass(colorFormat)),

@@ -7,7 +7,7 @@
 namespace sge::vulkan {
 
 VulkanAcquireQueuePass::VulkanAcquireQueuePass(
-    VulkanRendererBackend* renderer, const std::string name,
+    VRendererBackend* renderer, const std::string name,
     VulkanQueueAcquireTarget queueType)
     : RenderPass(renderer, name),
       m_queueType(queueType),

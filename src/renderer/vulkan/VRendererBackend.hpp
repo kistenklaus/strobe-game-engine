@@ -23,14 +23,13 @@ enum QueueFamilyType {
 
 class VulkanMasterRendergraph;
 
-class VulkanRendererBackend : public sge::RendererBackend {
+class VRendererBackend : public sge::RendererBackend {
  public:
-  VulkanRendererBackend(std::string application_name,
-                        std::tuple<int, int, int> application_version,
-                        std::string engine_name,
-                        std::tuple<int, int, int> engine_version,
-                        Window* window);
-  ~VulkanRendererBackend() override;
+  VRendererBackend(std::string application_name,
+                   std::tuple<int, int, int> application_version,
+                   std::string engine_name,
+                   std::tuple<int, int, int> engine_version, Window* window);
+  ~VRendererBackend() override;
   void beginFrame() override;
   void renderFrame() override;
   void endFrame() override;
@@ -41,7 +40,7 @@ class VulkanRendererBackend : public sge::RendererBackend {
   void destroyImageView(uint32_t imageViewId);
   const std::pair<u32, u32> getImageViewDimensions(const u32 imageViewId);
 
-  uint32_t createShaderModule(const std::vector<char> source_code);
+  u32 createShaderModule(const std::vector<char> source_code);
   void destroyShaderModule(uint32_t shader_module_id);
   uint32_t createRenderPass(const VkFormat color_format);
   void destroyRenderPass(uint32_t renderPassId);

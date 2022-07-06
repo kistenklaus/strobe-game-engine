@@ -1,12 +1,12 @@
 #pragma once
 #include "renderer/RenderPass.hpp"
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 namespace sge::vulkan {
 
 class VulkanTriangleRenderPass : public RenderPass {
  public:
-  explicit VulkanTriangleRenderPass(VulkanRendererBackend* renderer,
+  explicit VulkanTriangleRenderPass(VRendererBackend* renderer,
                                     const std::string name);
   void recreate() override;
   void execute() override;

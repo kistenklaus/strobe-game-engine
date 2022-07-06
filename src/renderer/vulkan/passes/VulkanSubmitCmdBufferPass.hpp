@@ -2,13 +2,13 @@
 #include <string>
 
 #include "renderer/RenderPass.hpp"
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 namespace sge::vulkan {
 
 class VulkanSubmitCmdBufferPass : public RenderPass {
  public:
-  explicit VulkanSubmitCmdBufferPass(VulkanRendererBackend* renderer,
+  explicit VulkanSubmitCmdBufferPass(VRendererBackend* renderer,
                                      const std::string name);
 
   void execute() override;

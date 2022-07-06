@@ -1,13 +1,13 @@
 #pragma once
 
 #include "renderer/RenderPass.hpp"
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 namespace sge::vulkan {
 
 class VulkanRenderPassSourcePass : public RenderPass {
  public:
-  explicit VulkanRenderPassSourcePass(VulkanRendererBackend* renderer,
+  explicit VulkanRenderPassSourcePass(VRendererBackend* renderer,
                                       const std::string name,
                                       const VkFormat colorFormat);
 

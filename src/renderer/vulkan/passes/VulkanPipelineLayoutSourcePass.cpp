@@ -3,7 +3,7 @@
 namespace sge::vulkan {
 
 VulkanPipelineLayoutSourcePass::VulkanPipelineLayoutSourcePass(
-    VulkanRendererBackend* renderer, const std::string name)
+    VRendererBackend* renderer, const std::string name)
     : RenderPass(renderer, name, false),
       m_pipelineLayout(m_vrenderer->createPipelineLayout()),
       m_pipelineLayoutSource(registerSource<u32>("pipelinelayout")) {

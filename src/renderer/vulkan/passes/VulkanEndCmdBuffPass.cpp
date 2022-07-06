@@ -2,7 +2,7 @@
 
 namespace sge::vulkan {
 
-VulkanEndCmdBuffPass::VulkanEndCmdBuffPass(VulkanRendererBackend* renderer,
+VulkanEndCmdBuffPass::VulkanEndCmdBuffPass(VRendererBackend* renderer,
                                            const std::string name)
     : RenderPass(renderer, name),
       m_cmdBuffSink(registerSink<u32>("cmdbuffer")),

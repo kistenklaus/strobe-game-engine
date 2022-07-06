@@ -3,7 +3,7 @@
 namespace sge::vulkan {
 
 VulkanFramebufferCachedSourcePass::VulkanFramebufferCachedSourcePass(
-    VulkanRendererBackend* renderer, const std::string name)
+    VRendererBackend* renderer, const std::string name)
     : RenderPass(renderer, name),
       m_imageViewSink(registerSink<u32>("imageview")),
       m_renderPassSink(registerSink<u32>("renderpass")),

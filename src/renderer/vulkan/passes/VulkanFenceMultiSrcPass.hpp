@@ -3,14 +3,14 @@
 #include <string>
 
 #include "renderer/RenderPass.hpp"
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 namespace sge::vulkan {
 
 class VulkanFenceMultiSrcPass : public RenderPass {
  public:
-  VulkanFenceMultiSrcPass(VulkanRendererBackend* renderer,
-                          const std::string name, const u32 count);
+  VulkanFenceMultiSrcPass(VRendererBackend* renderer, const std::string name,
+                          const u32 count);
   void recreate() override;
   void dispose() override;
 

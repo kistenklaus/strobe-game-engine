@@ -2,15 +2,15 @@
 
 #include "logging/log.hpp"
 #include "renderer/Rendergraph.hpp"
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 namespace sge::vulkan {
 
-class VulkanRendererBackend;
+class VRendererBackend;
 
 class VulkanMasterRendergraph : public Rendergraph {
  public:
-  VulkanMasterRendergraph(VulkanRendererBackend* renderer);
+  VulkanMasterRendergraph(VRendererBackend* renderer);
   void recreate() override;
 
  private:

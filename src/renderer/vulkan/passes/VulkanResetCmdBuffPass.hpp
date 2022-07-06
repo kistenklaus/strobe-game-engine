@@ -3,13 +3,13 @@
 #include <set>
 
 #include "renderer/RenderPass.hpp"
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 namespace sge::vulkan {
 
 class VulkanResetCmdBuffPass : public RenderPass {
  public:
-  explicit VulkanResetCmdBuffPass(VulkanRendererBackend* renderer,
+  explicit VulkanResetCmdBuffPass(VRendererBackend* renderer,
                                   const std::string name);
   void recreate() override;
 

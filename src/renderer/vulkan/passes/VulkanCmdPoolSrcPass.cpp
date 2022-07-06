@@ -2,7 +2,7 @@
 
 namespace sge::vulkan {
 
-VulkanCmdPoolSrcPass::VulkanCmdPoolSrcPass(VulkanRendererBackend* renderer,
+VulkanCmdPoolSrcPass::VulkanCmdPoolSrcPass(VRendererBackend* renderer,
                                            const std::string name,
                                            QueueFamilyType queueFamily)
     : RenderPass(renderer, name, false),

@@ -3,13 +3,13 @@
 #include <string>
 
 #include "renderer/RenderPass.hpp"
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 namespace sge::vulkan {
 
 class VulkanResetCmdPoolPass : public RenderPass {
  public:
-  explicit VulkanResetCmdPoolPass(VulkanRendererBackend* renderer,
+  explicit VulkanResetCmdPoolPass(VRendererBackend* renderer,
                                   const std::string name);
   void execute() override;
   void recreate() override;

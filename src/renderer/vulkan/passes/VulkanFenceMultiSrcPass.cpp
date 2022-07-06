@@ -2,8 +2,9 @@
 
 namespace sge::vulkan {
 
-VulkanFenceMultiSrcPass::VulkanFenceMultiSrcPass(
-    VulkanRendererBackend* renderer, const std::string name, const u32 count)
+VulkanFenceMultiSrcPass::VulkanFenceMultiSrcPass(VRendererBackend* renderer,
+                                                 const std::string name,
+                                                 const u32 count)
     : RenderPass(renderer, name, false),
       m_fencesSource(registerSource<std::vector<u32>>("fences")),
       m_fences([&]() {

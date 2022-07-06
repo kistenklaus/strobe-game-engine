@@ -3,13 +3,13 @@
 #include <string>
 
 #include "renderer/RenderPass.hpp"
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 namespace sge::vulkan {
 
 class VulkanCmdPoolSrcPass : public RenderPass {
  public:
-  explicit VulkanCmdPoolSrcPass(VulkanRendererBackend* renderer,
+  explicit VulkanCmdPoolSrcPass(VRendererBackend* renderer,
                                 const std::string name,
                                 QueueFamilyType queueFamily);
 

@@ -1,6 +1,6 @@
 #include "renderer/Renderer.hpp"
 
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 using namespace sge;
 
@@ -12,7 +12,7 @@ Renderer::Renderer(RendererBackendAPI backendApi, Window* window)
         std::tuple<int, int, int> engine_version = {0, 0, 0};
         switch (backendApi) {
           case VULKAN_RENDER_BACKEND:
-            return std::make_unique<vulkan::VulkanRendererBackend>(
+            return std::make_unique<vulkan::VRendererBackend>(
                 application_name, application_version, engine_name,
                 engine_version, window);
         }

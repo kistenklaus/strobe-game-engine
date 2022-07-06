@@ -2,7 +2,7 @@
 #include <string>
 
 #include "renderer/RenderPass.hpp"
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 namespace sge::vulkan {
 
@@ -10,8 +10,7 @@ enum VulkanQueueAcquireTarget { GRAPHICS_QUEUE, COMPUTE_QUEUE, TRANSFER_QUEUE };
 
 class VulkanAcquireQueuePass : public RenderPass {
  public:
-  VulkanAcquireQueuePass(VulkanRendererBackend* renderer,
-                         const std::string name,
+  VulkanAcquireQueuePass(VRendererBackend* renderer, const std::string name,
                          VulkanQueueAcquireTarget queueType = GRAPHICS_QUEUE);
 
   void execute() override;

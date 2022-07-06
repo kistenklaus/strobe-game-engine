@@ -1,4 +1,4 @@
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -18,7 +18,7 @@ static const u32 MAX_TRANSFER_QUEUES = 1;
 static const u32 MIN_COMPUTE_QUEUES = 0;
 static const u32 MAX_COMPUTE_QUEUES = 0;
 
-VulkanRendererBackend::VulkanRendererBackend(
+VRendererBackend::VRendererBackend(
     std::string application_name, std::tuple<int, int, int> application_version,
     std::string engine_name, std::tuple<int, int, int> engine_version,
     Window *window)
@@ -308,7 +308,7 @@ VulkanRendererBackend::VulkanRendererBackend(
   m_rendergraph = std::make_unique<VulkanMasterRendergraph>(this);
 }
 
-VulkanRendererBackend::~VulkanRendererBackend() {
+VRendererBackend::~VRendererBackend() {
   VkResult result = vkDeviceWaitIdle(m_device);
   m_rendergraph->dispose();
   m_rendergraph.reset();
@@ -412,7 +412,7 @@ VulkanRendererBackend::~VulkanRendererBackend() {
   vkDestroyInstance(m_instance, nullptr);
 }
 
-void VulkanRendererBackend::recreateSwapchain() {
+void VRendererBackend::recreateSwapchain() {
   //
   vkDeviceWaitIdle(m_device);
   for (const u32 imageView : m_swapchainImageViews) {
@@ -425,24 +425,23 @@ void VulkanRendererBackend::recreateSwapchain() {
   vkDestroySwapchainKHR(m_device, oldSwapchain, nullptr);
 }
 
-void VulkanRendererBackend::beginFrame() {
+void VRendererBackend::beginFrame() {
   //
   m_rendergraph->beginFrame();
 }
 
-void VulkanRendererBackend::renderFrame() {
+void VRendererBackend::renderFrame() {
   //
   m_rendergraph->execute();
 }
 
-void VulkanRendererBackend::endFrame() {
+void VRendererBackend::endFrame() {
   //
   m_rendergraph->endFrame();
 }
 
-uint32_t VulkanRendererBackend::createImageView(VkImage image, const u32 width,
-                                                const u32 height,
-                                                VkFormat format) {
+uint32_t VRendererBackend::createImageView(VkImage image, const u32 width,
+                                           const u32 height, VkFormat format) {
   VkImageView imageView;
   VkImageViewCreateInfo imageViewCreateInfo;
   imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -476,19 +475,18 @@ uint32_t VulkanRendererBackend::createImageView(VkImage image, const u32 width,
   }
 }
 
-void VulkanRendererBackend::destroyImageView(uint32_t imageViewId) {
+void VRendererBackend::destroyImageView(uint32_t imageViewId) {
   vkDestroyImageView(m_device, getImageViewById(imageViewId), nullptr);
   m_emptyImageViewIds.push_back(imageViewId);
 }
 
-const std::pair<u32, u32> VulkanRendererBackend::getImageViewDimensions(
+const std::pair<u32, u32> VRendererBackend::getImageViewDimensions(
     const u32 imageViewId) {
   assert(imageViewId < m_imageViewDimensions.size());
   return m_imageViewDimensions[imageViewId];
 }
 
-uint32_t VulkanRendererBackend::createShaderModule(
-    const std::vector<char> source_code) {
+u32 VRendererBackend::createShaderModule(const std::vector<char> source_code) {
   // create vulkan shader module
   VkShaderModuleCreateInfo shaderCreateInfo;
   shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -513,12 +511,12 @@ uint32_t VulkanRendererBackend::createShaderModule(
   }
 }
 
-void VulkanRendererBackend::destroyShaderModule(uint32_t shader_module_id) {
+void VRendererBackend::destroyShaderModule(uint32_t shader_module_id) {
   vkDestroyShaderModule(m_device, getShaderById(shader_module_id), nullptr);
   m_empty_shader_ids.push_back(shader_module_id);
 }
 
-uint32_t VulkanRendererBackend::createPipelineLayout() {
+uint32_t VRendererBackend::createPipelineLayout() {
   //
   VkPipelineLayout layout;
   VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo;
@@ -544,21 +542,21 @@ uint32_t VulkanRendererBackend::createPipelineLayout() {
     return id;
   }
 }
-void VulkanRendererBackend::destroyPipelineLayout(uint32_t pipelineLayoutId) {
+void VRendererBackend::destroyPipelineLayout(uint32_t pipelineLayoutId) {
   //
   vkDestroyPipelineLayout(m_device, getPipelineLayoutById(pipelineLayoutId),
                           nullptr);
   m_emptyPipelineLayoutIds.push_back(pipelineLayoutId);
 }
 
-void VulkanRendererBackend::bindPipeline(uint32_t pipelineId,
-                                         uint32_t commandBufferId) {
+void VRendererBackend::bindPipeline(uint32_t pipelineId,
+                                    uint32_t commandBufferId) {
   vkCmdBindPipeline(getCommandBufferById(commandBufferId),
                     VK_PIPELINE_BIND_POINT_GRAPHICS,
                     getPipelineById(pipelineId));
 }
 
-uint32_t VulkanRendererBackend::createRenderPass(const VkFormat color_format) {
+uint32_t VRendererBackend::createRenderPass(const VkFormat color_format) {
   VkRenderPass render_pass;
   VkResult result;
 
@@ -627,11 +625,11 @@ uint32_t VulkanRendererBackend::createRenderPass(const VkFormat color_format) {
   }
 }
 
-void VulkanRendererBackend::beginRenderPass(uint32_t renderPassId,
-                                            uint32_t framebufferId,
-                                            uint32_t renderAreaWidth,
-                                            uint32_t renderAreaHeight,
-                                            uint32_t commandBufferId) {
+void VRendererBackend::beginRenderPass(uint32_t renderPassId,
+                                       uint32_t framebufferId,
+                                       uint32_t renderAreaWidth,
+                                       uint32_t renderAreaHeight,
+                                       uint32_t commandBufferId) {
   VkRenderPassBeginInfo renderPassBeginInfo;
   renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
   renderPassBeginInfo.pNext = nullptr;
@@ -653,16 +651,16 @@ void VulkanRendererBackend::beginRenderPass(uint32_t renderPassId,
                        &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
-void VulkanRendererBackend::endRenderPass(uint32_t commandBufferId) {
+void VRendererBackend::endRenderPass(uint32_t commandBufferId) {
   vkCmdEndRenderPass(getCommandBufferById(commandBufferId));
 }
 
-void VulkanRendererBackend::destroyRenderPass(uint32_t renderPassId) {
+void VRendererBackend::destroyRenderPass(uint32_t renderPassId) {
   vkDestroyRenderPass(m_device, getRenderPassById(renderPassId), nullptr);
   m_empty_render_pass_ids.push_back(renderPassId);
 }
 
-uint32_t VulkanRendererBackend::createPipeline(
+uint32_t VRendererBackend::createPipeline(
     uint32_t renderPassId, uint32_t pipelineLayoutId, uint32_t viewportWidth,
     uint32_t viewportHeight, std::optional<uint32_t> vertexShaderId,
     std::optional<uint32_t> fragmentShaderId) {
@@ -824,15 +822,14 @@ uint32_t VulkanRendererBackend::createPipeline(
   }
 }
 
-void VulkanRendererBackend::destroyPipeline(uint32_t pipelineId) {
+void VRendererBackend::destroyPipeline(uint32_t pipelineId) {
   vkDestroyPipeline(m_device, getPipelineById(pipelineId), nullptr);
   m_empty_pipeline_ids.push_back(pipelineId);
 }
 
-uint32_t VulkanRendererBackend::createFramebuffer(uint32_t renderPassId,
-                                                  uint32_t imageViewId,
-                                                  uint32_t width,
-                                                  uint32_t height) {
+uint32_t VRendererBackend::createFramebuffer(uint32_t renderPassId,
+                                             uint32_t imageViewId,
+                                             uint32_t width, uint32_t height) {
   VkFramebuffer framebuffer;
 
   VkFramebufferCreateInfo framebufferCreateInfo;
@@ -862,18 +859,18 @@ uint32_t VulkanRendererBackend::createFramebuffer(uint32_t renderPassId,
   }
 }
 
-void VulkanRendererBackend::destroyFramebuffer(uint32_t framebufferId) {
+void VRendererBackend::destroyFramebuffer(uint32_t framebufferId) {
   vkDestroyFramebuffer(m_device, getFramebufferById(framebufferId), nullptr);
   m_emptyFramebufferIds.push_back(framebufferId);
 }
 
-const std::pair<u32, u32> VulkanRendererBackend::getFramebufferDimensions(
+const std::pair<u32, u32> VRendererBackend::getFramebufferDimensions(
     const u32 framebufferId) {
   assert(framebufferId < m_framebufferDimensions.size());
   return m_framebufferDimensions[framebufferId];
 }
 
-uint32_t VulkanRendererBackend::createCommandPool(QueueFamilyType queueFamily) {
+uint32_t VRendererBackend::createCommandPool(QueueFamilyType queueFamily) {
   u32 queueFamilyIndex = [&]() -> u32 {
     switch (queueFamily) {
       case QUEUE_FAMILY_GRAPHICS:
@@ -908,7 +905,7 @@ uint32_t VulkanRendererBackend::createCommandPool(QueueFamilyType queueFamily) {
     return id;
   }
 }
-void VulkanRendererBackend::resetCommandPool(u32 commandPoolId) {
+void VRendererBackend::resetCommandPool(u32 commandPoolId) {
   VkResult result =
       vkResetCommandPool(m_device, getCommandPoolById(commandPoolId),
                          VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
@@ -923,12 +920,12 @@ void VulkanRendererBackend::resetCommandPool(u32 commandPoolId) {
   ASSERT_VKRESULT(result);
 }
 
-void VulkanRendererBackend::destroyCommandPool(uint32_t commandPoolId) {
+void VRendererBackend::destroyCommandPool(uint32_t commandPoolId) {
   vkDestroyCommandPool(m_device, getCommandPoolById(commandPoolId), nullptr);
   m_emptyCommandPoolIds.push_back(commandPoolId);
 }
 
-const std::vector<uint32_t> VulkanRendererBackend::allocateCommandBuffers(
+const std::vector<uint32_t> VRendererBackend::allocateCommandBuffers(
     uint32_t commandPoolId, uint32_t count) {
   VkCommandBufferAllocateInfo commandBufferAllocateInfo;
   commandBufferAllocateInfo.sType =
@@ -958,7 +955,7 @@ const std::vector<uint32_t> VulkanRendererBackend::allocateCommandBuffers(
   return ids;
 }
 
-void VulkanRendererBackend::freeCommandBuffers(
+void VRendererBackend::freeCommandBuffers(
     const std::vector<uint32_t> &commandBufferIds) {
   if (commandBufferIds.empty()) return;
   std::vector<VkCommandBuffer> buffers(commandBufferIds.size());
@@ -976,15 +973,15 @@ void VulkanRendererBackend::freeCommandBuffers(
                        buffers.size(), buffers.data());
 }
 
-void VulkanRendererBackend::resetCommandBuffer(const u32 commandBufferId,
-                                               const boolean releaseResources) {
+void VRendererBackend::resetCommandBuffer(const u32 commandBufferId,
+                                          const boolean releaseResources) {
   const VkResult result = vkResetCommandBuffer(
       getCommandBufferById(commandBufferId),
       (releaseResources ? VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT : 0));
   ASSERT_VKRESULT(result);
 }
 
-void VulkanRendererBackend::beginCommandBuffer(uint32_t commandBufferId) {
+void VRendererBackend::beginCommandBuffer(uint32_t commandBufferId) {
   VkCommandBufferBeginInfo commandBufferBeginInfo;
   commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   commandBufferBeginInfo.pNext = nullptr;
@@ -996,12 +993,12 @@ void VulkanRendererBackend::beginCommandBuffer(uint32_t commandBufferId) {
   ASSERT_VKRESULT(result);
 }
 
-void VulkanRendererBackend::endCommandBuffer(uint32_t commandBufferId) {
+void VRendererBackend::endCommandBuffer(uint32_t commandBufferId) {
   VkResult result = vkEndCommandBuffer(getCommandBufferById(commandBufferId));
   ASSERT_VKRESULT(result);
 }
 
-uint32_t VulkanRendererBackend::createSemaphore() {
+uint32_t VRendererBackend::createSemaphore() {
   VkSemaphore semaphore;
   VkSemaphoreCreateInfo semaphoreCreateInfo;
   semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1021,18 +1018,17 @@ uint32_t VulkanRendererBackend::createSemaphore() {
   }
 }
 
-void VulkanRendererBackend::destroySemaphore(uint32_t semaphoreId) {
+void VRendererBackend::destroySemaphore(uint32_t semaphoreId) {
   vkDestroySemaphore(m_device, getSemaphoreById(semaphoreId), nullptr);
   m_emptySemaphoreIds.push_back(semaphoreId);
 }
 
-void VulkanRendererBackend::drawCall(uint32_t vertexCount,
-                                     uint32_t instanceCount,
-                                     uint32_t commandBufferId) {
+void VRendererBackend::drawCall(uint32_t vertexCount, uint32_t instanceCount,
+                                uint32_t commandBufferId) {
   vkCmdDraw(getCommandBufferById(commandBufferId), vertexCount, instanceCount,
             0, 0);
 }
-boolean VulkanRendererBackend::acquireNextSwapchainFrame(u32 signalSem) {
+boolean VRendererBackend::acquireNextSwapchainFrame(u32 signalSem) {
   VkResult result = vkAcquireNextImageKHR(
       m_device, m_swapchain, std::numeric_limits<uint64_t>::max(),
       getSemaphoreById(signalSem), VK_NULL_HANDLE, &m_swapchainFrameIndex);
@@ -1042,15 +1038,15 @@ boolean VulkanRendererBackend::acquireNextSwapchainFrame(u32 signalSem) {
   return false;
 }
 
-u32 VulkanRendererBackend::getCurrentSwapchainImageView() {
+u32 VRendererBackend::getCurrentSwapchainImageView() {
   return m_swapchainImageViews[m_swapchainFrameIndex];
 }
 
-u32 VulkanRendererBackend::getCurrentSwapchainFrameIndex() {
+u32 VRendererBackend::getCurrentSwapchainFrameIndex() {
   return m_swapchainFrameIndex;
 }
 
-boolean VulkanRendererBackend::presentQueue(
+boolean VRendererBackend::presentQueue(
     u32 queueId, const std::vector<u32> &waitSemaphoreIds) {
   VkPresentInfoKHR presentInfo;
   presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -1073,7 +1069,7 @@ boolean VulkanRendererBackend::presentQueue(
   return false;
 }
 
-void VulkanRendererBackend::submitCommandBuffers(
+void VRendererBackend::submitCommandBuffers(
     u32 queueId, const std::vector<u32> &commandBufferIds,
     const std::vector<u32> &waitSemaphoreIds,
     const std::vector<u32> &signalSemaphoreIds,
@@ -1116,7 +1112,7 @@ void VulkanRendererBackend::submitCommandBuffers(
   ASSERT_VKRESULT(result);
 }
 
-u32 VulkanRendererBackend::createFence() {
+u32 VRendererBackend::createFence() {
   VkFenceCreateInfo createInfo;
   createInfo.pNext = nullptr;
   createInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -1135,25 +1131,25 @@ u32 VulkanRendererBackend::createFence() {
   }
 }
 
-void VulkanRendererBackend::destroyFence(const u32 fenceId) {
+void VRendererBackend::destroyFence(const u32 fenceId) {
   m_emptyFenceIds.push_back(fenceId);
   vkDestroyFence(m_device, getFenceById(fenceId), nullptr);
 }
 
-void VulkanRendererBackend::resetFence(const u32 fenceId) {
+void VRendererBackend::resetFence(const u32 fenceId) {
   VkResult result = vkResetFences(m_device, 1, &getFenceById(fenceId));
   ASSERT_VKRESULT(result);
 }
 
-void VulkanRendererBackend::waitForFence(const u32 fenceId) {
+void VRendererBackend::waitForFence(const u32 fenceId) {
   VkResult result = vkWaitForFences(m_device, 1, &getFenceById(fenceId), true,
                                     std::numeric_limits<u64>::max());
   ASSERT_VKRESULT(result);
 }
 
-void VulkanRendererBackend::waitDeviceIdle() { vkDeviceWaitIdle(m_device); }
+void VRendererBackend::waitDeviceIdle() { vkDeviceWaitIdle(m_device); }
 
-u32 VulkanRendererBackend::getAnyGraphicsQueue() {
+u32 VRendererBackend::getAnyGraphicsQueue() {
   for (u32 i = 0; i < m_queueIds.size(); i++) {
     if (m_queueIds[i].first == GFX_QUEUE_IDENT) {
       return i;
@@ -1161,7 +1157,7 @@ u32 VulkanRendererBackend::getAnyGraphicsQueue() {
   }
   throw std::runtime_error("no graphics queue avaiable");
 }
-u32 VulkanRendererBackend::getAnyTransferQueue() {
+u32 VRendererBackend::getAnyTransferQueue() {
   for (u32 i = 0; i < m_queueIds.size(); i++) {
     if (m_queueIds[i].first == TRANSFER_QUEUE_IDENT) {
       return i;
@@ -1169,7 +1165,7 @@ u32 VulkanRendererBackend::getAnyTransferQueue() {
   }
   throw std::runtime_error("no transfer queue avaiable");
 }
-u32 VulkanRendererBackend::getAnyComputeQueue() {
+u32 VRendererBackend::getAnyComputeQueue() {
   for (u32 i = 0; i < m_queueIds.size(); i++) {
     if (m_queueIds[i].first == COMPUTE_QUEUE_IDENT) {
       return i;
@@ -1178,7 +1174,7 @@ u32 VulkanRendererBackend::getAnyComputeQueue() {
   throw std::runtime_error("no compute queue avaiable");
 }
 
-void VulkanRendererBackend::updateSwapchainSupport() {
+void VRendererBackend::updateSwapchainSupport() {
   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physicalDevice, m_surface,
                                             &m_swapchainSupport.capabilities);
 
@@ -1205,7 +1201,7 @@ void VulkanRendererBackend::updateSwapchainSupport() {
   }
 }
 
-void VulkanRendererBackend::createSwapchain() {
+void VRendererBackend::createSwapchain() {
   updateSwapchainSupport();
 
   VkExtent2D extend;
@@ -1241,7 +1237,7 @@ void VulkanRendererBackend::createSwapchain() {
       std::min(m_swapchainSupport.capabilities.minImageCount,
                (uint32_t)MAX_SWAPCHAIN_IMAGES);
   swapchainCreateInfo.imageFormat =
-      VulkanRendererBackend::SURFACE_COLOR_FORMAT;  // TODO select dynamicly
+      VRendererBackend::SURFACE_COLOR_FORMAT;  // TODO select dynamicly
   swapchainCreateInfo.imageColorSpace =
       VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;  // TODO check if valid.
   swapchainCreateInfo.imageExtent = extend;
@@ -1272,61 +1268,58 @@ void VulkanRendererBackend::createSwapchain() {
   for (unsigned int i = 0; i < n_swapchainImages; i++) {
     uint32_t imageViewId =
         createImageView(swapchainImages[i], extend.width, extend.height,
-                        VulkanRendererBackend::SURFACE_COLOR_FORMAT);
+                        VRendererBackend::SURFACE_COLOR_FORMAT);
     m_swapchainImageViews[i] = imageViewId;
   }
 }
 
-VkImageView &VulkanRendererBackend::getImageViewById(
-    const uint32_t imageViewId) {
+VkImageView &VRendererBackend::getImageViewById(const uint32_t imageViewId) {
   assert(imageViewId < m_imageViews.size());
   return m_imageViews[imageViewId];
 }
 
-VkPipelineLayout &VulkanRendererBackend::getPipelineLayoutById(
+VkPipelineLayout &VRendererBackend::getPipelineLayoutById(
     const uint32_t pipelineLayoutId) {
   assert(pipelineLayoutId < m_pipelineLayouts.size());
   return m_pipelineLayouts[pipelineLayoutId];
 }
-VkPipeline &VulkanRendererBackend::getPipelineById(const uint32_t pipelineId) {
+VkPipeline &VRendererBackend::getPipelineById(const uint32_t pipelineId) {
   assert(pipelineId < m_pipelines.size());
   return m_pipelines[pipelineId];
 }
-VkRenderPass &VulkanRendererBackend::getRenderPassById(
-    const uint32_t renderPassId) {
+VkRenderPass &VRendererBackend::getRenderPassById(const uint32_t renderPassId) {
   assert(renderPassId < m_render_passes.size());
   return m_render_passes[renderPassId];
 }
-VkShaderModule &VulkanRendererBackend::getShaderById(const uint32_t shaderId) {
+VkShaderModule &VRendererBackend::getShaderById(const uint32_t shaderId) {
   assert(shaderId < m_shaders.size());
   return m_shaders[shaderId];
 }
 
-VkFramebuffer &VulkanRendererBackend::getFramebufferById(
+VkFramebuffer &VRendererBackend::getFramebufferById(
     const uint32_t framebufferId) {
   assert(framebufferId < m_framebuffers.size());
   return m_framebuffers[framebufferId];
 }
 
-VkCommandPool &VulkanRendererBackend::getCommandPoolById(
+VkCommandPool &VRendererBackend::getCommandPoolById(
     const uint32_t commandPoolId) {
   assert(commandPoolId < m_commandPools.size());
   return m_commandPools[commandPoolId];
 }
 
-VkCommandBuffer &VulkanRendererBackend::getCommandBufferById(
+VkCommandBuffer &VRendererBackend::getCommandBufferById(
     const uint32_t commandBufferId) {
   assert(commandBufferId < m_commandBuffers.size());
   return m_commandBuffers[commandBufferId];
 }
 
-VkSemaphore &VulkanRendererBackend::getSemaphoreById(
-    const uint32_t semaphoreId) {
+VkSemaphore &VRendererBackend::getSemaphoreById(const uint32_t semaphoreId) {
   assert(semaphoreId < m_semaphores.size());
   return m_semaphores[semaphoreId];
 }
 
-VkQueue &VulkanRendererBackend::getQueueById(const u32 queueId) {
+VkQueue &VRendererBackend::getQueueById(const u32 queueId) {
   assert(queueId < m_queueIds.size());
   const u32 type = m_queueIds[queueId].first;
   const u32 index = m_queueIds[queueId].second;
@@ -1344,7 +1337,7 @@ VkQueue &VulkanRendererBackend::getQueueById(const u32 queueId) {
   throw std::runtime_error("how did we get here =^) !");
 }
 
-VkFence &VulkanRendererBackend::getFenceById(const u32 fenceId) {
+VkFence &VRendererBackend::getFenceById(const u32 fenceId) {
   assert(fenceId < m_fences.size());
   return m_fences[fenceId];
 }

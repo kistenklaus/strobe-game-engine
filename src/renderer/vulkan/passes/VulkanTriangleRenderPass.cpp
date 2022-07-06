@@ -3,8 +3,8 @@
 #include "fileio/fileio.hpp"
 
 namespace sge::vulkan {
-VulkanTriangleRenderPass::VulkanTriangleRenderPass(
-    VulkanRendererBackend* renderer, const std::string name)
+VulkanTriangleRenderPass::VulkanTriangleRenderPass(VRendererBackend* renderer,
+                                                   const std::string name)
     : RenderPass(renderer, name),
       m_framebufferSink(registerSink<u32>("framebuffer")),
       m_renderPassSink(registerSink<u32>("renderpass")),

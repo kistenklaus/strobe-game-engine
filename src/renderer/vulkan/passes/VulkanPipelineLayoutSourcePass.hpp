@@ -1,12 +1,12 @@
 #pragma once
 #include "renderer/RenderPass.hpp"
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 namespace sge::vulkan {
 
 class VulkanPipelineLayoutSourcePass : public RenderPass {
  public:
-  explicit VulkanPipelineLayoutSourcePass(VulkanRendererBackend* renderer,
+  explicit VulkanPipelineLayoutSourcePass(VRendererBackend* renderer,
                                           const std::string name);
 
   void dispose() override;

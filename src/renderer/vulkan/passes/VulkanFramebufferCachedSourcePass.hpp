@@ -2,13 +2,13 @@
 #include <map>
 
 #include "renderer/RenderPass.hpp"
-#include "renderer/vulkan/VulkanRendererBackend.hpp"
+#include "renderer/vulkan/VRendererBackend.hpp"
 
 namespace sge::vulkan {
 
 class VulkanFramebufferCachedSourcePass : public RenderPass {
  public:
-  explicit VulkanFramebufferCachedSourcePass(VulkanRendererBackend* renderer,
+  explicit VulkanFramebufferCachedSourcePass(VRendererBackend* renderer,
                                              const std::string name);
 
   void execute() override;

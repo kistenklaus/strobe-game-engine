@@ -4,8 +4,8 @@
 
 namespace sge::vulkan {
 
-VulkanSubmitCmdBufferPass::VulkanSubmitCmdBufferPass(
-    VulkanRendererBackend* renderer, const std::string name)
+VulkanSubmitCmdBufferPass::VulkanSubmitCmdBufferPass(VRendererBackend* renderer,
+                                                     const std::string name)
     : RenderPass(renderer, name),
       m_fenceSink(registerSink<u32>("fence")),
       m_queueSink(registerSink<u32>("queue")),

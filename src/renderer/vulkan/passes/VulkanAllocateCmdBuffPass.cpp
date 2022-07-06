@@ -2,8 +2,8 @@
 
 namespace sge::vulkan {
 
-VulkanAllocateCmdBuffPass::VulkanAllocateCmdBuffPass(
-    VulkanRendererBackend* renderer, const std::string name)
+VulkanAllocateCmdBuffPass::VulkanAllocateCmdBuffPass(VRendererBackend* renderer,
+                                                     const std::string name)
     : RenderPass(renderer, name),
       m_poolSink(registerSink<u32>("cmdpool")),
       m_bufferSource(registerSource<u32>("cmdbuffer")) {}

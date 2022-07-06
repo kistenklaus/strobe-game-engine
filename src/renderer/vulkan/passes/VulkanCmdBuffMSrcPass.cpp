@@ -3,7 +3,7 @@
 
 namespace sge::vulkan {
 
-VulkanCmdBuffMSrcPass::VulkanCmdBuffMSrcPass(VulkanRendererBackend* renderer,
+VulkanCmdBuffMSrcPass::VulkanCmdBuffMSrcPass(VRendererBackend* renderer,
                                              const std::string name,
                                              const u32 count)
     : RenderPass(renderer, name, false),

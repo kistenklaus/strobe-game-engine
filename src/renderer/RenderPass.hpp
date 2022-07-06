@@ -14,7 +14,7 @@
 
 namespace sge {
 
-#define m_vrenderer (reinterpret_cast<VulkanRendererBackend*>(m_renderer))
+#define m_vrenderer (reinterpret_cast<VRendererBackend*>(m_renderer))
 
 class ISink;
 template <class Resource_t>

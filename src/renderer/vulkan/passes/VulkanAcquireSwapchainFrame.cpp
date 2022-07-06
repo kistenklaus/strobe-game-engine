@@ -5,7 +5,7 @@
 namespace sge::vulkan {
 
 VulkanAcquireSwapchainFrame::VulkanAcquireSwapchainFrame(
-    VulkanRendererBackend* renderer, const std::string name)
+    VRendererBackend* renderer, const std::string name)
     : RenderPass(renderer, name),
       m_singalSemaphoresSource(registerSource<std::vector<u32>>("signal")),
       m_swapchainImageViewSource(registerSource<u32>("imageview")),

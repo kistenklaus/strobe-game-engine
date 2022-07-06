@@ -1,7 +1,7 @@
 #include "renderer/vulkan/passes/VulkanResetCmdPoolPass.hpp"
 
 namespace sge::vulkan {
-VulkanResetCmdPoolPass::VulkanResetCmdPoolPass(VulkanRendererBackend* renderer,
+VulkanResetCmdPoolPass::VulkanResetCmdPoolPass(VRendererBackend* renderer,
                                                const std::string name)
     : RenderPass(renderer, name),
       m_fenceSink(registerSink<u32>("fence")),

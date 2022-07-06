@@ -5,7 +5,7 @@
 
 namespace sge::vulkan {
 
-VulkanPresentQueuePass::VulkanPresentQueuePass(VulkanRendererBackend* renderer,
+VulkanPresentQueuePass::VulkanPresentQueuePass(VRendererBackend* renderer,
                                                const std::string name)
     : RenderPass(renderer, name),
       m_queueSink(registerSink<u32>("queue")),
