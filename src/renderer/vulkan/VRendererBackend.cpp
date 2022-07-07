@@ -1285,7 +1285,7 @@ void VRendererBackend::destroyImageView(imageview_t &imageview) {
 }
 void VRendererBackend::destroySwapchain(swapchain_t &swapchain) {
   //
-  vkDestroySwapchainKHR(m_device.m_handle, m_swapchain.m_handle, nullptr);
+  vkDestroySwapchainKHR(m_device.m_handle, swapchain.m_handle, nullptr);
 }
 void VRendererBackend::destroySurface(surface_t &surface) {
   //
