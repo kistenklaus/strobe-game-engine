@@ -236,10 +236,10 @@ struct semaphore {
 
 class VRendererBackend : public sge::RendererBackend {
  public:
-  VRendererBackend(std::string application_name,
-                   std::tuple<int, int, int> application_version,
-                   std::string engine_name,
-                   std::tuple<int, int, int> engine_version, Window* window);
+  VRendererBackend(std::string& application_name,
+                   std::tuple<u32, u32, u32>& application_version,
+                   std::string& engine_name,
+                   std::tuple<u32, u32, u32>& engine_version, Window* window);
   ~VRendererBackend() override;
   void beginFrame() override;
   void renderFrame() override;
@@ -409,6 +409,12 @@ class VRendererBackend : public sge::RendererBackend {
   semaphore_t& getSemaphoreByHandle(const semaphore semaphoreId);
   queue_t& getQueueByHandle(const queue queueId);
   fence_t& getFenceByHandle(const fence fenceId);
+  instance_t createInstance(const std::string& applicationName,
+                            const std::tuple<u32, u32, u32>& applicationVersion,
+                            const std::string& engineName,
+                            const std::tuple<u32, u32, u32>& engineVersion);
+  device_t createDevice();
+  surface_t createSurface();
   void destroyCommandPool(command_pool_t& commandPool);
   void destroySemaphore(semaphore_t& semaphore);
   void destroyPipeline(pipeline_t& pipeline);

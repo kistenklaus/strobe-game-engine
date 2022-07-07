@@ -1,1 +1,3 @@
-refactor sink to only require one pointer unreferencing.
+
+refactor backend-renderer esspecially the constructor! (helper methods)
+

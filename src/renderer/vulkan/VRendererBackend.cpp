@@ -20,22 +20,92 @@ static const u32 MIN_COMPUTE_QUEUES = 0;
 static const u32 MAX_COMPUTE_QUEUES = 0;
 
 VRendererBackend::VRendererBackend(
-    std::string application_name, std::tuple<int, int, int> application_version,
-    std::string engine_name, std::tuple<int, int, int> engine_version,
+    std::string &applicationName, std::tuple<u32, u32, u32> &applicationVersion,
+    std::string &engineName, std::tuple<u32, u32, u32> &engineVersion,
     Window *window)
     : mp_window(window) {
+  m_instance = createInstance(applicationName, applicationVersion, engineName,
+                              engineVersion);
+  m_device = createDevice();
+  m_surface = createSurface();
+  updateSwapchainSupport();
+  createSwapchain();
+  m_rootPass = new VMasterRendergraph(this);
+}
+
+VRendererBackend::~VRendererBackend() {
+  waitDeviceIdle();
+  m_rootPass->dispose();
+  delete m_rootPass;
+
+  for (command_buffer_t &command_buffer : m_commandBuffers) {
+    // freeing is propably not required if we destroy the pools
+  }
+  for (command_pool_t &command_pool : m_commandPools) {
+    destroyCommandPool(command_pool);
+  }
+  for (semaphore_t &semaphore : m_semaphores) {
+    destroySemaphore(semaphore);
+  }
+  for (pipeline_t &pipeline : m_pipelines) {
+    destroyPipeline(pipeline);
+  }
+
+  for (pipeline_layout_t &pipelineLayout : m_pipelineLayouts) {
+    destroyPipelineLayout(pipelineLayout);
+  }
+  for (shader_module_t &shaderModule : m_shaders) {
+    destroyShaderModule(shaderModule);
+  }
+  for (framebuffer_t &framebuffer : m_framebuffers) {
+    destroyFramebuffer(framebuffer);
+  }
+  for (renderpass_t &renderpass : m_renderpasses) {
+    destroyRenderPass(renderpass);
+  }
+  for (imageview_t &imageview : m_imageViews) {
+    destroyImageView(imageview);
+  }
+  destroySwapchain(m_swapchain);
+  destroySurface(m_surface);
+  destroyDevice(m_device);
+  destroyInstance(m_instance);
+  // vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
+  // vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+  // vkDestroyDevice(m_device, nullptr);
+  // vkDestroyInstance(m_instance, nullptr);
+}
+
+void VRendererBackend::recreateSwapchain() {
   //
+  waitDeviceIdle();
+
+  for (const imageview &imageview : m_swapchain.m_imageViewsHandles) {
+    destroyImageView(imageview);
+  }
+
+  swapchain_t oldSwapchain = m_swapchain;
+  createSwapchain();
+
+  destroySwapchain(oldSwapchain);
+}
+
+VRendererBackend::instance_t VRendererBackend::createInstance(
+    const std::string &applicationName,
+    const std::tuple<u32, u32, u32> &applicationVersion,
+    const std::string &engineName,
+    const std::tuple<u32, u32, u32> &engineVersion) {
   VkApplicationInfo appInfo;
   appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
   appInfo.pNext = NULL;
-  appInfo.pApplicationName = application_name.c_str();
-  appInfo.applicationVersion = VK_MAKE_VERSION(
-      std::get<0>(application_version), std::get<1>(application_version),
-      std::get<2>(application_version));
-  appInfo.pEngineName = engine_name.c_str();
+  appInfo.pApplicationName = applicationName.c_str();
+  appInfo.applicationVersion = VK_MAKE_VERSION(std::get<0>(applicationVersion),
+                                               std::get<1>(applicationVersion),
+                                               std::get<2>(applicationVersion));
+  appInfo.pEngineName = engineName.c_str();
   appInfo.engineVersion =
-      VK_MAKE_VERSION(std::get<0>(engine_version), std::get<1>(engine_version),
-                      std::get<2>(engine_version));
+      VK_MAKE_VERSION(std::get<0>(engineVersion), std::get<1>(engineVersion),
+                      std::get<2>(engineVersion));
   appInfo.apiVersion = VK_MAKE_VERSION(1, 1, 0);
 
   uint32_t n_layersProperties;
@@ -72,7 +142,7 @@ VRendererBackend::VRendererBackend(
   std::vector<std::string> window_extentions =
       [&]() -> std::vector<std::string> {
     //
-    switch (window->getBackendAPI()) {
+    switch (mp_window->getBackendAPI()) {
       case GLFW_WINDOW_BACKEND:
         uint32_t count;
         const char **glfw_ext = glfwGetRequiredInstanceExtensions(&count);
@@ -114,12 +184,17 @@ VRendererBackend::VRendererBackend(
   instanceInfo.enabledExtensionCount = avaiableExtentions.size();
   instanceInfo.ppEnabledExtensionNames = desiredExtentions.data();
 
-  result = vkCreateInstance(&instanceInfo, nullptr, &m_instance.m_handle);
+  instance_t instance{};
+  result = vkCreateInstance(&instanceInfo, nullptr, &instance.m_handle);
   ASSERT_VKRESULT(result);
+  return instance;
+}
 
+VRendererBackend::device_t VRendererBackend::createDevice() {
+  device_t device{};
   uint32_t n_physicalDevices;
-  result = vkEnumeratePhysicalDevices(m_instance.m_handle, &n_physicalDevices,
-                                      nullptr);
+  VkResult result = vkEnumeratePhysicalDevices(m_instance.m_handle,
+                                               &n_physicalDevices, nullptr);
   ASSERT_VKRESULT(result);
 
   std::vector<VkPhysicalDevice> physicalDevices(n_physicalDevices);
@@ -157,7 +232,7 @@ VRendererBackend::VRendererBackend(
     }
   }
   assert(selectedPhysicalDevice);  // raise if nullptr
-  m_device.m_physicalDevice = selectedPhysicalDevice;
+  device.m_physicalDevice = selectedPhysicalDevice;
 
   // TODO select a the queue with a bit more BRAIN !!!
   // i want one queue for transfer one for rendering and one for computes if
@@ -177,17 +252,17 @@ VRendererBackend::VRendererBackend(
     if (queue_family_properties[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
       graphics_queue_family_index = {index,
                                      queue_family_properties[index].queueCount};
-      m_device.m_gfxQueueFamilyIndex = index;
+      device.m_gfxQueueFamilyIndex = index;
     } else if (queue_family_properties[index].queueFlags &
                VK_QUEUE_TRANSFER_BIT) {
       transfer_queue_family_index = {index,
                                      queue_family_properties[index].queueCount};
-      m_device.m_transferQueueFamilyIndex = index;
+      device.m_transferQueueFamilyIndex = index;
     } else if (queue_family_properties[index].queueFlags &
                VK_QUEUE_COMPUTE_BIT) {
       compute_queue_family_index = {index,
                                     queue_family_properties[index].queueCount};
-      m_device.m_computeQueueFamilyIndex = index;
+      device.m_computeQueueFamilyIndex = index;
     }
   }
 
@@ -259,120 +334,45 @@ VRendererBackend::VRendererBackend(
   deviceCreateInfo.pEnabledFeatures = &usedFeatures;
 
   result = vkCreateDevice(selectedPhysicalDevice, &deviceCreateInfo, nullptr,
-                          &m_device.m_handle);
+                          &device.m_handle);
 
   for (u32 i = 0; i < graphicsQueueCount; i++) {
     queue_t queue{};
     queue.m_type = QUEUE_FAMILY_GRAPHICS;
-    vkGetDeviceQueue(m_device.m_handle, m_device.m_gfxQueueFamilyIndex.value(),
-                     i, &queue.m_handle);
+    vkGetDeviceQueue(device.m_handle, device.m_gfxQueueFamilyIndex.value(), i,
+                     &queue.m_handle);
     m_queues.insert(queue);
   }
   for (u32 i = 0; i < transferQueueCount; i++) {
     queue_t queue{};
     queue.m_type = QUEUE_FAMILY_TRANSFER;
-    vkGetDeviceQueue(m_device.m_handle,
-                     m_device.m_transferQueueFamilyIndex.value(), i,
-                     &queue.m_handle);
+    vkGetDeviceQueue(device.m_handle, device.m_transferQueueFamilyIndex.value(),
+                     i, &queue.m_handle);
     m_queues.insert(queue);
   }
   for (u32 i = 0; i < computeQueueCount; i++) {
     queue_t queue{};
     queue.m_type = QUEUE_FAMILY_COMPUTE;
-    vkGetDeviceQueue(m_device.m_handle,
-                     m_device.m_computeQueueFamilyIndex.value(), i,
-                     &queue.m_handle);
+    vkGetDeviceQueue(device.m_handle, device.m_computeQueueFamilyIndex.value(),
+                     i, &queue.m_handle);
     m_queues.insert(queue);
   }
+  return device;
+}
 
+VRendererBackend::surface_t VRendererBackend::createSurface() {
   // create surface and swapchain.
-  if (window->getBackendAPI() == GLFW_WINDOW_BACKEND) {
+  surface_t surface{};
+  if (mp_window->getBackendAPI() == GLFW_WINDOW_BACKEND) {
     const glfw::GlfwWindowBackend &backend =
-        static_cast<const glfw::GlfwWindowBackend &>(window->getBackend());
-    result = glfwCreateWindowSurface(
+        static_cast<const glfw::GlfwWindowBackend &>(mp_window->getBackend());
+    VkResult result = glfwCreateWindowSurface(
         m_instance.m_handle, const_cast<GLFWwindow *>(backend.pointer()),
-        nullptr, &m_surface.m_handle);
+        nullptr, &surface.m_handle);
     ASSERT_VKRESULT(result);
   } else
     throw std::runtime_error("unsupported window backend");
-
-  updateSwapchainSupport();
-  // check if VK_FORMAT_B8G8R8A8_UNORM is supported.
-  // TODO better to select the proper format (would support more devices).
-  bool supportsFormat = false;
-  for (VkSurfaceFormatKHR format : m_surface.m_formats) {
-    if (format.format == SURFACE_COLOR_FORMAT) {
-      supportsFormat = true;
-    }
-  }
-  assert(supportsFormat);
-
-  VkBool32 surfaceSupport = false;
-  result = vkGetPhysicalDeviceSurfaceSupportKHR(
-      m_device.m_physicalDevice, 0, m_surface.m_handle, &surfaceSupport);
-  ASSERT_VKRESULT(result);
-  assert(surfaceSupport);
-
-  createSwapchain();
-
-  m_rootPass = new VMasterRendergraph(this);
-}
-
-VRendererBackend::~VRendererBackend() {
-  waitDeviceIdle();
-  m_rootPass->dispose();
-  delete m_rootPass;
-
-  for (command_buffer_t &command_buffer : m_commandBuffers) {
-    // freeing is propably not required if we destroy the pools
-  }
-  for (command_pool_t &command_pool : m_commandPools) {
-    destroyCommandPool(command_pool);
-  }
-  for (semaphore_t &semaphore : m_semaphores) {
-    destroySemaphore(semaphore);
-  }
-  for (pipeline_t &pipeline : m_pipelines) {
-    destroyPipeline(pipeline);
-  }
-
-  for (pipeline_layout_t &pipelineLayout : m_pipelineLayouts) {
-    destroyPipelineLayout(pipelineLayout);
-  }
-  for (shader_module_t &shaderModule : m_shaders) {
-    destroyShaderModule(shaderModule);
-  }
-  for (framebuffer_t &framebuffer : m_framebuffers) {
-    destroyFramebuffer(framebuffer);
-  }
-  for (renderpass_t &renderpass : m_renderpasses) {
-    destroyRenderPass(renderpass);
-  }
-  for (imageview_t &imageview : m_imageViews) {
-    destroyImageView(imageview);
-  }
-  destroySwapchain(m_swapchain);
-  destroySurface(m_surface);
-  destroyDevice(m_device);
-  destroyInstance(m_instance);
-  // vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
-  // vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-  // vkDestroyDevice(m_device, nullptr);
-  // vkDestroyInstance(m_instance, nullptr);
-}
-
-void VRendererBackend::recreateSwapchain() {
-  //
-  waitDeviceIdle();
-
-  for (const imageview &imageview : m_swapchain.m_imageViewsHandles) {
-    destroyImageView(imageview);
-  }
-
-  swapchain_t oldSwapchain = m_swapchain;
-  createSwapchain();
-
-  destroySwapchain(oldSwapchain);
+  return surface;
 }
 
 void VRendererBackend::beginFrame() {
@@ -1101,6 +1101,20 @@ void VRendererBackend::updateSwapchainSupport() {
         m_device.m_physicalDevice, m_surface.m_handle, &presentModeCount,
         m_surface.m_presentModes.data());
   }
+
+  bool supportsFormat = false;
+  for (VkSurfaceFormatKHR format : m_surface.m_formats) {
+    if (format.format == SURFACE_COLOR_FORMAT) {
+      supportsFormat = true;
+    }
+  }
+  assert(supportsFormat);
+
+  VkBool32 surfaceSupport = false;
+  const VkResult result = vkGetPhysicalDeviceSurfaceSupportKHR(
+      m_device.m_physicalDevice, 0, m_surface.m_handle, &surfaceSupport);
+  ASSERT_VKRESULT(result);
+  assert(surfaceSupport);
 }
 
 void VRendererBackend::createSwapchain() {
