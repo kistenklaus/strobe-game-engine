@@ -6,29 +6,25 @@ namespace sge::vulkan {
 VResetCmdBuffPass::VResetCmdBuffPass(VRendererBackend* renderer,
                                      const std::string name)
     : RenderPass(renderer, name),
-      m_cmdbufferSink(sink<command_buffer>("cmdbuffer")),
-      m_fenceSink(sink<fence>("fence")),
-      m_cmdbufferSrc(source<command_buffer>("cmdbuffer")),
-      m_fenceSrc(source<fence>("fence")) {
-  registerSink(&m_cmdbufferSink);
-  registerSink(&m_fenceSink);
-  registerSource(&m_cmdbufferSrc);
-  registerSource(&m_fenceSrc);
+      m_cmdbufferSS(sinksource<command_buffer>("cmdbuffer")),
+      m_fenceSS(sinksource<fence>("fence")) {
+  registerSinkSource(&m_cmdbufferSS);
+  registerSinkSource(&m_fenceSS);
 }
 
 void VResetCmdBuffPass::recreate() { m_seenFences.clear(); }
 
 void VResetCmdBuffPass::execute() {
-  if (m_seenFences.contains(*m_fenceSink)) {
-    m_vrenderer->waitForFence(*m_fenceSink);
-    m_vrenderer->resetFence(*m_fenceSink);
+  if (m_seenFences.contains(*m_fenceSS)) {
+    m_vrenderer->waitForFence(*m_fenceSS);
+    m_vrenderer->resetFence(*m_fenceSS);
   } else {
-    m_seenFences.insert(*m_fenceSink);
+    m_seenFences.insert(*m_fenceSS);
   }
-  m_vrenderer->resetCommandBuffer(*m_cmdbufferSink);
+  m_vrenderer->resetCommandBuffer(*m_cmdbufferSS);
 
-  m_cmdbufferSrc.set(m_cmdbufferSink);
-  m_fenceSrc.set(m_fenceSink);
+  m_cmdbufferSS.forward();
+  m_fenceSS.forward();
 }
 
 }  // namespace sge::vulkan

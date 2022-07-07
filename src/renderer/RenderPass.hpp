@@ -51,6 +51,10 @@ class RenderPass {
     sink->m_pass = this;
     m_sinks.push_back(sink);
   }
+  void registerSinkSource(isinksource* sinksource) {
+    registerSink(sinksource->getSink());
+    registerSource(sinksource->getSource());
+  }
 
  private:
  protected:

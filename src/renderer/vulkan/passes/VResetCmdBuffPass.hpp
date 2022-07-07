@@ -16,10 +16,8 @@ class VResetCmdBuffPass : public RenderPass {
   void execute() override;
 
  private:
-  sink<command_buffer> m_cmdbufferSink;
-  sink<fence> m_fenceSink;
-  source<command_buffer> m_cmdbufferSrc;
-  source<fence> m_fenceSrc;
+  sinksource<command_buffer> m_cmdbufferSS;
+  sinksource<fence> m_fenceSS;
 
   std::set<fence> m_seenFences;
 };

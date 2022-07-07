@@ -34,7 +34,7 @@ struct source : public isource {
   friend struct sink<T>;
 
  public:
-  source(const std::string name, T* p_value = nullptr)
+  explicit source(const std::string name, T* p_value = nullptr)
       : isource(name, std::type_index(typeid(T))), m_ptr(p_value) {}
 
   void set(T* p_value) { m_ptr = p_value; }
@@ -91,8 +91,37 @@ struct sink : public isink {
     m_ptr = reinterpret_cast<source<T>*>(p_source);
   }
 
+ protected:
+  boolean m_isFwd = false;
+
  private:
   source<T>* m_ptr;
+};
+
+struct isinksource {
+  virtual isink* getSink() = 0;
+  virtual isource* getSource() = 0;
+};
+
+template <typename T>
+struct sinksource : public isinksource {
+ public:
+  explicit sinksource(const std::string& name)
+      : m_sink(sink<T>(name)), m_source(source<T>(name)) {}
+
+  T& operator*() const { return *m_sink; }
+  T* operator->() { return m_sink; }
+  operator bool() const { return (bool)m_sink; }
+  void forward() { m_source.set(m_sink); }
+  void set(T* p_value) { m_source.set(p_value); }
+  void set(sink<T>& sink) { m_source.set(sink); }
+  void reset() { m_source.reset(); }
+  isink* getSink() { return &m_sink; }
+  isource* getSource() { return &m_source; }
+
+ private:
+  sink<T> m_sink;
+  source<T> m_source;
 };
 
 }  // namespace sge
