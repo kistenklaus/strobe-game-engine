@@ -3,6 +3,7 @@
 #include <cassert>
 #include <iostream>
 
+#include "renderer/vulkan/VMasterRendergraph.hpp"
 #include "window/glfw/GlfwWindowBackend.hpp"
 
 namespace sge::vulkan {
@@ -113,15 +114,16 @@ VRendererBackend::VRendererBackend(
   instanceInfo.enabledExtensionCount = avaiableExtentions.size();
   instanceInfo.ppEnabledExtensionNames = desiredExtentions.data();
 
-  result = vkCreateInstance(&instanceInfo, nullptr, &m_instance);
+  result = vkCreateInstance(&instanceInfo, nullptr, &m_instance.m_handle);
   ASSERT_VKRESULT(result);
 
   uint32_t n_physicalDevices;
-  result = vkEnumeratePhysicalDevices(m_instance, &n_physicalDevices, nullptr);
+  result = vkEnumeratePhysicalDevices(m_instance.m_handle, &n_physicalDevices,
+                                      nullptr);
   ASSERT_VKRESULT(result);
 
   std::vector<VkPhysicalDevice> physicalDevices(n_physicalDevices);
-  result = vkEnumeratePhysicalDevices(m_instance, &n_physicalDevices,
+  result = vkEnumeratePhysicalDevices(m_instance.m_handle, &n_physicalDevices,
                                       physicalDevices.data());
   ASSERT_VKRESULT(result);
 
@@ -155,7 +157,7 @@ VRendererBackend::VRendererBackend(
     }
   }
   assert(selectedPhysicalDevice);  // raise if nullptr
-  m_physicalDevice = selectedPhysicalDevice;
+  m_device.m_physicalDevice = selectedPhysicalDevice;
 
   // TODO select a the queue with a bit more BRAIN !!!
   // i want one queue for transfer one for rendering and one for computes if
@@ -175,24 +177,24 @@ VRendererBackend::VRendererBackend(
     if (queue_family_properties[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
       graphics_queue_family_index = {index,
                                      queue_family_properties[index].queueCount};
-      m_gfxQueueFamilyIndex = index;
+      m_device.m_gfxQueueFamilyIndex = index;
     } else if (queue_family_properties[index].queueFlags &
                VK_QUEUE_TRANSFER_BIT) {
       transfer_queue_family_index = {index,
                                      queue_family_properties[index].queueCount};
-      m_transferQueueFamilyIndex = index;
+      m_device.m_transferQueueFamilyIndex = index;
     } else if (queue_family_properties[index].queueFlags &
                VK_QUEUE_COMPUTE_BIT) {
       compute_queue_family_index = {index,
                                     queue_family_properties[index].queueCount};
-      m_computeQueueFamilyIndex = index;
+      m_device.m_computeQueueFamilyIndex = index;
     }
   }
 
   const auto queueCreateInfoConstructor =
       [](std::optional<std::pair<u32, u32>> &family, std::string queue_name,
          u32 min, u32 max, std::vector<VkDeviceQueueCreateInfo> &out,
-         std::vector<float> &prios) -> void {
+         std::vector<float> &prios) -> u32 {
     family->second = std::min(family->second, max);
     if (family.has_value() && family->second > 0) {
       if (family->second < min) {
@@ -213,6 +215,7 @@ VRendererBackend::VRendererBackend(
       queueCreateInfo.queueCount = family->second;
       queueCreateInfo.pQueuePriorities = prios.data();
       out.push_back(queueCreateInfo);
+      return family->second;
     } else {
       if (min != 0) {
         std::string err = "no ";
@@ -220,22 +223,23 @@ VRendererBackend::VRendererBackend(
         err.append(" queue family avaiable");
         throw std::runtime_error(err);
       }
+      return 0;
     }
   };
 
   std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
   std::vector<float> gfx_prios;
-  queueCreateInfoConstructor(graphics_queue_family_index, "graphics",
-                             MIN_GRAPHICS_QUEUES, MAX_GRAPHICS_QUEUES,
-                             queue_create_infos, gfx_prios);
+  const u32 graphicsQueueCount = queueCreateInfoConstructor(
+      graphics_queue_family_index, "graphics", MIN_GRAPHICS_QUEUES,
+      MAX_GRAPHICS_QUEUES, queue_create_infos, gfx_prios);
   std::vector<float> transfer_prios;
-  queueCreateInfoConstructor(transfer_queue_family_index, "transfer",
-                             MIN_TRANSFER_QUEUES, MAX_TRANSFER_QUEUES,
-                             queue_create_infos, transfer_prios);
+  const u32 transferQueueCount = queueCreateInfoConstructor(
+      transfer_queue_family_index, "transfer", MIN_TRANSFER_QUEUES,
+      MAX_TRANSFER_QUEUES, queue_create_infos, transfer_prios);
   std::vector<float> compute_prios;
-  queueCreateInfoConstructor(compute_queue_family_index, "compute",
-                             MIN_COMPUTE_QUEUES, MAX_COMPUTE_QUEUES,
-                             queue_create_infos, compute_prios);
+  const u32 computeQueueCount = queueCreateInfoConstructor(
+      compute_queue_family_index, "compute", MIN_COMPUTE_QUEUES,
+      MAX_COMPUTE_QUEUES, queue_create_infos, compute_prios);
 
   VkPhysicalDeviceFeatures usedFeatures = {};
 
@@ -255,25 +259,30 @@ VRendererBackend::VRendererBackend(
   deviceCreateInfo.pEnabledFeatures = &usedFeatures;
 
   result = vkCreateDevice(selectedPhysicalDevice, &deviceCreateInfo, nullptr,
-                          &m_device);
+                          &m_device.m_handle);
 
-  for (u32 i = 0; i < graphics_queue_family_index->second; i++) {
-    m_graphics_queues.resize(i + 1);
-    vkGetDeviceQueue(m_device, graphics_queue_family_index->first, i,
-                     &m_graphics_queues[i]);
-    m_queueIds.emplace_back(GFX_QUEUE_IDENT, i);
+  for (u32 i = 0; i < graphicsQueueCount; i++) {
+    queue_t queue{};
+    queue.m_type = QUEUE_FAMILY_GRAPHICS;
+    vkGetDeviceQueue(m_device.m_handle, m_device.m_gfxQueueFamilyIndex.value(),
+                     i, &queue.m_handle);
+    m_queues.insert(queue);
   }
-  for (u32 i = 0; i < transfer_queue_family_index->second; i++) {
-    m_transfer_queues.resize(i + 1);
-    vkGetDeviceQueue(m_device, transfer_queue_family_index->first, i,
-                     &m_transfer_queues[i]);
-    m_queueIds.emplace_back(TRANSFER_QUEUE_IDENT, i);
+  for (u32 i = 0; i < transferQueueCount; i++) {
+    queue_t queue{};
+    queue.m_type = QUEUE_FAMILY_TRANSFER;
+    vkGetDeviceQueue(m_device.m_handle,
+                     m_device.m_transferQueueFamilyIndex.value(), i,
+                     &queue.m_handle);
+    m_queues.insert(queue);
   }
-  for (u32 i = 0; i < compute_queue_family_index->second; i++) {
-    m_compute_queues.resize(i + 1);
-    vkGetDeviceQueue(m_device, compute_queue_family_index->first, i,
-                     &m_compute_queues[i]);
-    m_queueIds.emplace_back(COMPUTE_QUEUE_IDENT, i);
+  for (u32 i = 0; i < computeQueueCount; i++) {
+    queue_t queue{};
+    queue.m_type = QUEUE_FAMILY_COMPUTE;
+    vkGetDeviceQueue(m_device.m_handle,
+                     m_device.m_computeQueueFamilyIndex.value(), i,
+                     &queue.m_handle);
+    m_queues.insert(queue);
   }
 
   // create surface and swapchain.
@@ -281,16 +290,17 @@ VRendererBackend::VRendererBackend(
     const glfw::GlfwWindowBackend &backend =
         static_cast<const glfw::GlfwWindowBackend &>(window->getBackend());
     result = glfwCreateWindowSurface(
-        m_instance, const_cast<GLFWwindow *>(backend.pointer()), nullptr,
-        &m_surface);
+        m_instance.m_handle, const_cast<GLFWwindow *>(backend.pointer()),
+        nullptr, &m_surface.m_handle);
     ASSERT_VKRESULT(result);
   } else
     throw std::runtime_error("unsupported window backend");
 
   updateSwapchainSupport();
   // check if VK_FORMAT_B8G8R8A8_UNORM is supported.
+  // TODO better to select the proper format (would support more devices).
   bool supportsFormat = false;
-  for (VkSurfaceFormatKHR format : m_swapchainSupport.formats) {
+  for (VkSurfaceFormatKHR format : m_surface.m_formats) {
     if (format.format == SURFACE_COLOR_FORMAT) {
       supportsFormat = true;
     }
@@ -298,151 +308,90 @@ VRendererBackend::VRendererBackend(
   assert(supportsFormat);
 
   VkBool32 surfaceSupport = false;
-  result = vkGetPhysicalDeviceSurfaceSupportKHR(selectedPhysicalDevice, 0,
-                                                m_surface, &surfaceSupport);
+  result = vkGetPhysicalDeviceSurfaceSupportKHR(
+      m_device.m_physicalDevice, 0, m_surface.m_handle, &surfaceSupport);
   ASSERT_VKRESULT(result);
   assert(surfaceSupport);
 
   createSwapchain();
 
-  m_rendergraph = std::make_unique<VulkanMasterRendergraph>(this);
+  m_rootPass = new VMasterRendergraph(this);
 }
 
 VRendererBackend::~VRendererBackend() {
-  VkResult result = vkDeviceWaitIdle(m_device);
-  m_rendergraph->dispose();
-  m_rendergraph.reset();
+  waitDeviceIdle();
+  m_rootPass->dispose();
+  delete m_rootPass;
 
-  ASSERT_VKRESULT(result);
-  std::vector<uint32_t> allocatedBufferIds;
-  for (uint32_t i = 0; i < m_commandBuffers.size(); i++) {
-    bool allocated = true;
-    for (const uint32_t empty_id : m_emptyCommandBufferIds) {
-      if (empty_id == i) {
-        allocated = false;
-        break;
-      }
-    }
-    if (allocated) allocatedBufferIds.push_back(i);
+  for (command_buffer_t &command_buffer : m_commandBuffers) {
+    // freeing is propably not required if we destroy the pools
   }
-  for (uint32_t i = 0; i < m_commandPools.size(); i++) {
-    bool allocated = true;
-    for (const uint32_t empty_id : m_emptyCommandPoolIds) {
-      if (empty_id == i) {
-        allocated = false;
-        break;
-      }
-    }
-    if (allocated) destroyCommandPool(i);
+  for (command_pool_t &command_pool : m_commandPools) {
+    destroyCommandPool(command_pool);
   }
-  for (uint32_t i = 0; i < m_semaphores.size(); i++) {
-    bool allocated = true;
-    for (const uint32_t empty_id : m_emptySemaphoreIds) {
-      if (empty_id == i) {
-        allocated = false;
-        break;
-      }
-    }
-    if (allocated) destroySemaphore(i);
+  for (semaphore_t &semaphore : m_semaphores) {
+    destroySemaphore(semaphore);
   }
-  for (uint32_t i = 0; i < m_pipelines.size(); i++) {
-    bool allocated = true;
-    for (const uint32_t empty_id : m_empty_pipeline_ids) {
-      if (empty_id == i) {
-        allocated = false;
-        break;
-      }
-    }
-    if (allocated) destroyPipeline(i);
+  for (pipeline_t &pipeline : m_pipelines) {
+    destroyPipeline(pipeline);
   }
-  for (uint32_t i = 0; i < m_framebuffers.size(); i++) {
-    bool allocated = true;
-    for (const uint32_t empty_id : m_emptyFramebufferIds) {
-      if (empty_id == i) {
-        allocated = false;
-        break;
-      }
-    }
-    if (allocated) destroyFramebuffer(i);
+  for (framebuffer_t &framebuffer : m_framebuffers) {
+    destroyFramebuffer(framebuffer);
   }
-  for (uint32_t i = 0; i < m_pipelineLayouts.size(); i++) {
-    bool allocated = true;
-    for (const uint32_t empty_id : m_emptyPipelineLayoutIds) {
-      if (empty_id == i) {
-        allocated = false;
-        break;
-      }
-    }
-    if (allocated) destroyPipelineLayout(i);
+  for (pipeline_layout_t &pipelineLayout : m_pipelineLayouts) {
+    destroyPipelineLayout(pipelineLayout);
   }
-  for (uint32_t i = 0; i < m_shaders.size(); i++) {
-    bool allocated = true;
-    for (const uint32_t empty_id : m_empty_shader_ids) {
-      if (empty_id == i) {
-        allocated = false;
-        break;
-      }
-    }
-    if (allocated) destroyShaderModule(i);
+  for (shader_module_t &shaderModule : m_shaders) {
+    destroyShaderModule(shaderModule);
   }
-  for (uint32_t i = 0; i < m_render_passes.size(); i++) {
-    bool allocated = true;
-    for (const uint32_t empty_id : m_empty_render_pass_ids) {
-      if (empty_id == i) {
-        allocated = false;
-        break;
-      }
-    }
-
-    if (allocated) destroyRenderPass(i);
+  for (renderpass_t &renderpass : m_renderpasses) {
+    destroyRenderPass(renderpass);
   }
-  for (uint32_t i = 0; i < m_imageViews.size(); i++) {
-    bool allocated = true;
-    for (const uint32_t empty_id : m_emptyImageViewIds) {
-      if (empty_id == i) {
-        allocated = false;
-        break;
-      }
-    }
-    if (allocated) destroyImageView(i);
+  for (imageview_t &imageview : m_imageViews) {
+    destroyImageView(imageview);
   }
-  vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
-  vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-  vkDestroyDevice(m_device, nullptr);
-  vkDestroyInstance(m_instance, nullptr);
+  destroySwapchain(m_swapchain);
+  destroySurface(m_surface);
+  destroyDevice(m_device);
+  destroyInstance(m_instance);
+  // vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
+  // vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+  // vkDestroyDevice(m_device, nullptr);
+  // vkDestroyInstance(m_instance, nullptr);
 }
 
 void VRendererBackend::recreateSwapchain() {
   //
-  vkDeviceWaitIdle(m_device);
-  for (const u32 imageView : m_swapchainImageViews) {
-    destroyImageView(imageView);
+  waitDeviceIdle();
+
+  for (const imageview &imageview : m_swapchain.m_imageViewsHandles) {
+    destroyImageView(imageview);
   }
 
-  VkSwapchainKHR oldSwapchain = m_swapchain;
+  swapchain_t oldSwapchain = m_swapchain;
   createSwapchain();
 
-  vkDestroySwapchainKHR(m_device, oldSwapchain, nullptr);
+  destroySwapchain(oldSwapchain);
 }
 
 void VRendererBackend::beginFrame() {
   //
-  m_rendergraph->beginFrame();
+  m_rootPass->beginFrame();
 }
 
 void VRendererBackend::renderFrame() {
   //
-  m_rendergraph->execute();
+  m_rootPass->execute();
 }
 
 void VRendererBackend::endFrame() {
   //
-  m_rendergraph->endFrame();
+  m_rootPass->endFrame();
 }
 
-uint32_t VRendererBackend::createImageView(VkImage image, const u32 width,
-                                           const u32 height, VkFormat format) {
-  VkImageView imageView;
+imageview VRendererBackend::createImageView(VkImage image, const u32 width,
+                                            const u32 height, VkFormat format) {
+  imageview_t imageview;
   VkImageViewCreateInfo imageViewCreateInfo;
   imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   imageViewCreateInfo.pNext = nullptr;
@@ -460,33 +409,28 @@ uint32_t VRendererBackend::createImageView(VkImage image, const u32 width,
   // COMPLETLY USELESS =^)
   imageViewCreateInfo.subresourceRange.layerCount = 1;
   imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-  vkCreateImageView(m_device, &imageViewCreateInfo, nullptr, &imageView);
-
-  if (m_emptyImageViewIds.empty()) {
-    m_imageViews.push_back(imageView);
-    m_imageViewDimensions.push_back({width, height});
-    return m_imageViews.size() - 1;
-  } else {
-    uint32_t id = m_emptyImageViewIds.back();
-    m_emptyImageViewIds.pop_back();
-    m_imageViews[id] = imageView;
-    m_imageViewDimensions[id] = {width, height};
-    return id;
-  }
+  vkCreateImageView(m_device.m_handle, &imageViewCreateInfo, nullptr,
+                    &imageview.m_handle);
+  imageview.m_width = width;
+  imageview.m_height = height;
+  imageview.m_index = m_imageViews.insert(imageview);
+  struct imageview handle(imageview.m_index);
+  return handle;
 }
 
-void VRendererBackend::destroyImageView(uint32_t imageViewId) {
-  vkDestroyImageView(m_device, getImageViewById(imageViewId), nullptr);
-  m_emptyImageViewIds.push_back(imageViewId);
+void VRendererBackend::destroyImageView(imageview imageViewHandle) {
+  destroyImageView(getImageViewByHandle(imageViewHandle));
 }
 
 const std::pair<u32, u32> VRendererBackend::getImageViewDimensions(
-    const u32 imageViewId) {
-  assert(imageViewId < m_imageViewDimensions.size());
-  return m_imageViewDimensions[imageViewId];
+    const imageview imageViewHandle) {
+  m_imageViews.assertValidIndex(imageViewHandle.m_index);
+  return std::make_pair(m_imageViews[imageViewHandle.m_index].m_width,
+                        m_imageViews[imageViewHandle.m_index].m_height);
 }
 
-u32 VRendererBackend::createShaderModule(const std::vector<char> source_code) {
+shader_module VRendererBackend::createShaderModule(
+    const std::vector<char> source_code) {
   // create vulkan shader module
   VkShaderModuleCreateInfo shaderCreateInfo;
   shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -495,30 +439,21 @@ u32 VRendererBackend::createShaderModule(const std::vector<char> source_code) {
   shaderCreateInfo.codeSize = source_code.size();
   shaderCreateInfo.pCode =
       reinterpret_cast<const uint32_t *>(source_code.data());
-  VkShaderModule shader_module;
-  VkResult result = vkCreateShaderModule(m_device, &shaderCreateInfo, nullptr,
-                                         &shader_module);
+  shader_module_t shaderModule{};
+  VkResult result = vkCreateShaderModule(m_device.m_handle, &shaderCreateInfo,
+                                         nullptr, &shaderModule.m_handle);
   ASSERT_VKRESULT(result);
   // select id for new shader.
-  if (m_empty_shader_ids.empty()) {
-    m_shaders.push_back(shader_module);
-    return m_shaders.size() - 1;
-  } else {
-    uint32_t id = m_empty_shader_ids.back();
-    m_empty_shader_ids.pop_back();
-    m_shaders[id] = shader_module;
-    return id;
-  }
+  shaderModule.m_index = m_shaders.insert(shaderModule);
+  return shader_module(shaderModule.m_index);
 }
 
-void VRendererBackend::destroyShaderModule(uint32_t shader_module_id) {
-  vkDestroyShaderModule(m_device, getShaderById(shader_module_id), nullptr);
-  m_empty_shader_ids.push_back(shader_module_id);
+void VRendererBackend::destroyShaderModule(shader_module shaderModuleHandle) {
+  destroyShaderModule(getShaderByHandle(shaderModuleHandle));
 }
 
-uint32_t VRendererBackend::createPipelineLayout() {
+pipeline_layout VRendererBackend::createPipelineLayout() {
   //
-  VkPipelineLayout layout;
   VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo;
   pipelineLayoutCreateInfo.sType =
       VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -529,37 +464,27 @@ uint32_t VRendererBackend::createPipelineLayout() {
   pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
   pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
 
-  VkResult result = vkCreatePipelineLayout(m_device, &pipelineLayoutCreateInfo,
-                                           nullptr, &layout);
+  pipeline_layout_t pipelineLayout{};
+  const VkResult result =
+      vkCreatePipelineLayout(m_device.m_handle, &pipelineLayoutCreateInfo,
+                             nullptr, &pipelineLayout.m_handle);
   ASSERT_VKRESULT(result);
-  if (m_empty_pipeline_ids.empty()) {
-    m_pipelineLayouts.push_back(layout);
-    return m_pipelineLayouts.size() - 1;
-  } else {
-    uint32_t id = m_emptyPipelineLayoutIds.back();
-    m_emptyPipelineLayoutIds.pop_back();
-    m_pipelineLayouts[id] = layout;
-    return id;
-  }
+  pipelineLayout.m_index = m_pipelineLayouts.insert(pipelineLayout);
+  return pipeline_layout(pipelineLayout.m_index);
 }
-void VRendererBackend::destroyPipelineLayout(uint32_t pipelineLayoutId) {
+void VRendererBackend::destroyPipelineLayout(
+    pipeline_layout pipelineLayoutHandle) {
   //
-  vkDestroyPipelineLayout(m_device, getPipelineLayoutById(pipelineLayoutId),
-                          nullptr);
-  m_emptyPipelineLayoutIds.push_back(pipelineLayoutId);
+  destroyPipelineLayout(getPipelineLayoutByHandle(pipelineLayoutHandle));
 }
 
-void VRendererBackend::bindPipeline(uint32_t pipelineId,
-                                    uint32_t commandBufferId) {
-  vkCmdBindPipeline(getCommandBufferById(commandBufferId),
-                    VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    getPipelineById(pipelineId));
+void VRendererBackend::bindPipeline(pipeline pipelineHandle,
+                                    command_buffer commandBufferHandle) {
+  bindPipeline(getPipelineByHandle(pipelineHandle),
+               getCommandBufferByHandle(commandBufferHandle));
 }
 
-uint32_t VRendererBackend::createRenderPass(const VkFormat color_format) {
-  VkRenderPass render_pass;
-  VkResult result;
-
+renderpass VRendererBackend::createRenderPass(const VkFormat color_format) {
   VkAttachmentDescription attachmentDescription;
   attachmentDescription.flags = 0;
   attachmentDescription.format = color_format;
@@ -610,31 +535,27 @@ uint32_t VRendererBackend::createRenderPass(const VkFormat color_format) {
   renderPassCreateInfo.dependencyCount = 1;
   renderPassCreateInfo.pDependencies = &subpassDependency;
 
-  result = vkCreateRenderPass(m_device, &renderPassCreateInfo, nullptr,
-                              &render_pass);
+  renderpass_t renderpass{};
+  const VkResult result = vkCreateRenderPass(
+      m_device.m_handle, &renderPassCreateInfo, nullptr, &renderpass.m_handle);
   ASSERT_VKRESULT(result);
-
-  if (m_empty_render_pass_ids.empty()) {
-    m_render_passes.push_back(render_pass);
-    return m_render_passes.size() - 1;
-  } else {
-    uint32_t id = m_empty_render_pass_ids.back();
-    m_empty_render_pass_ids.pop_back();
-    m_render_passes[id] = render_pass;
-    return id;
-  }
+  renderpass.m_index = m_renderpasses.insert(renderpass);
+  struct renderpass handle(renderpass.m_index);
+  return handle;
 }
 
-void VRendererBackend::beginRenderPass(uint32_t renderPassId,
-                                       uint32_t framebufferId,
-                                       uint32_t renderAreaWidth,
-                                       uint32_t renderAreaHeight,
-                                       uint32_t commandBufferId) {
+void VRendererBackend::beginRenderPass(renderpass renderPassHandle,
+                                       framebuffer framebufferHandle,
+                                       u32 renderAreaWidth,
+                                       u32 renderAreaHeight,
+                                       command_buffer commandBufferHandle) {
   VkRenderPassBeginInfo renderPassBeginInfo;
   renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
   renderPassBeginInfo.pNext = nullptr;
-  renderPassBeginInfo.renderPass = getRenderPassById(renderPassId);
-  renderPassBeginInfo.framebuffer = getFramebufferById(framebufferId);
+  renderPassBeginInfo.renderPass =
+      getRenderPassByHandle(renderPassHandle).m_handle;
+  renderPassBeginInfo.framebuffer =
+      getFramebufferByHandle(framebufferHandle).m_handle;
   renderPassBeginInfo.renderArea.offset = {0, 0};
   renderPassBeginInfo.renderArea.extent = {renderAreaWidth, renderAreaHeight};
 
@@ -647,47 +568,46 @@ void VRendererBackend::beginRenderPass(uint32_t renderPassId,
   renderPassBeginInfo.clearValueCount = 1;
   renderPassBeginInfo.pClearValues = &clearValue;
 
-  vkCmdBeginRenderPass(getCommandBufferById(commandBufferId),
+  vkCmdBeginRenderPass(getCommandBufferByHandle(commandBufferHandle).m_handle,
                        &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
-void VRendererBackend::endRenderPass(uint32_t commandBufferId) {
-  vkCmdEndRenderPass(getCommandBufferById(commandBufferId));
+void VRendererBackend::endRenderPass(command_buffer commandBufferHandle) {
+  vkCmdEndRenderPass(getCommandBufferByHandle(commandBufferHandle).m_handle);
 }
 
-void VRendererBackend::destroyRenderPass(uint32_t renderPassId) {
-  vkDestroyRenderPass(m_device, getRenderPassById(renderPassId), nullptr);
-  m_empty_render_pass_ids.push_back(renderPassId);
+void VRendererBackend::destroyRenderPass(renderpass renderpassHandle) {
+  destroyRenderPass(getRenderPassByHandle(renderpassHandle));
 }
 
-uint32_t VRendererBackend::createPipeline(
-    uint32_t renderPassId, uint32_t pipelineLayoutId, uint32_t viewportWidth,
-    uint32_t viewportHeight, std::optional<uint32_t> vertexShaderId,
-    std::optional<uint32_t> fragmentShaderId) {
-  VkPipeline pipeline;
-  VkResult result;
-
+pipeline VRendererBackend::createPipeline(
+    renderpass renderPassHandle, pipeline_layout pipelineLayoutHandle,
+    uint32_t viewportWidth, uint32_t viewportHeight,
+    std::optional<shader_module> vertexShaderHandle,
+    std::optional<shader_module> fragmentShaderHandle) {
   std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-  if (vertexShaderId.has_value()) {
+  if (vertexShaderHandle.has_value()) {
     VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert;
     shaderStageCreateInfoVert.sType =
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shaderStageCreateInfoVert.pNext = nullptr;
     shaderStageCreateInfoVert.flags = 0;
     shaderStageCreateInfoVert.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    shaderStageCreateInfoVert.module = getShaderById(vertexShaderId.value());
+    shaderStageCreateInfoVert.module =
+        getShaderByHandle(vertexShaderHandle.value()).m_handle;
     shaderStageCreateInfoVert.pName = "main";
     shaderStageCreateInfoVert.pSpecializationInfo = nullptr;
     shaderStages.push_back(shaderStageCreateInfoVert);
   }
-  if (fragmentShaderId.has_value()) {
+  if (fragmentShaderHandle.has_value()) {
     VkPipelineShaderStageCreateInfo shaderStageCreateInfoFrag;
     shaderStageCreateInfoFrag.sType =
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shaderStageCreateInfoFrag.pNext = nullptr;
     shaderStageCreateInfoFrag.flags = 0;
     shaderStageCreateInfoFrag.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    shaderStageCreateInfoFrag.module = getShaderById(fragmentShaderId.value());
+    shaderStageCreateInfoFrag.module =
+        getShaderByHandle(fragmentShaderHandle.value()).m_handle;
     shaderStageCreateInfoFrag.pName = "main";
     shaderStageCreateInfoFrag.pSpecializationInfo = nullptr;
     shaderStages.push_back(shaderStageCreateInfoFrag);
@@ -801,267 +721,246 @@ uint32_t VRendererBackend::createPipeline(
   pipelineCreateInfo.pDepthStencilState = nullptr;
   pipelineCreateInfo.pColorBlendState = &colorBlendCreateInfo;
   pipelineCreateInfo.pDynamicState = nullptr;
-  pipelineCreateInfo.layout = getPipelineLayoutById(pipelineLayoutId);
-  pipelineCreateInfo.renderPass = getRenderPassById(renderPassId);
+  pipelineCreateInfo.layout =
+      getPipelineLayoutByHandle(pipelineLayoutHandle).m_handle;
+  pipelineCreateInfo.renderPass =
+      getRenderPassByHandle(renderPassHandle).m_handle;
   pipelineCreateInfo.subpass = 0;
   pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
   pipelineCreateInfo.basePipelineIndex = -1;
 
-  result = vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1,
-                                     &pipelineCreateInfo, nullptr, &pipeline);
+  pipeline_t pipeline{};
+  VkResult result = vkCreateGraphicsPipelines(m_device.m_handle, VK_NULL_HANDLE,
+                                              1, &pipelineCreateInfo, nullptr,
+                                              &pipeline.m_handle);
   ASSERT_VKRESULT(result);
   //
-  if (m_empty_pipeline_ids.empty()) {
-    m_pipelines.push_back(pipeline);
-    return m_pipelines.size() - 1;
-  } else {
-    uint32_t id = m_empty_pipeline_ids.back();
-    m_empty_pipeline_ids.pop_back();
-    m_pipelines[id] = pipeline;
-    return id;
-  }
+  pipeline.m_index = m_pipelines.insert(pipeline);
+  struct pipeline handle(pipeline.m_index);
+  return handle;
 }
 
-void VRendererBackend::destroyPipeline(uint32_t pipelineId) {
-  vkDestroyPipeline(m_device, getPipelineById(pipelineId), nullptr);
-  m_empty_pipeline_ids.push_back(pipelineId);
+void VRendererBackend::destroyPipeline(pipeline pipelineHandle) {
+  destroyPipeline(getPipelineByHandle(pipelineHandle));
 }
 
-uint32_t VRendererBackend::createFramebuffer(uint32_t renderPassId,
-                                             uint32_t imageViewId,
-                                             uint32_t width, uint32_t height) {
-  VkFramebuffer framebuffer;
-
+framebuffer VRendererBackend::createFramebuffer(renderpass renderPassHandle,
+                                                imageview imageViewHandle,
+                                                u32 width, u32 height) {
   VkFramebufferCreateInfo framebufferCreateInfo;
   framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
   framebufferCreateInfo.pNext = nullptr;
   framebufferCreateInfo.flags = 0;
-  framebufferCreateInfo.renderPass = getRenderPassById(renderPassId);
+  framebufferCreateInfo.renderPass =
+      getRenderPassByHandle(renderPassHandle).m_handle;
   framebufferCreateInfo.attachmentCount = 1;
-  framebufferCreateInfo.pAttachments = &getImageViewById(imageViewId);
+  framebufferCreateInfo.pAttachments =
+      &getImageViewByHandle(imageViewHandle).m_handle;
   framebufferCreateInfo.width = width;
   framebufferCreateInfo.height = height;
   framebufferCreateInfo.layers = 1;
-  VkResult result = vkCreateFramebuffer(m_device, &framebufferCreateInfo,
-                                        nullptr, &framebuffer);
+  framebuffer_t framebuffer{
+      .m_imageview = imageViewHandle, .m_width = width, .m_height = height};
+  const VkResult result =
+      vkCreateFramebuffer(m_device.m_handle, &framebufferCreateInfo, nullptr,
+                          &framebuffer.m_handle);
   ASSERT_VKRESULT(result);
-
-  if (m_emptyFramebufferIds.empty()) {
-    m_framebuffers.push_back(framebuffer);
-    m_framebufferDimensions.push_back(std::make_pair(width, height));
-    return m_framebuffers.size() - 1;
-  } else {
-    uint32_t id = m_emptyFramebufferIds.back();
-    m_emptyFramebufferIds.pop_back();
-    m_framebuffers[id] = framebuffer;
-    m_framebufferDimensions[id] = std::make_pair(width, height);
-    return id;
-  }
+  framebuffer.m_index = m_framebuffers.insert(framebuffer);
+  struct framebuffer handle(framebuffer.m_index);
+  return handle;
 }
 
-void VRendererBackend::destroyFramebuffer(uint32_t framebufferId) {
-  vkDestroyFramebuffer(m_device, getFramebufferById(framebufferId), nullptr);
-  m_emptyFramebufferIds.push_back(framebufferId);
+void VRendererBackend::destroyFramebuffer(framebuffer framebufferHandle) {
+  destroyFramebuffer(getFramebufferByHandle(framebufferHandle));
 }
 
 const std::pair<u32, u32> VRendererBackend::getFramebufferDimensions(
-    const u32 framebufferId) {
-  assert(framebufferId < m_framebufferDimensions.size());
-  return m_framebufferDimensions[framebufferId];
+    const framebuffer framebufferHandle) {
+  framebuffer_t &framebuffer = getFramebufferByHandle(framebufferHandle);
+  return std::make_pair(framebuffer.m_width, framebuffer.m_height);
 }
 
-uint32_t VRendererBackend::createCommandPool(QueueFamilyType queueFamily) {
+command_pool VRendererBackend::createCommandPool(QueueFamilyType queueFamily) {
   u32 queueFamilyIndex = [&]() -> u32 {
     switch (queueFamily) {
       case QUEUE_FAMILY_GRAPHICS:
-        assert(m_gfxQueueFamilyIndex.has_value());
-        return m_gfxQueueFamilyIndex.value();
+        assert(m_device.m_gfxQueueFamilyIndex.has_value());
+        return m_device.m_gfxQueueFamilyIndex.value();
       case QUEUE_FAMILY_TRANSFER:
-        assert(m_transferQueueFamilyIndex.has_value());
-        return m_transferQueueFamilyIndex.value();
+        assert(m_device.m_transferQueueFamilyIndex.has_value());
+        return m_device.m_transferQueueFamilyIndex.value();
       case QUEUE_FAMILY_COMPUTE:
-        assert(m_computeQueueFamilyIndex.has_value());
-        return m_computeQueueFamilyIndex.value();
+        assert(m_device.m_computeQueueFamilyIndex.has_value());
+        return m_device.m_computeQueueFamilyIndex.value();
     }
     throw std::runtime_error("how did we get here!");
   }();
 
-  VkCommandPool commandPool;
   VkCommandPoolCreateInfo commandPoolCreateInfo;
   commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   commandPoolCreateInfo.pNext = nullptr;
   commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
-  VkResult result = vkCreateCommandPool(m_device, &commandPoolCreateInfo,
-                                        nullptr, &commandPool);
+  command_pool_t pool{};
+  const VkResult result = vkCreateCommandPool(
+      m_device.m_handle, &commandPoolCreateInfo, nullptr, &pool.m_handle);
   ASSERT_VKRESULT(result);
-  if (m_emptyCommandPoolIds.empty()) {
-    m_commandPools.push_back(commandPool);
-    return m_commandPools.size() - 1;
-  } else {
-    uint32_t id = m_emptyCommandPoolIds.back();
-    m_emptyCommandPoolIds.pop_back();
-    m_commandPools[id] = commandPool;
-    return id;
-  }
+  pool.m_index = m_commandPools.insert(pool);
+  struct command_pool handle(pool.m_index);
+  return handle;
 }
-void VRendererBackend::resetCommandPool(u32 commandPoolId) {
-  VkResult result =
-      vkResetCommandPool(m_device, getCommandPoolById(commandPoolId),
-                         VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+void VRendererBackend::resetCommandPool(command_pool commandPoolHandle) {
+  const VkResult result = vkResetCommandPool(
+      m_device.m_handle, getCommandPoolByHandle(commandPoolHandle).m_handle,
+      VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+  ASSERT_VKRESULT(result);
 
-  // make all ids from the pool avaiable for reallocation.
-  for (u32 i = 0; i < m_commandBufferIdToPoolId.size(); i++) {
-    if (m_commandBufferIdToPoolId[i] == commandPoolId) {
-      m_emptyCommandBufferIds.push_back(i);
+  // make all ids from the buffers avaiable for reallocation.
+  for (command_buffer_t &commandBuffer : m_commandBuffers) {
+    if (commandBuffer.m_origin_pool.m_index == commandPoolHandle.m_index) {
+      m_commandBuffers.removeAt(commandBuffer.m_index);
     }
   }
-
-  ASSERT_VKRESULT(result);
 }
 
-void VRendererBackend::destroyCommandPool(uint32_t commandPoolId) {
-  vkDestroyCommandPool(m_device, getCommandPoolById(commandPoolId), nullptr);
-  m_emptyCommandPoolIds.push_back(commandPoolId);
+void VRendererBackend::destroyCommandPool(command_pool commandPoolHandle) {
+  destroyCommandPool(getCommandPoolByHandle(commandPoolHandle));
 }
 
-const std::vector<uint32_t> VRendererBackend::allocateCommandBuffers(
-    uint32_t commandPoolId, uint32_t count) {
+const std::vector<command_buffer> VRendererBackend::allocateCommandBuffers(
+    command_pool commandPoolHandle, u32 count) {
   VkCommandBufferAllocateInfo commandBufferAllocateInfo;
   commandBufferAllocateInfo.sType =
       VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   commandBufferAllocateInfo.pNext = nullptr;
-  commandBufferAllocateInfo.commandPool = getCommandPoolById(commandPoolId);
+  commandBufferAllocateInfo.commandPool =
+      getCommandPoolByHandle(commandPoolHandle).m_handle;
   commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   commandBufferAllocateInfo.commandBufferCount = count;
 
-  std::vector<VkCommandBuffer> buffer(count);
-  VkResult result = vkAllocateCommandBuffers(
-      m_device, &commandBufferAllocateInfo, buffer.data());
+  std::vector<VkCommandBuffer> vkbuffers(count);
+  const VkResult result = vkAllocateCommandBuffers(
+      m_device.m_handle, &commandBufferAllocateInfo, vkbuffers.data());
   ASSERT_VKRESULT(result);
-  std::vector<uint32_t> ids(count);
-  for (uint32_t i = 0; i < count; i++) {
-    if (m_emptyCommandBufferIds.empty()) {
-      ids[i] = m_commandBuffers.size();
-      m_commandBuffers.push_back(buffer[i]);
-      m_commandBufferIdToPoolId.push_back(commandPoolId);
-    } else {
-      ids[i] = m_emptyCommandBufferIds.back();
-      m_emptyCommandBufferIds.pop_back();
-      m_commandBuffers[ids[i]] = buffer[i];
-      m_commandBufferIdToPoolId[ids[i]] = commandPoolId;
-    }
+  std::vector<command_buffer> handles;
+  for (u32 i = 0; i < count; i++) {
+    command_buffer_t buffer{.m_origin_pool = commandPoolHandle};
+    buffer.m_handle = vkbuffers[i];
+    buffer.m_index = m_commandBuffers.insert(buffer);
+    handles.push_back(command_buffer(buffer.m_index));
   }
-  return ids;
+  return handles;
 }
 
 void VRendererBackend::freeCommandBuffers(
-    const std::vector<uint32_t> &commandBufferIds) {
-  if (commandBufferIds.empty()) return;
-  std::vector<VkCommandBuffer> buffers(commandBufferIds.size());
-  std::optional<uint32_t> poolId;
-  for (const uint32_t bufferId : commandBufferIds) {
-    buffers.push_back(getCommandBufferById(bufferId));
-    m_emptyCommandBufferIds.push_back(bufferId);
-    if (!poolId.has_value()) {
-      poolId = m_commandBufferIdToPoolId[bufferId];
+    const std::vector<command_buffer> &commandBufferHandles) {
+  if (commandBufferHandles.empty()) return;
+
+  std::vector<VkCommandBuffer> buffers(commandBufferHandles.size());
+  std::optional<command_pool> poolHandle;
+  for (const command_buffer &handle : commandBufferHandles) {
+    buffers.push_back(getCommandBufferByHandle(handle).m_handle);
+    m_commandBuffers.removeAt(handle.m_index);
+
+    if (!poolHandle.has_value()) {
+      poolHandle = getCommandBufferByHandle(handle).m_origin_pool;
     } else {
-      assert(poolId == m_commandBufferIdToPoolId[bufferId]);
+      assert(poolHandle.value().m_index ==
+             getCommandBufferByHandle(handle).m_origin_pool.m_index);
     }
   }
-  vkFreeCommandBuffers(m_device, getCommandPoolById(poolId.value()),
+  vkFreeCommandBuffers(m_device.m_handle,
+                       getCommandPoolByHandle(poolHandle.value()).m_handle,
                        buffers.size(), buffers.data());
 }
 
-void VRendererBackend::resetCommandBuffer(const u32 commandBufferId,
-                                          const boolean releaseResources) {
+void VRendererBackend::resetCommandBuffer(
+    const command_buffer commandBufferHandle, const boolean releaseResources) {
   const VkResult result = vkResetCommandBuffer(
-      getCommandBufferById(commandBufferId),
+      getCommandBufferByHandle(commandBufferHandle).m_handle,
       (releaseResources ? VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT : 0));
   ASSERT_VKRESULT(result);
 }
 
-void VRendererBackend::beginCommandBuffer(uint32_t commandBufferId) {
+void VRendererBackend::beginCommandBuffer(command_buffer commandBufferHandle) {
   VkCommandBufferBeginInfo commandBufferBeginInfo;
   commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   commandBufferBeginInfo.pNext = nullptr;
   commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
   commandBufferBeginInfo.pInheritanceInfo = nullptr;
 
-  VkResult result = vkBeginCommandBuffer(getCommandBufferById(commandBufferId),
-                                         &commandBufferBeginInfo);
+  const VkResult result = vkBeginCommandBuffer(
+      getCommandBufferByHandle(commandBufferHandle).m_handle,
+      &commandBufferBeginInfo);
   ASSERT_VKRESULT(result);
 }
 
-void VRendererBackend::endCommandBuffer(uint32_t commandBufferId) {
-  VkResult result = vkEndCommandBuffer(getCommandBufferById(commandBufferId));
+void VRendererBackend::endCommandBuffer(command_buffer commandBufferHandle) {
+  const VkResult result = vkEndCommandBuffer(
+      getCommandBufferByHandle(commandBufferHandle).m_handle);
   ASSERT_VKRESULT(result);
 }
 
-uint32_t VRendererBackend::createSemaphore() {
-  VkSemaphore semaphore;
+semaphore VRendererBackend::createSemaphore() {
   VkSemaphoreCreateInfo semaphoreCreateInfo;
   semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
   semaphoreCreateInfo.pNext = nullptr;
   semaphoreCreateInfo.flags = 0;
-  VkResult result =
-      vkCreateSemaphore(m_device, &semaphoreCreateInfo, nullptr, &semaphore);
+  semaphore_t semaphore{};
+  VkResult result = vkCreateSemaphore(m_device.m_handle, &semaphoreCreateInfo,
+                                      nullptr, &semaphore.m_handle);
   ASSERT_VKRESULT(result);
-  if (m_emptySemaphoreIds.empty()) {
-    m_semaphores.push_back(semaphore);
-    return m_semaphores.size() - 1;
-  } else {
-    uint32_t id = m_emptySemaphoreIds.back();
-    m_emptySemaphoreIds.pop_back();
-    m_semaphores[id] = semaphore;
-    return id;
-  }
+  semaphore.m_index = m_semaphores.insert(semaphore);
+  struct semaphore handle(semaphore.m_index);
+  return handle;
 }
 
-void VRendererBackend::destroySemaphore(uint32_t semaphoreId) {
-  vkDestroySemaphore(m_device, getSemaphoreById(semaphoreId), nullptr);
-  m_emptySemaphoreIds.push_back(semaphoreId);
+void VRendererBackend::destroySemaphore(semaphore semaphoreHandle) {
+  destroySemaphore(getSemaphoreByHandle(semaphoreHandle));
 }
 
 void VRendererBackend::drawCall(uint32_t vertexCount, uint32_t instanceCount,
-                                uint32_t commandBufferId) {
-  vkCmdDraw(getCommandBufferById(commandBufferId), vertexCount, instanceCount,
-            0, 0);
+                                command_buffer commandBufferHandle) {
+  vkCmdDraw(getCommandBufferByHandle(commandBufferHandle).m_handle, vertexCount,
+            instanceCount, 0, 0);
 }
-boolean VRendererBackend::acquireNextSwapchainFrame(u32 signalSem) {
-  VkResult result = vkAcquireNextImageKHR(
-      m_device, m_swapchain, std::numeric_limits<uint64_t>::max(),
-      getSemaphoreById(signalSem), VK_NULL_HANDLE, &m_swapchainFrameIndex);
+boolean VRendererBackend::acquireNextSwapchainFrame(semaphore signalSem) {
+  VkResult result =
+      vkAcquireNextImageKHR(m_device.m_handle, m_swapchain.m_handle,
+                            std::numeric_limits<uint64_t>::max(),
+                            getSemaphoreByHandle(signalSem).m_handle,
+                            VK_NULL_HANDLE, &m_swapchain.m_frameIndex);
   if (result == VK_ERROR_OUT_OF_DATE_KHR) return true;
   if (result == VK_SUBOPTIMAL_KHR) return false;
   ASSERT_VKRESULT(result);
   return false;
 }
 
-u32 VRendererBackend::getCurrentSwapchainImageView() {
-  return m_swapchainImageViews[m_swapchainFrameIndex];
+imageview VRendererBackend::getCurrentSwapchainImageView() {
+  return m_swapchain.m_imageViewsHandles[m_swapchain.m_frameIndex];
 }
 
 u32 VRendererBackend::getCurrentSwapchainFrameIndex() {
-  return m_swapchainFrameIndex;
+  return m_swapchain.m_frameIndex;
 }
 
 boolean VRendererBackend::presentQueue(
-    u32 queueId, const std::vector<u32> &waitSemaphoreIds) {
+    queue queueHandle, const std::vector<semaphore> &waitSemaphoreHandles) {
   VkPresentInfoKHR presentInfo;
   presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
   presentInfo.pNext = nullptr;
-  presentInfo.waitSemaphoreCount = waitSemaphoreIds.size();
-  std::vector<VkSemaphore> waitSemaphores(waitSemaphoreIds.size());
-  for (u32 i = 0; i < waitSemaphoreIds.size(); i++) {
-    waitSemaphores[i] = getSemaphoreById(waitSemaphoreIds[i]);
+  presentInfo.waitSemaphoreCount = waitSemaphoreHandles.size();
+  std::vector<VkSemaphore> waitSemaphores(waitSemaphoreHandles.size());
+  for (u32 i = 0; i < waitSemaphoreHandles.size(); i++) {
+    waitSemaphores[i] = getSemaphoreByHandle(waitSemaphoreHandles[i]).m_handle;
   }
   presentInfo.pWaitSemaphores = waitSemaphores.data();
   presentInfo.swapchainCount = 1;
-  presentInfo.pSwapchains = &m_swapchain;
-  presentInfo.pImageIndices = &m_swapchainFrameIndex;
+  presentInfo.pSwapchains = &m_swapchain.m_handle;
+  presentInfo.pImageIndices = &m_swapchain.m_frameIndex;
   presentInfo.pResults = nullptr;
-  VkResult result = vkQueuePresentKHR(getQueueById(queueId), &presentInfo);
+  VkResult result =
+      vkQueuePresentKHR(getQueueByHandle(queueHandle).m_handle, &presentInfo);
   if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR) {
     return true;
   }
@@ -1070,23 +969,24 @@ boolean VRendererBackend::presentQueue(
 }
 
 void VRendererBackend::submitCommandBuffers(
-    u32 queueId, const std::vector<u32> &commandBufferIds,
-    const std::vector<u32> &waitSemaphoreIds,
-    const std::vector<u32> &signalSemaphoreIds,
-    const std::optional<u32> fence) {
-  std::vector<VkSemaphore> waitSemaphores(waitSemaphoreIds.size());
-  for (u32 i = 0; i < waitSemaphoreIds.size(); i++) {
-    waitSemaphores[i] = getSemaphoreById(waitSemaphoreIds[i]);
+    queue queueHandle, const std::vector<command_buffer> &commandBufferHandles,
+    const std::vector<semaphore> &waitSemaphoreHandles,
+    const std::vector<semaphore> &signalSemaphoreHandles,
+    const std::optional<fence> fenceHandle) {
+  std::vector<VkSemaphore> waitSemaphores(waitSemaphoreHandles.size());
+  for (u32 i = 0; i < waitSemaphoreHandles.size(); i++) {
+    waitSemaphores[i] = getSemaphoreByHandle(waitSemaphoreHandles[i]).m_handle;
   }
 
-  std::vector<VkCommandBuffer> buffers(commandBufferIds.size());
-  for (u32 i = 0; i < commandBufferIds.size(); i++) {
-    buffers[i] = getCommandBufferById(commandBufferIds[i]);
+  std::vector<VkCommandBuffer> buffers(commandBufferHandles.size());
+  for (u32 i = 0; i < commandBufferHandles.size(); i++) {
+    buffers[i] = getCommandBufferByHandle(commandBufferHandles[i]).m_handle;
   }
 
-  std::vector<VkSemaphore> signalSemaphore(signalSemaphoreIds.size());
-  for (u32 i = 0; i < signalSemaphoreIds.size(); i++) {
-    signalSemaphore[i] = getSemaphoreById(signalSemaphoreIds[i]);
+  std::vector<VkSemaphore> signalSemaphore(signalSemaphoreHandles.size());
+  for (u32 i = 0; i < signalSemaphoreHandles.size(); i++) {
+    signalSemaphore[i] =
+        getSemaphoreByHandle(signalSemaphoreHandles[i]).m_handle;
   }
 
   VkSubmitInfo submitInfo;
@@ -1103,101 +1003,101 @@ void VRendererBackend::submitCommandBuffers(
   submitInfo.pSignalSemaphores = signalSemaphore.data();
 
   VkFence vkFence = VK_NULL_HANDLE;
-  if (fence.has_value()) {
-    vkFence = getFenceById(fence.value());
+  if (fenceHandle.has_value()) {
+    vkFence = getFenceByHandle(fenceHandle.value()).m_handle;
   }
 
-  VkResult result =
-      vkQueueSubmit(getQueueById(queueId), 1, &submitInfo, vkFence);
+  const VkResult result = vkQueueSubmit(getQueueByHandle(queueHandle).m_handle,
+                                        1, &submitInfo, vkFence);
   ASSERT_VKRESULT(result);
 }
 
-u32 VRendererBackend::createFence() {
+fence VRendererBackend::createFence() {
   VkFenceCreateInfo createInfo;
   createInfo.pNext = nullptr;
   createInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
   createInfo.flags = 0;
-  VkFence fence;
-  VkResult result = vkCreateFence(m_device, &createInfo, nullptr, &fence);
+  fence_t fence{};
+  VkResult result =
+      vkCreateFence(m_device.m_handle, &createInfo, nullptr, &fence.m_handle);
   ASSERT_VKRESULT(result);
-  if (m_emptyFenceIds.empty()) {
-    m_fences.push_back(fence);
-    return m_fences.size() - 1;
-  } else {
-    u32 id = m_emptyFenceIds.back();
-    m_emptyFenceIds.pop_back();
-    m_fences[id] = fence;
-    return id;
-  }
+  fence.m_index = m_fences.insert(fence);
+  struct fence handle(fence.m_index);
+  return handle;
 }
 
-void VRendererBackend::destroyFence(const u32 fenceId) {
-  m_emptyFenceIds.push_back(fenceId);
-  vkDestroyFence(m_device, getFenceById(fenceId), nullptr);
+void VRendererBackend::destroyFence(const fence fenceHandle) {
+  destroyFence(getFenceByHandle(fenceHandle));
 }
 
-void VRendererBackend::resetFence(const u32 fenceId) {
-  VkResult result = vkResetFences(m_device, 1, &getFenceById(fenceId));
+void VRendererBackend::resetFence(const fence fenceHandle) {
+  const VkResult result = vkResetFences(
+      m_device.m_handle, 1, &getFenceByHandle(fenceHandle).m_handle);
   ASSERT_VKRESULT(result);
 }
 
-void VRendererBackend::waitForFence(const u32 fenceId) {
-  VkResult result = vkWaitForFences(m_device, 1, &getFenceById(fenceId), true,
-                                    std::numeric_limits<u64>::max());
+void VRendererBackend::waitForFence(const fence fenceHandle) {
+  const VkResult result = vkWaitForFences(
+      m_device.m_handle, 1, &getFenceByHandle(fenceHandle).m_handle, true,
+      std::numeric_limits<u64>::max());
   ASSERT_VKRESULT(result);
 }
 
-void VRendererBackend::waitDeviceIdle() { vkDeviceWaitIdle(m_device); }
+void VRendererBackend::waitDeviceIdle() { vkDeviceWaitIdle(m_device.m_handle); }
 
-u32 VRendererBackend::getAnyGraphicsQueue() {
-  for (u32 i = 0; i < m_queueIds.size(); i++) {
-    if (m_queueIds[i].first == GFX_QUEUE_IDENT) {
-      return i;
+queue VRendererBackend::getAnyGraphicsQueue() {
+  for (queue_t &queue : m_queues) {
+    if (queue.m_type == QUEUE_FAMILY_GRAPHICS) {
+      struct queue handle(queue.m_index);
+      return handle;
     }
   }
   throw std::runtime_error("no graphics queue avaiable");
 }
-u32 VRendererBackend::getAnyTransferQueue() {
-  for (u32 i = 0; i < m_queueIds.size(); i++) {
-    if (m_queueIds[i].first == TRANSFER_QUEUE_IDENT) {
-      return i;
+queue VRendererBackend::getAnyTransferQueue() {
+  for (queue_t &queue : m_queues) {
+    if (queue.m_type == QUEUE_FAMILY_TRANSFER) {
+      struct queue handle(queue.m_index);
+      return handle;
     }
   }
   throw std::runtime_error("no transfer queue avaiable");
 }
-u32 VRendererBackend::getAnyComputeQueue() {
-  for (u32 i = 0; i < m_queueIds.size(); i++) {
-    if (m_queueIds[i].first == COMPUTE_QUEUE_IDENT) {
-      return i;
+queue VRendererBackend::getAnyComputeQueue() {
+  for (queue_t &queue : m_queues) {
+    if (queue.m_type == QUEUE_FAMILY_COMPUTE) {
+      struct queue handle(queue.m_index);
+      return handle;
     }
   }
   throw std::runtime_error("no compute queue avaiable");
 }
 
 void VRendererBackend::updateSwapchainSupport() {
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physicalDevice, m_surface,
-                                            &m_swapchainSupport.capabilities);
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+      m_device.m_physicalDevice, m_surface.m_handle, &m_surface.m_capabilities);
 
   uint32_t formatCount;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_surface,
-                                       &formatCount, nullptr);
+  vkGetPhysicalDeviceSurfaceFormatsKHR(
+      m_device.m_physicalDevice, m_surface.m_handle, &formatCount, nullptr);
 
   if (formatCount != 0) {
-    m_swapchainSupport.formats.resize(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_surface,
-                                         &formatCount,
-                                         m_swapchainSupport.formats.data());
+    m_surface.m_formats.resize(formatCount);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(m_device.m_physicalDevice,
+                                         m_surface.m_handle, &formatCount,
+                                         m_surface.m_formats.data());
   }
 
   uint32_t presentModeCount;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, m_surface,
+  vkGetPhysicalDeviceSurfacePresentModesKHR(m_device.m_physicalDevice,
+                                            m_surface.m_handle,
                                             &presentModeCount, nullptr);
 
   if (presentModeCount != 0) {
-    m_swapchainSupport.presentModes.resize(presentModeCount);
+    m_surface.m_presentModes.resize(presentModeCount);
     vkGetPhysicalDeviceSurfacePresentModesKHR(
-        m_physicalDevice, m_surface, &presentModeCount,
-        m_swapchainSupport.presentModes.data());
+        m_device.m_physicalDevice, m_surface.m_handle, &presentModeCount,
+        m_surface.m_presentModes.data());
   }
 }
 
@@ -1206,24 +1106,20 @@ void VRendererBackend::createSwapchain() {
 
   VkExtent2D extend;
 
-  if (m_swapchainSupport.capabilities.currentExtent.width !=
+  if (m_surface.m_capabilities.currentExtent.width !=
       std::numeric_limits<uint32_t>::max()) {
-    extend = m_swapchainSupport.capabilities.currentExtent;
+    extend = m_surface.m_capabilities.currentExtent;
   } else {
     int width = mp_window->getWidth(), height = mp_window->getHeight();
-    // glfwGetFramebufferSize(window, &width, &height);
-
     VkExtent2D actualExtent = {static_cast<uint32_t>(width),
                                static_cast<uint32_t>(height)};
 
-    actualExtent.width =
-        std::clamp(actualExtent.width,
-                   m_swapchainSupport.capabilities.minImageExtent.width,
-                   m_swapchainSupport.capabilities.maxImageExtent.width);
-    actualExtent.height =
-        std::clamp(actualExtent.height,
-                   m_swapchainSupport.capabilities.minImageExtent.height,
-                   m_swapchainSupport.capabilities.maxImageExtent.height);
+    actualExtent.width = std::clamp(
+        actualExtent.width, m_surface.m_capabilities.minImageExtent.width,
+        m_surface.m_capabilities.maxImageExtent.width);
+    actualExtent.height = std::clamp(
+        actualExtent.height, m_surface.m_capabilities.minImageExtent.height,
+        m_surface.m_capabilities.maxImageExtent.height);
 
     extend = actualExtent;
   }
@@ -1232,10 +1128,9 @@ void VRendererBackend::createSwapchain() {
   swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
   swapchainCreateInfo.pNext = nullptr;
   swapchainCreateInfo.flags = 0;
-  swapchainCreateInfo.surface = m_surface;
-  swapchainCreateInfo.minImageCount =
-      std::min(m_swapchainSupport.capabilities.minImageCount,
-               (uint32_t)MAX_SWAPCHAIN_IMAGES);
+  swapchainCreateInfo.surface = m_surface.m_handle;
+  swapchainCreateInfo.minImageCount = std::min(
+      m_surface.m_capabilities.minImageCount, (uint32_t)MAX_SWAPCHAIN_IMAGES);
   swapchainCreateInfo.imageFormat =
       VRendererBackend::SURFACE_COLOR_FORMAT;  // TODO select dynamicly
   swapchainCreateInfo.imageColorSpace =
@@ -1250,96 +1145,153 @@ void VRendererBackend::createSwapchain() {
   swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   swapchainCreateInfo.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
   swapchainCreateInfo.clipped = VK_TRUE;
-  swapchainCreateInfo.oldSwapchain = m_swapchain;
+  swapchainCreateInfo.oldSwapchain = m_swapchain.m_handle;
 
-  VkResult result = vkCreateSwapchainKHR(m_device, &swapchainCreateInfo,
-                                         nullptr, &m_swapchain);
+  VkResult result = vkCreateSwapchainKHR(
+      m_device.m_handle, &swapchainCreateInfo, nullptr, &m_swapchain.m_handle);
   ASSERT_VKRESULT(result);
   uint32_t n_swapchainImages;
-  result = vkGetSwapchainImagesKHR(m_device, m_swapchain, &n_swapchainImages,
-                                   nullptr);
+  result = vkGetSwapchainImagesKHR(m_device.m_handle, m_swapchain.m_handle,
+                                   &n_swapchainImages, nullptr);
   ASSERT_VKRESULT(result);
   std::vector<VkImage> swapchainImages(n_swapchainImages);
-  result = vkGetSwapchainImagesKHR(m_device, m_swapchain, &n_swapchainImages,
-                                   swapchainImages.data());
+  result = vkGetSwapchainImagesKHR(m_device.m_handle, m_swapchain.m_handle,
+                                   &n_swapchainImages, swapchainImages.data());
   ASSERT_VKRESULT(result);
 
-  m_swapchainImageViews.resize(n_swapchainImages);
+  m_swapchain.m_imageViewsHandles.resize(n_swapchainImages, imageview());
   for (unsigned int i = 0; i < n_swapchainImages; i++) {
-    uint32_t imageViewId =
+    imageview imageviewHandle =
         createImageView(swapchainImages[i], extend.width, extend.height,
                         VRendererBackend::SURFACE_COLOR_FORMAT);
-    m_swapchainImageViews[i] = imageViewId;
+    m_swapchain.m_imageViewsHandles[i] = imageviewHandle;
   }
 }
 
-VkImageView &VRendererBackend::getImageViewById(const uint32_t imageViewId) {
-  assert(imageViewId < m_imageViews.size());
-  return m_imageViews[imageViewId];
+VRendererBackend::imageview_t &VRendererBackend::getImageViewByHandle(
+    const imageview imageViewHandle) {
+  assert(imageViewHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_imageViews.at(imageViewHandle.m_index);
 }
 
-VkPipelineLayout &VRendererBackend::getPipelineLayoutById(
-    const uint32_t pipelineLayoutId) {
-  assert(pipelineLayoutId < m_pipelineLayouts.size());
-  return m_pipelineLayouts[pipelineLayoutId];
+VRendererBackend::pipeline_layout_t &
+VRendererBackend::getPipelineLayoutByHandle(
+    const pipeline_layout pipelineLayoutHandle) {
+  assert(pipelineLayoutHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_pipelineLayouts.at(pipelineLayoutHandle.m_index);
 }
-VkPipeline &VRendererBackend::getPipelineById(const uint32_t pipelineId) {
-  assert(pipelineId < m_pipelines.size());
-  return m_pipelines[pipelineId];
+VRendererBackend::pipeline_t &VRendererBackend::getPipelineByHandle(
+    const pipeline pipelineHandle) {
+  assert(pipelineHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_pipelines.at(pipelineHandle.m_index);
 }
-VkRenderPass &VRendererBackend::getRenderPassById(const uint32_t renderPassId) {
-  assert(renderPassId < m_render_passes.size());
-  return m_render_passes[renderPassId];
+VRendererBackend::renderpass_t &VRendererBackend::getRenderPassByHandle(
+    const renderpass renderPassHandle) {
+  assert(renderPassHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_renderpasses.at(renderPassHandle.m_index);
 }
-VkShaderModule &VRendererBackend::getShaderById(const uint32_t shaderId) {
-  assert(shaderId < m_shaders.size());
-  return m_shaders[shaderId];
-}
-
-VkFramebuffer &VRendererBackend::getFramebufferById(
-    const uint32_t framebufferId) {
-  assert(framebufferId < m_framebuffers.size());
-  return m_framebuffers[framebufferId];
+VRendererBackend::shader_module_t &VRendererBackend::getShaderByHandle(
+    const shader_module shaderHandle) {
+  assert(shaderHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_shaders.at(shaderHandle.m_index);
 }
 
-VkCommandPool &VRendererBackend::getCommandPoolById(
-    const uint32_t commandPoolId) {
-  assert(commandPoolId < m_commandPools.size());
-  return m_commandPools[commandPoolId];
+VRendererBackend::framebuffer_t &VRendererBackend::getFramebufferByHandle(
+    const framebuffer framebufferHandle) {
+  assert(framebufferHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_framebuffers.at(framebufferHandle.m_index);
 }
 
-VkCommandBuffer &VRendererBackend::getCommandBufferById(
-    const uint32_t commandBufferId) {
-  assert(commandBufferId < m_commandBuffers.size());
-  return m_commandBuffers[commandBufferId];
+VRendererBackend::command_pool_t &VRendererBackend::getCommandPoolByHandle(
+    const command_pool commandPoolHandle) {
+  assert(commandPoolHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_commandPools.at(commandPoolHandle.m_index);
 }
 
-VkSemaphore &VRendererBackend::getSemaphoreById(const uint32_t semaphoreId) {
-  assert(semaphoreId < m_semaphores.size());
-  return m_semaphores[semaphoreId];
+VRendererBackend::command_buffer_t &VRendererBackend::getCommandBufferByHandle(
+    const command_buffer commandBufferHandle) {
+  assert(commandBufferHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_commandBuffers.at(commandBufferHandle.m_index);
 }
 
-VkQueue &VRendererBackend::getQueueById(const u32 queueId) {
-  assert(queueId < m_queueIds.size());
-  const u32 type = m_queueIds[queueId].first;
-  const u32 index = m_queueIds[queueId].second;
-  switch (type) {
-    case GFX_QUEUE_IDENT:
-      assert(index < m_graphics_queues.size());
-      return m_graphics_queues[index];
-    case TRANSFER_QUEUE_IDENT:
-      assert(index < m_transfer_queues.size());
-      return m_transfer_queues[index];
-    case COMPUTE_QUEUE_IDENT:
-      assert(index < m_compute_queues.size());
-      return m_compute_queues[index];
-  }
-  throw std::runtime_error("how did we get here =^) !");
+VRendererBackend::semaphore_t &VRendererBackend::getSemaphoreByHandle(
+    const semaphore semaphoreHandle) {
+  assert(semaphoreHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_semaphores.at(semaphoreHandle.m_index);
 }
 
-VkFence &VRendererBackend::getFenceById(const u32 fenceId) {
-  assert(fenceId < m_fences.size());
-  return m_fences[fenceId];
+VRendererBackend::queue_t &VRendererBackend::getQueueByHandle(
+    const queue queueHandle) {
+  assert(queueHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_queues.at(queueHandle.m_index);
+}
+
+VRendererBackend::fence_t &VRendererBackend::getFenceByHandle(
+    const fence fenceHandle) {
+  assert(fenceHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_fences.at(fenceHandle.m_index);
+}
+
+void VRendererBackend::destroyCommandPool(command_pool_t &commandPool) {
+  //
+  vkDestroyCommandPool(m_device.m_handle, commandPool.m_handle, nullptr);
+}
+void VRendererBackend::destroySemaphore(semaphore_t &semaphore) {
+  //
+  vkDestroySemaphore(m_device.m_handle, semaphore.m_handle, nullptr);
+}
+void VRendererBackend::destroyPipeline(pipeline_t &pipeline) {
+  //
+  vkDestroyPipeline(m_device.m_handle, pipeline.m_handle, nullptr);
+}
+void VRendererBackend::destroyFramebuffer(framebuffer_t &framebuffer) {
+  vkDestroyFramebuffer(m_device.m_handle, framebuffer.m_handle, nullptr);
+  //
+}
+void VRendererBackend::destroyPipelineLayout(
+    pipeline_layout_t &pipelineLayout) {
+  //
+  vkDestroyPipelineLayout(m_device.m_handle, pipelineLayout.m_handle, nullptr);
+}
+void VRendererBackend::destroyShaderModule(shader_module_t &shaderModule) {
+  //
+  vkDestroyShaderModule(m_device.m_handle, shaderModule.m_handle, nullptr);
+}
+void VRendererBackend::destroyRenderPass(renderpass_t &renderpass) {
+  //
+  vkDestroyRenderPass(m_device.m_handle, renderpass.m_handle, nullptr);
+}
+void VRendererBackend::destroyImageView(imageview_t &imageview) {
+  //
+  vkDestroyImageView(m_device.m_handle, imageview.m_handle, nullptr);
+}
+void VRendererBackend::destroySwapchain(swapchain_t &swapchain) {
+  //
+  vkDestroySwapchainKHR(m_device.m_handle, m_swapchain.m_handle, nullptr);
+}
+void VRendererBackend::destroySurface(surface_t &surface) {
+  //
+  vkDestroySurfaceKHR(m_instance.m_handle, m_surface.m_handle, nullptr);
+}
+void VRendererBackend::destroyDevice(device_t &device) {
+  //
+  vkDestroyDevice(m_device.m_handle, nullptr);
+}
+void VRendererBackend::destroyInstance(instance_t &instance) {
+  //
+  vkDestroyInstance(m_instance.m_handle, nullptr);
+}
+void VRendererBackend::destroyFence(fence_t &fence) {
+  //
+  vkDestroyFence(m_device.m_handle, fence.m_handle, nullptr);
+  m_fences.removeAt(fence.m_index);
+}
+
+void VRendererBackend::bindPipeline(pipeline_t &pipeline,
+                                    command_buffer_t &commandBuffer) {
+  //
+  vkCmdBindPipeline(commandBuffer.m_handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    pipeline.m_handle);
 }
 
 }  // namespace sge::vulkan
