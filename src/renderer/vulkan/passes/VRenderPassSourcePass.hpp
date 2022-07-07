@@ -14,8 +14,8 @@ class VRenderPassSourcePass : public RenderPass {
   void dispose() override;
 
  private:
-  const renderpass m_renderPass;
-  const u32 m_renderPassSource;
+  renderpass m_renderPass;
+  source<renderpass> m_renderPassSource;
 };
 
 }  // namespace sge::vulkan

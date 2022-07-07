@@ -16,9 +16,9 @@ class VFramebufferCachedSourcePass : public RenderPass {
   void dispose() override;
 
  private:
-  const u32 m_imageViewSink;
-  const u32 m_renderPassSink;
-  const u32 m_framebufferSource;
+  sink<imageview> m_imageViewSink;
+  sink<renderpass> m_renderPassSink;
+  source<framebuffer> m_framebufferSource;
   std::map<std::pair<imageview, renderpass>, framebuffer> m_cache;
 };
 

@@ -1,39 +1,37 @@
 #include "renderer/RenderPass.hpp"
 
+#include "renderer/SinkNotFoundException.hpp"
+#include "renderer/SourceNotFoundException.hpp"
+
 namespace sge {
 
 RenderPass::RenderPass(RendererBackend* renderer, const std::string name,
                        const boolean executable)
     : m_renderer(renderer), m_name(name), m_exectuable(executable) {}
 
-void RenderPass::linkSink(u32 sink_id, RenderPass& source_pass, u32 source_id) {
-  assert(sink_id < m_sinks.size());
-  assert(m_sinks[sink_id]);  // raise if nullptr
-  assert(source_id < source_pass.m_sources.size());
-  assert(source_pass.m_sources[source_id]);  // raise if nullptr
-  m_sinks[sink_id]->link(source_pass.m_sources[source_id].get());
-}
-
-u32 RenderPass::getSinkIdByName(const std::string name) const {
-  for (u32 i = 0; i < m_sinkNames.size(); i++) {
-    if (m_sinkNames[i] == name) {
-      return i;
+void RenderPass::linkSink(RenderPass& sourceRenderPass,
+                          const std::string& sourceName,
+                          const std::string& sinkName) {
+  isource* p_source = nullptr;
+  for (isource* p_isource : sourceRenderPass.m_sources) {
+    if (p_isource->m_name == sourceName) {
+      p_source = p_isource;
+      break;
     }
   }
-  throw std::runtime_error(std::string("RenderPass:[") + m_name +
-                           std::string("] doesn't have a sink named : [") +
-                           name + std::string("]"));
-}
-
-u32 RenderPass::getSourceIdByName(const std::string name) const {
-  for (u32 i = 0; i < m_sourceNames.size(); i++) {
-    if (m_sourceNames[i] == name) {
-      return i;
+  if (p_source == nullptr) {
+    throw SourceNotFoundException();
+  }
+  isink* p_sink = nullptr;
+  for (isink* p_isink : m_sinks) {
+    if (p_isink->m_name == sinkName) {
+      p_sink = p_isink;
     }
   }
-  throw std::runtime_error(std::string("RenderPass:[") + m_name +
-                           std::string("] doesn't have a source named : [") +
-                           name + std::string("]"));
+  if (p_sink == nullptr) {
+    throw SinkNotFoundException();
+  }
+  p_sink->link(p_source);
 }
 
 }  // namespace sge

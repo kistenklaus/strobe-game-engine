@@ -12,8 +12,8 @@ class VPipelineLayoutSourcePass : public RenderPass {
   void dispose() override;
 
  private:
-  const pipeline_layout m_pipelineLayout;
-  const u32 m_pipelineLayoutSource;
+  pipeline_layout m_pipelineLayout;
+  source<pipeline_layout> m_pipelineLayoutSource;
 };
 
 }  // namespace sge::vulkan

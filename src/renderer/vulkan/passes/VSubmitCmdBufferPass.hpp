@@ -14,11 +14,12 @@ class VSubmitCmdBufferPass : public RenderPass {
   void execute() override;
 
  private:
-  const u32 m_fenceSink;
-  const u32 m_queueSink;
-  const u32 m_commandBuffersSink;
-  const u32 m_waitSemaphoresSink;
-  const u32 m_signalSemaphoresSource;
+  sink<fence> m_fenceSink;
+  sink<queue> m_queueSink;
+  sink<command_buffer> m_commandBuffersSink;
+  sink<std::vector<semaphore>> m_waitSemaphoresSink;
+  source<std::vector<semaphore>> m_signalSemaphoresSource;
+
   std::vector<semaphore> m_signalSemaphores;
 };
 }  // namespace sge::vulkan

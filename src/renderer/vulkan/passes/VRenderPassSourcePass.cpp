@@ -7,12 +7,13 @@ VRenderPassSourcePass::VRenderPassSourcePass(VRendererBackend* renderer,
                                              const VkFormat colorFormat)
     : RenderPass(renderer, name, false),
       m_renderPass(m_vrenderer->createRenderPass(colorFormat)),
-      m_renderPassSource(registerSource<renderpass>("renderpass")) {
-  setSourceResource(m_renderPassSource, &m_renderPass);
+      m_renderPassSource(source<renderpass>("renderpass")) {
+  registerSource(&m_renderPassSource);
+  m_renderPassSource.set(&m_renderPass);
 }
 
 void VRenderPassSourcePass::dispose() {
-  setSourceResource<renderpass>(m_renderPassSource, nullptr);
+  m_renderPassSource.reset();
   m_vrenderer->destroyRenderPass(m_renderPass);
 }
 

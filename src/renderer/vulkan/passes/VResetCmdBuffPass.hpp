@@ -16,10 +16,10 @@ class VResetCmdBuffPass : public RenderPass {
   void execute() override;
 
  private:
-  const u32 m_cmdbufferSink;
-  const u32 m_fenceSink;
-  const u32 m_cmdbufferSrc;
-  const u32 m_fenceSrc;
+  sink<command_buffer> m_cmdbufferSink;
+  sink<fence> m_fenceSink;
+  source<command_buffer> m_cmdbufferSrc;
+  source<fence> m_fenceSrc;
 
   std::set<fence> m_seenFences;
 };

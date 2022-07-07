@@ -7,9 +7,10 @@ VCmdPoolSrcPass::VCmdPoolSrcPass(VRendererBackend* renderer,
                                  QueueFamilyType queueFamily)
     : RenderPass(renderer, name, false),
       m_pool(m_vrenderer->createCommandPool(queueFamily)),
-      m_poolSource(registerSource<command_pool>("cmdpool")) {
+      m_poolSource(source<command_pool>("cmdpool")) {
   //
-  setSourceResource(m_poolSource, &m_pool);
+  registerSource(&m_poolSource);
+  m_poolSource.set(&m_pool);
 }
 
 }  // namespace sge::vulkan

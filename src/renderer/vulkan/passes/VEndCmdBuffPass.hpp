@@ -9,12 +9,9 @@ class VEndCmdBuffPass : public RenderPass {
   explicit VEndCmdBuffPass(VRendererBackend* renderer, const std::string name);
   void execute() override;
 
-  u32 getCmdBuffSink() const { return m_cmdBuffSink; }
-  u32 getCmdBuffSource() const { return m_cmdBuffSource; }
-
  private:
-  const u32 m_cmdBuffSink;
-  const u32 m_cmdBuffSource;
+  sink<command_buffer> m_cmdBuffSink;
+  source<command_buffer> m_cmdBuffSource;
 };
 
 }  // namespace sge::vulkan

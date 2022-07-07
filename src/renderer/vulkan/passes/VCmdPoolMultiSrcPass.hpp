@@ -13,8 +13,8 @@ class VCmdPoolMultiSrcPass : public RenderPass {
   void dispose() override;
 
  private:
-  const std::vector<command_pool> m_pools;
-  const u32 m_poolsSource;
+  std::vector<command_pool> m_pools;
+  source<std::vector<command_pool>> m_poolsSource;
 };
 
 }  // namespace sge::vulkan

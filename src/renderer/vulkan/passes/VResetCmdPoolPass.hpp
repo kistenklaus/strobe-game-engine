@@ -16,10 +16,10 @@ class VResetCmdPoolPass : public RenderPass {
   void recreate() override;
 
  private:
-  const u32 m_fenceSink;
-  const u32 m_poolSink;
-  const u32 m_fenceSource;
-  const u32 m_poolSource;
+  sink<fence> m_fenceSink;
+  sink<command_pool> m_poolSink;
+  source<fence> m_fenceSource;
+  source<command_pool> m_poolSource;
   std::set<fence> m_seenFences;
 };
 

@@ -6,10 +6,9 @@
 #include <vector>
 
 #include "renderer/Renderer.hpp"
-#include "renderer/Sink.hpp"
 #include "renderer/SinkNotLinkedException.hpp"
 #include "renderer/SinkNullPointerException.hpp"
-#include "renderer/Source.hpp"
+#include "renderer/sinksource.hpp"
 #include "types/inttypes.hpp"
 
 namespace sge {
@@ -35,75 +34,22 @@ class RenderPass {
   virtual void endFrame() {}
   virtual void dispose() {}
 
-  void linkSink(u32 sink_id, RenderPass& source_pass, u32 source_id);
+  void linkSink(RenderPass& sourceRenderPass, const std::string& sourceName,
+                const std::string& sinkName);
 
   const std::string getName() const { return m_name; }
-
-  const std::string getSinkNameById(const u32 sinkId) const {
-    return m_sinkNames[sinkId];
-  }
-  const std::string getSourceNameById(const u32 sourceId) const {
-    return m_sourceNames[sourceId];
-  }
-  const ISink* const getSinkById(const u32 sinkId) const {
-    return m_sinks[sinkId].get();
-  }
-  const ISource* const getSourceById(const u32 sourceId) const {
-    return m_sources[sourceId].get();
-  }
-  u32 getSinkIdByName(const std::string name) const;
-  u32 getSourceIdByName(const std::string name) const;
   const boolean isExecutable() const { return m_exectuable; }
 
  protected:
-  template <class Resource_t>
-  u32 registerSource(const std::string name) {
-    u32 id = m_sources.size();
-    std::unique_ptr<ISource> source =
-        std::unique_ptr<Source<Resource_t>>(new Source<Resource_t>(*this));
-    m_sources.push_back(std::move(source));
-    m_sourceNames.push_back(name);
-    return id;
+  void registerSource(isource* source) {
+    // TODO move to cpp
+    source->m_pass = this;
+    m_sources.push_back(source);
   }
-
-  template <class Resource_t>
-  u32 registerSink(const std::string name, const boolean nullable = false) {
-    u32 id = m_sinks.size();
-    std::unique_ptr<ISink> sink = std::unique_ptr<Sink<Resource_t>>(
-        new Sink<Resource_t>(*this, nullable));
-    m_sinks.push_back(std::move(sink));
-    m_sinkNames.push_back(name);
-    return id;
-  }
-
-  template <class Resource_t>
-  Resource_t* getSinkResource(u32 sink_id) {
-    assert(sink_id < m_sinks.size());
-    assert(m_sinks[sink_id]);  // raise if nullptr
-    ISink* isink = m_sinks[sink_id].get();
-    Sink<Resource_t>* sink = static_cast<Sink<Resource_t>*>(isink);
-    Resource_t* p_value = nullptr;
-    try {
-      p_value = sink->get();
-    } catch (const SinkNotLinkedException& e) {
-      throw SinkNotLinkedException(
-          std::string("tried to access unlinked sink :[") + m_name +
-          std::string("@") + m_sinkNames[sink_id] + std::string("]"));
-    } catch (const SinkNullPointerException& e) {
-      throw SinkNullPointerException(
-          std::string("Sink :[") + m_name + std::string("@") +
-          m_sinkNames[sink_id] +
-          std::string("] is NULL(nullptr), but not marked nullable"));
-    }
-    return p_value;
-  }
-  template <class Resource_t>
-  void setSourceResource(u32 source_id, const Resource_t* p_resource) {
-    assert(source_id < m_sources.size());
-    assert(m_sources[source_id]);  // raise if nullptr
-    ISource* p_isource = m_sources[source_id].get();
-    Source<Resource_t>* p_source = static_cast<Source<Resource_t>*>(p_isource);
-    p_source->set(p_resource);
+  void registerSink(isink* sink) {
+    // TODO move to cpp
+    sink->m_pass = this;
+    m_sinks.push_back(sink);
   }
 
  private:
@@ -113,10 +59,8 @@ class RenderPass {
  private:
   const std::string m_name;
   const boolean m_exectuable;
-  std::vector<std::unique_ptr<ISink>> m_sinks;
-  std::vector<std::string> m_sinkNames;
-  std::vector<std::unique_ptr<ISource>> m_sources;
-  std::vector<std::string> m_sourceNames;
+  std::vector<isink*> m_sinks;
+  std::vector<isource*> m_sources;
 };
 
 }  // namespace sge

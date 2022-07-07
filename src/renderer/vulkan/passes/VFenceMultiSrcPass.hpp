@@ -15,7 +15,7 @@ class VFenceMultiSrcPass : public RenderPass {
   void dispose() override;
 
  private:
-  const u32 m_fencesSource;
+  source<std::vector<fence>> m_fencesSource;
   std::vector<fence> m_fences;
 };
 

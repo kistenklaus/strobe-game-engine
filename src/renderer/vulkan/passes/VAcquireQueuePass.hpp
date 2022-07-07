@@ -15,11 +15,9 @@ class VAcquireQueuePass : public RenderPass {
 
   void execute() override;
 
-  u32 getQueueSource() const { return m_queueSource; }
-
  private:
   const u32 m_queueType;
-  const u32 m_queueSource;
+  source<queue> m_queueSource;
   queue m_queueHandle;
 };
 

@@ -14,9 +14,9 @@ class VCmdBuffMSrcPass : public RenderPass {
   void dispose() override;
 
  private:
-  const u32 m_poolSink;
-  const u32 m_cmdbufferSrc;
-  const u32 m_count;
+  sink<command_pool> m_poolSink;
+  source<std::vector<command_buffer>> m_cmdbufferSrc;
+  u32 m_count;
   std::vector<command_buffer> m_buffers;
 };
 

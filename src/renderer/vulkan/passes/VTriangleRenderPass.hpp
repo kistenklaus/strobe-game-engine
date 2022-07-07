@@ -13,11 +13,11 @@ class VTriangleRenderPass : public RenderPass {
   void dispose() override;
 
  private:
-  const u32 m_framebufferSink;
-  const u32 m_renderPassSink;
-  const u32 m_pipelineLayoutSink;
-  const u32 m_cmdBuffSink;
-  const u32 m_cmdBuffSource;
+  sink<framebuffer> m_framebufferSink;
+  sink<renderpass> m_renderPassSink;
+  sink<pipeline_layout> m_pipelineLayoutSink;
+  sink<command_buffer> m_cmdBuffSink;
+  source<command_buffer> m_cmdBuffSource;
 
   pipeline m_pipeline;
 

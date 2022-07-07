@@ -4,7 +4,6 @@
 
 #include "logging/print.hpp"
 #include "renderer/passes/VectorAtIndexPass.hpp"
-#include "renderer/passes/WrapWithVectorPass.hpp"
 #include "renderer/vulkan/VAssertion.hpp"
 #include "renderer/vulkan/passes/VAcquireQueuePass.hpp"
 #include "renderer/vulkan/passes/VAcquireSwapchainFrame.hpp"

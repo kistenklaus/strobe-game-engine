@@ -8,16 +8,15 @@ namespace sge::vulkan {
 VPresentQueuePass::VPresentQueuePass(VRendererBackend* renderer,
                                      const std::string name)
     : RenderPass(renderer, name),
-      m_queueSink(registerSink<queue>("queue")),
-      m_waitSemsSink(registerSink<std::vector<semaphore>>("wait")) {}
+      m_queueSink(sink<queue>("queue")),
+      m_waitSemsSink(sink<std::vector<semaphore>>("wait")) {
+  registerSink(&m_queueSink);
+  registerSink(&m_waitSemsSink);
+}
 
 void VPresentQueuePass::execute() {
-  queue* p_queue = getSinkResource<queue>(m_queueSink);
-
-  std::vector<semaphore>* p_semaphores =
-      getSinkResource<std::vector<semaphore>>(m_waitSemsSink);
-
-  const boolean deprecated = m_vrenderer->presentQueue(*p_queue, *p_semaphores);
+  const boolean deprecated =
+      m_vrenderer->presentQueue(*m_queueSink, *m_waitSemsSink);
   if (deprecated) {
     throw RendergraphResourcesDeprecatedException();
   }

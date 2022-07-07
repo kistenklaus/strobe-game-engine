@@ -11,7 +11,9 @@ VAcquireQueuePass::VAcquireQueuePass(VRendererBackend* renderer,
                                      VulkanQueueAcquireTarget queueType)
     : RenderPass(renderer, name),
       m_queueType(queueType),
-      m_queueSource(registerSource<queue>("queue")) {}
+      m_queueSource(source<queue>("queue")) {
+  registerSource(&m_queueSource);
+}
 
 void VAcquireQueuePass::execute() {
   m_queueHandle = [&]() -> queue {
@@ -25,7 +27,7 @@ void VAcquireQueuePass::execute() {
     }
     throw std::runtime_error("invalid queue target");
   }();
-  setSourceResource(m_queueSource, &m_queueHandle);
+  m_queueSource.set(&m_queueHandle);
 }
 
 }  // namespace sge::vulkan

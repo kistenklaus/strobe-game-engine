@@ -5,13 +5,15 @@ namespace sge::vulkan {
 VEndCmdBuffPass::VEndCmdBuffPass(VRendererBackend* renderer,
                                  const std::string name)
     : RenderPass(renderer, name),
-      m_cmdBuffSink(registerSink<command_buffer>("cmdbuffer")),
-      m_cmdBuffSource(registerSource<command_buffer>("cmdbuffer")) {}
+      m_cmdBuffSink(sink<command_buffer>("cmdbuffer")),
+      m_cmdBuffSource(source<command_buffer>("cmdbuffer")) {
+  registerSink(&m_cmdBuffSink);
+  registerSource(&m_cmdBuffSource);
+}
 
 void VEndCmdBuffPass::execute() {
-  command_buffer* p_cmdBuff = getSinkResource<command_buffer>(m_cmdBuffSink);
-  m_vrenderer->endCommandBuffer(*p_cmdBuff);
-  setSourceResource(m_cmdBuffSource, p_cmdBuff);
+  m_vrenderer->endCommandBuffer(*m_cmdBuffSink);
+  m_cmdBuffSource.set(m_cmdBuffSink);
 }
 
 }  // namespace sge::vulkan

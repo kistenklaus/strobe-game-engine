@@ -13,12 +13,9 @@ class VAllocateCmdBuffPass : public RenderPass {
                                 const std::string name);
   void execute() override;
 
-  u32 getPoolSink() const { return m_poolSink; }
-  u32 getCmdBufferSource() const { return m_bufferSource; }
-
  private:
-  const u32 m_poolSink;
-  const u32 m_bufferSource;
+  sink<command_pool> m_poolSink;
+  source<command_buffer> m_bufferSource;
 
   command_buffer m_buffer;
 };

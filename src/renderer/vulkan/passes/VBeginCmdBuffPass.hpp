@@ -12,8 +12,8 @@ class VBeginCmdBuffPass : public RenderPass {
   void execute() override;
 
  private:
-  const u32 m_cmdBufferSink;
-  const u32 m_cmdBufferSource;
+  sink<command_buffer> m_cmdBufferSink;
+  source<command_buffer> m_cmdBufferSource;
 };
 
 }  // namespace sge::vulkan

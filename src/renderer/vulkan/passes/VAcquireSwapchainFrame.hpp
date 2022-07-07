@@ -13,9 +13,9 @@ class VAcquireSwapchainFrame : public RenderPass {
   void execute() override;
 
  private:
-  const u32 m_singalSemaphoresSource;
-  const u32 m_swapchainImageViewSource;
-  const u32 m_swapchainFrameIndexSource;
+  source<std::vector<semaphore>> m_singalSemaphoresSource;
+  source<imageview> m_swapchainImageViewSource;
+  source<u32> m_swapchainFrameIndexSource;
 
   std::vector<semaphore> m_signalSemphores;
   imageview m_imageView;

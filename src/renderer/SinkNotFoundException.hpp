@@ -5,9 +5,9 @@ namespace sge {
 
 // TODO proper cpp implementation pls
 
-class SinkInvalidValueException : public std::exception {
+class SinkNotFoundException : public std::exception {
  public:
-  SinkInvalidValueException(const std::string msg = "sink value is invalid")
+  SinkNotFoundException(const std::string msg = "could not find sink")
       : m_msg(msg) {}
 
   const char* what() const throw() { return m_msg.c_str(); }

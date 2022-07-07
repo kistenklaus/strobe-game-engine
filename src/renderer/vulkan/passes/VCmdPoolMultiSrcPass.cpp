@@ -7,7 +7,7 @@ VCmdPoolMultiSrcPass::VCmdPoolMultiSrcPass(VRendererBackend* renderer,
                                            const QueueFamilyType queueFamily,
                                            const u32 count)
     : RenderPass(renderer, name, false),
-      m_poolsSource(registerSource<std::vector<u32>>("cmdpools")),
+      m_poolsSource(source<std::vector<command_pool>>("cmdpools", &m_pools)),
       m_pools([&]() {
         std::vector<command_pool> pools(count);
         for (u32 i = 0; i < count; i++) {
@@ -15,14 +15,14 @@ VCmdPoolMultiSrcPass::VCmdPoolMultiSrcPass(VRendererBackend* renderer,
         }
         return pools;
       }()) {
-  setSourceResource(m_poolsSource, &m_pools);
+  registerSource(&m_poolsSource);
 }
 
 void VCmdPoolMultiSrcPass::dispose() {
   for (const command_pool& pool : m_pools) {
     m_vrenderer->destroyCommandPool(pool);
   }
-  setSourceResource<std::vector<u32>>(m_poolsSource, nullptr);
+  m_poolsSource.reset();
 }
 
 }  // namespace sge::vulkan

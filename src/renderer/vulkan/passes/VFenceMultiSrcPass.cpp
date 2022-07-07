@@ -5,7 +5,7 @@ namespace sge::vulkan {
 VFenceMultiSrcPass::VFenceMultiSrcPass(VRendererBackend* renderer,
                                        const std::string name, const u32 count)
     : RenderPass(renderer, name, false),
-      m_fencesSource(registerSource<std::vector<fence>>("fences")),
+      m_fencesSource(source<std::vector<fence>>("fences")),
       m_fences([&]() {
         std::vector<fence> fences(count);
         for (u32 i = 0; i < count; i++) {
@@ -13,7 +13,8 @@ VFenceMultiSrcPass::VFenceMultiSrcPass(VRendererBackend* renderer,
         }
         return fences;
       }()) {
-  setSourceResource(m_fencesSource, &m_fences);
+  registerSource(&m_fencesSource);
+  m_fencesSource.set(&m_fences);
 }
 
 void VFenceMultiSrcPass::recreate() {
@@ -24,7 +25,7 @@ void VFenceMultiSrcPass::recreate() {
 }
 
 void VFenceMultiSrcPass::dispose() {
-  setSourceResource<std::vector<fence>>(m_fencesSource, nullptr);
+  m_fencesSource.reset();
   for (const fence fence : m_fences) {
     m_vrenderer->destroyFence(fence);
   }

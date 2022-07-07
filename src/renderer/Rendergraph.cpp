@@ -70,25 +70,8 @@ void Rendergraph::dispose() {
   }
 }
 
-void Rendergraph::addLinkage(u32 source_pass_id, u32 source_id,
-                             u32 sink_pass_id, u32 sink_id) {
-  assert(source_pass_id <= m_passes.size());
-  assert(sink_pass_id <= m_passes.size());
-  // check for types!
-  if (getPassById(source_pass_id).getSourceById(source_id)->getResourceType() !=
-      getPassById(sink_pass_id).getSinkById(sink_id)->getResourceType()) {
-    throw IncompatibleLinkageException(
-        "typeof [" + getPassById(source_pass_id).getName() + "@" +
-        getPassById(source_pass_id).getSourceNameById(source_id) +
-        "] doesn't match the typeof [" + getPassById(sink_pass_id).getName() +
-        "@" + getPassById(sink_pass_id).getSinkNameById(sink_id) + "]");
-  }
-
-  m_linkages.push_back(std::make_pair(std::make_pair(source_pass_id, source_id),
-                                      std::make_pair(sink_pass_id, sink_id)));
-}
-
-void Rendergraph::addLinkage(const std::string source, const std::string sink) {
+void Rendergraph::addLinkage(const std::string& source,
+                             const std::string& sink) {
   u32 sindex = source.find('@');
   const std::string sourcePassName = source.substr(0, sindex);
   const std::string sourceName = source.substr(sindex + 1);
@@ -97,11 +80,13 @@ void Rendergraph::addLinkage(const std::string source, const std::string sink) {
   const std::string sinkName = sink.substr(sindex + 1);
   const u32 sourcePassId = getPassIdByName(sourcePassName);
   const u32 sinkPassId = getPassIdByName(sinkPassName);
-  const RenderPass& sourcePass = getPassById(sourcePassId);
-  const u32 sourceId = sourcePass.getSourceIdByName(sourceName);
-  const RenderPass& sinkPass = getPassById(sinkPassId);
-  const u32 sinkId = sinkPass.getSinkIdByName(sinkName);
-  addLinkage(sourcePassId, sourceId, sinkPassId, sinkId);
+  linkage linkage{
+      .m_sourcePassId = sourcePassId,
+      .m_sourceName = sourceName,
+      .m_sinkPassId = sinkPassId,
+      .m_sinkName = sinkName,
+  };
+  m_linkages.push_back(linkage);
 }
 
 void Rendergraph::markPassAsRoot(const u32 passId) {
@@ -120,20 +105,15 @@ void Rendergraph::unmarkPassAsRoot(const u32 passId) {
 void Rendergraph::build() {
   // 1. link sinks to sources.
   for (const auto& linkage : m_linkages) {
-    const u32 source_pass_id = linkage.first.first;
-    const u32 source_id = linkage.first.second;
-    const u32 sink_pass_id = linkage.second.first;
-    const u32 sink_id = linkage.second.second;
-    m_passes[sink_pass_id]->linkSink(sink_id, getPassById(source_pass_id),
-                                     source_id);
+    getPassById(linkage.m_sinkPassId)
+        .linkSink(getPassById(linkage.m_sourcePassId), linkage.m_sourceName,
+                  linkage.m_sinkName);
   }
   std::vector<u32> sort;
 
   std::vector<std::vector<u32>> graph(m_passes.size());
   for (const auto& linkage : m_linkages) {
-    const u32 source_pass_id = linkage.first.first;
-    const u32 sink_pass_id = linkage.second.first;
-    graph[sink_pass_id].push_back(source_pass_id);
+    graph[linkage.m_sinkPassId].push_back(linkage.m_sourcePassId);
   }
   // TODO Topological sort
   m_dependencyOrder.clear();

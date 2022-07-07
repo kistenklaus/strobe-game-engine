@@ -13,8 +13,8 @@ class VPresentQueuePass : public RenderPass {
   void execute() override;
 
  private:
-  const u32 m_queueSink;
-  const u32 m_waitSemsSink;
+  sink<queue> m_queueSink;
+  sink<std::vector<semaphore>> m_waitSemsSink;
 };
 
 }  // namespace sge::vulkan
