@@ -5,11 +5,13 @@
 #include "logging/log.hpp"
 #include "profiling/Profiler.hpp"
 #include "renderer/Renderer.hpp"
+#include "types/sarray.hpp"
 #include "window/Window.hpp"
 using namespace sge;
 
 int main() {
   println();
+
   Window window =
       Window(800, 600, "FLOATING", VULKAN_RENDER_BACKEND, GLFW_WINDOW_BACKEND);
 

@@ -335,14 +335,15 @@ VRendererBackend::~VRendererBackend() {
   for (pipeline_t &pipeline : m_pipelines) {
     destroyPipeline(pipeline);
   }
-  for (framebuffer_t &framebuffer : m_framebuffers) {
-    destroyFramebuffer(framebuffer);
-  }
+
   for (pipeline_layout_t &pipelineLayout : m_pipelineLayouts) {
     destroyPipelineLayout(pipelineLayout);
   }
   for (shader_module_t &shaderModule : m_shaders) {
     destroyShaderModule(shaderModule);
+  }
+  for (framebuffer_t &framebuffer : m_framebuffers) {
+    destroyFramebuffer(framebuffer);
   }
   for (renderpass_t &renderpass : m_renderpasses) {
     destroyRenderPass(renderpass);
@@ -413,8 +414,8 @@ imageview VRendererBackend::createImageView(VkImage image, const u32 width,
                     &imageview.m_handle);
   imageview.m_width = width;
   imageview.m_height = height;
-  imageview.m_index = m_imageViews.insert(imageview);
-  struct imageview handle(imageview.m_index);
+  struct imageview handle(m_imageViews.insert(imageview));
+  m_imageViews[handle.m_index].m_index = handle.m_index;
   return handle;
 }
 
@@ -444,8 +445,9 @@ shader_module VRendererBackend::createShaderModule(
                                          nullptr, &shaderModule.m_handle);
   ASSERT_VKRESULT(result);
   // select id for new shader.
-  shaderModule.m_index = m_shaders.insert(shaderModule);
-  return shader_module(shaderModule.m_index);
+  struct shader_module handle(m_shaders.insert(shaderModule));
+  m_shaders[handle.m_index].m_index = handle.m_index;
+  return handle;
 }
 
 void VRendererBackend::destroyShaderModule(shader_module shaderModuleHandle) {
@@ -469,8 +471,9 @@ pipeline_layout VRendererBackend::createPipelineLayout() {
       vkCreatePipelineLayout(m_device.m_handle, &pipelineLayoutCreateInfo,
                              nullptr, &pipelineLayout.m_handle);
   ASSERT_VKRESULT(result);
-  pipelineLayout.m_index = m_pipelineLayouts.insert(pipelineLayout);
-  return pipeline_layout(pipelineLayout.m_index);
+  struct pipeline_layout handle(m_pipelineLayouts.insert(pipelineLayout));
+  m_pipelineLayouts[handle.m_index].m_index = handle.m_index;
+  return handle;
 }
 void VRendererBackend::destroyPipelineLayout(
     pipeline_layout pipelineLayoutHandle) {
@@ -539,8 +542,8 @@ renderpass VRendererBackend::createRenderPass(const VkFormat color_format) {
   const VkResult result = vkCreateRenderPass(
       m_device.m_handle, &renderPassCreateInfo, nullptr, &renderpass.m_handle);
   ASSERT_VKRESULT(result);
-  renderpass.m_index = m_renderpasses.insert(renderpass);
-  struct renderpass handle(renderpass.m_index);
+  struct renderpass handle(m_renderpasses.insert(renderpass));
+  m_renderpasses[handle.m_index].m_index = handle.m_index;
   return handle;
 }
 
@@ -735,8 +738,8 @@ pipeline VRendererBackend::createPipeline(
                                               &pipeline.m_handle);
   ASSERT_VKRESULT(result);
   //
-  pipeline.m_index = m_pipelines.insert(pipeline);
-  struct pipeline handle(pipeline.m_index);
+  struct pipeline handle(m_pipelines.insert(pipeline));
+  m_pipelines[handle.m_index].m_index = handle.m_index;
   return handle;
 }
 
@@ -765,8 +768,8 @@ framebuffer VRendererBackend::createFramebuffer(renderpass renderPassHandle,
       vkCreateFramebuffer(m_device.m_handle, &framebufferCreateInfo, nullptr,
                           &framebuffer.m_handle);
   ASSERT_VKRESULT(result);
-  framebuffer.m_index = m_framebuffers.insert(framebuffer);
-  struct framebuffer handle(framebuffer.m_index);
+  struct framebuffer handle(m_framebuffers.insert(framebuffer));
+  m_framebuffers[handle.m_index].m_index = handle.m_index;
   return handle;
 }
 
@@ -805,8 +808,8 @@ command_pool VRendererBackend::createCommandPool(QueueFamilyType queueFamily) {
   const VkResult result = vkCreateCommandPool(
       m_device.m_handle, &commandPoolCreateInfo, nullptr, &pool.m_handle);
   ASSERT_VKRESULT(result);
-  pool.m_index = m_commandPools.insert(pool);
-  struct command_pool handle(pool.m_index);
+  struct command_pool handle(m_commandPools.insert(pool));
+  m_commandPools[handle.m_index].m_index = handle.m_index;
   return handle;
 }
 void VRendererBackend::resetCommandPool(command_pool commandPoolHandle) {
@@ -859,15 +862,14 @@ void VRendererBackend::freeCommandBuffers(
   std::vector<VkCommandBuffer> buffers(commandBufferHandles.size());
   std::optional<command_pool> poolHandle;
   for (const command_buffer &handle : commandBufferHandles) {
-    buffers.push_back(getCommandBufferByHandle(handle).m_handle);
-    m_commandBuffers.removeAt(handle.m_index);
-
     if (!poolHandle.has_value()) {
       poolHandle = getCommandBufferByHandle(handle).m_origin_pool;
     } else {
-      assert(poolHandle.value().m_index ==
-             getCommandBufferByHandle(handle).m_origin_pool.m_index);
+      assert(poolHandle.value() ==
+             getCommandBufferByHandle(handle).m_origin_pool);
     }
+    buffers.push_back(getCommandBufferByHandle(handle).m_handle);
+    m_commandBuffers.removeAt(handle.m_index);
   }
   vkFreeCommandBuffers(m_device.m_handle,
                        getCommandPoolByHandle(poolHandle.value()).m_handle,
@@ -910,8 +912,8 @@ semaphore VRendererBackend::createSemaphore() {
   VkResult result = vkCreateSemaphore(m_device.m_handle, &semaphoreCreateInfo,
                                       nullptr, &semaphore.m_handle);
   ASSERT_VKRESULT(result);
-  semaphore.m_index = m_semaphores.insert(semaphore);
-  struct semaphore handle(semaphore.m_index);
+  struct semaphore handle(m_semaphores.insert(semaphore));
+  m_semaphores[handle.m_index].m_index = handle.m_index;
   return handle;
 }
 
@@ -1021,8 +1023,8 @@ fence VRendererBackend::createFence() {
   VkResult result =
       vkCreateFence(m_device.m_handle, &createInfo, nullptr, &fence.m_handle);
   ASSERT_VKRESULT(result);
-  fence.m_index = m_fences.insert(fence);
-  struct fence handle(fence.m_index);
+  struct fence handle(m_fences.insert(fence));
+  m_fences[handle.m_index].m_index = handle.m_index;
   return handle;
 }
 
@@ -1234,36 +1236,52 @@ VRendererBackend::fence_t &VRendererBackend::getFenceByHandle(
 
 void VRendererBackend::destroyCommandPool(command_pool_t &commandPool) {
   //
+  m_commandPools.removeAt(commandPool.m_index);
   vkDestroyCommandPool(m_device.m_handle, commandPool.m_handle, nullptr);
+  commandPool.m_handle = VK_NULL_HANDLE;
 }
 void VRendererBackend::destroySemaphore(semaphore_t &semaphore) {
   //
+  m_semaphores.removeAt(semaphore.m_index);
   vkDestroySemaphore(m_device.m_handle, semaphore.m_handle, nullptr);
+  semaphore.m_handle = VK_NULL_HANDLE;
 }
 void VRendererBackend::destroyPipeline(pipeline_t &pipeline) {
   //
   vkDestroyPipeline(m_device.m_handle, pipeline.m_handle, nullptr);
+  m_pipelines.removeAt(pipeline.m_index);
+  pipeline.m_handle = VK_NULL_HANDLE;
 }
 void VRendererBackend::destroyFramebuffer(framebuffer_t &framebuffer) {
+  m_framebuffers.removeAt(framebuffer.m_index);
   vkDestroyFramebuffer(m_device.m_handle, framebuffer.m_handle, nullptr);
+  framebuffer.m_handle = VK_NULL_HANDLE;
   //
 }
 void VRendererBackend::destroyPipelineLayout(
     pipeline_layout_t &pipelineLayout) {
   //
+  m_pipelineLayouts.removeAt(pipelineLayout.m_index);
   vkDestroyPipelineLayout(m_device.m_handle, pipelineLayout.m_handle, nullptr);
+  pipelineLayout.m_handle = VK_NULL_HANDLE;
 }
 void VRendererBackend::destroyShaderModule(shader_module_t &shaderModule) {
   //
+  m_shaders.removeAt(shaderModule.m_index);
   vkDestroyShaderModule(m_device.m_handle, shaderModule.m_handle, nullptr);
+  shaderModule.m_handle = VK_NULL_HANDLE;
 }
 void VRendererBackend::destroyRenderPass(renderpass_t &renderpass) {
   //
+  m_renderpasses.removeAt(renderpass.m_index);
   vkDestroyRenderPass(m_device.m_handle, renderpass.m_handle, nullptr);
+  renderpass.m_handle = VK_NULL_HANDLE;
 }
 void VRendererBackend::destroyImageView(imageview_t &imageview) {
   //
+  m_imageViews.removeAt(imageview.m_index);
   vkDestroyImageView(m_device.m_handle, imageview.m_handle, nullptr);
+  imageview.m_handle = VK_NULL_HANDLE;
 }
 void VRendererBackend::destroySwapchain(swapchain_t &swapchain) {
   //
@@ -1283,8 +1301,9 @@ void VRendererBackend::destroyInstance(instance_t &instance) {
 }
 void VRendererBackend::destroyFence(fence_t &fence) {
   //
-  vkDestroyFence(m_device.m_handle, fence.m_handle, nullptr);
   m_fences.removeAt(fence.m_index);
+  vkDestroyFence(m_device.m_handle, fence.m_handle, nullptr);
+  fence.m_handle = VK_NULL_HANDLE;
 }
 
 void VRendererBackend::bindPipeline(pipeline_t &pipeline,

@@ -36,7 +36,7 @@ struct sarray {
     m_allocated[index] = false;
   }
 
-  void unpackedSize() { return m_data.size(); }
+  u32 unpackedSize() { return m_data.size(); }
 
   T& operator[](const u32 index) { return m_data[index]; }
 
@@ -64,13 +64,16 @@ template <typename T>
 struct sarray_iterator {
  public:
   sarray_iterator(sarray<T>* p_array, u32 index)
-      : mp_array(p_array), m_index(index) {}
+      : mp_array(p_array), m_index(index) {
+    incrementToNextValid();
+  }
 
   T& operator*() const { return mp_array->at(m_index); }
   T* operator->() { return mp_array->ptrTo(m_index); }
 
   sarray_iterator<T>& operator++() {
     m_index++;
+    incrementToNextValid();
     return *this;
   }
   sarray_iterator<T> operator++(int) {
@@ -87,6 +90,12 @@ struct sarray_iterator {
   friend bool operator!=(const sarray_iterator<T>& a,
                          const sarray_iterator<T>& b) {
     return a.m_index != b.m_index;
+  }
+
+  void incrementToNextValid() {
+    while (m_index <= mp_array->unpackedSize() && !mp_array->isValid(m_index)) {
+      m_index++;
+    }
   }
 
  private:

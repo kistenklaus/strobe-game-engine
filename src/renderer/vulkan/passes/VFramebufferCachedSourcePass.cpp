@@ -1,5 +1,7 @@
 #include "renderer/vulkan/passes/VFramebufferCachedSourcePass.hpp"
 
+#include "logging//print.hpp"
+
 namespace sge::vulkan {
 
 VFramebufferCachedSourcePass::VFramebufferCachedSourcePass(

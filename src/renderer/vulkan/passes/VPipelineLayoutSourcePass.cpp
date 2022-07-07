@@ -1,5 +1,7 @@
 #include "renderer/vulkan/passes/VPipelineLayoutSourcePass.hpp"
 
+#include "logging/print.hpp"
+
 namespace sge::vulkan {
 
 VPipelineLayoutSourcePass::VPipelineLayoutSourcePass(VRendererBackend* renderer,
