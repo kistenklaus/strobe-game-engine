@@ -17,13 +17,11 @@ VTriangleRenderPass::VTriangleRenderPass(VRendererBackend* renderer,
   registerSink(&m_cmdBuffSink);
   registerSource(&m_cmdBuffSource);
 
-  const std::vector<char> vertexSrc =
-      fileio::read("renderer/vulkan/shaders/shader.vert.spv");
-  m_vertexShaderHandle = m_vrenderer->createShaderModule(vertexSrc);
+  m_vertexShaderHandle = m_vrenderer->createShaderModule(
+      "renderer/vulkan/shaders/shader.vert", SHADER_TYPE_VERTEX);
 
-  const std::vector<char> fragmentSrc =
-      fileio::read("renderer/vulkan/shaders/shader.frag.spv");
-  m_fragmentShaderHandle = m_vrenderer->createShaderModule(fragmentSrc);
+  m_fragmentShaderHandle = m_vrenderer->createShaderModule(
+      "renderer/vulkan/shaders/shader.frag", SHADER_TYPE_FRAGMENT);
 }
 
 void VTriangleRenderPass::recreate() {

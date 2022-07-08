@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include <limits>
+#include <map>
 #include <optional>
 #include <vector>
 
@@ -22,6 +23,8 @@ enum QueueFamilyType {
   QUEUE_FAMILY_TRANSFER,
   QUEUE_FAMILY_COMPUTE
 };
+
+enum ShaderType { SHADER_TYPE_VERTEX, SHADER_TYPE_FRAGMENT };
 
 class VulkanMasterRendergraph;
 
@@ -43,7 +46,8 @@ class VRendererBackend : public sge::RendererBackend {
   const std::pair<u32, u32> getImageViewDimensions(
       const imageview imageview_handle);
 
-  shader_module createShaderModule(const std::vector<char> sourceCode);
+  shader_module createShaderModule(const std::string path,
+                                   ShaderType shaderType);
   void destroyShaderModule(shader_module shaderModuleHandle);
   renderpass createRenderPass(const VkFormat colorFormat);
   void destroyRenderPass(renderpass renderPassHandle);
@@ -162,9 +166,15 @@ class VRendererBackend : public sge::RendererBackend {
     u32 m_height;
     u32 m_index;
   };
+  struct vertex_shader_input_layout_t {
+    //
+  };
   struct shader_module_t {
     VkShaderModule m_handle;
+    ShaderType m_type;
+    u32 m_refCount;
     u32 m_index;
+    std::optional<vertex_shader_input_layout_t> m_layout;
   };
   struct semaphore_t {
     VkSemaphore m_handle;
@@ -231,6 +241,7 @@ class VRendererBackend : public sge::RendererBackend {
   swapchain_t m_swapchain{VK_NULL_HANDLE};
 
   sarray<queue_t> m_queues;
+  std::map<std::string, shader_module> m_loadedShaders;
   sarray<imageview_t> m_imageViews;
   sarray<shader_module_t> m_shaders;
   sarray<renderpass_t> m_renderpasses;

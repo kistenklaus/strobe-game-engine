@@ -3,6 +3,7 @@
 #include <cassert>
 #include <iostream>
 
+#include "fileio/fileio.hpp"
 #include "renderer/vulkan/VMasterRendergraph.hpp"
 #include "window/glfw/GlfwWindowBackend.hpp"
 
@@ -430,23 +431,63 @@ const std::pair<u32, u32> VRendererBackend::getImageViewDimensions(
                         m_imageViews[imageViewHandle.m_index].m_height);
 }
 
-shader_module VRendererBackend::createShaderModule(
-    const std::vector<char> source_code) {
-  // create vulkan shader module
+shader_module VRendererBackend::createShaderModule(const std::string path,
+                                                   ShaderType shaderType) {
+  //
+  if (m_loadedShaders.contains(path)) {
+    const shader_module handle = m_loadedShaders[path];
+    m_shaders[handle.m_index].m_refCount++;
+    return handle;
+  }
+
+  shader_module_t shaderModule{};
+  shaderModule.m_refCount = 1;
+  shaderModule.m_layout = std::nullopt;
+  shaderModule.m_type = shaderType;
+
+  const std::vector<char> spvSourceCode = sge::fileio::read(path + ".spv");
+  if (shaderType == SHADER_TYPE_VERTEX) {
+    const std::vector<char> glslSourceCode = sge::fileio::read(path);
+    vertex_shader_input_layout_t inputLayout{};
+    // read the actual glsl source code to parse vertex input layout if this is
+    // a vertex shader
+    std::vector<std::string> lines;
+    u32 i = 0;
+    u32 j = 0;
+    while (i < glslSourceCode.size()) {
+      std::string line = "";
+      bool start = true;
+      while (glslSourceCode[i] != '\n' && i < glslSourceCode.size()) {
+        line.push_back(glslSourceCode[i]);
+        i++;
+      }
+      lines.push_back(line);
+      j++;
+      i++;
+    }
+    println(lines);
+
+    for (u32 i = 0; i < lines.size(); i++) {
+    }
+
+    shaderModule.m_layout = inputLayout;
+  }
+
+  // CREATE THE ACTUAL SHADER.
   VkShaderModuleCreateInfo shaderCreateInfo;
   shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   shaderCreateInfo.pNext = nullptr;
   shaderCreateInfo.flags = 0;
-  shaderCreateInfo.codeSize = source_code.size();
+  shaderCreateInfo.codeSize = spvSourceCode.size();
   shaderCreateInfo.pCode =
-      reinterpret_cast<const uint32_t *>(source_code.data());
-  shader_module_t shaderModule{};
+      reinterpret_cast<const uint32_t *>(spvSourceCode.data());
   VkResult result = vkCreateShaderModule(m_device.m_handle, &shaderCreateInfo,
                                          nullptr, &shaderModule.m_handle);
   ASSERT_VKRESULT(result);
   // select id for new shader.
   struct shader_module handle(m_shaders.insert(shaderModule));
   m_shaders[handle.m_index].m_index = handle.m_index;
+
   return handle;
 }
 
