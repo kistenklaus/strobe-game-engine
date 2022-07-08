@@ -38,6 +38,10 @@ VRendererBackend::~VRendererBackend() {
   m_rootPass->dispose();
   delete m_rootPass;
 
+  for (vertex_buffer_t &vertexBuffer : m_vertexBuffers) {
+    destroyVertexBuffer(vertexBuffer);
+  }
+
   for (command_buffer_t &command_buffer : m_commandBuffers) {
     // freeing is propably not required if we destroy the pools
   }
@@ -357,6 +361,9 @@ VRendererBackend::device_t VRendererBackend::createDevice() {
                      i, &queue.m_handle);
     m_queues.insert(queue);
   }
+
+  vkGetPhysicalDeviceMemoryProperties(device.m_physicalDevice,
+                                      &device.m_memoryProperties);
   return device;
 }
 
@@ -485,6 +492,18 @@ void VRendererBackend::bindPipeline(pipeline pipelineHandle,
                                     command_buffer commandBufferHandle) {
   bindPipeline(getPipelineByHandle(pipelineHandle),
                getCommandBufferByHandle(commandBufferHandle));
+}
+
+u32 VRendererBackend::findSuitableMemoryType(u32 memoryTypeFilter,
+                                             VkMemoryPropertyFlags properties) {
+  for (uint32_t i = 0; i < m_device.m_memoryProperties.memoryTypeCount; i++) {
+    if ((memoryTypeFilter & (1 << i)) &&
+        (m_device.m_memoryProperties.memoryTypes[i].propertyFlags &
+         properties) == properties) {
+      return i;
+    }
+  }
+  throw std::runtime_error("failed to find suitable memory type!");
 }
 
 renderpass VRendererBackend::createRenderPass(const VkFormat color_format) {
@@ -1047,6 +1066,91 @@ void VRendererBackend::waitForFence(const fence fenceHandle) {
 
 void VRendererBackend::waitDeviceIdle() { vkDeviceWaitIdle(m_device.m_handle); }
 
+vertex_buffer VRendererBackend::createVertexBuffer(const u32 byteSize,
+                                                   boolean exlusiveSharing) {
+  if (!exlusiveSharing)
+    throw std::runtime_error(
+        "concurrent sharing mode is not yet implemented for vertex buffers");
+
+  VkBufferCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  createInfo.pNext = nullptr;
+  createInfo.flags = 0;
+  createInfo.size = byteSize;
+  createInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  createInfo.sharingMode = (exlusiveSharing ? VK_SHARING_MODE_EXCLUSIVE
+                                            : VK_SHARING_MODE_CONCURRENT);
+  createInfo.queueFamilyIndexCount = 0;
+  createInfo.pQueueFamilyIndices = nullptr;
+  vertex_buffer_t vertexBuffer;
+  VkResult result = vkCreateBuffer(m_device.m_handle, &createInfo, nullptr,
+                                   &vertexBuffer.m_handle);
+  ASSERT_VKRESULT(result);
+
+  VkMemoryRequirements memReq;
+  vkGetBufferMemoryRequirements(m_device.m_handle, vertexBuffer.m_handle,
+                                &memReq);
+
+  VkMemoryAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.pNext = nullptr;
+  allocInfo.allocationSize = memReq.size;
+  allocInfo.memoryTypeIndex = findSuitableMemoryType(
+      memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+  result = vkAllocateMemory(m_device.m_handle, &allocInfo, nullptr,
+                            &vertexBuffer.m_memory);
+  ASSERT_VKRESULT(result);
+  vertexBuffer.m_size = createInfo.size;
+
+  struct vertex_buffer handle(m_vertexBuffers.insert(vertexBuffer));
+  m_vertexBuffers[handle.m_index].m_index = handle.m_index;
+  return handle;
+}
+
+void VRendererBackend::destroyVertexBuffer(vertex_buffer vertexBuffer) {
+  destroyVertexBuffer(getVertexBufferByHandle(vertexBuffer));
+}
+
+void VRendererBackend::destroyVertexBuffer(vertex_buffer_t vertexBuffer) {
+  m_vertexBuffers.removeAt(vertexBuffer.m_index);
+  vkDestroyBuffer(m_device.m_handle, vertexBuffer.m_handle, nullptr);
+  vkFreeMemory(m_device.m_handle, vertexBuffer.m_memory, nullptr);
+}
+
+void VRendererBackend::uploadToVertexBuffer(vertex_buffer vertexBuffer,
+                                            void *data, u32 offset,
+                                            std::optional<u32> size) {
+  if (size.has_value()) {
+    uploadToVertexBuffer(getVertexBufferByHandle(vertexBuffer), data, offset,
+                         size.value());
+  } else {
+    vertex_buffer_t &buffer = getVertexBufferByHandle(vertexBuffer);
+    uploadToVertexBuffer(buffer, data, offset, buffer.m_size);
+  }
+}
+void VRendererBackend::uploadToVertexBuffer(vertex_buffer_t &vertexBuffer,
+                                            void *data, u32 offset, u32 size) {
+  //
+  vkBindBufferMemory(m_device.m_handle, vertexBuffer.m_handle,
+                     vertexBuffer.m_memory, 0);
+  void *memory;
+  VkResult result = vkMapMemory(m_device.m_handle, vertexBuffer.m_memory,
+                                offset, size, 0, &memory);
+  ASSERT_VKRESULT(result);
+  std::memcpy(memory, data, size);
+  vkUnmapMemory(m_device.m_handle, vertexBuffer.m_memory);
+}
+void VRendererBackend::bindVertexBuffer(vertex_buffer vertexBufferHandle,
+                                        command_buffer commandBufferHandle) {
+  VkBuffer vertexBuffers[] = {
+      getVertexBufferByHandle(vertexBufferHandle).m_handle};
+  VkDeviceSize offsets[] = {0};
+  vkCmdBindVertexBuffers(getCommandBufferByHandle(commandBufferHandle).m_handle,
+                         0, 1, vertexBuffers, offsets);
+}
+
 queue VRendererBackend::getAnyGraphicsQueue() {
   for (queue_t &queue : m_queues) {
     if (queue.m_type == QUEUE_FAMILY_GRAPHICS) {
@@ -1246,6 +1350,12 @@ VRendererBackend::fence_t &VRendererBackend::getFenceByHandle(
     const fence fenceHandle) {
   assert(fenceHandle.m_index != INVALID_INDEX_HANDLE);
   return m_fences.at(fenceHandle.m_index);
+}
+
+VRendererBackend::vertex_buffer_t &VRendererBackend::getVertexBufferByHandle(
+    const vertex_buffer vertexBufferHandle) {
+  assert(vertexBufferHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_vertexBuffers.at(vertexBufferHandle.m_index);
 }
 
 void VRendererBackend::destroyCommandPool(command_pool_t &commandPool) {
