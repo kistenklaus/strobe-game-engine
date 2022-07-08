@@ -6,7 +6,6 @@
 
 #include "renderer/RenderPass.hpp"
 #include "renderer/Renderer.hpp"
-#include "renderer/Resource.hpp"
 #include "types/inttypes.hpp"
 
 namespace sge {
