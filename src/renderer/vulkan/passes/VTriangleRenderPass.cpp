@@ -22,6 +22,14 @@ VTriangleRenderPass::VTriangleRenderPass(VRendererBackend* renderer,
 
   m_fragmentShaderHandle = m_vrenderer->createShaderModule(
       "renderer/vulkan/shaders/shader.frag", SHADER_TYPE_FRAGMENT);
+  m_vertexBuffer = m_vrenderer->createVertexBuffer(sizeof(float) * 3 * 4);
+  float vertexData[] = {
+      0.5f,  -0.5f, 0.0f,  //
+      0.5f,  0.5f,  0.0f,  //
+      -0.5f, 0.5f,  0.0f,  //
+      -0.5f, -0.5f, 0.0f   //
+  };
+  m_vrenderer->uploadToVertexBuffer(m_vertexBuffer, &vertexData);
 }
 
 void VTriangleRenderPass::recreate() {
@@ -59,6 +67,7 @@ void VTriangleRenderPass::execute() {
       *m_cmdBuffSink);
 
   m_vrenderer->bindPipeline(m_pipeline, *m_cmdBuffSink);
+  m_vrenderer->bindVertexBuffer(m_vertexBuffer, *m_cmdBuffSink);
 
   m_vrenderer->drawCall(3, 1, *m_cmdBuffSink);
 

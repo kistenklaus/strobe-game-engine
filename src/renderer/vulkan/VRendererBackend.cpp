@@ -496,14 +496,19 @@ shader_module VRendererBackend::createShaderModule(const std::string path,
         e = rest.find(';');
         rest = rest.substr(0, e);
         GlslType type;
+        VkFormat format;
         if (std::regex_search(rest, std::regex("vec4"))) {
           type = GLSL_TYPE_VEC4;
+          format = VK_FORMAT_R32G32B32A32_SFLOAT;
         } else if (std::regex_search(rest, std::regex("vec3"))) {
           type = GLSL_TYPE_VEC3;
+          format = VK_FORMAT_R32G32B32_SFLOAT;
         } else if (std::regex_search(rest, std::regex("vec2"))) {
           type = GLSL_TYPE_VEC2;
+          format = VK_FORMAT_R32G32_SFLOAT;
         } else if (std::regex_search(rest, std::regex("flaot"))) {
           type = GLSL_TYPE_FLOAT;
+          format = VK_FORMAT_R32_SFLOAT;
         } else {
           throw std::runtime_error(
               "failed to parse vertex shader input layout");
@@ -511,6 +516,7 @@ shader_module VRendererBackend::createShaderModule(const std::string path,
         vertex_input_descriptor_t inputDesc{};
         inputDesc.m_location = location;
         inputDesc.m_type = type;
+        inputDesc.m_format = format;
         inputLayout.m_inputDescs.push_back(inputDesc);
       }
     }
