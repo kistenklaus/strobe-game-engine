@@ -1,6 +1,7 @@
 #include "renderer/vulkan/passes/VTriangleRenderPass.hpp"
 
 #include "fileio/fileio.hpp"
+#include "logging/print.hpp"
 
 namespace sge::vulkan {
 VTriangleRenderPass::VTriangleRenderPass(VRendererBackend* renderer,
@@ -29,7 +30,11 @@ VTriangleRenderPass::VTriangleRenderPass(VRendererBackend* renderer,
       -0.5f, 0.5f,  0.0f,  //
       -0.5f, -0.5f, 0.0f   //
   };
-  m_vrenderer->uploadToVertexBuffer(m_vertexBuffer, &vertexData);
+  m_vrenderer->uploadToVertexBuffer(m_vertexBuffer, vertexData);
+  m_indexBuffer = m_vrenderer->createIndexBuffer(sizeof(u32) * 3);
+  u32 indicies[] = {0, 1, 2};
+  u32* ptr = indicies;
+  m_vrenderer->uploadToIndexBuffer(m_indexBuffer, ptr);
 }
 
 void VTriangleRenderPass::recreate() {
@@ -68,8 +73,10 @@ void VTriangleRenderPass::execute() {
 
   m_vrenderer->bindPipeline(m_pipeline, *m_cmdBuffSink);
   m_vrenderer->bindVertexBuffer(m_vertexBuffer, *m_cmdBuffSink);
+  m_vrenderer->bindIndexBuffer(m_indexBuffer, *m_cmdBuffSink);
 
-  m_vrenderer->drawCall(3, 1, *m_cmdBuffSink);
+  m_vrenderer->indexedDrawCall(3, *m_cmdBuffSink);
+  // m_vrenderer->drawCall(3, 1, *m_cmdBuffSink);
 
   m_vrenderer->endRenderPass(*m_cmdBuffSink);
 

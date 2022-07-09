@@ -26,6 +26,7 @@ class VTriangleRenderPass : public RenderPass {
   shader_module m_vertexShaderHandle;
   shader_module m_fragmentShaderHandle;
   vertex_buffer m_vertexBuffer;
+  index_buffer m_indexBuffer;
 };
 
 }  // namespace sge::vulkan

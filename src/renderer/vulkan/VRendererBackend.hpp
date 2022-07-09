@@ -89,6 +89,7 @@ class VRendererBackend : public sge::RendererBackend {
   void destroySemaphore(semaphore semaphoreHandle);
   void drawCall(u32 vertexCount, u32 instanceCount,
                 command_buffer commandBufferHandle);
+  void indexedDrawCall(u32 indexCount, command_buffer commandBufferHandle);
   /// returns true if the swapchain KHR is deprecated (suboptional)
   // and a recreation of the swapchain is required.
   boolean acquireNextSwapchainFrame(semaphore singalSemaphoreHandle);
@@ -116,6 +117,13 @@ class VRendererBackend : public sge::RendererBackend {
                             std::optional<u32> size = std::nullopt);
   void bindVertexBuffer(vertex_buffer vertexBuffer,
                         command_buffer commandBuffer);
+  index_buffer createIndexBuffer(const u32 byteSize,
+                                 boolean exclusiveSharing = true);
+  void destroyIndexBuffer(index_buffer indexBuffer);
+  void bindIndexBuffer(index_buffer indexBuffer, command_buffer commandBuffer);
+  void uploadToIndexBuffer(index_buffer indexBuffer, u32* indicies,
+                           u32 offset = 0,
+                           std::optional<u32> size = std::nullopt);
   queue getAnyGraphicsQueue();
   queue getAnyTransferQueue();
   queue getAnyComputeQueue();
@@ -221,6 +229,12 @@ class VRendererBackend : public sge::RendererBackend {
     u32 m_size;
     u32 m_index;
   };
+  struct index_buffer_t {
+    VkBuffer m_handle;
+    VkDeviceMemory m_memory;
+    u32 m_size;
+    u32 m_index;
+  };
 
  private:
   void createSwapchain();
@@ -239,6 +253,7 @@ class VRendererBackend : public sge::RendererBackend {
   semaphore_t& getSemaphoreByHandle(const semaphore semaphoreId);
   queue_t& getQueueByHandle(const queue queueId);
   fence_t& getFenceByHandle(const fence fenceId);
+  index_buffer_t& getIndexBufferByHandle(const index_buffer indexBuffer);
   instance_t createInstance(const std::string& applicationName,
                             const std::tuple<u32, u32, u32>& applicationVersion,
                             const std::string& engineName,
@@ -259,6 +274,7 @@ class VRendererBackend : public sge::RendererBackend {
   void destroyInstance(instance_t& instance);
   void destroyFence(fence_t& fence);
   void destroyVertexBuffer(vertex_buffer_t vertexBuffer);
+  void destroyIndexBuffer(index_buffer_t indexBuffer);
   void bindPipeline(pipeline_t& pipeline, command_buffer_t& commandBuffer);
   u32 findSuitableMemoryType(u32 memoryTypeFilter,
                              VkMemoryPropertyFlags properties);
@@ -288,6 +304,7 @@ class VRendererBackend : public sge::RendererBackend {
   sarray<semaphore_t> m_semaphores;
   sarray<fence_t> m_fences;
   sarray<vertex_buffer_t> m_vertexBuffers;
+  sarray<index_buffer_t> m_indexBuffers;
 
   static const VkFormat SURFACE_COLOR_FORMAT = VK_FORMAT_B8G8R8A8_UNORM;
   static const u32 MAX_SWAPCHAIN_IMAGES = 3;
