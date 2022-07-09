@@ -108,6 +108,14 @@ class VRendererBackend : public sge::RendererBackend {
   void waitForFence(const fence fenceHandle);
   void resetFence(const fence fenceHandle);
   void waitDeviceIdle();
+  vertex_buffer createVertexBuffer(const u32 byteSize,
+                                   boolean exlusiveSharing = true);
+  void destroyVertexBuffer(vertex_buffer vertexBuffer);
+  void uploadToVertexBuffer(vertex_buffer vertexBuffer, void* data,
+                            u32 offset = 0,
+                            std::optional<u32> size = std::nullopt);
+  void bindVertexBuffer(vertex_buffer vertexBuffer,
+                        command_buffer commandBuffer);
   queue getAnyGraphicsQueue();
   queue getAnyTransferQueue();
   queue getAnyComputeQueue();
@@ -125,6 +133,7 @@ class VRendererBackend : public sge::RendererBackend {
   struct device_t {
     VkDevice m_handle;
     VkPhysicalDevice m_physicalDevice;
+    VkPhysicalDeviceMemoryProperties m_memoryProperties;
     std::optional<u32> m_gfxQueueFamilyIndex;
     std::optional<u32> m_transferQueueFamilyIndex;
     std::optional<u32> m_computeQueueFamilyIndex;
@@ -206,6 +215,12 @@ class VRendererBackend : public sge::RendererBackend {
     VkFence m_handle;
     u32 m_index;
   };
+  struct vertex_buffer_t {
+    VkBuffer m_handle;
+    VkDeviceMemory m_memory;
+    u32 m_size;
+    u32 m_index;
+  };
 
  private:
   void createSwapchain();
@@ -220,6 +235,7 @@ class VRendererBackend : public sge::RendererBackend {
   command_pool_t& getCommandPoolByHandle(const command_pool commandPoolId);
   command_buffer_t& getCommandBufferByHandle(
       const command_buffer commandBufferId);
+  vertex_buffer_t& getVertexBufferByHandle(const vertex_buffer);
   semaphore_t& getSemaphoreByHandle(const semaphore semaphoreId);
   queue_t& getQueueByHandle(const queue queueId);
   fence_t& getFenceByHandle(const fence fenceId);
@@ -242,7 +258,13 @@ class VRendererBackend : public sge::RendererBackend {
   void destroyDevice(device_t& device);
   void destroyInstance(instance_t& instance);
   void destroyFence(fence_t& fence);
+  void destroyVertexBuffer(vertex_buffer_t vertexBuffer);
   void bindPipeline(pipeline_t& pipeline, command_buffer_t& commandBuffer);
+  u32 findSuitableMemoryType(u32 memoryTypeFilter,
+                             VkMemoryPropertyFlags properties);
+
+  void uploadToVertexBuffer(vertex_buffer_t& vertexBuffer, void* data,
+                            u32 offset, u32 size);
 
  private:
   RenderPass* m_rootPass;
@@ -265,6 +287,7 @@ class VRendererBackend : public sge::RendererBackend {
   sarray<command_buffer_t> m_commandBuffers;
   sarray<semaphore_t> m_semaphores;
   sarray<fence_t> m_fences;
+  sarray<vertex_buffer_t> m_vertexBuffers;
 
   static const VkFormat SURFACE_COLOR_FORMAT = VK_FORMAT_B8G8R8A8_UNORM;
   static const u32 MAX_SWAPCHAIN_IMAGES = 3;
