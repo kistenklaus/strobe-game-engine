@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <regex>
 
 #include "fileio/fileio.hpp"
 #include "renderer/vulkan/VMasterRendergraph.hpp"
@@ -465,11 +466,75 @@ shader_module VRendererBackend::createShaderModule(const std::string path,
       j++;
       i++;
     }
-    println(lines);
 
     for (u32 i = 0; i < lines.size(); i++) {
+      if (std::regex_match(
+              lines[i],
+              std::regex(
+                  ".*layout\\([a-zA-Z0-9, \t\r\n\f=]*location[ \t\r\n\f]*=[ "
+                  "\t\r\n\f]*[0-9]+[a-zA-Z0-9, \t\r\n\f=]*\\)[ \t\r\n\f]+in[ "
+                  "\t\r\n\f]+(vec4|vec3|vec2|float).*"))) {
+        println(lines[i]);
+        u32 s = lines[i].find("location") + std::string("location").size();
+        while (!(lines[i][s] >= '0' && lines[i][s] <= '9')) {
+          s++;
+        }
+        println(lines[i].substr(s));
+        u32 e = s;
+        while ((lines[i][e] >= '0' && lines[i][e] <= '9')) {
+          e++;
+        }
+        const u32 location = std::stoi(lines[i].substr(s, e - s));
+        std::string rest = lines[i].substr(e);
+        e = rest.find(';');
+        rest = rest.substr(0, e);
+        GlslType type;
+        if (std::regex_search(rest, std::regex("vec4"))) {
+          type = GLSL_TYPE_VEC4;
+        } else if (std::regex_search(rest, std::regex("vec3"))) {
+          type = GLSL_TYPE_VEC3;
+        } else if (std::regex_search(rest, std::regex("vec2"))) {
+          type = GLSL_TYPE_VEC2;
+        } else if (std::regex_search(rest, std::regex("flaot"))) {
+          type = GLSL_TYPE_FLOAT;
+        } else {
+          throw std::runtime_error(
+              "failed to parse vertex shader input layout");
+        }
+        vertex_input_descriptor_t inputDesc{};
+        inputDesc.m_location = location;
+        inputDesc.m_type = type;
+        inputLayout.m_inputDescs.push_back(inputDesc);
+      }
     }
 
+    // calculate offsets and stride
+    // sort by location.
+    std::sort(inputLayout.m_inputDescs.begin(), inputLayout.m_inputDescs.end(),
+              [](const vertex_input_descriptor_t &a,
+                 const vertex_input_descriptor_t &b) {
+                return a.m_location < b.m_location;
+              });
+    u32 offset = 0;
+    for (vertex_input_descriptor_t &inputDesc : inputLayout.m_inputDescs) {
+      inputDesc.m_offset = 0;
+      u32 size = [&]() {
+        switch (inputDesc.m_type) {
+          case GLSL_TYPE_VEC4:
+            return sizeof(float) * 4;
+          case GLSL_TYPE_VEC3:
+            return sizeof(float) * 3;
+          case GLSL_TYPE_VEC2:
+            return sizeof(float) * 2;
+          case GLSL_TYPE_FLOAT:
+            return sizeof(float);
+          default:
+            throw std::runtime_error("HOW DID WE GET HERE?");
+        }
+      }();
+      offset += size;
+    }
+    inputLayout.m_stride = offset;
     shaderModule.m_layout = inputLayout;
   }
 
@@ -493,6 +558,16 @@ shader_module VRendererBackend::createShaderModule(const std::string path,
 
 void VRendererBackend::destroyShaderModule(shader_module shaderModuleHandle) {
   destroyShaderModule(getShaderByHandle(shaderModuleHandle));
+}
+
+void VRendererBackend::destroyShaderModule(shader_module_t &shaderModule) {
+  //
+  shaderModule.m_refCount--;
+  if (shaderModule.m_refCount == 0) {
+    m_shaders.removeAt(shaderModule.m_index);
+    vkDestroyShaderModule(m_device.m_handle, shaderModule.m_handle, nullptr);
+    shaderModule.m_handle = VK_NULL_HANDLE;
+  }
 }
 
 pipeline_layout VRendererBackend::createPipelineLayout() {
@@ -630,18 +705,40 @@ pipeline VRendererBackend::createPipeline(
     std::optional<shader_module> vertexShaderHandle,
     std::optional<shader_module> fragmentShaderHandle) {
   std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+
+  std::vector<VkVertexInputBindingDescription> bindingDescriptions;
+  std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+
   if (vertexShaderHandle.has_value()) {
+    shader_module_t &shader = getShaderByHandle(vertexShaderHandle.value());
+    assert(shader.m_type == SHADER_TYPE_VERTEX);
     VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert;
     shaderStageCreateInfoVert.sType =
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shaderStageCreateInfoVert.pNext = nullptr;
     shaderStageCreateInfoVert.flags = 0;
     shaderStageCreateInfoVert.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    shaderStageCreateInfoVert.module =
-        getShaderByHandle(vertexShaderHandle.value()).m_handle;
+    shaderStageCreateInfoVert.module = shader.m_handle;
     shaderStageCreateInfoVert.pName = "main";
     shaderStageCreateInfoVert.pSpecializationInfo = nullptr;
     shaderStages.push_back(shaderStageCreateInfoVert);
+
+    VkVertexInputBindingDescription bindingDesc{};
+    bindingDesc.binding = 0;
+    bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    assert(shader.m_layout.has_value());
+    bindingDesc.stride = shader.m_layout.value().m_stride;
+    bindingDescriptions.push_back(bindingDesc);
+
+    for (vertex_input_descriptor_t &inputDesc : shader.m_layout->m_inputDescs) {
+      VkVertexInputAttributeDescription attribDesc{};
+      attribDesc.binding = 0;
+      attribDesc.location = inputDesc.m_location;
+      attribDesc.offset = inputDesc.m_offset;
+      attribDesc.format = inputDesc.m_format;
+
+      attributeDescriptions.push_back(attribDesc);
+    }
   }
   if (fragmentShaderHandle.has_value()) {
     VkPipelineShaderStageCreateInfo shaderStageCreateInfoFrag;
@@ -662,10 +759,13 @@ pipeline VRendererBackend::createPipeline(
       VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   vertexInputCreateInfo.pNext = nullptr;
   vertexInputCreateInfo.flags = 0;
-  vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
-  vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
-  vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
-  vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+  vertexInputCreateInfo.vertexBindingDescriptionCount =
+      bindingDescriptions.size();
+  vertexInputCreateInfo.pVertexBindingDescriptions = bindingDescriptions.data();
+  vertexInputCreateInfo.vertexAttributeDescriptionCount =
+      attributeDescriptions.size();
+  vertexInputCreateInfo.pVertexAttributeDescriptions =
+      attributeDescriptions.data();
 
   VkPipelineInputAssemblyStateCreateInfo inputAssemlyCreateInfo;
   inputAssemlyCreateInfo.sType =
@@ -1319,12 +1419,6 @@ void VRendererBackend::destroyPipelineLayout(
   m_pipelineLayouts.removeAt(pipelineLayout.m_index);
   vkDestroyPipelineLayout(m_device.m_handle, pipelineLayout.m_handle, nullptr);
   pipelineLayout.m_handle = VK_NULL_HANDLE;
-}
-void VRendererBackend::destroyShaderModule(shader_module_t &shaderModule) {
-  //
-  m_shaders.removeAt(shaderModule.m_index);
-  vkDestroyShaderModule(m_device.m_handle, shaderModule.m_handle, nullptr);
-  shaderModule.m_handle = VK_NULL_HANDLE;
 }
 void VRendererBackend::destroyRenderPass(renderpass_t &renderpass) {
   //

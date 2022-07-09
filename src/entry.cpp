@@ -1,6 +1,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <regex>
 
 #include "logging/log.hpp"
 #include "profiling/Profiler.hpp"
@@ -11,7 +12,6 @@ using namespace sge;
 
 int main() {
   println();
-
   Window window =
       Window(800, 600, "FLOATING", VULKAN_RENDER_BACKEND, GLFW_WINDOW_BACKEND);
 

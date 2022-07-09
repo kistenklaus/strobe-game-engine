@@ -166,8 +166,21 @@ class VRendererBackend : public sge::RendererBackend {
     u32 m_height;
     u32 m_index;
   };
+  enum GlslType {
+    GLSL_TYPE_VEC4,
+    GLSL_TYPE_VEC3,
+    GLSL_TYPE_VEC2,
+    GLSL_TYPE_FLOAT
+  };
+  struct vertex_input_descriptor_t {
+    u32 m_location;
+    u32 m_offset;
+    GlslType m_type;
+    VkFormat m_format;
+  };
   struct vertex_shader_input_layout_t {
-    //
+    std::vector<vertex_input_descriptor_t> m_inputDescs;
+    u32 m_stride;
   };
   struct shader_module_t {
     VkShaderModule m_handle;
