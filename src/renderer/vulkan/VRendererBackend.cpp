@@ -2,7 +2,9 @@
 
 #include <cassert>
 #include <iostream>
+#include <regex>
 
+#include "fileio/fileio.hpp"
 #include "renderer/vulkan/VMasterRendergraph.hpp"
 #include "window/glfw/GlfwWindowBackend.hpp"
 
@@ -37,6 +39,14 @@ VRendererBackend::~VRendererBackend() {
   waitDeviceIdle();
   m_rootPass->dispose();
   delete m_rootPass;
+
+  for (index_buffer_t &indexBuffer : m_indexBuffers) {
+    destroyIndexBuffer(indexBuffer);
+  }
+
+  for (vertex_buffer_t &vertexBuffer : m_vertexBuffers) {
+    destroyVertexBuffer(vertexBuffer);
+  }
 
   for (command_buffer_t &command_buffer : m_commandBuffers) {
     // freeing is propably not required if we destroy the pools
@@ -357,6 +367,9 @@ VRendererBackend::device_t VRendererBackend::createDevice() {
                      i, &queue.m_handle);
     m_queues.insert(queue);
   }
+
+  vkGetPhysicalDeviceMemoryProperties(device.m_physicalDevice,
+                                      &device.m_memoryProperties);
   return device;
 }
 
@@ -430,28 +443,148 @@ const std::pair<u32, u32> VRendererBackend::getImageViewDimensions(
                         m_imageViews[imageViewHandle.m_index].m_height);
 }
 
-shader_module VRendererBackend::createShaderModule(
-    const std::vector<char> source_code) {
-  // create vulkan shader module
+shader_module VRendererBackend::createShaderModule(const std::string path,
+                                                   ShaderType shaderType) {
+  //
+  if (m_loadedShaders.contains(path)) {
+    const shader_module handle = m_loadedShaders[path];
+    m_shaders[handle.m_index].m_refCount++;
+    return handle;
+  }
+
+  shader_module_t shaderModule{};
+  shaderModule.m_refCount = 1;
+  shaderModule.m_layout = std::nullopt;
+  shaderModule.m_type = shaderType;
+
+  const std::vector<char> spvSourceCode = sge::fileio::read(path + ".spv");
+  if (shaderType == SHADER_TYPE_VERTEX) {
+    const std::vector<char> glslSourceCode = sge::fileio::read(path);
+    vertex_shader_input_layout_t inputLayout{};
+    // read the actual glsl source code to parse vertex input layout if this is
+    // a vertex shader
+    std::vector<std::string> lines;
+    u32 i = 0;
+    u32 j = 0;
+    while (i < glslSourceCode.size()) {
+      std::string line = "";
+      bool start = true;
+      while (glslSourceCode[i] != '\n' && i < glslSourceCode.size()) {
+        line.push_back(glslSourceCode[i]);
+        i++;
+      }
+      lines.push_back(line);
+      j++;
+      i++;
+    }
+
+    for (u32 i = 0; i < lines.size(); i++) {
+      if (std::regex_match(
+              lines[i],
+              std::regex(
+                  ".*layout\\([a-zA-Z0-9, \t\r\n\f=]*location[ \t\r\n\f]*=[ "
+                  "\t\r\n\f]*[0-9]+[a-zA-Z0-9, \t\r\n\f=]*\\)[ \t\r\n\f]+in[ "
+                  "\t\r\n\f]+(vec4|vec3|vec2|float).*"))) {
+        println(lines[i]);
+        u32 s = lines[i].find("location") + std::string("location").size();
+        while (!(lines[i][s] >= '0' && lines[i][s] <= '9')) {
+          s++;
+        }
+        println(lines[i].substr(s));
+        u32 e = s;
+        while ((lines[i][e] >= '0' && lines[i][e] <= '9')) {
+          e++;
+        }
+        const u32 location = std::stoi(lines[i].substr(s, e - s));
+        std::string rest = lines[i].substr(e);
+        e = rest.find(';');
+        rest = rest.substr(0, e);
+        GlslType type;
+        VkFormat format;
+        if (std::regex_search(rest, std::regex("vec4"))) {
+          type = GLSL_TYPE_VEC4;
+          format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        } else if (std::regex_search(rest, std::regex("vec3"))) {
+          type = GLSL_TYPE_VEC3;
+          format = VK_FORMAT_R32G32B32_SFLOAT;
+        } else if (std::regex_search(rest, std::regex("vec2"))) {
+          type = GLSL_TYPE_VEC2;
+          format = VK_FORMAT_R32G32_SFLOAT;
+        } else if (std::regex_search(rest, std::regex("flaot"))) {
+          type = GLSL_TYPE_FLOAT;
+          format = VK_FORMAT_R32_SFLOAT;
+        } else {
+          throw std::runtime_error(
+              "failed to parse vertex shader input layout");
+        }
+        vertex_input_descriptor_t inputDesc{};
+        inputDesc.m_location = location;
+        inputDesc.m_type = type;
+        inputDesc.m_format = format;
+        inputLayout.m_inputDescs.push_back(inputDesc);
+      }
+    }
+
+    // calculate offsets and stride
+    // sort by location.
+    std::sort(inputLayout.m_inputDescs.begin(), inputLayout.m_inputDescs.end(),
+              [](const vertex_input_descriptor_t &a,
+                 const vertex_input_descriptor_t &b) {
+                return a.m_location < b.m_location;
+              });
+    u32 offset = 0;
+    for (vertex_input_descriptor_t &inputDesc : inputLayout.m_inputDescs) {
+      inputDesc.m_offset = 0;
+      u32 size = [&]() {
+        switch (inputDesc.m_type) {
+          case GLSL_TYPE_VEC4:
+            return sizeof(float) * 4;
+          case GLSL_TYPE_VEC3:
+            return sizeof(float) * 3;
+          case GLSL_TYPE_VEC2:
+            return sizeof(float) * 2;
+          case GLSL_TYPE_FLOAT:
+            return sizeof(float);
+          default:
+            throw std::runtime_error("HOW DID WE GET HERE?");
+        }
+      }();
+      offset += size;
+    }
+    inputLayout.m_stride = offset;
+    shaderModule.m_layout = inputLayout;
+  }
+
+  // CREATE THE ACTUAL SHADER.
   VkShaderModuleCreateInfo shaderCreateInfo;
   shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   shaderCreateInfo.pNext = nullptr;
   shaderCreateInfo.flags = 0;
-  shaderCreateInfo.codeSize = source_code.size();
+  shaderCreateInfo.codeSize = spvSourceCode.size();
   shaderCreateInfo.pCode =
-      reinterpret_cast<const uint32_t *>(source_code.data());
-  shader_module_t shaderModule{};
+      reinterpret_cast<const uint32_t *>(spvSourceCode.data());
   VkResult result = vkCreateShaderModule(m_device.m_handle, &shaderCreateInfo,
                                          nullptr, &shaderModule.m_handle);
   ASSERT_VKRESULT(result);
   // select id for new shader.
   struct shader_module handle(m_shaders.insert(shaderModule));
   m_shaders[handle.m_index].m_index = handle.m_index;
+
   return handle;
 }
 
 void VRendererBackend::destroyShaderModule(shader_module shaderModuleHandle) {
   destroyShaderModule(getShaderByHandle(shaderModuleHandle));
+}
+
+void VRendererBackend::destroyShaderModule(shader_module_t &shaderModule) {
+  //
+  shaderModule.m_refCount--;
+  if (shaderModule.m_refCount == 0) {
+    m_shaders.removeAt(shaderModule.m_index);
+    vkDestroyShaderModule(m_device.m_handle, shaderModule.m_handle, nullptr);
+    shaderModule.m_handle = VK_NULL_HANDLE;
+  }
 }
 
 pipeline_layout VRendererBackend::createPipelineLayout() {
@@ -485,6 +618,18 @@ void VRendererBackend::bindPipeline(pipeline pipelineHandle,
                                     command_buffer commandBufferHandle) {
   bindPipeline(getPipelineByHandle(pipelineHandle),
                getCommandBufferByHandle(commandBufferHandle));
+}
+
+u32 VRendererBackend::findSuitableMemoryType(u32 memoryTypeFilter,
+                                             VkMemoryPropertyFlags properties) {
+  for (uint32_t i = 0; i < m_device.m_memoryProperties.memoryTypeCount; i++) {
+    if ((memoryTypeFilter & (1 << i)) &&
+        (m_device.m_memoryProperties.memoryTypes[i].propertyFlags &
+         properties) == properties) {
+      return i;
+    }
+  }
+  throw std::runtime_error("failed to find suitable memory type!");
 }
 
 renderpass VRendererBackend::createRenderPass(const VkFormat color_format) {
@@ -589,18 +734,40 @@ pipeline VRendererBackend::createPipeline(
     std::optional<shader_module> vertexShaderHandle,
     std::optional<shader_module> fragmentShaderHandle) {
   std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+
+  std::vector<VkVertexInputBindingDescription> bindingDescriptions;
+  std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+
   if (vertexShaderHandle.has_value()) {
+    shader_module_t &shader = getShaderByHandle(vertexShaderHandle.value());
+    assert(shader.m_type == SHADER_TYPE_VERTEX);
     VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert;
     shaderStageCreateInfoVert.sType =
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shaderStageCreateInfoVert.pNext = nullptr;
     shaderStageCreateInfoVert.flags = 0;
     shaderStageCreateInfoVert.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    shaderStageCreateInfoVert.module =
-        getShaderByHandle(vertexShaderHandle.value()).m_handle;
+    shaderStageCreateInfoVert.module = shader.m_handle;
     shaderStageCreateInfoVert.pName = "main";
     shaderStageCreateInfoVert.pSpecializationInfo = nullptr;
     shaderStages.push_back(shaderStageCreateInfoVert);
+
+    VkVertexInputBindingDescription bindingDesc{};
+    bindingDesc.binding = 0;
+    bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    assert(shader.m_layout.has_value());
+    bindingDesc.stride = shader.m_layout.value().m_stride;
+    bindingDescriptions.push_back(bindingDesc);
+
+    for (vertex_input_descriptor_t &inputDesc : shader.m_layout->m_inputDescs) {
+      VkVertexInputAttributeDescription attribDesc{};
+      attribDesc.binding = 0;
+      attribDesc.location = inputDesc.m_location;
+      attribDesc.offset = inputDesc.m_offset;
+      attribDesc.format = inputDesc.m_format;
+
+      attributeDescriptions.push_back(attribDesc);
+    }
   }
   if (fragmentShaderHandle.has_value()) {
     VkPipelineShaderStageCreateInfo shaderStageCreateInfoFrag;
@@ -621,10 +788,13 @@ pipeline VRendererBackend::createPipeline(
       VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   vertexInputCreateInfo.pNext = nullptr;
   vertexInputCreateInfo.flags = 0;
-  vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
-  vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
-  vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
-  vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+  vertexInputCreateInfo.vertexBindingDescriptionCount =
+      bindingDescriptions.size();
+  vertexInputCreateInfo.pVertexBindingDescriptions = bindingDescriptions.data();
+  vertexInputCreateInfo.vertexAttributeDescriptionCount =
+      attributeDescriptions.size();
+  vertexInputCreateInfo.pVertexAttributeDescriptions =
+      attributeDescriptions.data();
 
   VkPipelineInputAssemblyStateCreateInfo inputAssemlyCreateInfo;
   inputAssemlyCreateInfo.sType =
@@ -926,6 +1096,14 @@ void VRendererBackend::drawCall(uint32_t vertexCount, uint32_t instanceCount,
   vkCmdDraw(getCommandBufferByHandle(commandBufferHandle).m_handle, vertexCount,
             instanceCount, 0, 0);
 }
+
+void VRendererBackend::indexedDrawCall(u32 indexCount,
+                                       command_buffer commandBufferHandle) {
+  //
+  vkCmdDrawIndexed(getCommandBufferByHandle(commandBufferHandle).m_handle,
+                   indexCount, 1, 0, 0, 0);
+}
+
 boolean VRendererBackend::acquireNextSwapchainFrame(semaphore signalSem) {
   VkResult result =
       vkAcquireNextImageKHR(m_device.m_handle, m_swapchain.m_handle,
@@ -1046,6 +1224,168 @@ void VRendererBackend::waitForFence(const fence fenceHandle) {
 }
 
 void VRendererBackend::waitDeviceIdle() { vkDeviceWaitIdle(m_device.m_handle); }
+
+vertex_buffer VRendererBackend::createVertexBuffer(const u32 byteSize,
+                                                   boolean exlusiveSharing) {
+  if (!exlusiveSharing)
+    throw std::runtime_error(
+        "concurrent sharing mode is not yet implemented for vertex buffers");
+
+  VkBufferCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  createInfo.pNext = nullptr;
+  createInfo.flags = 0;
+  createInfo.size = byteSize;
+  createInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  createInfo.sharingMode = (exlusiveSharing ? VK_SHARING_MODE_EXCLUSIVE
+                                            : VK_SHARING_MODE_CONCURRENT);
+  createInfo.queueFamilyIndexCount = 0;
+  createInfo.pQueueFamilyIndices = nullptr;
+  vertex_buffer_t vertexBuffer;
+  VkResult result = vkCreateBuffer(m_device.m_handle, &createInfo, nullptr,
+                                   &vertexBuffer.m_handle);
+  ASSERT_VKRESULT(result);
+
+  VkMemoryRequirements memReq;
+  vkGetBufferMemoryRequirements(m_device.m_handle, vertexBuffer.m_handle,
+                                &memReq);
+
+  VkMemoryAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.pNext = nullptr;
+  allocInfo.allocationSize = memReq.size;
+  allocInfo.memoryTypeIndex = findSuitableMemoryType(
+      memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+  result = vkAllocateMemory(m_device.m_handle, &allocInfo, nullptr,
+                            &vertexBuffer.m_memory);
+  ASSERT_VKRESULT(result);
+  vkBindBufferMemory(m_device.m_handle, vertexBuffer.m_handle,
+                     vertexBuffer.m_memory, 0);
+  vertexBuffer.m_size = createInfo.size;
+
+  struct vertex_buffer handle(m_vertexBuffers.insert(vertexBuffer));
+  m_vertexBuffers[handle.m_index].m_index = handle.m_index;
+  return handle;
+}
+
+void VRendererBackend::destroyVertexBuffer(vertex_buffer vertexBuffer) {
+  destroyVertexBuffer(getVertexBufferByHandle(vertexBuffer));
+}
+
+void VRendererBackend::destroyVertexBuffer(vertex_buffer_t vertexBuffer) {
+  m_vertexBuffers.removeAt(vertexBuffer.m_index);
+  vkDestroyBuffer(m_device.m_handle, vertexBuffer.m_handle, nullptr);
+  vkFreeMemory(m_device.m_handle, vertexBuffer.m_memory, nullptr);
+}
+
+void VRendererBackend::uploadToVertexBuffer(vertex_buffer vertexBuffer,
+                                            void *data, u32 offset,
+                                            std::optional<u32> size) {
+  if (size.has_value()) {
+    uploadToVertexBuffer(getVertexBufferByHandle(vertexBuffer), data, offset,
+                         size.value());
+  } else {
+    vertex_buffer_t &buffer = getVertexBufferByHandle(vertexBuffer);
+    uploadToVertexBuffer(buffer, data, offset, buffer.m_size);
+  }
+}
+
+void VRendererBackend::uploadToVertexBuffer(vertex_buffer_t &vertexBuffer,
+                                            void *data, u32 offset, u32 size) {
+  //
+  void *memory;
+  VkResult result = vkMapMemory(m_device.m_handle, vertexBuffer.m_memory,
+                                offset, size, 0, &memory);
+  ASSERT_VKRESULT(result);
+  std::memcpy(memory, data, size);
+  vkUnmapMemory(m_device.m_handle, vertexBuffer.m_memory);
+}
+void VRendererBackend::bindVertexBuffer(vertex_buffer vertexBufferHandle,
+                                        command_buffer commandBufferHandle) {
+  VkBuffer vertexBuffers[] = {
+      getVertexBufferByHandle(vertexBufferHandle).m_handle};
+  VkDeviceSize offsets[] = {0};
+  vkCmdBindVertexBuffers(getCommandBufferByHandle(commandBufferHandle).m_handle,
+                         0, 1, vertexBuffers, offsets);
+}
+
+index_buffer VRendererBackend::createIndexBuffer(const u32 byteSize,
+                                                 boolean exclusiveSharing) {
+  index_buffer_t indexBuffer;
+  indexBuffer.m_size = byteSize;
+  VkBufferCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  createInfo.pNext = nullptr;
+  createInfo.size = byteSize;
+  createInfo.flags = 0;
+  createInfo.sharingMode = (exclusiveSharing ? VK_SHARING_MODE_EXCLUSIVE
+                                             : VK_SHARING_MODE_CONCURRENT);
+  createInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+  createInfo.queueFamilyIndexCount = 0;
+  createInfo.pQueueFamilyIndices = nullptr;
+  VkResult result = vkCreateBuffer(m_device.m_handle, &createInfo, nullptr,
+                                   &indexBuffer.m_handle);
+  ASSERT_VKRESULT(result);
+
+  VkMemoryRequirements memReq;
+  vkGetBufferMemoryRequirements(m_device.m_handle, indexBuffer.m_handle,
+                                &memReq);
+
+  VkMemoryAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.pNext = nullptr;
+  allocInfo.allocationSize = memReq.size;
+  allocInfo.memoryTypeIndex = findSuitableMemoryType(
+      memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+  result = vkAllocateMemory(m_device.m_handle, &allocInfo, nullptr,
+                            &indexBuffer.m_memory);
+  ASSERT_VKRESULT(result);
+  vkBindBufferMemory(m_device.m_handle, indexBuffer.m_handle,
+                     indexBuffer.m_memory, 0);
+
+  struct index_buffer handle(m_indexBuffers.insert(indexBuffer));
+  m_indexBuffers[handle.m_index].m_index = handle.m_index;
+  return handle;
+}
+void VRendererBackend::destroyIndexBuffer(index_buffer indexBuffer) {
+  destroyIndexBuffer(getIndexBufferByHandle(indexBuffer));
+}
+
+void VRendererBackend::destroyIndexBuffer(index_buffer_t indexBuffer) {
+  m_indexBuffers.removeAt(indexBuffer.m_index);
+  vkDestroyBuffer(m_device.m_handle, indexBuffer.m_handle, nullptr);
+  vkFreeMemory(m_device.m_handle, indexBuffer.m_memory, nullptr);
+}
+
+void VRendererBackend::bindIndexBuffer(index_buffer indexBuffer,
+                                       command_buffer commandBuffer) {
+  //
+  vkCmdBindIndexBuffer(getCommandBufferByHandle(commandBuffer).m_handle,
+                       getIndexBufferByHandle(indexBuffer).m_handle, 0,
+                       VK_INDEX_TYPE_UINT32);
+}
+
+void VRendererBackend::uploadToIndexBuffer(index_buffer indexBufferHandle,
+                                           u32 *indicies, u32 offset,
+                                           std::optional<u32> sizeOpt) {
+  index_buffer_t &indexBuffer = getIndexBufferByHandle(indexBufferHandle);
+  u32 size = sizeOpt.value_or(indexBuffer.m_size);
+  void *memory;
+  vkMapMemory(m_device.m_handle, indexBuffer.m_memory, offset, size, 0,
+              &memory);
+  std::memcpy(memory, indicies, size);
+  vkUnmapMemory(m_device.m_handle, indexBuffer.m_memory);
+}
+
+VRendererBackend::index_buffer_t &VRendererBackend::getIndexBufferByHandle(
+    const index_buffer indexBuffer) {
+  assert(indexBuffer.m_index != INVALID_INDEX_HANDLE);
+  return m_indexBuffers.at(indexBuffer.m_index);
+}
 
 queue VRendererBackend::getAnyGraphicsQueue() {
   for (queue_t &queue : m_queues) {
@@ -1248,6 +1588,12 @@ VRendererBackend::fence_t &VRendererBackend::getFenceByHandle(
   return m_fences.at(fenceHandle.m_index);
 }
 
+VRendererBackend::vertex_buffer_t &VRendererBackend::getVertexBufferByHandle(
+    const vertex_buffer vertexBufferHandle) {
+  assert(vertexBufferHandle.m_index != INVALID_INDEX_HANDLE);
+  return m_vertexBuffers.at(vertexBufferHandle.m_index);
+}
+
 void VRendererBackend::destroyCommandPool(command_pool_t &commandPool) {
   //
   m_commandPools.removeAt(commandPool.m_index);
@@ -1278,12 +1624,6 @@ void VRendererBackend::destroyPipelineLayout(
   m_pipelineLayouts.removeAt(pipelineLayout.m_index);
   vkDestroyPipelineLayout(m_device.m_handle, pipelineLayout.m_handle, nullptr);
   pipelineLayout.m_handle = VK_NULL_HANDLE;
-}
-void VRendererBackend::destroyShaderModule(shader_module_t &shaderModule) {
-  //
-  m_shaders.removeAt(shaderModule.m_index);
-  vkDestroyShaderModule(m_device.m_handle, shaderModule.m_handle, nullptr);
-  shaderModule.m_handle = VK_NULL_HANDLE;
 }
 void VRendererBackend::destroyRenderPass(renderpass_t &renderpass) {
   //

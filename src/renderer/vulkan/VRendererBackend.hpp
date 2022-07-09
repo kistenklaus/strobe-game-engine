@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include <limits>
+#include <map>
 #include <optional>
 #include <vector>
 
@@ -22,6 +23,8 @@ enum QueueFamilyType {
   QUEUE_FAMILY_TRANSFER,
   QUEUE_FAMILY_COMPUTE
 };
+
+enum ShaderType { SHADER_TYPE_VERTEX, SHADER_TYPE_FRAGMENT };
 
 class VulkanMasterRendergraph;
 
@@ -43,7 +46,8 @@ class VRendererBackend : public sge::RendererBackend {
   const std::pair<u32, u32> getImageViewDimensions(
       const imageview imageview_handle);
 
-  shader_module createShaderModule(const std::vector<char> sourceCode);
+  shader_module createShaderModule(const std::string path,
+                                   ShaderType shaderType);
   void destroyShaderModule(shader_module shaderModuleHandle);
   renderpass createRenderPass(const VkFormat colorFormat);
   void destroyRenderPass(renderpass renderPassHandle);
@@ -85,6 +89,7 @@ class VRendererBackend : public sge::RendererBackend {
   void destroySemaphore(semaphore semaphoreHandle);
   void drawCall(u32 vertexCount, u32 instanceCount,
                 command_buffer commandBufferHandle);
+  void indexedDrawCall(u32 indexCount, command_buffer commandBufferHandle);
   /// returns true if the swapchain KHR is deprecated (suboptional)
   // and a recreation of the swapchain is required.
   boolean acquireNextSwapchainFrame(semaphore singalSemaphoreHandle);
@@ -104,6 +109,21 @@ class VRendererBackend : public sge::RendererBackend {
   void waitForFence(const fence fenceHandle);
   void resetFence(const fence fenceHandle);
   void waitDeviceIdle();
+  vertex_buffer createVertexBuffer(const u32 byteSize,
+                                   boolean exlusiveSharing = true);
+  void destroyVertexBuffer(vertex_buffer vertexBuffer);
+  void uploadToVertexBuffer(vertex_buffer vertexBuffer, void* data,
+                            u32 offset = 0,
+                            std::optional<u32> size = std::nullopt);
+  void bindVertexBuffer(vertex_buffer vertexBuffer,
+                        command_buffer commandBuffer);
+  index_buffer createIndexBuffer(const u32 byteSize,
+                                 boolean exclusiveSharing = true);
+  void destroyIndexBuffer(index_buffer indexBuffer);
+  void bindIndexBuffer(index_buffer indexBuffer, command_buffer commandBuffer);
+  void uploadToIndexBuffer(index_buffer indexBuffer, u32* indicies,
+                           u32 offset = 0,
+                           std::optional<u32> size = std::nullopt);
   queue getAnyGraphicsQueue();
   queue getAnyTransferQueue();
   queue getAnyComputeQueue();
@@ -121,6 +141,7 @@ class VRendererBackend : public sge::RendererBackend {
   struct device_t {
     VkDevice m_handle;
     VkPhysicalDevice m_physicalDevice;
+    VkPhysicalDeviceMemoryProperties m_memoryProperties;
     std::optional<u32> m_gfxQueueFamilyIndex;
     std::optional<u32> m_transferQueueFamilyIndex;
     std::optional<u32> m_computeQueueFamilyIndex;
@@ -162,9 +183,28 @@ class VRendererBackend : public sge::RendererBackend {
     u32 m_height;
     u32 m_index;
   };
+  enum GlslType {
+    GLSL_TYPE_VEC4,
+    GLSL_TYPE_VEC3,
+    GLSL_TYPE_VEC2,
+    GLSL_TYPE_FLOAT
+  };
+  struct vertex_input_descriptor_t {
+    u32 m_location;
+    u32 m_offset;
+    GlslType m_type;
+    VkFormat m_format;
+  };
+  struct vertex_shader_input_layout_t {
+    std::vector<vertex_input_descriptor_t> m_inputDescs;
+    u32 m_stride;
+  };
   struct shader_module_t {
     VkShaderModule m_handle;
+    ShaderType m_type;
+    u32 m_refCount;
     u32 m_index;
+    std::optional<vertex_shader_input_layout_t> m_layout;
   };
   struct semaphore_t {
     VkSemaphore m_handle;
@@ -183,6 +223,18 @@ class VRendererBackend : public sge::RendererBackend {
     VkFence m_handle;
     u32 m_index;
   };
+  struct vertex_buffer_t {
+    VkBuffer m_handle;
+    VkDeviceMemory m_memory;
+    u32 m_size;
+    u32 m_index;
+  };
+  struct index_buffer_t {
+    VkBuffer m_handle;
+    VkDeviceMemory m_memory;
+    u32 m_size;
+    u32 m_index;
+  };
 
  private:
   void createSwapchain();
@@ -197,9 +249,11 @@ class VRendererBackend : public sge::RendererBackend {
   command_pool_t& getCommandPoolByHandle(const command_pool commandPoolId);
   command_buffer_t& getCommandBufferByHandle(
       const command_buffer commandBufferId);
+  vertex_buffer_t& getVertexBufferByHandle(const vertex_buffer);
   semaphore_t& getSemaphoreByHandle(const semaphore semaphoreId);
   queue_t& getQueueByHandle(const queue queueId);
   fence_t& getFenceByHandle(const fence fenceId);
+  index_buffer_t& getIndexBufferByHandle(const index_buffer indexBuffer);
   instance_t createInstance(const std::string& applicationName,
                             const std::tuple<u32, u32, u32>& applicationVersion,
                             const std::string& engineName,
@@ -219,7 +273,14 @@ class VRendererBackend : public sge::RendererBackend {
   void destroyDevice(device_t& device);
   void destroyInstance(instance_t& instance);
   void destroyFence(fence_t& fence);
+  void destroyVertexBuffer(vertex_buffer_t vertexBuffer);
+  void destroyIndexBuffer(index_buffer_t indexBuffer);
   void bindPipeline(pipeline_t& pipeline, command_buffer_t& commandBuffer);
+  u32 findSuitableMemoryType(u32 memoryTypeFilter,
+                             VkMemoryPropertyFlags properties);
+
+  void uploadToVertexBuffer(vertex_buffer_t& vertexBuffer, void* data,
+                            u32 offset, u32 size);
 
  private:
   RenderPass* m_rootPass;
@@ -231,6 +292,7 @@ class VRendererBackend : public sge::RendererBackend {
   swapchain_t m_swapchain{VK_NULL_HANDLE};
 
   sarray<queue_t> m_queues;
+  std::map<std::string, shader_module> m_loadedShaders;
   sarray<imageview_t> m_imageViews;
   sarray<shader_module_t> m_shaders;
   sarray<renderpass_t> m_renderpasses;
@@ -241,6 +303,8 @@ class VRendererBackend : public sge::RendererBackend {
   sarray<command_buffer_t> m_commandBuffers;
   sarray<semaphore_t> m_semaphores;
   sarray<fence_t> m_fences;
+  sarray<vertex_buffer_t> m_vertexBuffers;
+  sarray<index_buffer_t> m_indexBuffers;
 
   static const VkFormat SURFACE_COLOR_FORMAT = VK_FORMAT_B8G8R8A8_UNORM;
   static const u32 MAX_SWAPCHAIN_IMAGES = 3;

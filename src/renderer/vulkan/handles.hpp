@@ -213,4 +213,44 @@ struct semaphore {
   u32 m_index;
 };
 
+struct vertex_buffer {
+  friend class VRendererBackend;
+
+ public:
+  vertex_buffer() : m_index(INVALID_INDEX_HANDLE) {}
+  bool operator==(const vertex_buffer& vertexBuffer) const {
+    return vertexBuffer.m_index == m_index;
+  }
+  bool operator!=(const vertex_buffer& vertexBuffer) const {
+    return vertexBuffer.m_index != m_index;
+  }
+  bool operator<(const vertex_buffer& vertexBuffer) const {
+    return vertexBuffer.m_index < m_index;
+  }
+
+ private:
+  explicit vertex_buffer(u32 index) : m_index(index) {}
+  u32 m_index;
+};
+
+struct index_buffer {
+  friend class VRendererBackend;
+
+ public:
+  index_buffer() : m_index(INVALID_INDEX_HANDLE) {}
+  bool operator==(const index_buffer& indexBuffer) const {
+    return indexBuffer.m_index == m_index;
+  }
+  bool operator!=(const index_buffer& indexBuffer) const {
+    return indexBuffer.m_index != m_index;
+  }
+  bool operator<(const index_buffer& indexBuffer) const {
+    return indexBuffer.m_index < m_index;
+  }
+
+ private:
+  explicit index_buffer(u32 index) : m_index(index) {}
+  u32 m_index;
+};
+
 }  // namespace sge::vulkan

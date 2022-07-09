@@ -1,6 +1,7 @@
 #include "renderer/vulkan/passes/VTriangleRenderPass.hpp"
 
 #include "fileio/fileio.hpp"
+#include "logging/print.hpp"
 
 namespace sge::vulkan {
 VTriangleRenderPass::VTriangleRenderPass(VRendererBackend* renderer,
@@ -17,13 +18,23 @@ VTriangleRenderPass::VTriangleRenderPass(VRendererBackend* renderer,
   registerSink(&m_cmdBuffSink);
   registerSource(&m_cmdBuffSource);
 
-  const std::vector<char> vertexSrc =
-      fileio::read("renderer/vulkan/shaders/shader.vert.spv");
-  m_vertexShaderHandle = m_vrenderer->createShaderModule(vertexSrc);
+  m_vertexShaderHandle = m_vrenderer->createShaderModule(
+      "renderer/vulkan/shaders/shader.vert", SHADER_TYPE_VERTEX);
 
-  const std::vector<char> fragmentSrc =
-      fileio::read("renderer/vulkan/shaders/shader.frag.spv");
-  m_fragmentShaderHandle = m_vrenderer->createShaderModule(fragmentSrc);
+  m_fragmentShaderHandle = m_vrenderer->createShaderModule(
+      "renderer/vulkan/shaders/shader.frag", SHADER_TYPE_FRAGMENT);
+  m_vertexBuffer = m_vrenderer->createVertexBuffer(sizeof(float) * 3 * 4);
+  float vertexData[] = {
+      0.5f,  -0.5f, 0.0f,  //
+      0.5f,  0.5f,  0.0f,  //
+      -0.5f, 0.5f,  0.0f,  //
+      -0.5f, -0.5f, 0.0f   //
+  };
+  m_vrenderer->uploadToVertexBuffer(m_vertexBuffer, vertexData);
+  m_indexBuffer = m_vrenderer->createIndexBuffer(sizeof(u32) * 3);
+  u32 indicies[] = {0, 1, 2};
+  u32* ptr = indicies;
+  m_vrenderer->uploadToIndexBuffer(m_indexBuffer, ptr);
 }
 
 void VTriangleRenderPass::recreate() {
@@ -61,8 +72,11 @@ void VTriangleRenderPass::execute() {
       *m_cmdBuffSink);
 
   m_vrenderer->bindPipeline(m_pipeline, *m_cmdBuffSink);
+  m_vrenderer->bindVertexBuffer(m_vertexBuffer, *m_cmdBuffSink);
+  m_vrenderer->bindIndexBuffer(m_indexBuffer, *m_cmdBuffSink);
 
-  m_vrenderer->drawCall(3, 1, *m_cmdBuffSink);
+  m_vrenderer->indexedDrawCall(3, *m_cmdBuffSink);
+  // m_vrenderer->drawCall(3, 1, *m_cmdBuffSink);
 
   m_vrenderer->endRenderPass(*m_cmdBuffSink);
 
