@@ -35,6 +35,20 @@ VTriangleRenderPass::VTriangleRenderPass(VRendererBackend* renderer,
   u32 indicies[] = {0, 1, 2};
   u32* ptr = indicies;
   m_vrenderer->uploadToBuffer(m_indexBuffer, ptr);
+
+  m_descriptorPool = m_vrenderer->createDescriptorPool(1);
+  m_descriptorSetLayout =
+      m_vrenderer->createDescriptorSetLayout(0, 1, VK_SHADER_STAGE_VERTEX_BIT);
+  m_desciprotSet = m_vrenderer->allocateDescriptorSets(
+      m_descriptorPool, m_descriptorSetLayout, 1)[0];
+
+  m_uniformBuffer = m_vrenderer->createUniformBuffer(4 * sizeof(float));
+  float uniformData[] = {0.0f, 1.0f, 0.0f, 1.0f};
+  m_vrenderer->uploadToBuffer(m_uniformBuffer, uniformData);
+
+  m_vrenderer->updateDescriptorSet(m_desciprotSet, m_uniformBuffer);
+  std::vector<descriptor_set_layout> layouts = {m_descriptorSetLayout};
+  m_pipelineLayout = m_vrenderer->createPipelineLayout(layouts);
 }
 
 void VTriangleRenderPass::recreate() {
@@ -61,7 +75,7 @@ void VTriangleRenderPass::execute() {
         m_vrenderer->getFramebufferDimensions(*m_framebufferSink);
 
     m_pipeline = m_vrenderer->createPipeline(
-        *m_renderPassSink, *m_pipelineLayoutSink, dim.first, dim.second,
+        *m_renderPassSink, m_pipelineLayout, dim.first, dim.second,
         m_vertexShaderHandle, m_fragmentShaderHandle);
   }
 
@@ -74,6 +88,8 @@ void VTriangleRenderPass::execute() {
   m_vrenderer->bindPipeline(m_pipeline, *m_cmdBuffSink);
   m_vrenderer->bindVertexBuffer(m_vertexBuffer, *m_cmdBuffSink);
   m_vrenderer->bindIndexBuffer(m_indexBuffer, *m_cmdBuffSink);
+  m_vrenderer->bindDescriptorSet(m_desciprotSet, m_pipelineLayout,
+                                 *m_cmdBuffSink);
 
   m_vrenderer->indexedDrawCall(3, *m_cmdBuffSink);
   // m_vrenderer->drawCall(3, 1, *m_cmdBuffSink);

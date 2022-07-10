@@ -40,6 +40,10 @@ VRendererBackend::~VRendererBackend() {
   m_rootPass->dispose();
   delete m_rootPass;
 
+  for (descriptor_pool_t &descriptorPool : m_descriptorPools) {
+    destroyDescriptorPool(descriptorPool);
+  }
+
   for (descriptor_set_layout_t &descriptorSetLayout : m_descriptorSetLayouts) {
     destroyDescriptorSetLayout(descriptorSetLayout);
   }
@@ -587,15 +591,21 @@ void VRendererBackend::destroyShaderModule(shader_module_t &shaderModule) {
   }
 }
 
-pipeline_layout VRendererBackend::createPipelineLayout() {
+pipeline_layout VRendererBackend::createPipelineLayout(
+    const std::vector<descriptor_set_layout> &descriptorSetLayouts) {
   //
   VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo;
   pipelineLayoutCreateInfo.sType =
       VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   pipelineLayoutCreateInfo.pNext = nullptr;
   pipelineLayoutCreateInfo.flags = 0;
-  pipelineLayoutCreateInfo.setLayoutCount = 0;
-  pipelineLayoutCreateInfo.pSetLayouts = nullptr;
+  std::vector<VkDescriptorSetLayout> layouts(descriptorSetLayouts.size());
+  for (u32 i = 0; i < layouts.size(); i++) {
+    layouts[i] =
+        getDescriptorSetLayoutByHandle(descriptorSetLayouts[i]).m_handle;
+  }
+  pipelineLayoutCreateInfo.setLayoutCount = layouts.size();
+  pipelineLayoutCreateInfo.pSetLayouts = layouts.data();
   pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
   pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
 
@@ -1604,6 +1614,11 @@ void VRendererBackend::uploadToBuffer(buffer_t &buffer, void *data, u32 offset,
   ASSERT_VKRESULT(result);
   std::memcpy(memory, data, size);
   vkUnmapMemory(m_device.m_handle, buffer.m_memory);
+}
+
+void VRendererBackend::uploadToBuffer(uniform_buffer &buffer, void *data,
+                                      u32 offset, std::optional<u32> size) {
+  uploadToBuffer(buffer.m_bufferHandle, data, offset, size);
 }
 
 buffer VRendererBackend::createBuffer(u32 byteSize, bool exlusiveSharing,

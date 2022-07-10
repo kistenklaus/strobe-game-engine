@@ -56,7 +56,8 @@ class VRendererBackend : public sge::RendererBackend {
                        u32 renderAreaHeight,
                        command_buffer commandBufferHandle);
   void endRenderPass(command_buffer commandBufferHandle);
-  pipeline_layout createPipelineLayout();
+  pipeline_layout createPipelineLayout(
+      const std::vector<descriptor_set_layout>& descriptorSetLayout);
   void destroyPipelineLayout(pipeline_layout pipelineLayoutHandle);
   pipeline createPipeline(renderpass renderPassHandle,
                           pipeline_layout pipelineLayoutHandle,
@@ -126,6 +127,8 @@ class VRendererBackend : public sge::RendererBackend {
                                                   VkShaderStageFlags stages);
   void destroyDescriptorSetLayout(descriptor_set_layout descriptor_set_layout);
   void uploadToBuffer(buffer& bufffer, void* data, u32 offset = 0,
+                      std::optional<u32> size = std::nullopt);
+  void uploadToBuffer(uniform_buffer& buffer, void* data, u32 offset = 0,
                       std::optional<u32> size = std::nullopt);
   uniform_buffer createUniformBuffer(u32 byteSize);
   descriptor_pool createDescriptorPool(u32 count);

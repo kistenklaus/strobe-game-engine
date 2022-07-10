@@ -4,7 +4,11 @@ layout(location= 0) in vec3 inPosition;
 
 layout(location = 0) out vec3 fragColor;
 
+layout(binding = 0) uniform uniformObject{
+  vec4 color;
+} ubo;
+
 void main() {
     gl_Position = vec4(inPosition.xy, 0.0, 1.0);
-    fragColor = vec3(1,1,1);
+    fragColor = ubo.color.xyz;
 }
