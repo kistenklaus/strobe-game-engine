@@ -262,5 +262,6 @@ struct simple_handle {
 
 typedef simple_handle descriptor_set_layout;
 typedef simple_handle descriptor_pool;
+typedef simple_handle descriptor_set;
 
 }  // namespace sge::vulkan

@@ -1705,4 +1705,87 @@ VRendererBackend::getDescriptorPoolByHandle(
   return m_descriptorPools.at(descriptorPool.m_index);
 }
 
+std::vector<descriptor_set> VRendererBackend::allocateDescriptorSets(
+    descriptor_pool descriptorPool,
+    descriptor_set_layout descriptorLayoutHandle, u32 count) {
+  //
+  descriptor_set_layout_t descriptorSetLayout =
+      getDescriptorSetLayoutByHandle(descriptorLayoutHandle);
+  std::vector<VkDescriptorSetLayout> layouts(count,
+                                             descriptorSetLayout.m_handle);
+
+  VkDescriptorSetAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocInfo.pNext = nullptr;
+  allocInfo.descriptorPool = getDescriptorPoolByHandle(descriptorPool).m_handle;
+  allocInfo.descriptorSetCount = count;
+  allocInfo.pSetLayouts = layouts.data();
+
+  std::vector<VkDescriptorSet> vkDescriptorSets;
+  vkDescriptorSets.resize(count);
+  const VkResult result = vkAllocateDescriptorSets(
+      m_device.m_handle, &allocInfo, vkDescriptorSets.data());
+  ASSERT_VKRESULT(result);
+
+  std::vector<descriptor_set> handles;
+  for (VkDescriptorSet vkDescriptorSet : vkDescriptorSets) {
+    descriptor_set_t descriptorSet{};
+    descriptorSet.m_handle = vkDescriptorSet;
+    descriptorSet.m_parent = descriptorPool;
+    descriptor_set handle(m_descriptorSets.insert(descriptorSet));
+    m_descriptorSets[handle.m_index].m_index = handle.m_index;
+    handles.push_back(handle);
+  }
+  return handles;
+}
+
+VRendererBackend::descriptor_set_t &VRendererBackend::getDescriptorSetByHandle(
+    const descriptor_set descriptorSet) {
+  assert(descriptorSet.m_index != INVALID_INDEX_HANDLE);
+  return m_descriptorSets.at(descriptorSet.m_index);
+}
+
+void VRendererBackend::updateDescriptorSet(descriptor_set descriptorSetHandle,
+                                           uniform_buffer uniformBufferHandle) {
+  descriptor_set_t descriptorSet =
+      getDescriptorSetByHandle(descriptorSetHandle);
+  buffer_t uniformBuffer =
+      getBufferByHandle(uniformBufferHandle.m_bufferHandle);
+
+  VkDescriptorBufferInfo bufferInfo{};
+  bufferInfo.buffer = uniformBuffer.m_buffer;
+  bufferInfo.offset = 0;
+  bufferInfo.range = uniformBuffer.m_size;
+
+  VkWriteDescriptorSet descriptorWrite{};
+  descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  descriptorWrite.pNext = nullptr;
+  descriptorWrite.dstSet = descriptorSet.m_handle;
+  descriptorWrite.dstBinding = 0;
+  descriptorWrite.dstArrayElement = 0;
+  descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  descriptorWrite.descriptorCount = 1;
+  descriptorWrite.pBufferInfo = &bufferInfo;
+  descriptorWrite.pImageInfo = nullptr;
+  descriptorWrite.pTexelBufferView = nullptr;
+
+  vkUpdateDescriptorSets(m_device.m_handle, 1, &descriptorWrite, 0, nullptr);
+  //
+}
+
+void VRendererBackend::bindDescriptorSet(descriptor_set descriptorSetHandle,
+                                         pipeline_layout pipelineLayoutHandle,
+                                         command_buffer commandBufferHandle) {
+  command_buffer_t &commandBuffer =
+      getCommandBufferByHandle(commandBufferHandle);
+  descriptor_set_t &descriptorSet =
+      getDescriptorSetByHandle(descriptorSetHandle);
+  pipeline_layout_t &pipelineLayout =
+      getPipelineLayoutByHandle(pipelineLayoutHandle);
+  //
+  vkCmdBindDescriptorSets(
+      commandBuffer.m_handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+      pipelineLayout.m_handle, 0, 1, &descriptorSet.m_handle, 0, nullptr);
+}
+
 }  // namespace sge::vulkan

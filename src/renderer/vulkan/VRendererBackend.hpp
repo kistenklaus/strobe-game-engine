@@ -131,6 +131,15 @@ class VRendererBackend : public sge::RendererBackend {
   descriptor_pool createDescriptorPool(u32 count);
   void destroyDescriptorPool(descriptor_pool descriptorPool);
 
+  std::vector<descriptor_set> allocateDescriptorSets(
+      descriptor_pool descriptorPool, descriptor_set_layout descriptorSetLayout,
+      u32 count);
+  void updateDescriptorSet(descriptor_set descriptorSet,
+                           uniform_buffer uniformBuffer);
+  void bindDescriptorSet(descriptor_set descriptorSet,
+                         pipeline_layout pipelineLayout,
+                         command_buffer commandBuffer);
+
  private:
   struct instance_t {
     VkInstance m_handle;
@@ -236,9 +245,13 @@ class VRendererBackend : public sge::RendererBackend {
     VkDescriptorSetLayout m_handle;
     u32 m_index;
   };
-
   struct descriptor_pool_t {
     VkDescriptorPool m_handle;
+    u32 m_index;
+  };
+  struct descriptor_set_t {
+    VkDescriptorSet m_handle;
+    descriptor_pool m_parent;
     u32 m_index;
   };
 
@@ -263,6 +276,8 @@ class VRendererBackend : public sge::RendererBackend {
       const descriptor_set_layout descriptorSetLayout);
   descriptor_pool_t& getDescriptorPoolByHandle(
       const descriptor_pool descriptorPool);
+  descriptor_set_t& getDescriptorSetByHandle(
+      const descriptor_set descriptorSet);
   instance_t createInstance(const std::string& applicationName,
                             const std::tuple<u32, u32, u32>& applicationVersion,
                             const std::string& engineName,
@@ -318,6 +333,7 @@ class VRendererBackend : public sge::RendererBackend {
   sarray<buffer_t> m_buffers;
   sarray<descriptor_set_layout_t> m_descriptorSetLayouts;
   sarray<descriptor_pool_t> m_descriptorPools;
+  sarray<descriptor_set_t> m_descriptorSets;
 
   static const VkFormat SURFACE_COLOR_FORMAT = VK_FORMAT_B8G8R8A8_UNORM;
   static const u32 MAX_SWAPCHAIN_IMAGES = 3;
