@@ -489,12 +489,10 @@ shader_module VRendererBackend::createShaderModule(const std::string path,
                   ".*layout\\([a-zA-Z0-9, \t\r\n\f=]*location[ \t\r\n\f]*=[ "
                   "\t\r\n\f]*[0-9]+[a-zA-Z0-9, \t\r\n\f=]*\\)[ \t\r\n\f]+in[ "
                   "\t\r\n\f]+(vec4|vec3|vec2|float).*"))) {
-        println(lines[i]);
         u32 s = lines[i].find("location") + std::string("location").size();
         while (!(lines[i][s] >= '0' && lines[i][s] <= '9')) {
           s++;
         }
-        println(lines[i].substr(s));
         u32 e = s;
         while ((lines[i][e] >= '0' && lines[i][e] <= '9')) {
           e++;
