@@ -40,6 +40,10 @@ VRendererBackend::~VRendererBackend() {
   m_rootPass->dispose();
   delete m_rootPass;
 
+  for (descriptor_set_layout_t &descriptorSetLayout : m_descriptorSetLayouts) {
+    destroyDescriptorSetLayout(descriptorSetLayout);
+  }
+
   for (index_buffer_t &indexBuffer : m_indexBuffers) {
     destroyIndexBuffer(indexBuffer);
   }
@@ -1274,7 +1278,7 @@ void VRendererBackend::destroyVertexBuffer(vertex_buffer vertexBuffer) {
   destroyVertexBuffer(getVertexBufferByHandle(vertexBuffer));
 }
 
-void VRendererBackend::destroyVertexBuffer(vertex_buffer_t vertexBuffer) {
+void VRendererBackend::destroyVertexBuffer(vertex_buffer_t &vertexBuffer) {
   m_vertexBuffers.removeAt(vertexBuffer.m_index);
   vkDestroyBuffer(m_device.m_handle, vertexBuffer.m_handle, nullptr);
   vkFreeMemory(m_device.m_handle, vertexBuffer.m_memory, nullptr);
@@ -1355,7 +1359,7 @@ void VRendererBackend::destroyIndexBuffer(index_buffer indexBuffer) {
   destroyIndexBuffer(getIndexBufferByHandle(indexBuffer));
 }
 
-void VRendererBackend::destroyIndexBuffer(index_buffer_t indexBuffer) {
+void VRendererBackend::destroyIndexBuffer(index_buffer_t &indexBuffer) {
   m_indexBuffers.removeAt(indexBuffer.m_index);
   vkDestroyBuffer(m_device.m_handle, indexBuffer.m_handle, nullptr);
   vkFreeMemory(m_device.m_handle, indexBuffer.m_memory, nullptr);
@@ -1665,6 +1669,51 @@ void VRendererBackend::bindPipeline(pipeline_t &pipeline,
   //
   vkCmdBindPipeline(commandBuffer.m_handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeline.m_handle);
+}
+
+descriptor_set_layout VRendererBackend::createDescriptorSetLayout(
+    u32 binding, u32 count, VkShaderStageFlags stages) {
+  VkDescriptorSetLayoutBinding layoutBinding{};
+  layoutBinding.binding = binding;
+  layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  layoutBinding.descriptorCount = count;
+  layoutBinding.stageFlags = stages;
+  layoutBinding.pImmutableSamplers = nullptr;
+
+  VkDescriptorSetLayoutCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  createInfo.pNext = nullptr;
+  createInfo.flags = 0;
+  createInfo.bindingCount = 1;
+  createInfo.pBindings = &layoutBinding;
+
+  descriptor_set_layout_t descriptorSetLayout{};
+  VkResult result = vkCreateDescriptorSetLayout(
+      m_device.m_handle, &createInfo, nullptr, &descriptorSetLayout.m_handle);
+  ASSERT_VKRESULT(result);
+
+  struct descriptor_set_layout handle(
+      m_descriptorSetLayouts.insert(descriptorSetLayout));
+  m_descriptorSetLayouts[handle.m_index].m_index = handle.m_index;
+  return handle;
+}
+void VRendererBackend::destroyDescriptorSetLayout(
+    descriptor_set_layout descriptorSetLayout) {
+  destroyDescriptorSetLayout(
+      getDescriptorSetLayoutByHandle(descriptorSetLayout));
+}
+void VRendererBackend::destroyDescriptorSetLayout(
+    descriptor_set_layout_t &descriptorSetLayout) {
+  m_descriptorSetLayouts.removeAt(descriptorSetLayout.m_index);
+  vkDestroyDescriptorSetLayout(m_device.m_handle, descriptorSetLayout.m_handle,
+                               nullptr);
+  //
+}
+VRendererBackend::descriptor_set_layout_t &
+VRendererBackend::getDescriptorSetLayoutByHandle(
+    const descriptor_set_layout descriptorSetLayout) {
+  assert(descriptorSetLayout.m_index != INVALID_INDEX_HANDLE);
+  return m_descriptorSetLayouts[descriptorSetLayout.m_index];
 }
 
 }  // namespace sge::vulkan

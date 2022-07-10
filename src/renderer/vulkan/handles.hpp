@@ -253,4 +253,24 @@ struct index_buffer {
   u32 m_index;
 };
 
+struct descriptor_set_layout {
+  friend class VRendererBackend;
+
+ public:
+  descriptor_set_layout() : m_index(INVALID_INDEX_HANDLE) {}
+  bool operator==(const descriptor_set_layout& descriptorSetLayout) const {
+    return descriptorSetLayout.m_index == m_index;
+  }
+  bool operator!=(const descriptor_set_layout& descriptorSetLayout) const {
+    return descriptorSetLayout.m_index != m_index;
+  }
+  bool operator<(const descriptor_set_layout& descriptorSetLayout) const {
+    return descriptorSetLayout.m_index < m_index;
+  }
+
+ private:
+  explicit descriptor_set_layout(u32 index) : m_index(index) {}
+  u32 m_index;
+};
+
 }  // namespace sge::vulkan

@@ -128,6 +128,9 @@ class VRendererBackend : public sge::RendererBackend {
   queue getAnyTransferQueue();
   queue getAnyComputeQueue();
   Window* getWindowPtr() { return mp_window; }
+  descriptor_set_layout createDescriptorSetLayout(u32 binding, u32 count,
+                                                  VkShaderStageFlags stages);
+  void destroyDescriptorSetLayout(descriptor_set_layout descriptor_set_layout);
 
  private:
   struct instance_t {
@@ -235,6 +238,10 @@ class VRendererBackend : public sge::RendererBackend {
     u32 m_size;
     u32 m_index;
   };
+  struct descriptor_set_layout_t {
+    VkDescriptorSetLayout m_handle;
+    u32 m_index;
+  };
 
  private:
   void createSwapchain();
@@ -254,6 +261,8 @@ class VRendererBackend : public sge::RendererBackend {
   queue_t& getQueueByHandle(const queue queueId);
   fence_t& getFenceByHandle(const fence fenceId);
   index_buffer_t& getIndexBufferByHandle(const index_buffer indexBuffer);
+  descriptor_set_layout_t& getDescriptorSetLayoutByHandle(
+      const descriptor_set_layout descriptorSetLayout);
   instance_t createInstance(const std::string& applicationName,
                             const std::tuple<u32, u32, u32>& applicationVersion,
                             const std::string& engineName,
@@ -273,8 +282,9 @@ class VRendererBackend : public sge::RendererBackend {
   void destroyDevice(device_t& device);
   void destroyInstance(instance_t& instance);
   void destroyFence(fence_t& fence);
-  void destroyVertexBuffer(vertex_buffer_t vertexBuffer);
-  void destroyIndexBuffer(index_buffer_t indexBuffer);
+  void destroyVertexBuffer(vertex_buffer_t& vertexBuffer);
+  void destroyIndexBuffer(index_buffer_t& indexBuffer);
+  void destroyDescriptorSetLayout(descriptor_set_layout_t& descriptorSetLayout);
   void bindPipeline(pipeline_t& pipeline, command_buffer_t& commandBuffer);
   u32 findSuitableMemoryType(u32 memoryTypeFilter,
                              VkMemoryPropertyFlags properties);
@@ -305,6 +315,7 @@ class VRendererBackend : public sge::RendererBackend {
   sarray<fence_t> m_fences;
   sarray<vertex_buffer_t> m_vertexBuffers;
   sarray<index_buffer_t> m_indexBuffers;
+  sarray<descriptor_set_layout_t> m_descriptorSetLayouts;
 
   static const VkFormat SURFACE_COLOR_FORMAT = VK_FORMAT_B8G8R8A8_UNORM;
   static const u32 MAX_SWAPCHAIN_IMAGES = 3;
