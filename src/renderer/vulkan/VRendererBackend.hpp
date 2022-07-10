@@ -112,18 +112,12 @@ class VRendererBackend : public sge::RendererBackend {
   vertex_buffer createVertexBuffer(const u32 byteSize,
                                    boolean exlusiveSharing = true);
   void destroyVertexBuffer(vertex_buffer vertexBuffer);
-  void uploadToVertexBuffer(vertex_buffer vertexBuffer, void* data,
-                            u32 offset = 0,
-                            std::optional<u32> size = std::nullopt);
   void bindVertexBuffer(vertex_buffer vertexBuffer,
                         command_buffer commandBuffer);
   index_buffer createIndexBuffer(const u32 byteSize,
                                  boolean exclusiveSharing = true);
   void destroyIndexBuffer(index_buffer indexBuffer);
   void bindIndexBuffer(index_buffer indexBuffer, command_buffer commandBuffer);
-  void uploadToIndexBuffer(index_buffer indexBuffer, u32* indicies,
-                           u32 offset = 0,
-                           std::optional<u32> size = std::nullopt);
   queue getAnyGraphicsQueue();
   queue getAnyTransferQueue();
   queue getAnyComputeQueue();
@@ -131,6 +125,11 @@ class VRendererBackend : public sge::RendererBackend {
   descriptor_set_layout createDescriptorSetLayout(u32 binding, u32 count,
                                                   VkShaderStageFlags stages);
   void destroyDescriptorSetLayout(descriptor_set_layout descriptor_set_layout);
+  void uploadToBuffer(buffer& bufffer, void* data, u32 offset = 0,
+                      std::optional<u32> size = std::nullopt);
+  uniform_buffer createUniformBuffer(u32 byteSize);
+  descriptor_pool createDescriptorPool(u32 count);
+  void destroyDescriptorPool(descriptor_pool descriptorPool);
 
  private:
   struct instance_t {
@@ -226,20 +225,20 @@ class VRendererBackend : public sge::RendererBackend {
     VkFence m_handle;
     u32 m_index;
   };
-  struct vertex_buffer_t {
-    VkBuffer m_handle;
+  struct buffer_t {
+    VkBuffer m_buffer;
     VkDeviceMemory m_memory;
     u32 m_size;
     u32 m_index;
   };
-  struct index_buffer_t {
-    VkBuffer m_handle;
-    VkDeviceMemory m_memory;
-    u32 m_size;
-    u32 m_index;
-  };
+
   struct descriptor_set_layout_t {
     VkDescriptorSetLayout m_handle;
+    u32 m_index;
+  };
+
+  struct descriptor_pool_t {
+    VkDescriptorPool m_handle;
     u32 m_index;
   };
 
@@ -256,19 +255,23 @@ class VRendererBackend : public sge::RendererBackend {
   command_pool_t& getCommandPoolByHandle(const command_pool commandPoolId);
   command_buffer_t& getCommandBufferByHandle(
       const command_buffer commandBufferId);
-  vertex_buffer_t& getVertexBufferByHandle(const vertex_buffer);
   semaphore_t& getSemaphoreByHandle(const semaphore semaphoreId);
   queue_t& getQueueByHandle(const queue queueId);
   fence_t& getFenceByHandle(const fence fenceId);
-  index_buffer_t& getIndexBufferByHandle(const index_buffer indexBuffer);
+  buffer_t& getBufferByHandle(const buffer buffer);
   descriptor_set_layout_t& getDescriptorSetLayoutByHandle(
       const descriptor_set_layout descriptorSetLayout);
+  descriptor_pool_t& getDescriptorPoolByHandle(
+      const descriptor_pool descriptorPool);
   instance_t createInstance(const std::string& applicationName,
                             const std::tuple<u32, u32, u32>& applicationVersion,
                             const std::string& engineName,
                             const std::tuple<u32, u32, u32>& engineVersion);
   device_t createDevice();
   surface_t createSurface();
+  buffer createBuffer(u32 byteSize, bool exlusiveSharing,
+                      VkBufferUsageFlags usage,
+                      VkMemoryPropertyFlags memoryProperties);
   void destroyCommandPool(command_pool_t& commandPool);
   void destroySemaphore(semaphore_t& semaphore);
   void destroyPipeline(pipeline_t& pipeline);
@@ -282,15 +285,14 @@ class VRendererBackend : public sge::RendererBackend {
   void destroyDevice(device_t& device);
   void destroyInstance(instance_t& instance);
   void destroyFence(fence_t& fence);
-  void destroyVertexBuffer(vertex_buffer_t& vertexBuffer);
-  void destroyIndexBuffer(index_buffer_t& indexBuffer);
   void destroyDescriptorSetLayout(descriptor_set_layout_t& descriptorSetLayout);
+  void destroyBuffer(buffer_t& buffer);
   void bindPipeline(pipeline_t& pipeline, command_buffer_t& commandBuffer);
+  void destroyDescriptorPool(descriptor_pool_t& descriptorPool);
+  void uploadToBuffer(buffer_t& bufffer, void* data, u32 offset,
+                      std::optional<u32> size);
   u32 findSuitableMemoryType(u32 memoryTypeFilter,
                              VkMemoryPropertyFlags properties);
-
-  void uploadToVertexBuffer(vertex_buffer_t& vertexBuffer, void* data,
-                            u32 offset, u32 size);
 
  private:
   RenderPass* m_rootPass;
@@ -313,9 +315,9 @@ class VRendererBackend : public sge::RendererBackend {
   sarray<command_buffer_t> m_commandBuffers;
   sarray<semaphore_t> m_semaphores;
   sarray<fence_t> m_fences;
-  sarray<vertex_buffer_t> m_vertexBuffers;
-  sarray<index_buffer_t> m_indexBuffers;
+  sarray<buffer_t> m_buffers;
   sarray<descriptor_set_layout_t> m_descriptorSetLayouts;
+  sarray<descriptor_pool_t> m_descriptorPools;
 
   static const VkFormat SURFACE_COLOR_FORMAT = VK_FORMAT_B8G8R8A8_UNORM;
   static const u32 MAX_SWAPCHAIN_IMAGES = 3;

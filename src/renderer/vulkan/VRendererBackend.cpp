@@ -44,12 +44,8 @@ VRendererBackend::~VRendererBackend() {
     destroyDescriptorSetLayout(descriptorSetLayout);
   }
 
-  for (index_buffer_t &indexBuffer : m_indexBuffers) {
-    destroyIndexBuffer(indexBuffer);
-  }
-
-  for (vertex_buffer_t &vertexBuffer : m_vertexBuffers) {
-    destroyVertexBuffer(vertexBuffer);
+  for (buffer_t &buffer : m_buffers) {
+    destroyBuffer(buffer);
   }
 
   for (command_buffer_t &command_buffer : m_commandBuffers) {
@@ -1231,85 +1227,19 @@ void VRendererBackend::waitDeviceIdle() { vkDeviceWaitIdle(m_device.m_handle); }
 
 vertex_buffer VRendererBackend::createVertexBuffer(const u32 byteSize,
                                                    boolean exlusiveSharing) {
-  if (!exlusiveSharing)
-    throw std::runtime_error(
-        "concurrent sharing mode is not yet implemented for vertex buffers");
-
-  VkBufferCreateInfo createInfo{};
-  createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  createInfo.pNext = nullptr;
-  createInfo.flags = 0;
-  createInfo.size = byteSize;
-  createInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-  createInfo.sharingMode = (exlusiveSharing ? VK_SHARING_MODE_EXCLUSIVE
-                                            : VK_SHARING_MODE_CONCURRENT);
-  createInfo.queueFamilyIndexCount = 0;
-  createInfo.pQueueFamilyIndices = nullptr;
-  vertex_buffer_t vertexBuffer;
-  VkResult result = vkCreateBuffer(m_device.m_handle, &createInfo, nullptr,
-                                   &vertexBuffer.m_handle);
-  ASSERT_VKRESULT(result);
-
-  VkMemoryRequirements memReq;
-  vkGetBufferMemoryRequirements(m_device.m_handle, vertexBuffer.m_handle,
-                                &memReq);
-
-  VkMemoryAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.pNext = nullptr;
-  allocInfo.allocationSize = memReq.size;
-  allocInfo.memoryTypeIndex = findSuitableMemoryType(
-      memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-  result = vkAllocateMemory(m_device.m_handle, &allocInfo, nullptr,
-                            &vertexBuffer.m_memory);
-  ASSERT_VKRESULT(result);
-  vkBindBufferMemory(m_device.m_handle, vertexBuffer.m_handle,
-                     vertexBuffer.m_memory, 0);
-  vertexBuffer.m_size = createInfo.size;
-
-  struct vertex_buffer handle(m_vertexBuffers.insert(vertexBuffer));
-  m_vertexBuffers[handle.m_index].m_index = handle.m_index;
-  return handle;
+  return createBuffer(byteSize, exlusiveSharing,
+                      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
 void VRendererBackend::destroyVertexBuffer(vertex_buffer vertexBuffer) {
-  destroyVertexBuffer(getVertexBufferByHandle(vertexBuffer));
+  destroyBuffer(getBufferByHandle(vertexBuffer));
 }
 
-void VRendererBackend::destroyVertexBuffer(vertex_buffer_t &vertexBuffer) {
-  m_vertexBuffers.removeAt(vertexBuffer.m_index);
-  vkDestroyBuffer(m_device.m_handle, vertexBuffer.m_handle, nullptr);
-  vkFreeMemory(m_device.m_handle, vertexBuffer.m_memory, nullptr);
-}
-
-void VRendererBackend::uploadToVertexBuffer(vertex_buffer vertexBuffer,
-                                            void *data, u32 offset,
-                                            std::optional<u32> size) {
-  if (size.has_value()) {
-    uploadToVertexBuffer(getVertexBufferByHandle(vertexBuffer), data, offset,
-                         size.value());
-  } else {
-    vertex_buffer_t &buffer = getVertexBufferByHandle(vertexBuffer);
-    uploadToVertexBuffer(buffer, data, offset, buffer.m_size);
-  }
-}
-
-void VRendererBackend::uploadToVertexBuffer(vertex_buffer_t &vertexBuffer,
-                                            void *data, u32 offset, u32 size) {
-  //
-  void *memory;
-  VkResult result = vkMapMemory(m_device.m_handle, vertexBuffer.m_memory,
-                                offset, size, 0, &memory);
-  ASSERT_VKRESULT(result);
-  std::memcpy(memory, data, size);
-  vkUnmapMemory(m_device.m_handle, vertexBuffer.m_memory);
-}
 void VRendererBackend::bindVertexBuffer(vertex_buffer vertexBufferHandle,
                                         command_buffer commandBufferHandle) {
-  VkBuffer vertexBuffers[] = {
-      getVertexBufferByHandle(vertexBufferHandle).m_handle};
+  VkBuffer vertexBuffers[] = {getBufferByHandle(vertexBufferHandle).m_buffer};
   VkDeviceSize offsets[] = {0};
   vkCmdBindVertexBuffers(getCommandBufferByHandle(commandBufferHandle).m_handle,
                          0, 1, vertexBuffers, offsets);
@@ -1317,78 +1247,27 @@ void VRendererBackend::bindVertexBuffer(vertex_buffer vertexBufferHandle,
 
 index_buffer VRendererBackend::createIndexBuffer(const u32 byteSize,
                                                  boolean exclusiveSharing) {
-  index_buffer_t indexBuffer;
-  indexBuffer.m_size = byteSize;
-  VkBufferCreateInfo createInfo{};
-  createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  createInfo.pNext = nullptr;
-  createInfo.size = byteSize;
-  createInfo.flags = 0;
-  createInfo.sharingMode = (exclusiveSharing ? VK_SHARING_MODE_EXCLUSIVE
-                                             : VK_SHARING_MODE_CONCURRENT);
-  createInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-  createInfo.queueFamilyIndexCount = 0;
-  createInfo.pQueueFamilyIndices = nullptr;
-  VkResult result = vkCreateBuffer(m_device.m_handle, &createInfo, nullptr,
-                                   &indexBuffer.m_handle);
-  ASSERT_VKRESULT(result);
-
-  VkMemoryRequirements memReq;
-  vkGetBufferMemoryRequirements(m_device.m_handle, indexBuffer.m_handle,
-                                &memReq);
-
-  VkMemoryAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.pNext = nullptr;
-  allocInfo.allocationSize = memReq.size;
-  allocInfo.memoryTypeIndex = findSuitableMemoryType(
-      memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-  result = vkAllocateMemory(m_device.m_handle, &allocInfo, nullptr,
-                            &indexBuffer.m_memory);
-  ASSERT_VKRESULT(result);
-  vkBindBufferMemory(m_device.m_handle, indexBuffer.m_handle,
-                     indexBuffer.m_memory, 0);
-
-  struct index_buffer handle(m_indexBuffers.insert(indexBuffer));
-  m_indexBuffers[handle.m_index].m_index = handle.m_index;
-  return handle;
+  return createBuffer(byteSize, exclusiveSharing,
+                      VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 void VRendererBackend::destroyIndexBuffer(index_buffer indexBuffer) {
-  destroyIndexBuffer(getIndexBufferByHandle(indexBuffer));
-}
-
-void VRendererBackend::destroyIndexBuffer(index_buffer_t &indexBuffer) {
-  m_indexBuffers.removeAt(indexBuffer.m_index);
-  vkDestroyBuffer(m_device.m_handle, indexBuffer.m_handle, nullptr);
-  vkFreeMemory(m_device.m_handle, indexBuffer.m_memory, nullptr);
+  destroyBuffer(getBufferByHandle(indexBuffer));
 }
 
 void VRendererBackend::bindIndexBuffer(index_buffer indexBuffer,
                                        command_buffer commandBuffer) {
   //
   vkCmdBindIndexBuffer(getCommandBufferByHandle(commandBuffer).m_handle,
-                       getIndexBufferByHandle(indexBuffer).m_handle, 0,
+                       getBufferByHandle(indexBuffer).m_buffer, 0,
                        VK_INDEX_TYPE_UINT32);
 }
 
-void VRendererBackend::uploadToIndexBuffer(index_buffer indexBufferHandle,
-                                           u32 *indicies, u32 offset,
-                                           std::optional<u32> sizeOpt) {
-  index_buffer_t &indexBuffer = getIndexBufferByHandle(indexBufferHandle);
-  u32 size = sizeOpt.value_or(indexBuffer.m_size);
-  void *memory;
-  vkMapMemory(m_device.m_handle, indexBuffer.m_memory, offset, size, 0,
-              &memory);
-  std::memcpy(memory, indicies, size);
-  vkUnmapMemory(m_device.m_handle, indexBuffer.m_memory);
-}
-
-VRendererBackend::index_buffer_t &VRendererBackend::getIndexBufferByHandle(
-    const index_buffer indexBuffer) {
-  assert(indexBuffer.m_index != INVALID_INDEX_HANDLE);
-  return m_indexBuffers.at(indexBuffer.m_index);
+VRendererBackend::buffer_t &VRendererBackend::getBufferByHandle(
+    const buffer buffer) {
+  assert(buffer.m_index != INVALID_INDEX_HANDLE);
+  return m_buffers.at(buffer.m_index);
 }
 
 queue VRendererBackend::getAnyGraphicsQueue() {
@@ -1592,12 +1471,6 @@ VRendererBackend::fence_t &VRendererBackend::getFenceByHandle(
   return m_fences.at(fenceHandle.m_index);
 }
 
-VRendererBackend::vertex_buffer_t &VRendererBackend::getVertexBufferByHandle(
-    const vertex_buffer vertexBufferHandle) {
-  assert(vertexBufferHandle.m_index != INVALID_INDEX_HANDLE);
-  return m_vertexBuffers.at(vertexBufferHandle.m_index);
-}
-
 void VRendererBackend::destroyCommandPool(command_pool_t &commandPool) {
   //
   m_commandPools.removeAt(commandPool.m_index);
@@ -1692,7 +1565,7 @@ descriptor_set_layout VRendererBackend::createDescriptorSetLayout(
       m_device.m_handle, &createInfo, nullptr, &descriptorSetLayout.m_handle);
   ASSERT_VKRESULT(result);
 
-  struct descriptor_set_layout handle(
+  descriptor_set_layout handle(
       m_descriptorSetLayouts.insert(descriptorSetLayout));
   m_descriptorSetLayouts[handle.m_index].m_index = handle.m_index;
   return handle;
@@ -1714,6 +1587,122 @@ VRendererBackend::getDescriptorSetLayoutByHandle(
     const descriptor_set_layout descriptorSetLayout) {
   assert(descriptorSetLayout.m_index != INVALID_INDEX_HANDLE);
   return m_descriptorSetLayouts[descriptorSetLayout.m_index];
+}
+
+void VRendererBackend::destroyBuffer(buffer_t &buffer) {
+  m_buffers.removeAt(buffer.m_index);
+  vkDestroyBuffer(m_device.m_handle, buffer.m_buffer, nullptr);
+  vkFreeMemory(m_device.m_handle, buffer.m_memory, nullptr);
+}
+
+void VRendererBackend::uploadToBuffer(buffer_t &buffer, void *data, u32 offset,
+                                      std::optional<u32> sizeOpt) {
+  const u32 size = sizeOpt.value_or(buffer.m_size);
+  void *memory;
+  const VkResult result =
+      vkMapMemory(m_device.m_handle, buffer.m_memory, offset, size, 0, &memory);
+  ASSERT_VKRESULT(result);
+  std::memcpy(memory, data, size);
+  vkUnmapMemory(m_device.m_handle, buffer.m_memory);
+}
+
+buffer VRendererBackend::createBuffer(u32 byteSize, bool exlusiveSharing,
+                                      VkBufferUsageFlags usage,
+                                      VkMemoryPropertyFlags memoryProperties) {
+  //
+  if (!exlusiveSharing)
+    throw std::runtime_error(
+        "concurrent sharing mode is not yet implemented for vertex buffers");
+
+  VkBufferCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  createInfo.pNext = nullptr;
+  createInfo.flags = 0;
+  createInfo.size = byteSize;
+  createInfo.usage = usage;
+  createInfo.sharingMode = (exlusiveSharing ? VK_SHARING_MODE_EXCLUSIVE
+                                            : VK_SHARING_MODE_CONCURRENT);
+  createInfo.queueFamilyIndexCount = 0;
+  createInfo.pQueueFamilyIndices = nullptr;
+  buffer_t buffer;
+  VkResult result =
+      vkCreateBuffer(m_device.m_handle, &createInfo, nullptr, &buffer.m_buffer);
+  ASSERT_VKRESULT(result);
+
+  VkMemoryRequirements memReq;
+  vkGetBufferMemoryRequirements(m_device.m_handle, buffer.m_buffer, &memReq);
+
+  VkMemoryAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.pNext = nullptr;
+  allocInfo.allocationSize = memReq.size;
+  allocInfo.memoryTypeIndex =
+      findSuitableMemoryType(memReq.memoryTypeBits, memoryProperties);
+
+  result = vkAllocateMemory(m_device.m_handle, &allocInfo, nullptr,
+                            &buffer.m_memory);
+  ASSERT_VKRESULT(result);
+  vkBindBufferMemory(m_device.m_handle, buffer.m_buffer, buffer.m_memory, 0);
+  buffer.m_size = createInfo.size;
+
+  struct buffer handle(m_buffers.insert(buffer));
+  m_buffers[handle.m_index].m_index = handle.m_index;
+  return handle;
+}
+
+void VRendererBackend::uploadToBuffer(buffer &buffer, void *data, u32 offset,
+                                      std::optional<u32> size) {
+  uploadToBuffer(getBufferByHandle(buffer), data, offset, size);
+}
+
+uniform_buffer VRendererBackend::createUniformBuffer(u32 byteSize) {
+  //
+  buffer bufferHandle =
+      createBuffer(byteSize, true, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+  uniform_buffer ubo{};
+  ubo.m_bufferHandle = bufferHandle;
+  return ubo;
+};
+
+descriptor_pool VRendererBackend::createDescriptorPool(u32 count) {
+  //
+  VkDescriptorPoolSize poolSize{};
+  poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  poolSize.descriptorCount = count;
+  VkDescriptorPoolCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+  createInfo.pNext = nullptr;
+  createInfo.flags = 0;
+  createInfo.poolSizeCount = 1;
+  createInfo.pPoolSizes = &poolSize;
+  createInfo.maxSets = count;
+  descriptor_pool_t descriptorPool{};
+  const VkResult result = vkCreateDescriptorPool(
+      m_device.m_handle, &createInfo, nullptr, &descriptorPool.m_handle);
+  ASSERT_VKRESULT(result);
+
+  descriptor_pool handle(m_descriptorPools.insert(descriptorPool));
+  m_descriptorPools[handle.m_index].m_index = handle.m_index;
+  return handle;
+}
+
+void VRendererBackend::destroyDescriptorPool(
+    descriptor_pool_t &descriptorPool) {
+  m_descriptorPools.removeAt(descriptorPool.m_index);
+  vkDestroyDescriptorPool(m_device.m_handle, descriptorPool.m_handle, nullptr);
+}
+
+void VRendererBackend::destroyDescriptorPool(descriptor_pool descriptorPool) {
+  destroyDescriptorPool(getDescriptorPoolByHandle(descriptorPool));
+}
+
+VRendererBackend::descriptor_pool_t &
+VRendererBackend::getDescriptorPoolByHandle(
+    const descriptor_pool descriptorPool) {
+  assert(descriptorPool.m_index != INVALID_INDEX_HANDLE);
+  return m_descriptorPools.at(descriptorPool.m_index);
 }
 
 }  // namespace sge::vulkan

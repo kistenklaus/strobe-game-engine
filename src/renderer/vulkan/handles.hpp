@@ -213,64 +213,54 @@ struct semaphore {
   u32 m_index;
 };
 
-struct vertex_buffer {
+struct buffer {
   friend class VRendererBackend;
 
  public:
-  vertex_buffer() : m_index(INVALID_INDEX_HANDLE) {}
-  bool operator==(const vertex_buffer& vertexBuffer) const {
-    return vertexBuffer.m_index == m_index;
+  buffer() : m_index(INVALID_INDEX_HANDLE) {}
+  bool operator==(const buffer& buffer) const {
+    return buffer.m_index == m_index;
   }
-  bool operator!=(const vertex_buffer& vertexBuffer) const {
-    return vertexBuffer.m_index != m_index;
+  bool operator!=(const buffer& buffer) const {
+    return buffer.m_index != m_index;
   }
-  bool operator<(const vertex_buffer& vertexBuffer) const {
-    return vertexBuffer.m_index < m_index;
+  bool operator<(const buffer& buffer) const {
+    return buffer.m_index < m_index;
   }
 
  private:
-  explicit vertex_buffer(u32 index) : m_index(index) {}
+  explicit buffer(u32 index) : m_index(index) {}
   u32 m_index;
 };
 
-struct index_buffer {
-  friend class VRendererBackend;
+typedef buffer vertex_buffer;
+typedef buffer index_buffer;
 
- public:
-  index_buffer() : m_index(INVALID_INDEX_HANDLE) {}
-  bool operator==(const index_buffer& indexBuffer) const {
-    return indexBuffer.m_index == m_index;
-  }
-  bool operator!=(const index_buffer& indexBuffer) const {
-    return indexBuffer.m_index != m_index;
-  }
-  bool operator<(const index_buffer& indexBuffer) const {
-    return indexBuffer.m_index < m_index;
-  }
-
- private:
-  explicit index_buffer(u32 index) : m_index(index) {}
-  u32 m_index;
+struct uniform_buffer {
+  buffer m_bufferHandle;
 };
 
-struct descriptor_set_layout {
+struct simple_handle {
   friend class VRendererBackend;
 
  public:
-  descriptor_set_layout() : m_index(INVALID_INDEX_HANDLE) {}
-  bool operator==(const descriptor_set_layout& descriptorSetLayout) const {
+  simple_handle() : m_index(INVALID_INDEX_HANDLE) {}
+  bool operator==(const simple_handle& descriptorSetLayout) const {
     return descriptorSetLayout.m_index == m_index;
   }
-  bool operator!=(const descriptor_set_layout& descriptorSetLayout) const {
+  bool operator!=(const simple_handle& descriptorSetLayout) const {
     return descriptorSetLayout.m_index != m_index;
   }
-  bool operator<(const descriptor_set_layout& descriptorSetLayout) const {
+  bool operator<(const simple_handle& descriptorSetLayout) const {
     return descriptorSetLayout.m_index < m_index;
   }
 
  private:
-  explicit descriptor_set_layout(u32 index) : m_index(index) {}
+  explicit simple_handle(u32 index) : m_index(index) {}
   u32 m_index;
 };
+
+typedef simple_handle descriptor_set_layout;
+typedef simple_handle descriptor_pool;
 
 }  // namespace sge::vulkan

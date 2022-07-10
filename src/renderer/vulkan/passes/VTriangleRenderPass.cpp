@@ -30,11 +30,11 @@ VTriangleRenderPass::VTriangleRenderPass(VRendererBackend* renderer,
       -0.5f, 0.5f,  0.0f,  //
       -0.5f, -0.5f, 0.0f   //
   };
-  m_vrenderer->uploadToVertexBuffer(m_vertexBuffer, vertexData);
+  m_vrenderer->uploadToBuffer(m_vertexBuffer, vertexData);
   m_indexBuffer = m_vrenderer->createIndexBuffer(sizeof(u32) * 3);
   u32 indicies[] = {0, 1, 2};
   u32* ptr = indicies;
-  m_vrenderer->uploadToIndexBuffer(m_indexBuffer, ptr);
+  m_vrenderer->uploadToBuffer(m_indexBuffer, ptr);
 }
 
 void VTriangleRenderPass::recreate() {
