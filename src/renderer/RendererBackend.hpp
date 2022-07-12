@@ -11,6 +11,7 @@ class RendererBackend {
   virtual void endFrame() = 0;
 
  private:
+ protected:
 };
 
 }  // namespace sge

@@ -1,5 +1,6 @@
 #pragma once
 #include "renderer/RenderQueuePass.hpp"
+#include "renderer/handles.hpp"
 
 namespace sge {
 
@@ -12,6 +13,7 @@ class DrawJob {
  public:
  private:
   RenderQueuePass* queue;
+  shader_module vertexShader;
 };
 
 }  // namespace sge
