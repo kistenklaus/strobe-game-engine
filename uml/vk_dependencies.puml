@@ -1,0 +1,75 @@
+@startuml
+!include ./theme.puml
+skinparam linetype ortho
+
+class CommandPool
+class CommandBuffer 
+class RenderPass
+class Framebuffer
+class ImageView
+class PipelineLayout
+class Pipeline
+class DescriptorPool
+class DescriptorSetLayout
+class DescriptorSet
+class UniformBuffer
+class VertexBuffer
+class Shader
+class IndexBuffer
+class Instance
+class Swapchain
+class Queue
+class Surface
+class PhysicalDevice
+class Device
+class Window
+<> DrawCall
+note "indexed-draw-call" as indexed_draw_call
+indexed_draw_call .. DrawCall
+<> SubmitQueue
+note "submit-command-buffer" as submit_queue
+submit_queue .. SubmitQueue
+<> PresentQueue
+note "present-queue" as present_queue
+present_queue .. PresentQueue
+
+
+Pipeline ..> PipelineLayout
+Pipeline ..> RenderPass
+Pipeline ..> Shader
+PipelineLayout ..> DescriptorSetLayout
+DescriptorSet ..> DescriptorSetLayout
+DescriptorSet ..> DescriptorPool
+DescriptorSet ..> UniformBuffer
+
+Framebuffer ..> RenderPass
+Framebuffer ..> ImageView
+
+CommandBuffer ..> CommandPool
+
+DrawCall ..> Pipeline 
+DrawCall ..> DescriptorSet 
+DrawCall ..> IndexBuffer 
+DrawCall ..> VertexBuffer 
+DrawCall ..> CommandBuffer 
+
+
+PhysicalDevice ..> Instance
+Device ..> PhysicalDevice
+Device ..> Instance
+Surface ..> Window
+Surface ..> Instance
+Swapchain ..> Surface
+Queue ..> Device
+
+SubmitQueue ..> CommandBuffer
+SubmitQueue ..> Queue
+SubmitQueue ..> DrawCall
+
+PresentQueue ..> SubmitQueue
+PresentQueue ..> Swapchain
+
+DescriptorPool ..> Device
+CommandPool ..> Device
+
+@enduml

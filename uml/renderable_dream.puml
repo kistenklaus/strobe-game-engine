@@ -1,0 +1,40 @@
+@startuml
+!include ./theme.puml
+skinparam linetype ortho
+
+class Renderable{
+}
+
+class Materail{
+
+}
+Materail --* Renderable
+
+class Step{
+    vertexShader : shader
+    fragmentShader : shader
+    -queue : RenderQueue*
+    -index : u32
+
+    -void submit();
+}
+Step --* Materail
+
+class Bindable{
+    {abstract} void bind(void)
+}
+Bindable --* Step
+
+class Mesh extends Bindable{
+}
+class UniformSet extends Bindable{
+}
+
+
+class QueueJob{
+    pipeline : pipeline
+    bindables : Bindable[*]
+    void execute(void)
+}
+
+@enduml
