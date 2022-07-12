@@ -9,8 +9,8 @@
 
 #include "renderer/RenderPass.hpp"
 #include "renderer/RendererBackend.hpp"
+#include "renderer/handles.hpp"
 #include "renderer/vulkan/VAssertion.hpp"
-#include "renderer/vulkan/handles.hpp"
 #include "types/inttypes.hpp"
 #include "types/sarray.hpp"
 #include "window/Window.hpp"
