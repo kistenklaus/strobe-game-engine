@@ -2,8 +2,9 @@
 
 namespace sge {
 
-class RenderQueuePass {
+class Bindable {
  public:
+ protected:
  private:
 };
 

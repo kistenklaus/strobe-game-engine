@@ -8,6 +8,7 @@
 #include "renderer/Renderer.hpp"
 #include "types/sarray.hpp"
 #include "window/Window.hpp"
+
 using namespace sge;
 
 int main() {
