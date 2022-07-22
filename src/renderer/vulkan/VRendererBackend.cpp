@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <iterator>
 #include <regex>
 
 #include "fileio/fileio.hpp"
@@ -84,10 +85,6 @@ VRendererBackend::~VRendererBackend() {
   destroySurface(m_surface);
   destroyDevice(m_device);
   destroyInstance(m_instance);
-  // vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
-  // vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-  // vkDestroyDevice(m_device, nullptr);
-  // vkDestroyInstance(m_instance, nullptr);
 }
 
 void VRendererBackend::recreateSwapchain() {
@@ -462,25 +459,25 @@ shader_module VRendererBackend::createShaderModule(const std::string path,
   shaderModule.m_type = shaderType;
 
   const std::vector<char> spvSourceCode = sge::fileio::read(path + ".spv");
-  if (shaderType == SHADER_TYPE_VERTEX) {
-    const std::vector<char> glslSourceCode = sge::fileio::read(path);
-    vertex_shader_input_layout_t inputLayout{};
-    // read the actual glsl source code to parse vertex input layout if this is
-    // a vertex shader
-    std::vector<std::string> lines;
-    u32 i = 0;
-    u32 j = 0;
-    while (i < glslSourceCode.size()) {
-      std::string line = "";
-      bool start = true;
-      while (glslSourceCode[i] != '\n' && i < glslSourceCode.size()) {
-        line.push_back(glslSourceCode[i]);
-        i++;
-      }
-      lines.push_back(line);
-      j++;
+  const std::vector<char> glslSourceCode = sge::fileio::read(path);
+  // read the actual glsl source code to parse.
+  std::vector<std::string> lines;
+  u32 i = 0;
+  u32 j = 0;
+  while (i < glslSourceCode.size()) {
+    std::string line = "";
+    bool start = true;
+    while (glslSourceCode[i] != '\n' && i < glslSourceCode.size()) {
+      line.push_back(glslSourceCode[i]);
       i++;
     }
+    lines.push_back(line);
+    j++;
+    i++;
+  }
+
+  if (shaderType == SHADER_TYPE_VERTEX) {
+    vertex_shader_input_layout_t inputLayout{};
 
     for (u32 i = 0; i < lines.size(); i++) {
       if (std::regex_match(
@@ -555,6 +552,127 @@ shader_module VRendererBackend::createShaderModule(const std::string path,
     }
     inputLayout.m_stride = offset;
     shaderModule.m_layout = inputLayout;
+  }
+  // parse uniform blocks
+  for (u32 i = 0; i < lines.size(); i++) {
+    if (std::regex_match(
+            lines[i], std::regex(".*layout\\([a-zA-Z0-9, \t\r\n\f=]*binding[ "
+                                 "\t\r\n\f]*=[ \t\r\n\f]*[0-9]+[a-zA-Z0-9,= "
+                                 "\t\r\n\f]*\\)[ \t\r\n\f]uniform.*"))) {
+      // parse binding
+      u32 s = lines[i].find("binding") + 7;  // 7=strlen("binding");
+      while (lines[i][s++] != '=')
+        ;
+      while (lines[i][s++] == ' ')
+        ;
+      s--;
+      std::string relBinding = "";
+      while (lines[i][s] >= '0' && lines[i][s] <= '9') {
+        relBinding.push_back(lines[i][s]);
+        s++;
+      }
+      u32 binding = std::stoi(relBinding);
+      // parse set
+      s = lines[i].find("set") + 3;  // 7=strlen("binding");
+      while (lines[i][s++] != '=')
+        ;
+      while (lines[i][s++] == ' ')
+        ;
+      s--;
+      std::string relSet = "";
+      while (lines[i][s] >= '0' && lines[i][s] <= '9') {
+        relBinding.push_back(lines[i][s]);
+        s++;
+      }
+      u32 set = std::stoi(relBinding);
+      // UBO block starts at i
+      std::string uboDecel = "";
+      std::string uboName = "";
+      u32 bracketCount = 0;
+      bool inside = false;
+      for (u32 j = i; j < lines.size(); j++) {
+        for (u32 k = 0; k < lines[j].size(); k++) {
+          if (lines[j][k] == '}') {
+            bracketCount--;
+          }
+          if (inside && bracketCount == 0) {
+            // find the name of the ubo.
+            k++;
+            for (; j < lines.size(); j++) {
+              for (; k < lines[j].size(); k++) {
+                if (lines[j][k] == ';') {
+                  // break outer loop(s)
+                  j = lines.size();
+                  break;
+                } else if (lines[j][k] != ' ') {
+                  uboName.push_back(lines[j][k]);
+                }
+              }
+            }
+            j = lines.size();  // for breaking outer loop
+            break;
+          }
+          if (inside) {
+            uboDecel.push_back(lines[j][k]);
+          }
+          if (lines[j][k] == '{') {
+            bracketCount++;
+            inside = true;
+          }
+        }
+      }
+
+      // split uboDecel by ;
+      std::vector<std::string> split;
+      const char delimiter = ';';
+      size_t i;
+      while ((i = uboDecel.find(delimiter)) != std::string::npos) {
+        split.push_back(uboDecel.substr(0, i));
+        uboDecel.erase(0, i + 1);
+      }
+      // trim spaces
+      for (u32 k = 0; k < split.size(); k++) {
+        u32 i;
+        for (i = 0; i < split[k].size(); i++) {
+          if (split[k][i] != ' ') break;
+        }
+        u32 j;
+        for (j = split[k].size() - 1; j >= 0; j--) {
+          if (split[k][j] != ' ') break;
+        }
+        split[k] = split[k].substr(i, j + 1);
+      }
+      std::vector<shader_uniform_info> parsed(split.size());
+      for (u32 i = 0; i < split.size(); i++) {
+        u32 s = split[i].find(' ');
+        u32 e = split[i].find_last_of(';');
+        std::string relType = split[i].substr(0, s);
+        u32 s2 = s;
+        while (split[i][s2] == ' ') s2++;
+        std::string name = split[i].substr(s2, e - s2);
+        GlslType type;
+        if (relType == "float") {
+          type = GLSL_TYPE_FLOAT;
+        } else if (relType == "vec2") {
+          type = GLSL_TYPE_VEC2;
+        } else if (relType == "vec3") {
+          type = GLSL_TYPE_VEC3;
+        } else if (relType == "vec4") {
+          type = GLSL_TYPE_VEC4;
+        } else {
+          throw std::runtime_error(
+              "could not parse uniform type inside of uniform block");
+        }
+        parsed[i] = shader_uniform_info(type, name);
+      }
+      shader_uniform_block_info blockInfo{
+          .m_uniforms = parsed,
+          .m_name = uboName,
+          .m_binding = binding,
+          .m_set = set,
+      };
+      shaderModule.m_uniformLayout.m_blocks.push_back(blockInfo);
+    }
   }
 
   // CREATE THE ACTUAL SHADER.
