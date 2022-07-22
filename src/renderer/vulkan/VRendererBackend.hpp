@@ -198,10 +198,11 @@ class VRendererBackend : public sge::RendererBackend {
     u32 m_index;
   };
   enum GlslType {
-    GLSL_TYPE_VEC4,
-    GLSL_TYPE_VEC3,
+    GLSL_TYPE_NULL,
+    GLSL_TYPE_FLOAT,
     GLSL_TYPE_VEC2,
-    GLSL_TYPE_FLOAT
+    GLSL_TYPE_VEC3,
+    GLSL_TYPE_VEC4
   };
   struct vertex_input_descriptor_t {
     u32 m_location;
@@ -213,12 +214,36 @@ class VRendererBackend : public sge::RendererBackend {
     std::vector<vertex_input_descriptor_t> m_inputDescs;
     u32 m_stride;
   };
+  struct shader_uniform_info {
+    GlslType m_type;
+    std::string m_name;
+    explicit shader_uniform_info(GlslType type, std::string name)
+        : m_type(type), m_name(name) {}
+    shader_uniform_info() : m_type(GLSL_TYPE_NULL) {}
+  };
+  struct shader_uniform_block_info {
+    std::vector<shader_uniform_info> m_uniforms;
+    std::string m_name;
+    u32 m_binding;
+    u32 m_set;
+
+    GlslType getTypeByName(std::string name) const {
+      for (u32 i = 0; i < m_uniforms.size(); i++) {
+        if (m_uniforms[i].m_name == name) return m_uniforms[i].m_type;
+      }
+      return GLSL_TYPE_NULL;
+    }
+  };
+  struct shader_uniform_layout {
+    std::vector<shader_uniform_block_info> m_blocks;
+  };
   struct shader_module_t {
     VkShaderModule m_handle;
     ShaderType m_type;
     u32 m_refCount;
     u32 m_index;
     std::optional<vertex_shader_input_layout_t> m_layout;
+    shader_uniform_layout m_uniformLayout;
   };
   struct semaphore_t {
     VkSemaphore m_handle;
