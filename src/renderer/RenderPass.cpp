@@ -20,7 +20,11 @@ void RenderPass::linkSink(RenderPass& sourceRenderPass,
     }
   }
   if (p_source == nullptr) {
-    throw SourceNotFoundException();
+    throw SinkNotFoundException(std::string("failed to link ") +
+                                sourceRenderPass.m_name + "@" + sourceName +
+                                " to " + this->m_name + "@" + sinkName + "\n " +
+                                sourceRenderPass.m_name +
+                                " doesn't have a source called " + sourceName);
   }
   isink* p_sink = nullptr;
   for (isink* p_isink : m_sinks) {
@@ -29,7 +33,10 @@ void RenderPass::linkSink(RenderPass& sourceRenderPass,
     }
   }
   if (p_sink == nullptr) {
-    throw SinkNotFoundException();
+    throw SinkNotFoundException(
+        std::string("failed to link ") + sourceRenderPass.m_name + "@" +
+        sourceName + " to " + this->m_name + "@" + sinkName + "\n " +
+        this->m_name + " doesn't have a sink called " + sinkName);
   }
   p_sink->link(p_source);
 }

@@ -14,6 +14,7 @@
 #include "renderer/vulkan/passes/VCmdPoolSrcPass.hpp"
 #include "renderer/vulkan/passes/VEndCmdBuffPass.hpp"
 #include "renderer/vulkan/passes/VFenceMultiSrcPass.hpp"
+#include "renderer/vulkan/passes/VForwardQueuePass.hpp"
 #include "renderer/vulkan/passes/VFramebufferCachedSourcePass.hpp"
 #include "renderer/vulkan/passes/VPipelineLayoutSourcePass.hpp"
 #include "renderer/vulkan/passes/VPresentQueuePass.hpp"
@@ -34,14 +35,6 @@ VMasterRendergraph::VMasterRendergraph(VRendererBackend* renderer)
           createPass<VAcquireSwapchainFrame>(renderer, "acq-swapchain-frame")),
       m_renderPassSourcePass(createPass<VRenderPassSourcePass>(
           renderer, "renderpass-src", VK_FORMAT_B8G8R8A8_UNORM)),
-      // m_poolMultiSrcPass(createPass<VCmdPoolMultiSrcPass>(
-      //     renderer, "cmdpool-multi-src", QUEUE_FAMILY_GRAPHICS,
-      //     m_vrenderer->getSwapchainCount())),
-      // m_resetPoolPass(
-      //     createPass<VResetCmdPoolPass>(renderer, "reset-cmdpool")),
-      // m_allocateCmdBufferPass(
-      //     createPass<VAllocateCmdBuffPass>(renderer,
-      //     "alloc-cmdbuffer")),
       m_beginCmdBuffPass(
           createPass<VBeginCmdBuffPass>(renderer, "begin-cmdbuffer")),
       m_pipelineLayoutSourcePass(createPass<VPipelineLayoutSourcePass>(
@@ -50,6 +43,8 @@ VMasterRendergraph::VMasterRendergraph(VRendererBackend* renderer)
           renderer, "framebuffer-cached-src")),
       m_trianglePass(
           createPass<VTriangleRenderPass>(renderer, "triangle-pass")),
+      m_forwardQueuePass(
+          createPass<VForwardQueuePass>(renderer, "forward-queue")),
       m_endCmdBuffPass(createPass<VEndCmdBuffPass>(renderer, "end-cmdbuffer")),
       m_acquireQueuePass(createPass<VAcquireQueuePass>(renderer, "acq-gfxqueue",
                                                        GRAPHICS_QUEUE)),
@@ -92,13 +87,11 @@ VMasterRendergraph::VMasterRendergraph(VRendererBackend* renderer)
 
   addLinkage("reset-cmdbuffer@cmdbuffer", "begin-cmdbuffer@cmdbuffer");
 
-  addLinkage("begin-cmdbuffer@cmdbuffer", "triangle-pass@cmdbuffer");
-  addLinkage("framebuffer-cached-src@framebuffer", "triangle-pass@framebuffer");
-  addLinkage("pipelinelayout-src@pipelinelayout",
-             "triangle-pass@pipelinelayout");
-  addLinkage("renderpass-src@renderpass", "triangle-pass@renderpass");
+  addLinkage("begin-cmdbuffer@cmdbuffer", "forward-queue@cmdbuffer");
+  addLinkage("framebuffer-cached-src@framebuffer", "forward-queue@framebuffer");
+  addLinkage("renderpass-src@renderpass", "forward-queue@renderpass");
 
-  addLinkage("triangle-pass@cmdbuffer", "end-cmdbuffer@cmdbuffer");
+  addLinkage("forward-queue@cmdbuffer", "end-cmdbuffer@cmdbuffer");
 
   addLinkage("acq-swapchain-frame@signal", "submit-cmdbuffer@wait");
   addLinkage("reset-cmdbuffer@fence", "submit-cmdbuffer@fence");

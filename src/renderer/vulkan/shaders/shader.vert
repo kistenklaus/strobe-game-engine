@@ -6,7 +6,6 @@ layout(location = 0) out vec3 fragColor;
 
 layout(binding=0, set=0) uniform uniformObject{
   vec4 color;
-  vec3 shit;
 } ubo;
 
 void main() {

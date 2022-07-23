@@ -4,6 +4,8 @@ namespace sge {
 
 class Bindable {
  public:
+  virtual void bind();
+
  protected:
  private:
 };

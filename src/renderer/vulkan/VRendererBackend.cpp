@@ -846,6 +846,14 @@ void VRendererBackend::beginRenderPass(renderpass renderPassHandle,
                        &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
+void VRendererBackend::beginRenderPass(renderpass renderPassHandle,
+                                       framebuffer framebufferHandle,
+                                       command_buffer commandBufferHandle) {
+  const std::pair<u32, u32> &dim = getFramebufferDimensions(framebufferHandle);
+  beginRenderPass(renderPassHandle, framebufferHandle, dim.first, dim.second,
+                  commandBufferHandle);
+}
+
 void VRendererBackend::endRenderPass(command_buffer commandBufferHandle) {
   vkCmdEndRenderPass(getCommandBufferByHandle(commandBufferHandle).m_handle);
 }
@@ -1223,11 +1231,11 @@ void VRendererBackend::drawCall(uint32_t vertexCount, uint32_t instanceCount,
             instanceCount, 0, 0);
 }
 
-void VRendererBackend::indexedDrawCall(u32 indexCount,
+void VRendererBackend::indexedDrawCall(u32 indexCount, u32 instanceCount,
                                        command_buffer commandBufferHandle) {
   //
   vkCmdDrawIndexed(getCommandBufferByHandle(commandBufferHandle).m_handle,
-                   indexCount, 1, 0, 0, 0);
+                   indexCount, instanceCount, 0, 0, 0);
 }
 
 boolean VRendererBackend::acquireNextSwapchainFrame(semaphore signalSem) {
@@ -1696,6 +1704,80 @@ descriptor_set_layout VRendererBackend::createDescriptorSetLayout(
   m_descriptorSetLayouts[handle.m_index].m_index = handle.m_index;
   return handle;
 }
+
+std::vector<descriptor_set_layout>
+VRendererBackend::getDescriptorSetLayoutsFromShader(
+    shader_module vertexHandle, shader_module fragmentHandle, u32 *p_setCount) {
+  u32 setCount = 0;
+
+  const shader_module_t &vertexShader = getShaderByHandle(vertexHandle);
+  const shader_module_t &fragmentShader = getShaderByHandle(fragmentHandle);
+
+  if (vertexShader.m_uniformLayout.m_blocks.size() == 0 &&
+      fragmentShader.m_uniformLayout.m_blocks.size() == 0)
+    return {};
+
+  // find highest binding.
+  u32 maxBinding = 0;
+  for (const shader_uniform_block_info &block :
+       vertexShader.m_uniformLayout.m_blocks) {
+    maxBinding = std::max(block.m_binding, maxBinding);
+  }
+  for (const shader_uniform_block_info &block :
+       fragmentShader.m_uniformLayout.m_blocks) {
+    maxBinding = std::max(block.m_binding, maxBinding);
+  }
+
+  typedef struct block {
+    u32 binding;
+    u32 maxSet;
+    VkShaderStageFlags stages;
+    bool valid = false;
+  } block;
+
+  std::vector<block> blocks(maxBinding + 1);
+  for (const shader_uniform_block_info &block :
+       vertexShader.m_uniformLayout.m_blocks) {
+    if (blocks[block.m_binding].valid) {
+      u32 set = block.m_set;
+      blocks[block.m_binding].maxSet =
+          std::max(set, blocks[block.m_binding].maxSet);
+      blocks[block.m_binding].stages |= VK_SHADER_STAGE_VERTEX_BIT;
+    } else {
+      blocks[block.m_binding].stages = VK_SHADER_STAGE_VERTEX_BIT;
+      blocks[block.m_binding].maxSet = block.m_set;
+      blocks[block.m_binding].valid = true;
+    }
+  }
+  for (const shader_uniform_block_info &block :
+       fragmentShader.m_uniformLayout.m_blocks) {
+    if (blocks[block.m_binding].valid) {
+      const u32 set = block.m_set;
+      blocks[block.m_binding].maxSet =
+          std::max(set, blocks[block.m_binding].maxSet);
+      blocks[block.m_binding].stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    } else {
+      blocks[block.m_binding].stages = VK_SHADER_STAGE_FRAGMENT_BIT;
+      blocks[block.m_binding].maxSet = block.m_set;
+      blocks[block.m_binding].valid = true;
+      blocks[block.m_binding].binding = block.m_binding;
+    }
+  }
+
+  std::vector<descriptor_set_layout> out;
+  for (u32 i = 0; i < blocks.size(); i++) {
+    if (blocks[i].valid) {
+      out.push_back(createDescriptorSetLayout(
+          blocks[i].binding, blocks[i].maxSet + 1, blocks[i].stages));
+      setCount = blocks[i].maxSet + 1;
+    }
+  }
+  if (p_setCount != nullptr) {
+    *p_setCount = setCount;
+  }
+  return out;
+}
+
 void VRendererBackend::destroyDescriptorSetLayout(
     descriptor_set_layout descriptorSetLayout) {
   destroyDescriptorSetLayout(
@@ -1852,8 +1934,7 @@ std::vector<descriptor_set> VRendererBackend::allocateDescriptorSets(
   allocInfo.descriptorSetCount = count;
   allocInfo.pSetLayouts = layouts.data();
 
-  std::vector<VkDescriptorSet> vkDescriptorSets;
-  vkDescriptorSets.resize(count);
+  std::vector<VkDescriptorSet> vkDescriptorSets(count);
   const VkResult result = vkAllocateDescriptorSets(
       m_device.m_handle, &allocInfo, vkDescriptorSets.data());
   ASSERT_VKRESULT(result);

@@ -3,24 +3,19 @@
 #include <string>
 #include <vector>
 
-#include "renderer/Bindable.hpp"
 #include "renderer/handles.hpp"
+#include "renderer/vulkan/VBindable.hpp"
+#include "renderer/vulkan/VRenderable.hpp"
 
 namespace sge::vulkan {
+enum VDrawCallType { DRAW_CALL_DEFAULT = 0, DRAW_CALL_INDEXED = 1 };
 
 class VDrawJob {
  public:
-  explicit VDrawJob(const std::string vertexShaderPath,
-                    const std::string fragmentShaderPath,
-                    const std::vector<std::shared_ptr<Bindable>> bindables,
-                    const u32 pipelineIndex)
-      : m_vertexShaderPath(vertexShaderPath),
-        m_fragmentShaderPath(fragmentShaderPath),
-        m_bindables(bindables),
-        m_pipelineIndex(pipelineIndex) {}
-  const std::string m_vertexShaderPath;
-  const std::string m_fragmentShaderPath;
-  const std::vector<std::shared_ptr<Bindable>> m_bindables;
+  explicit VDrawJob(const std::shared_ptr<VRenderable> renderable,
+                    u32 pipelineIndex)
+      : m_renderable(renderable), m_pipelineIndex(pipelineIndex) {}
+  const std::shared_ptr<VRenderable> m_renderable;
   const u32 m_pipelineIndex;
 };
 

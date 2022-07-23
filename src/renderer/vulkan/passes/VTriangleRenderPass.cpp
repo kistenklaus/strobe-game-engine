@@ -39,6 +39,7 @@ VTriangleRenderPass::VTriangleRenderPass(VRendererBackend* renderer,
   m_descriptorPool = m_vrenderer->createDescriptorPool(1);
   m_descriptorSetLayout =
       m_vrenderer->createDescriptorSetLayout(0, 1, VK_SHADER_STAGE_VERTEX_BIT);
+
   m_desciprotSet = m_vrenderer->allocateDescriptorSets(
       m_descriptorPool, m_descriptorSetLayout, 1)[0];
 
@@ -91,8 +92,7 @@ void VTriangleRenderPass::execute() {
   m_vrenderer->bindDescriptorSet(m_desciprotSet, m_pipelineLayout,
                                  *m_cmdBuffSink);
 
-  m_vrenderer->indexedDrawCall(3, *m_cmdBuffSink);
-  // m_vrenderer->drawCall(3, 1, *m_cmdBuffSink);
+  m_vrenderer->indexedDrawCall(3, 1, *m_cmdBuffSink);
 
   m_vrenderer->endRenderPass(*m_cmdBuffSink);
 

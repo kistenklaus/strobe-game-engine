@@ -55,6 +55,9 @@ class VRendererBackend : public sge::RendererBackend {
                        framebuffer framebufferHandle, u32 renderAreaWidth,
                        u32 renderAreaHeight,
                        command_buffer commandBufferHandle);
+  void beginRenderPass(renderpass renderPassHandle,
+                       framebuffer framebufferHandle,
+                       command_buffer commandBufferHandle);
   void endRenderPass(command_buffer commandBufferHandle);
   pipeline_layout createPipelineLayout(
       const std::vector<descriptor_set_layout>& descriptorSetLayout);
@@ -90,7 +93,8 @@ class VRendererBackend : public sge::RendererBackend {
   void destroySemaphore(semaphore semaphoreHandle);
   void drawCall(u32 vertexCount, u32 instanceCount,
                 command_buffer commandBufferHandle);
-  void indexedDrawCall(u32 indexCount, command_buffer commandBufferHandle);
+  void indexedDrawCall(u32 indexCount, u32 instanceCount,
+                       command_buffer commandBufferHandle);
   /// returns true if the swapchain KHR is deprecated (suboptional)
   // and a recreation of the swapchain is required.
   boolean acquireNextSwapchainFrame(semaphore singalSemaphoreHandle);
@@ -125,6 +129,9 @@ class VRendererBackend : public sge::RendererBackend {
   Window* getWindowPtr() { return mp_window; }
   descriptor_set_layout createDescriptorSetLayout(u32 binding, u32 count,
                                                   VkShaderStageFlags stages);
+  std::vector<descriptor_set_layout> getDescriptorSetLayoutsFromShader(
+      shader_module vertexShader, shader_module fragmentShader,
+      u32* setCount = nullptr);
   void destroyDescriptorSetLayout(descriptor_set_layout descriptor_set_layout);
   void uploadToBuffer(buffer& bufffer, void* data, u32 offset = 0,
                       std::optional<u32> size = std::nullopt);
@@ -142,6 +149,10 @@ class VRendererBackend : public sge::RendererBackend {
   void bindDescriptorSet(descriptor_set descriptorSet,
                          pipeline_layout pipelineLayout,
                          command_buffer commandBuffer);
+
+  u32 getDescriptorSetLayoutCount(descriptor_set_layout layout) {
+    return getDescriptorSetLayoutByHandle(layout).m_count;
+  }
 
  private:
   struct instance_t {
@@ -272,6 +283,8 @@ class VRendererBackend : public sge::RendererBackend {
   struct descriptor_set_layout_t {
     VkDescriptorSetLayout m_handle;
     u32 m_index;
+    u32 m_count;
+    u32 m_binding;
   };
   struct descriptor_pool_t {
     VkDescriptorPool m_handle;

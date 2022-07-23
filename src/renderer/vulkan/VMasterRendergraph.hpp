@@ -39,6 +39,7 @@ class VMasterRendergraph : public Rendergraph {
   u32 m_pipelineLayoutSourcePass;
   u32 m_framebufferCachedSourcePass;
   u32 m_trianglePass;
+  u32 m_forwardQueuePass;
   u32 m_endCmdBuffPass;
   u32 m_acquireQueuePass;
   u32 m_submitPass;
