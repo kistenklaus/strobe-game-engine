@@ -4,11 +4,13 @@ in vec2 uv;
 in vec3 surfaceNormal;
 in vec3 toLightVector;
 in vec3 toCameraVector;
+in float visibility;
 
 uniform sampler2D sampler;
 uniform vec3 lightColor;
 uniform float shineDamper;
 uniform float reflectivity;
+uniform vec3 skyColor;
 
 out vec4 fragColor;
 
@@ -30,5 +32,11 @@ void main(){
 	float dampedFac = pow(specFac, shineDamper);
 	vec3 specular = (dampedFac * reflectivity) * lightColor;
 	
-	fragColor = vec4(diffuse,1.0) * texture(sampler, uv) + vec4(specular, 1.0);;
+	vec4 textureColor = texture(sampler, uv);
+	if(textureColor.a<0.5){
+		discard;
+	}
+	
+	fragColor = vec4(diffuse,1.0) * textureColor + vec4(specular, 1.0);
+	fragColor = mix(vec4(skyColor,1.0), fragColor, visibility);
 }

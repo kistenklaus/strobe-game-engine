@@ -30,7 +30,9 @@ public abstract class ShaderProgram {
 	protected abstract void getAllUniformLocations();
 	
 	protected int getUniformLoaction(String uniformName) {
-		return GL20.glGetUniformLocation(programID, uniformName);
+		int loc = GL20.glGetUniformLocation(programID, uniformName);
+		if(loc == -1)System.err.println("Uniform: " + uniformName + " has not been found");
+		return loc;
 	}
 	protected void loadBoolean(int loc, boolean value) {
 		loadInt(loc, value?1:0);
@@ -42,7 +44,10 @@ public abstract class ShaderProgram {
 		GL20.glUniform1f(loc, value);
 	}
 	protected void loadVector3(int loc, Vector3f vec3) {
-		GL20.glUniform3f(loc, vec3.x, vec3.y, vec3.z);
+		loadVector3(loc, vec3.x, vec3.y, vec3.z);
+	}
+	protected void loadVector3(int loc, float x, float y, float z) {
+		GL20.glUniform3f(loc, x, y, z);
 	}
 	protected void loadMatrix4(int loc, Matrix4f mat4) {
 		GL20.glUniformMatrix4fv(loc, false, mat4.get(new float[16]));

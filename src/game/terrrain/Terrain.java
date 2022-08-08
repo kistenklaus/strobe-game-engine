@@ -5,7 +5,7 @@ import engine.gfx.models.RawModel;
 import engine.gfx.textures.ModelMaterial;
 
 public class Terrain{
-	private static final float SIZE = 800;
+	private static final float SIZE = 400;
 	private static final int VERTEX_COUNT = 128;
 	private float x,z;
 	private ModelMaterial material;

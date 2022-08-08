@@ -13,17 +13,17 @@ import engine.gfx.entity.Entity;
 import engine.gfx.entity.Light;
 import engine.gfx.models.RawModel;
 import engine.gfx.models.TexturedModel;
+import engine.gfx.renderer.MasterRenderer;
 import engine.gfx.renderer.Renderer;
-import engine.gfx.shaders.Shader3D;
 import engine.gfx.textures.ModelMaterial;
 import engine.gfx.toolbox.Maths;
 
-public class Renderer3D extends Renderer{
-	private Shader3D shader;
+public class EntityRenderer extends Renderer{
+	private EntityShader shader;
 	private Camera camera;
 	private Light light;
 	private HashMap<TexturedModel, List<Entity>> entities;
-	public Renderer3D(Shader3D shader, Light light, Camera camera) {
+	public EntityRenderer(EntityShader shader, Light light, Camera camera) {
 		this.shader = shader;
 		this.light = light;
 		this.camera = camera;
@@ -35,6 +35,7 @@ public class Renderer3D extends Renderer{
 		this.shader.start();
 		this.shader.loadLight(this.light);
 		this.shader.loadViewMatrix(this.camera.getPos(), this.camera.getPitch(), this.camera.getYaw(), this.camera.getRoll());
+		this.shader.loadSkyColor(MasterRenderer.SkyColor);
 		this.shader.stop();
 		this.entities.clear();
 	}
@@ -73,12 +74,17 @@ public class Renderer3D extends Renderer{
 		GL20.glEnableVertexAttribArray(1);
 		GL20.glEnableVertexAttribArray(2);
 		ModelMaterial material = texModel.getMaterial();
+		if(material.hasTransparency()) {
+			MasterRenderer.disableCulling();
+		}
+		this.shader.loadUseFakeLightingBoolean(material.hasFakeLighing());
 		this.shader.loadShineVariables(material.getShineDamper(), material.getReflectivity());
 		GL13.glActiveTexture(GL13.GL_TEXTURE0);
 		GL11.glBindTexture(GL11.GL_TEXTURE_2D, material.getID());
 	}
 	
 	private void unbindTexModel() {
+		MasterRenderer.enableCulling();
 		GL20.glDisableVertexAttribArray(0);
 		GL20.glDisableVertexAttribArray(1);
 		GL20.glDisableVertexAttribArray(2);

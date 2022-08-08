@@ -1,4 +1,4 @@
-package engine.gfx.models;
+package engine.gfx.models.objLoader;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -12,6 +12,7 @@ import org.joml.Vector2f;
 import org.joml.Vector3f;
 
 import engine.gfx.Loader;
+import engine.gfx.models.RawModel;
 
 public class OBJLoader {
 	public static RawModel loadObjModel(String fileName, Loader loader) {

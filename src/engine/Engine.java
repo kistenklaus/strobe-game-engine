@@ -22,6 +22,8 @@ public class Engine {
 		this.logic = logic;
 		this.logic.setEngine(this);
 		this.window = new Window(logic.getWidth(), logic.getHeight(), logic.getTitle(), 60);
+		GL.createCapabilities();	
+		//Everthing OpenGL related needs to be behind GL.createCapabilities() and the Window needs to be created befor calling this
 		this.renderer = new MasterRenderer();
 		this.loader = new Loader();
 		this.inputManager = new InputManager();
@@ -29,9 +31,9 @@ public class Engine {
 		this.window.setMouseButtonCallback(inputManager.getMouseButtonCallback());
 		this.window.setMousePositionCallback(inputManager.getMousePosCallback());
 		this.window.setScrollCallback(inputManager.getMouseScrollCallback());
+		
 		this.input = new Input() {@Override public void update() {}};
-		GL.createCapabilities();
-		GL11.glClearColor(0, 0, 0, 1);
+		
 		logic.init(this.loader);
 	}
 	

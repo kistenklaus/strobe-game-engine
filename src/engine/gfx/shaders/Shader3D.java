@@ -14,6 +14,7 @@ public abstract class Shader3D extends ShaderProgram{
 	private int location_lightColor;
 	private int location_shineDamper;
 	private int location_reflectivity;
+	private int location_skyColor;
 	
 	public Shader3D(String vertexFile, String fragmentFile, Matrix4f projection) {
 		super(vertexFile, fragmentFile);
@@ -40,6 +41,7 @@ public abstract class Shader3D extends ShaderProgram{
 		this.location_lightColor = getUniformLoaction("lightColor");
 		this.location_shineDamper = getUniformLoaction("shineDamper");
 		this.location_reflectivity = getUniformLoaction("reflectivity");
+		this.location_skyColor = getUniformLoaction("skyColor");
 		this.getAllNewUniformLocations();
 	}
 	protected abstract void getAllNewUniformLocations();
@@ -60,5 +62,8 @@ public abstract class Shader3D extends ShaderProgram{
 	public void loadShineVariables(float shineDamper, float reflectivity) {
 		super.loadFloat(location_shineDamper, shineDamper);
 		super.loadFloat(location_reflectivity, reflectivity);
+	}
+	public void loadSkyColor(Vector3f skyColor) {
+		super.loadVector3(location_skyColor, skyColor);
 	}
 }

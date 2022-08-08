@@ -11,6 +11,7 @@ import org.lwjgl.opengl.GL30;
 
 import engine.gfx.entity.Light;
 import engine.gfx.models.RawModel;
+import engine.gfx.renderer.MasterRenderer;
 import engine.gfx.renderer.Renderer;
 import engine.gfx.textures.ModelMaterial;
 import engine.gfx.toolbox.Maths;
@@ -35,6 +36,7 @@ public class TerrainRenderer extends Renderer{
 		this.shader.start();
 		this.shader.loadLight(light);
 		this.shader.loadViewMatrix(camera.getPos(), camera.getPitch(), camera.getYaw(), camera.getRoll());
+		this.shader.loadSkyColor(MasterRenderer.SkyColor);
 		this.shader.stop();
 	}
 	
