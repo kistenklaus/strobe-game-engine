@@ -2,13 +2,19 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="2227a806-2611-43d4-9dad-e5c8465f6b53" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/joml_1_10_4_sources.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Strobe-LWJGL3.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screenshot.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/shaders3D/shaders3Dexample/fragment.vs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/shaders3D/shaders3Dexample/vertex.vs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/engine/Boot.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/engine/Boot.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/engine/Engine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/engine/Engine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/engine/gfx/entity/Entity.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/engine/gfx/entity/Entity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/engine/gfx/renderer/MasterRenderer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/engine/gfx/renderer/MasterRenderer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/engine/gfx/renderer/Renderer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/engine/gfx/renderer/Renderer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rubiksCube/Camera.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rubiksCube/InputHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rubiksCube/Renderer3D.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rubiksCube/RubiksLogic.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rubiksCube/Shader3Dexample.java" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -66,7 +72,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1659979116471</updated>
-      <workItem from="1659979469735" duration="204000" />
+      <workItem from="1659979469735" duration="639000" />
     </task>
     <servers />
   </component>

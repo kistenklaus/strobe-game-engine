@@ -9,14 +9,18 @@ public class MasterRenderer {
 	private List<Renderer> renderers;
 	public MasterRenderer() {
 		this.renderers = new ArrayList<>();
+		
 	}
-	public void renderScenes() {
+	public void processScenes() {
 		for (Renderer renderer : renderers) {
-			renderer.renderScene();
+			renderer.processScene();
 		}
-		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
 	}
 	public void render() {
+		GL11.glEnable(GL11.GL_DEPTH_TEST);
+		GL11.glEnable(GL11.GL_CULL_FACE);
+		GL11.glCullFace(GL11.GL_BACK);
+		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
 		for (Renderer renderer : renderers) {
 			renderer.render();
 		}

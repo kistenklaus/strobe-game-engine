@@ -1,4 +1,4 @@
-package rubiksCube;
+package game;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,7 +31,7 @@ public class Renderer3D extends Renderer{
 	}
 	
 	@Override
-	public void renderScene() {
+	public void processScene() {
 		this.shader.start();
 		this.shader.loadLight(this.light);
 		this.shader.loadViewMatrix(this.camera.getPos(), this.camera.getPitch(), this.camera.getYaw(), this.camera.getRoll());
@@ -39,7 +39,6 @@ public class Renderer3D extends Renderer{
 		this.entities.clear();
 	}
 	
-	@Override
 	public void processEntity(Entity entity) {
 		TexturedModel key = entity.getTex_model();
 		List<Entity> batch = entities.get(key);
@@ -55,9 +54,6 @@ public class Renderer3D extends Renderer{
 	@Override
 	public void render() {
 		shader.start();
-		GL11.glEnable(GL11.GL_DEPTH_TEST);
-		GL11.glEnable(GL11.GL_CULL_FACE);
-		GL11.glCullFace(GL11.GL_BACK);
 		for (TexturedModel model : this.entities.keySet()) {
 			prepareTexModel(model);
 			List<Entity> batch = entities.get(model);

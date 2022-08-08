@@ -40,7 +40,7 @@ public class Engine {
 			if(this.window.windowShouldRepaint()) {
 				this.window.pollEvents();
 				input.update();
-				this.renderer.renderScenes();
+				this.renderer.processScenes();
 				logic.repaint();
 				this.renderer.render();
 				this.window.swapBuffers();

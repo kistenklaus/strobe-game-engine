@@ -1,4 +1,4 @@
-package rubiksCube;
+package game;
 
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;

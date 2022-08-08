@@ -1,4 +1,4 @@
-package rubiksCube;
+package game;
 
 import engine.input.Input;
 

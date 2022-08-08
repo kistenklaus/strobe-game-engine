@@ -4,12 +4,12 @@ import org.joml.Vector3f;
 
 import engine.gfx.models.TexturedModel;
 
-public class Entity {
-	protected TexturedModel tex_model;
-	protected Vector3f pos;
-	protected float rotX, rotY, rotZ;
-	protected float scale;
-	public Entity(TexturedModel tex_model, Vector3f pos, float rotX, float rotY, float rotZ, float scale) {
+public class DynEntity {
+	private TexturedModel tex_model;
+	private Vector3f pos;
+	private float rotX, rotY, rotZ;
+	private float scale;
+	public DynEntity(TexturedModel tex_model, Vector3f pos, float rotX, float rotY, float rotZ, float scale) {
 		super();
 		this.tex_model = tex_model;
 		this.pos = pos;

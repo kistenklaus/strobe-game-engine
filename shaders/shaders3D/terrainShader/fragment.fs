@@ -19,7 +19,7 @@ void main(){
 	
 	//diffuse
 	float nDot1 = dot(unitNormal, unitLightVector);
-	float brightness = max(nDot1, 0.2);
+	float brightness = max(nDot1, 0.15f);
 	vec3 diffuse = brightness * lightColor;
 	
 	//specular

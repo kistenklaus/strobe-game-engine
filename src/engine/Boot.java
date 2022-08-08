@@ -2,7 +2,7 @@ package engine;
 
 import org.lwjgl.glfw.GLFW;
 
-import rubiksCube.RubiksLogic;
+import game.GameLogic;
 
 public class Boot {
 	
@@ -10,7 +10,7 @@ public class Boot {
 		if(!GLFW.glfwInit()) {
 			System.err.println("ERROR: GLFW Failed to Initalize");
 		}
-		Engine engine = new Engine(new RubiksLogic());
+		Engine engine = new Engine(new GameLogic());
 		engine.start();
 	}
 	
