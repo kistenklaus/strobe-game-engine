@@ -32,7 +32,6 @@
         <module>strobe-window-imgui</module>
         <module>strobe-entry</module>
         <module>strobe-opengl-context</module>
-        <module>strobe-imgui-utils</module>
     </modules>
 
     <properties>
@@ -45,7 +44,7 @@
         <lwjgl.version>3.2.3</lwjgl.version>
         <joml.version>1.10.1</joml.version>
         <imgui.version>1.83.1</imgui.version>
-        <lwjgl.natives>natives-windows</lwjgl.natives>
+        <lwjgl.natives>natives-linux</lwjgl.natives>
         <junit-platform.version>5.3.1</junit-platform.version>
     </properties>
 

@@ -64,7 +64,7 @@ float calcShadow(vec4 dlsFragPos, sampler2D shadowMap, vec4 lightShadowDim){
 void main(){
     vec3 norm = normalize(normal);
 
-    vec3 matDiffuse = texture2D(diffuseTexture,uv).rgb * material.diffuseColor;
+    vec3 matDiffuse = texture(diffuseTexture,uv).rgb * material.diffuseColor;
 
     vec3 combined = vec3(0);
 
