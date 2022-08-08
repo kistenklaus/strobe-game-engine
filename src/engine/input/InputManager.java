@@ -80,14 +80,8 @@ public class InputManager {
 	public double getScrollY() {
 		return this.scrollY;
 	}
-	public void updateScrollX() {
-		this.scrollX = 0;
-	}
-	public void updateScrollY() {
-		this.scrollY = 0;
-	}
 	public void updateScroll() {
-		updateScrollX();
-		updateScrollY();
+		this.scrollX = 0;
+		this.scrollY = 0;
 	}
 }

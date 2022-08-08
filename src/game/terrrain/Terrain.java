@@ -1,49 +1,66 @@
 package game.terrrain;
 
-import engine.gfx.Loader;
-import engine.gfx.models.RawModel;
-import engine.gfx.textures.ModelMaterial;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
+
+import engine.gfx.models.RawModel3D;
+import engine.loading.Loader;
 
 public class Terrain{
-	private static final float SIZE = 400;
-	private static final int VERTEX_COUNT = 128;
+	private static final float SIZE = 800;
+	private static final float MAX_HEIGHT = 40;
+	private static final float MAX_PIXEL_COLOR = 256 * 256 * 256;
 	private float x,z;
-	private ModelMaterial material;
-	private RawModel model;
+	private TerrainTexurePack texturepack;
+	private TerrainTexture blendMap;
+	private RawModel3D model;
 
-	public Terrain(int gridX, int gridY, Loader loader, ModelMaterial material) {
+	public Terrain(int gridX, int gridY, Loader loader, TerrainTexurePack texturepack, TerrainTexture blendMap, String heightMap) {
 		this.x = gridX * SIZE;
 		this.z = gridY * SIZE;
-		this.material = material;
-		this.model = generateTerrain(loader);
+		this.texturepack = texturepack;
+		this.blendMap = blendMap;
+		this.model = generateTerrain(loader, heightMap);
 	}
 	
-	private static RawModel generateTerrain(Loader loader){
-		int count = VERTEX_COUNT * VERTEX_COUNT;
+	private RawModel3D generateTerrain(Loader loader, String heightMap){
+		
+		BufferedImage image = null;
+		try {
+			image = ImageIO.read(new File(heightMap));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		int vertexCount = image.getHeight();
+		
+		int count = vertexCount * vertexCount;
 		float[] vertices = new float[count * 3];
 		float[] normals = new float[count * 3];
 		float[] textureCoords = new float[count*2];
-		int[] indices = new int[6*(VERTEX_COUNT-1)*(VERTEX_COUNT-1)];
+		int[] indices = new int[6*(vertexCount-1)*(vertexCount-1)];
 		int vertexPointer = 0;
-		for(int i=0;i<VERTEX_COUNT;i++){
-			for(int j=0;j<VERTEX_COUNT;j++){
-				vertices[vertexPointer*3] = (float)j/((float)VERTEX_COUNT - 1) * SIZE;
-				vertices[vertexPointer*3+1] = 0;
-				vertices[vertexPointer*3+2] = (float)i/((float)VERTEX_COUNT - 1) * SIZE;
+		for(int i=0;i<vertexCount;i++){
+			for(int j=0;j<vertexCount;j++){
+				vertices[vertexPointer*3] = (float)j/((float)vertexCount - 1) * SIZE;
+				vertices[vertexPointer*3+1] = getHeight(j,i,image);
+				vertices[vertexPointer*3+2] = (float)i/((float)vertexCount - 1) * SIZE;
 				normals[vertexPointer*3] = 0;
 				normals[vertexPointer*3+1] = 1;
 				normals[vertexPointer*3+2] = 0;
-				textureCoords[vertexPointer*2] = (float)j/((float)VERTEX_COUNT - 1);
-				textureCoords[vertexPointer*2+1] = (float)i/((float)VERTEX_COUNT - 1);
+				textureCoords[vertexPointer*2] = (float)j/((float)vertexCount - 1);
+				textureCoords[vertexPointer*2+1] = (float)i/((float)vertexCount - 1);
 				vertexPointer++;
 			}
 		}
 		int pointer = 0;
-		for(int gz=0;gz<VERTEX_COUNT-1;gz++){
-			for(int gx=0;gx<VERTEX_COUNT-1;gx++){
-				int topLeft = (gz*VERTEX_COUNT)+gx;
+		for(int gz=0;gz<vertexCount-1;gz++){
+			for(int gx=0;gx<vertexCount-1;gx++){
+				int topLeft = (gz*vertexCount)+gx;
 				int topRight = topLeft + 1;
-				int bottomLeft = ((gz+1)*VERTEX_COUNT)+gx;
+				int bottomLeft = ((gz+1)*vertexCount)+gx;
 				int bottomRight = bottomLeft + 1;
 				indices[pointer++] = topLeft;
 				indices[pointer++] = bottomLeft;
@@ -53,7 +70,18 @@ public class Terrain{
 				indices[pointer++] = bottomRight;
 			}
 		}
-		return loader.loadToVAO(vertices, textureCoords, normals, indices);
+		return loader.loadTo3DVAO(vertices, textureCoords, normals, indices);
+	}
+	
+	private float getHeight(int x, int z, BufferedImage image) {
+		if(x<0 || x>=image.getHeight() || z<0 || z>=image.getHeight()) {
+			return 0;
+		}
+		float height = image.getRGB(x, z);
+		height += MAX_PIXEL_COLOR;
+		height /= MAX_PIXEL_COLOR;
+		height *= MAX_HEIGHT;
+		return height;
 	}
 
 	public float getX() {
@@ -63,13 +91,14 @@ public class Terrain{
 	public float getZ() {
 		return z;
 	}
-
-	public ModelMaterial getMaterial() {
-		return material;
+	public TerrainTexurePack getTexturepack() {
+		return texturepack;
 	}
-
-	public RawModel getModel() {
+	public RawModel3D getModel() {
 		return model;
+	}
+	public TerrainTexture getBlendMap() {
+		return blendMap;
 	}
 	
 }

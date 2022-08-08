@@ -1,7 +1,7 @@
 #version 400
 
-const float density = 0.003;
-const float gradient = 1.5;
+const float density = 0.002;
+const float gradient = 2;
 
 in vec3 position;
 in vec2 texCoords;
@@ -24,7 +24,7 @@ out float visibility;
 void main(){
 	vec4 worldPosition = transformation * vec4(position, 1.0);
 	
-	gl_Position = projection *view *worldPosition;
+	gl_Position = projection *view * worldPosition;
 	uv = texCoords;
 	
 	vec3 actualNormal = normal;
@@ -36,7 +36,7 @@ void main(){
 	toCameraVector = (inverse(view) * vec4(0.0,0.0,0.0,0.0)).xyz - worldPosition.xyz;
 	
 	vec4 positionRelativToCam = view * worldPosition;
-	float distance = length(positionRelativToCam.xyz);
+	float distance = length(positionRelativToCam.xz);
 	visibility = exp(-pow((distance*density), gradient));
 	visibility = clamp(visibility, 0.0, 1.0);
 }

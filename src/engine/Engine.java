@@ -1,14 +1,13 @@
 package engine;
 
 import org.lwjgl.opengl.GL;
-import org.lwjgl.opengl.GL11;
 
-import engine.gfx.Loader;
 import engine.gfx.renderer.MasterRenderer;
 import engine.gfx.renderer.Renderer;
 import engine.input.Input;
 import engine.input.InputManager;
 import engine.io.Window;
+import engine.loading.Loader;
 
 public class Engine {
 	private Window window;
@@ -17,11 +16,12 @@ public class Engine {
 	private InputManager inputManager;
 	private Input input;
 	private Logic logic;
-	
+	private Clock clock;
 	public Engine(Logic logic) {
 		this.logic = logic;
 		this.logic.setEngine(this);
-		this.window = new Window(logic.getWidth(), logic.getHeight(), logic.getTitle(), 60);
+		Window.initGLFW();
+		this.window = new Window(logic.getWidth(), logic.getHeight(), logic.getTitle());
 		GL.createCapabilities();	
 		//Everthing OpenGL related needs to be behind GL.createCapabilities() and the Window needs to be created befor calling this
 		this.renderer = new MasterRenderer();
@@ -33,16 +33,15 @@ public class Engine {
 		this.window.setScrollCallback(inputManager.getMouseScrollCallback());
 		
 		this.input = new Input() {@Override public void update() {}};
-		
+		this.clock = new Clock(60);
 		logic.init(this.loader);
 	}
 	
 	public void start() {
 		while(!this.window.shouldClose()) {
-			if(this.window.windowShouldRepaint()) {
+			if(this.clock.shouldRepaint()) {
 				this.window.pollEvents();
 				input.update();
-				this.renderer.processScenes();
 				logic.repaint();
 				this.renderer.render();
 				this.window.swapBuffers();
@@ -64,5 +63,8 @@ public class Engine {
 	}
 	public void addRenderer(Renderer renderer) {
 		this.renderer.addRenderer(renderer);
+	}
+	public Clock getClock() {
+		return this.clock;
 	}
 }

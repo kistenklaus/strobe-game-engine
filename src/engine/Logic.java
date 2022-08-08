@@ -1,6 +1,6 @@
 package engine;
 
-import engine.gfx.Loader;
+import engine.loading.Loader;
 
 public abstract class Logic {
 	protected final int WIDTH, HEIGHT;

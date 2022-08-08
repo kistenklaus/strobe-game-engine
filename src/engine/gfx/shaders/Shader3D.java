@@ -3,7 +3,7 @@ package engine.gfx.shaders;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
-import engine.gfx.entity.Light;
+import engine.gfx.entity.Light3D;
 import engine.gfx.toolbox.Maths;
 
 public abstract class Shader3D extends ShaderProgram{
@@ -25,7 +25,7 @@ public abstract class Shader3D extends ShaderProgram{
 	public Shader3D(String vertexFile, String fragmentFile, int winWidth, int winHeight, float FOV, float FAR_PLANE, float NEAR_PLANE) {
 		super(vertexFile, fragmentFile);
 		this.start();
-		loadProjectionMatrix(Maths.createProjectionMatrix(winWidth, winHeight, FOV, FAR_PLANE, NEAR_PLANE));
+		loadProjectionMatrix(Maths.create3DProjectionMatrix(winWidth, winHeight, FOV, FAR_PLANE, NEAR_PLANE));
 		this.stop();
 	}
 	public void bindAttributes() {
@@ -53,9 +53,9 @@ public abstract class Shader3D extends ShaderProgram{
 		loadMatrix4(location_transformation, transform);
 	}
 	public void loadViewMatrix(Vector3f cameraPosition, float pitch, float yaw, float roll) {
-		loadMatrix4(location_view, Maths.createViewMatrix(cameraPosition, pitch, yaw, roll));
+		loadMatrix4(location_view, Maths.create3DViewMatrix(cameraPosition, pitch, yaw, roll));
 	}
-	public void loadLight(Light light) {
+	public void loadLight(Light3D light) {
 		loadVector3(location_lightPosition, light.getPos());
 		loadVector3(location_lightColor, light.getColor());
 	}

@@ -17,17 +17,14 @@ public class MasterRenderer {
 		GL11.glClearColor(SkyColor.x, SkyColor.y, SkyColor.z, 1f);
 		
 	}
-	public void processScenes() {
-		for (Renderer renderer : renderers) {
-			renderer.processScene();
-		}
-	}
+	
 	public void render() {
-		GL11.glEnable(GL11.GL_DEPTH_TEST);
 		enableCulling();
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
 		for (Renderer renderer : renderers) {
+			renderer.enableRenderSetting();
 			renderer.render();
+			renderer.disableRenderSetting();
 		}
 	}
 	public static void enableCulling() {

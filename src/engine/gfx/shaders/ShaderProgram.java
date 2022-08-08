@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 
+import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
@@ -48,6 +49,9 @@ public abstract class ShaderProgram {
 	}
 	protected void loadVector3(int loc, float x, float y, float z) {
 		GL20.glUniform3f(loc, x, y, z);
+	}
+	protected void loadMatrix3(int loc, Matrix3f mat3) {
+		GL20.glUniformMatrix3fv(loc, false, mat3.get(new float[9]));
 	}
 	protected void loadMatrix4(int loc, Matrix4f mat4) {
 		GL20.glUniformMatrix4fv(loc, false, mat4.get(new float[16]));

@@ -9,63 +9,71 @@ import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
 
-import engine.gfx.entity.Light;
-import engine.gfx.models.RawModel;
+import engine.gfx.entity.Camera;
+import engine.gfx.entity.Light3D;
+import engine.gfx.models.RawModel3D;
 import engine.gfx.renderer.MasterRenderer;
-import engine.gfx.renderer.Renderer;
-import engine.gfx.textures.ModelMaterial;
+import engine.gfx.renderer.Renderer3D;
 import engine.gfx.toolbox.Maths;
-import game.Camera;
 
-public class TerrainRenderer extends Renderer{
+public class TerrainRenderer extends Renderer3D{
 	
 	private TerrainShader shader;
-	private Light light;
-	private Camera camera;
 	private List<Terrain> terrains; 
 	
-	public TerrainRenderer(TerrainShader shader, Light light, Camera camera) {
+	public TerrainRenderer(TerrainShader shader, Light3D light, Camera camera) {
+		super(camera, light);
 		this.shader = shader;
 		this.terrains = new ArrayList<>();
-		this.light = light;
-		this.camera = camera;
 	}
 	
-	@Override
-	public void processScene() {
-		this.shader.start();
-		this.shader.loadLight(light);
-		this.shader.loadViewMatrix(camera.getPos(), camera.getPitch(), camera.getYaw(), camera.getRoll());
-		this.shader.loadSkyColor(MasterRenderer.SkyColor);
-		this.shader.stop();
-	}
-	
-	public void processTerrain(List<Terrain> terrains) {
-		this.terrains = terrains;
-	}
-
 	@Override
 	public void render() {
 		this.shader.start();
+		renderScene();
 		for (Terrain terrain : terrains) {
 			prepareTerrain(terrain);
 			loadModelMatrix(terrain);
 			GL11.glDrawElements(GL11.GL_TRIANGLES, terrain.getModel().getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
 			unbindTexModel();
 		}
+		this.shader.connectTexUnits();	
 		this.shader.stop();
+		
+	}
+	
+	private void renderScene() {
+		this.shader.loadLight(light);
+		this.shader.loadViewMatrix(camera.getPos(), camera.getPitch(), camera.getYaw(), camera.getRoll());
+		this.shader.loadSkyColor(MasterRenderer.SkyColor);
+	}
+	
+	public void processTerrain(List<Terrain> terrains) {
+		this.terrains = terrains;
 	}
 	
 	private void prepareTerrain(Terrain terrain) {
-		RawModel rawModel = terrain.getModel();
+		RawModel3D rawModel = terrain.getModel();
 		GL30.glBindVertexArray(rawModel.getVaoID());
 		GL20.glEnableVertexAttribArray(0);
 		GL20.glEnableVertexAttribArray(1);
 		GL20.glEnableVertexAttribArray(2);
-		ModelMaterial material = terrain.getMaterial();
-		this.shader.loadShineVariables(material.getShineDamper(), material.getReflectivity());
+		bindTextures(terrain);
+		this.shader.loadShineVariables(1, 0);
+	}
+	
+	private void bindTextures(Terrain terrain) {
+		TerrainTexurePack texturepack = terrain.getTexturepack();
 		GL13.glActiveTexture(GL13.GL_TEXTURE0);
-		GL11.glBindTexture(GL11.GL_TEXTURE_2D, material.getID());
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, texturepack.getBgTex().getTexID());
+		GL13.glActiveTexture(GL13.GL_TEXTURE1);
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, texturepack.getrTex().getTexID());
+		GL13.glActiveTexture(GL13.GL_TEXTURE2);
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, texturepack.getbTex().getTexID());
+		GL13.glActiveTexture(GL13.GL_TEXTURE3);
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, texturepack.getgTex().getTexID());
+		GL13.glActiveTexture(GL13.GL_TEXTURE4);
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, terrain.getBlendMap().getTexID());
 	}
 	
 	private void unbindTexModel() {
@@ -76,16 +84,13 @@ public class TerrainRenderer extends Renderer{
 	}
 	
 	private void loadModelMatrix(Terrain terrain) {
-		this.shader.loadTransformationMatrix(Maths.createTransformationMatrix(
+		this.shader.loadTransformationMatrix(Maths.create3DTransformationMatrix(
 				new Vector3f(terrain.getX(), 0, terrain.getZ()), 0, 0, 0, 1));
 		
 	}
 
 	@Override
 	public void cleanUp() {
-		
+		this.shader.cleanUp();
 	}
-
-
-
 }
