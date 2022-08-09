@@ -38,7 +38,7 @@
         <lwjgl.version>3.2.3</lwjgl.version>
         <joml.version>1.10.1</joml.version>
         <imgui.version>1.83.1</imgui.version>
-        <lwjgl.natives>natives-windows</lwjgl.natives>
+        <lwjgl.natives>natives-linux</lwjgl.natives>
         <junit-platform.version>5.3.1</junit-platform.version>
     </properties>
 

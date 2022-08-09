@@ -9,7 +9,7 @@ import org.strobe.gfx.opengl.bindables.shader.ShaderPool;
 public final class GreenTestShader extends MaterialShader{
 
     public GreenTestShader(Graphics gfx) {
-        super(gfx, "shaders/testShader");
+        super(gfx, "shaders/TestShader");
     }
 
     @Override

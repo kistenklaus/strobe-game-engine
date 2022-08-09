@@ -1,2 +1,1 @@
-# strobe-game-engine
-a simple ecs based game engine
+![Alt text](screenshot.png?raw=true "screenshot")
