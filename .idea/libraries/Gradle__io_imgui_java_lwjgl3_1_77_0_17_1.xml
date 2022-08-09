@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Gradle: io.imgui.java:lwjgl3:1.77-0.17.1">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.imgui.java/lwjgl3/1.77-0.17.1/926c27057933eb6000d1bcf93c396e00cf397b14/lwjgl3-1.77-0.17.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.imgui.java/lwjgl3/1.77-0.17.1/1c6854ccbf5547f40e197c4f4a822c0a5123ea72/lwjgl3-1.77-0.17.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

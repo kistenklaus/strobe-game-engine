@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Gradle: io.imgui.java:natives-linux:1.77-0.17.1">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.imgui.java/natives-linux/1.77-0.17.1/ffcdb83d71561dd166c86f5924fc6cec771346df/natives-linux-1.77-0.17.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.imgui.java/natives-linux/1.77-0.17.1/124d40eece8fe9ba05d7111898842b1c34fb7c17/natives-linux-1.77-0.17.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
