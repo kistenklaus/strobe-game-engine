@@ -14,11 +14,11 @@ out vec4 fragColor;
 
 void main(){
 
-    float lumaM = dot(luma, texture2D(source, uv.xy).rgb);
-    float lumaTL = dot(luma, texture2D(source, uv.xy + vec2(-1,-1)*texelSize.xy).rgb);
-    float lumaTR = dot(luma, texture2D(source, uv.xy + vec2(1,-1)*texelSize.xy).rgb);
-    float lumaBL = dot(luma, texture2D(source, uv.xy + vec2(-1,1)*texelSize.xy).rgb);
-    float lumaBR = dot(luma, texture2D(source, uv.xy + vec2(1,1)*texelSize.xy).rgb);
+    float lumaM = dot(luma, texture(source, uv.xy).rgb);
+    float lumaTL = dot(luma, texture(source, uv.xy + vec2(-1,-1)*texelSize.xy).rgb);
+    float lumaTR = dot(luma, texture(source, uv.xy + vec2(1,-1)*texelSize.xy).rgb);
+    float lumaBL = dot(luma, texture(source, uv.xy + vec2(-1,1)*texelSize.xy).rgb);
+    float lumaBR = dot(luma, texture(source, uv.xy + vec2(1,1)*texelSize.xy).rgb);
 
     vec2 dir;
     dir.x = -((lumaTL + lumaTR) - (lumaBL + lumaBR));
@@ -29,8 +29,8 @@ void main(){
 
     dir = min(vec2(fxaaMaxSpan, fxaaMaxSpan), max(vec2(-fxaaMaxSpan, -fxaaMaxSpan), dir * dirAdj)) * texelSize.xy;
 
-    vec3 s1 = 0.5 * (texture2D(source,uv.xy + dir * (0.33-0.5)).xyz + texture2D(source,uv.xy + dir * (0.66-0.5)).xyz);
-    vec3 s2 = s1 * 0.5  + 0.25 * (texture2D(source,uv.xy + dir * (-0.5)).xyz +texture2D(source,uv.xy + dir * 0.5).xyz);
+    vec3 s1 = 0.5 * (texture(source,uv.xy + dir * (0.33-0.5)).xyz + texture(source,uv.xy + dir * (0.66-0.5)).xyz);
+    vec3 s2 = s1 * 0.5  + 0.25 * (texture(source,uv.xy + dir * (-0.5)).xyz +texture(source,uv.xy + dir * 0.5).xyz);
 
      float lumaMin = min(lumaTL, min(min(lumaTR, lumaBL), min(lumaBR, lumaM)));
      float lumaMax = max(lumaTL, max(max(lumaTR, lumaBL), max(lumaBR, lumaM)));

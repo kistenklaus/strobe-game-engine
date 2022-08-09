@@ -49,7 +49,7 @@ public class Game extends EntityContext {
 
 
         Entity camera = ecs.createEntity();
-        camera.addComponent(new PerspectiveLens(60, 960f/640, 0.01f, 25));
+        camera.addComponent(new PerspectiveLens(60, 960f/640, 0.01f, 50));
         int resRed = 1;
         CameraRenderer cr;
         camera.addComponent(cr=new CameraRenderer(960/resRed, 640/resRed));
