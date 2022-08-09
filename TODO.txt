@@ -1,0 +1,34 @@
+06.04.2021
++rework of the deferred and forward render -queue to be combined to one class
++introducing lightSource and cameraSource
++rework of deferred and forward drawable to be combined to one class.
++introduction to materials (as storage for shaders and properties)
+07.04.2021
++moving shaders to classpath
++blending semi transparent objects (z sorting object based) zSortedSceneQueue
++discarding full transparent objects in forward queue
++making materials define cull face (blending as bool for sorting drawables later)
+    depth testing is not a part of the material it's a part of a queue
++optimising materials to use only one uniform buffer
++fxaa in post-processing
+
+
+TODO
+dynamic materials (changing materials on the fly)
+
+effects
+outline material
+multiple lights
+colored lights
+shadow maps
+
+mesh loading obj
+mesh creation scripts
+batching
+instancing
+
+particle system
+
+
+future:
+2D pipeline Graph
