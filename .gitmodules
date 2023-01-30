@@ -1,0 +1,3 @@
+[submodule "renderer_opengl/lib/glm"]
+	path = renderer_opengl/lib/glm
+	url = https://github.com/g-truc/glm

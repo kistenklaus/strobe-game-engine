@@ -1,0 +1,6 @@
+cmake-build-debug
+build
+.idea
+test-assets
+deprecated_src
+/perf.txt
