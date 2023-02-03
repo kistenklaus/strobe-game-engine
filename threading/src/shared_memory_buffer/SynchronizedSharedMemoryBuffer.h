@@ -3,6 +3,7 @@
 #include "SharedMemoryBuffer.h"
 #include <shared_mutex>
 
+/*
 template<typename T, unsigned int Size>
 class SynchronizedSharedMemoryBuffer : public SharedMemoryBuffer<T> {
 private:
@@ -64,3 +65,4 @@ private:
     std::shared_mutex m_mutex;
     unsigned int m_size;
 };
+*/

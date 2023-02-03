@@ -6,4 +6,4 @@ add_compile_options(-Wall -g -O0)
 
 add_subdirectory(threading)
 add_subdirectory(asset_loading)
-add_subdirectory(renderer_opengl)
+add_subdirectory(opengl_render_backend)

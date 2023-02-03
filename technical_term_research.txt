@@ -1,0 +1,12 @@
+
+Pixel Shading:
+    - nearest or linear is stupid.
+    - Toonshading : Lambertian Shading (Phong) (Read Light Value from Texture). Laufzeit?
+    - Paper : X-Toon (Barla, Thollot und Markosian 2006).
+    - Maybe nearest neighbor and X-Toon.
+
+
+Automatic LoD Generation:
+    - Paper : Progressive Meshes. (maybe something like this is possible).
+    - Edge : Collapse Replace 2 Vertices with interpolated Vertex.
+    - Half-edge Collapse : Replace one Vertex with another.

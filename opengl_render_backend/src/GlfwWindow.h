@@ -4,7 +4,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-class Window {
+class GlfwWindow {
 public:
     enum DisplayMode {
         Windowed,
@@ -12,8 +12,8 @@ public:
         Fullscreen
     };
     struct CreateInfo {
-        int width = 600;
-        int height = 400;
+        int width = 1200;
+        int height = 800;
         std::string title = "GLFW-Window";
         DisplayMode displayMode = Windowed;
         bool resizable = false;
@@ -29,9 +29,9 @@ public:
         int framebufferStencilBits = 8;
     };
 
-    explicit Window(CreateInfo* createInfo);
+    explicit GlfwWindow(CreateInfo* createInfo);
 
-    ~Window();
+    ~GlfwWindow();
 
     bool shouldClose();
 

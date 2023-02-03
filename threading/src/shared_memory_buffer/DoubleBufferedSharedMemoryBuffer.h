@@ -3,6 +3,7 @@
 #include "SharedMemoryBuffer.h"
 #include <semaphore>
 
+/*
 template<typename T, unsigned int Size>
 class DoubleBufferedSharedMemoryBuffer : public SharedMemoryBuffer<T> {
 private:
@@ -84,3 +85,5 @@ private:
 };
 
 
+
+ */

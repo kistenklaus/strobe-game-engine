@@ -1,41 +1,51 @@
 #pragma once
 
 #include "SharedMemoryBuffer.h"
-#include <cstring>
 #include <stdexcept>
+#include <cstring>
 
-template<typename T, unsigned int Size>
-class ConstSharedMemoryBuffer : public SharedMemoryBuffer<T>{
-private:
+namespace strobe {
 
-    class ReadRef {
+    template<typename T, unsigned int Size>
+    class ConstSharedMemoryBuffer : public SharedMemoryBuffer<T> {
     public:
-        explicit ReadRef(ConstSharedMemoryBuffer<T, Size> ptr)
-            : m_ptr(ptr) {}
+        explicit ConstSharedMemoryBuffer(T *initialValue, unsigned int size = Size)
+                : m_size(size){
+            std::memcpy(m_data, initialValue, m_size);
+        }
 
-        void acquire() { }
+        void acquireNewRead() override {}
 
-        void release() { }
+        void releaseRead() override {}
 
-        const T *data() { return m_ptr->m_data;}
+        void acquireNewWrite() override {
+            throw std::logic_error("Can't acquire write from ConstSharedMemoryBuffer");
+        }
 
-        unsigned int size() { return Size; }
+        void releaseWrite() override {
+            throw std::logic_error("Can't releaseWrite from ConstSharedMemoryBuffer");
+        }
+
+        const T *data() const override { return m_data; }
+
+        T *data() override {
+            throw std::logic_error("Can't write to ConstSharedMemoryBuffer");
+        }
+
+        [[nodiscard]] unsigned int size() const override { return m_size; }
+
+        void setSize(unsigned int size) override {
+            m_size = size;
+        }
+
+        [[nodiscard]] unsigned int capacity() const override { return Size; }
+
     private:
-        ConstSharedMemoryBuffer<T, Size> m_ptr;
+        union {
+            T m_data[Size];
+            char m_bytes[Size * sizeof(T)];
+        };
+        unsigned int m_size;
     };
 
-public:
-
-    explicit ConstSharedMemoryBuffer(T* bufferValue){
-        std::memcpy(m_data, bufferValue, Size * sizeof(T));
-    }
-
-    virtual ReadRef readRef() { return ReadRef(this); }
-
-    typename SharedMemoryBuffer<T>::WriteRef writeRef() {
-        throw std::logic_error("Can't create a read reference to a ConstSharedMemoryBuffer");
-    }
-
-private:
-    T m_data[Size];
-};
+}

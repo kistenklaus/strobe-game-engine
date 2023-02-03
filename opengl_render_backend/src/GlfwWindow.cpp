@@ -1,4 +1,4 @@
-#include "Window.h"
+#include "GlfwWindow.h"
 #include <utility>
 #include <cassert>
 #include <stdexcept>
@@ -9,7 +9,7 @@
 void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar*
 message, const void* userParam);
 
-Window::Window(CreateInfo* createInfo) :
+GlfwWindow::GlfwWindow(CreateInfo* createInfo) :
         m_width(createInfo->width),
         m_height(createInfo->height),
         m_title(std::move(createInfo->title)),
@@ -102,43 +102,43 @@ Window::Window(CreateInfo* createInfo) :
 }
 
 
-Window::~Window() {
+GlfwWindow::~GlfwWindow() {
     assert(m_window);
     glfwDestroyWindow(m_window);
 }
 
-bool Window::shouldClose() {
+bool GlfwWindow::shouldClose() {
     return glfwWindowShouldClose(m_window);
 }
 
-void Window::swapBuffers() {
+void GlfwWindow::swapBuffers() {
     glfwSwapBuffers(m_window);
 }
 
-void Window::pollEvents() {
+void GlfwWindow::pollEvents() {
     glfwPollEvents();
 }
 
-void Window::close() {
+void GlfwWindow::close() {
     glfwSetWindowShouldClose(m_window, GLFW_TRUE);
 }
 
-void Window::setSize(const int width, const int height) {
+void GlfwWindow::setSize(const int width, const int height) {
     m_width = width;
     m_height = height;
     glfwSetWindowSize(m_window, width, height);
 }
 
-void Window::setTitle(const std::string &title) {
+void GlfwWindow::setTitle(const std::string &title) {
     m_title = title;
     glfwSetWindowTitle(m_window, m_title.c_str());
 }
 
-int Window::width() const { return m_width; }
+int GlfwWindow::width() const { return m_width; }
 
-int Window::height() const { return m_height; }
+int GlfwWindow::height() const { return m_height; }
 
-std::string Window::title() const { return m_title; }
+std::string GlfwWindow::title() const { return m_title; }
 
 
 void APIENTRY glDebugOutput(GLenum source,
