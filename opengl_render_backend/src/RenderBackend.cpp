@@ -19,7 +19,7 @@ std::shared_ptr<std::binary_semaphore> strobe::RenderBackend::start() {
             std::make_shared<std::binary_semaphore>(0);
 
     if (m_runtime == nullptr) {
-        m_runtime = new RenderBackendRuntime(validRuntimeSignal);
+        m_runtime = new internal::RenderBackendRuntime(validRuntimeSignal);
     }
     return validRuntimeSignal;
 }
@@ -54,8 +54,13 @@ bool strobe::RenderBackend::isRunning() {
     return m_runtime->isRunning();
 }
 
+void strobe::RenderBackend::draw(const RenderObject& renderObject){
+    assert(m_runtime);
+    m_runtime->draw(renderObject);
+}
 
-strobe::Buffer strobe::RenderBackend::createBuffer(
+
+strobe::Buffer strobe::RenderBackend::createBufferInternal(
         const std::shared_ptr<ReadSharedMemoryBuffer<char>> &memory,
         Buffer::Usage usage,
         Buffer::Type type) {

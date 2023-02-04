@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include "../resource_id.h"
 #include <glad/glad.h>
 #include <algorithm>
@@ -17,11 +18,15 @@ namespace strobe::internal {
     class BufferManager {
     public:
 
+        explicit BufferManager(){
+            //m_referenceCounts.reserve(1000);
+        }
+
         ~BufferManager();
 
         void processSubmissions();
 
-        void endFrame();
+        void swapBuffers();
 
         Buffer foreignCreate(
                 std::shared_ptr<ReadSharedMemoryBuffer<char>> memory,
@@ -29,6 +34,7 @@ namespace strobe::internal {
                 Buffer::Type type);
 
         void bind(resource_id bufferId) {
+            assert(m_opengl_buffer_names[bufferId.asIntegral()] != 0);
             glBindBuffer(BufferTypeMapping[static_cast<int>(m_buffer_types[bufferId.asIntegral()])],
                          m_opengl_buffer_names[bufferId.asIntegral()]);
         }
@@ -79,7 +85,8 @@ namespace strobe::internal {
         std::vector<std::weak_ptr<ReadSharedMemoryBuffer<char>>> m_buffer_memories;
         std::vector<Buffer::Usage> m_buffer_usages;
         std::vector<Buffer::Type> m_buffer_types;
-        std::vector<unsigned int> m_referenceCounts;
+
+        std::deque<unsigned int> m_referenceCounts;
 
         std::vector<resource_id> m_destroyQueue;
         std::vector<std::tuple<resource_id, unsigned int, unsigned int>> m_updateQueue;

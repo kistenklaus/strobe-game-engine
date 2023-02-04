@@ -7,7 +7,7 @@ add_library(${PROJECT_NAME}_assets
         src/assets/ImageAsset.h
         src/assets/TextFileAsset.cpp
         src/assets/TextFileAsset.h
-        include/strobe/assets.h ../threading/include/strobe/shared_memory_buffer.h)
+        include/strobe/assets.h ../threading/include/strobe/shared_memory_buffer.h src/assets/ShaderAsset.cpp src/assets/ShaderAsset.h)
 
 target_link_libraries(${PROJECT_NAME}_assets PRIVATE stb_image)
 

@@ -1,24 +1,28 @@
 #include "RenderBackendRuntime.h"
 #include "GlfwWindow.h"
+#include <chrono>
 #include <iostream>
 
+static const unsigned int MAX_RENDER_OBJECTS = 10000;
 
-strobe::RenderBackendRuntime::RenderBackendRuntime()
+strobe::internal::RenderBackendRuntime::RenderBackendRuntime()
         : m_bufferManager(),
           m_geometrieManager(),
           m_requestShutdown(false),
-          m_thread() {
+          m_thread(),
+          m_renderObjectQueue(0) {
 }
 
-strobe::RenderBackendRuntime::RenderBackendRuntime(std::shared_ptr<std::binary_semaphore> validRuntimeSignal)
+strobe::internal::RenderBackendRuntime::RenderBackendRuntime(std::shared_ptr<std::binary_semaphore> validRuntimeSignal)
         : m_bufferManager(),
           m_geometrieManager(&m_bufferManager),
           m_requestShutdown(false),
-          m_thread(new std::thread(&RenderBackendRuntime::main, this, std::move(validRuntimeSignal))) {
+          m_thread(new std::thread(&RenderBackendRuntime::main, this, std::move(validRuntimeSignal))),
+          m_renderObjectQueue(MAX_RENDER_OBJECTS) {
     std::cout << "constructed runtime" << std::endl;
 }
 
-strobe::RenderBackendRuntime::~RenderBackendRuntime() {
+strobe::internal::RenderBackendRuntime::~RenderBackendRuntime() {
     std::cout << "destruct runtime" << std::endl;
     requestShutdown();
     if (m_thread != nullptr && m_thread->joinable()) {
@@ -29,28 +33,81 @@ strobe::RenderBackendRuntime::~RenderBackendRuntime() {
 }
 
 
-void strobe::RenderBackendRuntime::startup() {
+void strobe::internal::RenderBackendRuntime::startup() {
     GlfwWindow::CreateInfo createInfo = {
 
     };
     m_window = new GlfwWindow(&createInfo);
+
+
+    TextFileAsset vertexShaderAsset("res/simple.vs.glsl");
+    Shader vertexShader = Shader(vertexShaderAsset, Shader::VertexShader);
+    TextFileAsset fragmentShaderAsset("res/simple.fs.glsl");
+    Shader fragmentShader = Shader(fragmentShaderAsset, Shader::FragmentShader);
+
+    m_deprecatedShader = std::make_unique<ShaderProgram>(vertexShader, fragmentShader);
+
+    glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
 }
 
-void strobe::RenderBackendRuntime::shutdown() {
+void strobe::internal::RenderBackendRuntime::shutdown() {
     m_window->close();
     delete m_window;
 }
 
-void strobe::RenderBackendRuntime::main(std::shared_ptr<std::binary_semaphore> validRuntimeSignal) {
+void strobe::internal::RenderBackendRuntime::main(std::shared_ptr<std::binary_semaphore> validRuntimeSignal) {
     std::cout << "started runtime at pid=" << std::this_thread::get_id() << std::endl;
     m_running = true;
     startup();
     validRuntimeSignal->release();
+
+    // don't render on the first frame because there can't be any submissions due to
+    // the double buffering latency.
+    runtimeBeginFrame();
+    runtimeEndFrame();
+    m_bufferManager.swapBuffers();
+    m_geometrieManager.swapBuffers();
+    m_renderObjectQueue.swapBuffers();
+    runtimeCompleteFrame();
+
+    double summedFrametime = 0;
+    int frameCount = 0;
+
     while (!m_requestShutdown) {
+
         GlfwWindow::pollEvents();
         if (m_window->shouldClose())m_requestShutdown = true;
+        runtimeBeginFrame();
+
+        using std::chrono::high_resolution_clock;
+        using std::chrono::duration_cast;
+        using std::chrono::duration;
+        using std::chrono::milliseconds;
+
+        auto t1 = high_resolution_clock::now();
+
         renderloop();
+
         m_window->swapBuffers();
+
+        auto t2 = high_resolution_clock::now();
+
+        runtimeEndFrame();
+        m_bufferManager.swapBuffers();
+        m_geometrieManager.swapBuffers();
+        m_renderObjectQueue.swapBuffers();
+        runtimeCompleteFrame();
+
+
+        duration<double, std::milli> ms_double = t2 - t1;
+        summedFrametime += ms_double.count();
+        frameCount += 1;
+        if (summedFrametime > 5000) {
+            std::cout << "[average RenderBackend frametime : " << (summedFrametime / frameCount) << "ms ]" << std::endl;
+            summedFrametime = 0;
+            frameCount = 0;
+        }
     }
     m_running = false;
     shutdown();
@@ -60,53 +117,79 @@ void strobe::RenderBackendRuntime::main(std::shared_ptr<std::binary_semaphore> v
     std::cout << "runtime stopped execution" << std::endl;
 }
 
-void strobe::RenderBackendRuntime::renderloop() {
-    // ======== MEMORY CRITICAL SECTION ==========
-    m_frameBeginSemaphore.acquire();
+void strobe::internal::RenderBackendRuntime::renderloop() {
 
     m_bufferManager.processSubmissions();
     m_geometrieManager.processSubmissions();
 
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    //swaps queue buffers (no submissions are allowed during this section).
-    m_bufferManager.endFrame();
-    m_geometrieManager.endFrame();
+    // reorder RenderObjectQueue.
+    RenderObject* queue = m_renderObjectQueue.getEnqueuedRenderObjects();
+    //assert(m_renderObjectQueue.getEnqueuedObjectCount() == 10000);
+    for(unsigned int i=0;i<m_renderObjectQueue.getEnqueuedObjectCount();++i){
+        const RenderObject& renderObject = queue[i];
+        //m_geometrieManager.bind(renderObject.m_geometrieId);
 
-    m_frameEndSemaphore.release();
+        m_deprecatedShader->bind();
+        m_geometrieManager.renderGeometrie(renderObject.m_geometrieId);
+    }
+
+    // process RenderObjectQueue.
+
+    //swaps queue buffers (no submissions are allowed during this section).
+
 }
 
-void strobe::RenderBackendRuntime::requestShutdown() {
+void strobe::internal::RenderBackendRuntime::requestShutdown() {
     m_requestShutdown = true;
 }
 
-void strobe::RenderBackendRuntime::awaitShutdown() {
+void strobe::internal::RenderBackendRuntime::awaitShutdown() {
     m_runtimeStoppedSignal.acquire();
 }
 
-void strobe::RenderBackendRuntime::beginFrame() {
+void strobe::internal::RenderBackendRuntime::beginFrame() {
     if (not m_running)return;
-    m_frameBeginSemaphore.release();
+    m_beginFrameSemaphore.release();
 }
 
-void strobe::RenderBackendRuntime::endFrame() {
+void strobe::internal::RenderBackendRuntime::endFrame() {
+    m_endFrameSemaphore.release();
     using namespace std::chrono_literals;
     bool succ;
     do {
-        succ = m_frameEndSemaphore.try_acquire_for(1ms);
+        succ = m_completeFrameSemaphore.try_acquire_for(10ms);
     } while (!succ && m_running);
 }
 
+void strobe::internal::RenderBackendRuntime::draw(
+        const RenderObject &renderObject) {
+    m_renderObjectQueue.enqueue(renderObject);
+}
 
-strobe::Buffer strobe::RenderBackendRuntime::createBuffer(
+
+strobe::Buffer strobe::internal::RenderBackendRuntime::createBuffer(
         const std::shared_ptr<ReadSharedMemoryBuffer<char>> &memory,
         Buffer::Usage usage,
         Buffer::Type type) {
     return m_bufferManager.foreignCreate(memory, usage, type);
 }
 
-strobe::Geometrie strobe::RenderBackendRuntime::createGeometrie(const std::vector<GeometrieAttribute>& attributes,
-                          const std::shared_ptr<GeometrieIndices>& indices){
+strobe::Geometrie strobe::internal::RenderBackendRuntime::createGeometrie(const std::vector<GeometrieAttribute>
+                                                                          &attributes,
+                                                                          const std::shared_ptr<GeometrieIndices> &indices) {
     return m_geometrieManager.foreignCreate(attributes, indices);
+}
+
+void strobe::internal::RenderBackendRuntime::runtimeBeginFrame() {
+    m_beginFrameSemaphore.acquire();
+}
+
+void strobe::internal::RenderBackendRuntime::runtimeEndFrame() {
+    m_endFrameSemaphore.acquire();
+}
+
+void strobe::internal::RenderBackendRuntime::runtimeCompleteFrame() {
+    m_completeFrameSemaphore.release();
 }

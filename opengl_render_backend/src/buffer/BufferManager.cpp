@@ -14,7 +14,7 @@ void strobe::internal::BufferManager::processSubmissions() {
     processUpdateSubmissions();
 }
 
-void strobe::internal::BufferManager::endFrame() {
+void strobe::internal::BufferManager::swapBuffers() {
     m_destroyQueue.swap(m_destroyQueue_back);
     m_createQueue.swap(m_createQueue_back);
     m_updateQueue.swap(m_updateQueue_back);
@@ -46,10 +46,12 @@ strobe::Buffer strobe::internal::BufferManager::foreignCreate(
     }
     // find next resource_id ensure that resource_ids are packed.
     resource_id id = null_id;
-    for (unsigned int i = 0; i < m_referenceCounts.size(); ++i) {
-        if (m_referenceCounts[i]) {
+    unsigned int i = 0;
+    for (auto refCount :  m_referenceCounts) {
+        if (refCount == 0) {
             id = resource_id(i);
         }
+        i += 1;
     }
     if (not id.isValid()) {
         id = resource_id(m_referenceCounts.size());
@@ -83,8 +85,12 @@ void strobe::internal::BufferManager::processDestroySubmissions() {
     m_internal_tmp_vector.clear();
     while (not m_destroyQueue_back.empty()) {
         resource_id id = m_destroyQueue_back.back();
+        unsigned int glName = id.asIntegral();
+        assert(glName != 0);
+        m_internal_tmp_vector.push_back(glName);
+        m_opengl_buffer_names[id.asIntegral()] = 0;
+
         m_destroyQueue_back.pop_back();
-        m_internal_tmp_vector.push_back(m_opengl_buffer_names[static_cast<resource_id_type>(id)]);
     }
     glDeleteBuffers(static_cast<GLsizei>(m_internal_tmp_vector.size()),
                     m_internal_tmp_vector.data());
@@ -111,10 +117,12 @@ void strobe::internal::BufferManager::processUpdateSubmissions() {
         unsigned int byteRange = endByte - startByte;
         auto memory = m_buffer_memories[integralId].lock();
         memory->acquireNewRead();
+        GL_ELEMENT_ARRAY_BUFFER;
         GLenum type = BufferTypeMapping[static_cast<int>(m_buffer_types[integralId])];
         // TODO performance tune this heuristic.
         if (memory->capacity() < byteRange * 2) {
             // reallocate the hole buffer.
+            GL_STATIC_DRAW;
             GLenum usage = BufferUsageMapping[static_cast<int>(m_buffer_usages[integralId])];
             glBindBuffer(type, m_opengl_buffer_names[integralId]);
             glBufferData(type,

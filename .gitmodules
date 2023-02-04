@@ -1,3 +1,6 @@
 [submodule "opengl_render_backend/lib/glm"]
 	path = opengl_render_backend/lib/glm
 	url = https://github.com/g-truc/glm
+[submodule "opengl_render_backend/lib/embed-resource"]
+	path = opengl_render_backend/lib/embed-resource
+	url = https://github.com/cyrilcode/embed-resource

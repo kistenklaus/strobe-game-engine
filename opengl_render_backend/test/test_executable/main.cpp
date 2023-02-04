@@ -3,64 +3,60 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <cstddef>
+#include <Resource.h>
 
 int main() {
-
-    float positionData[] = {
-            -0.5f, -0.5f, 0,
-            -0.5f, 0.5f, 0,
-            0.5f, 0.5f, 0,
-            -0.5f, -0.5f, 0
-    };
-
-    int indicesData[] = {
-            0, 1, 2,
-            2, 3, 0
-    };
-
-    std::shared_ptr<strobe::ConstSharedMemoryBuffer<char, 12 * sizeof(float)>>
-            vertexMemory =
-            std::make_shared<strobe::ConstSharedMemoryBuffer<char, 12 * sizeof(float)>>(
-                    reinterpret_cast<char *>(&positionData[0]));
-
-    std::shared_ptr<strobe::ConstSharedMemoryBuffer<char, 12 * sizeof(float)>>
-            indicesMemory =
-            std::make_shared<strobe::ConstSharedMemoryBuffer<char, 12 * sizeof(float)>>(
-                    reinterpret_cast<char *>(&indicesData[0]));
-
+    Resource resource = LOAD_RESOURCE(simple_fs_glsl);
+    std::cout << std::string(resource.data(), resource.size()) << std::endl;
 
     std::cout << "started main at pid=" << std::this_thread::get_id() << std::endl;
 
+    auto vertexMemory =
+            std::make_shared<strobe::ConstSharedMemoryBuffer<float, 12>>(
+                    std::vector<float>{
+                            -0.5f, -0.5f, 0.0f,
+                            -0.5f, 0.5f, 0.0f,
+                            0.5f, 0.5f, 0.0f,
+                            0.5f, -0.5f, 0.0f
+                    });
+
+    auto indicesMemory =
+            std::make_shared<strobe::ConstSharedMemoryBuffer<unsigned int, 6>>(
+                    std::vector<unsigned int>{
+                            0, 1, 2,
+                            2, 3, 0
+                    });
+
+
     strobe::RenderBackend renderBackend;
 
+    renderBackend.start()->acquire();
 
-    auto backendInitSignal = renderBackend.start();
-    backendInitSignal->acquire(); // await renderer to finish initalization.
-    strobe::Buffer vertexBuffer = renderBackend.createBuffer(vertexMemory,
-                                                             strobe::Buffer::Usage::STATIC_DRAW,
-                                                             strobe::Buffer::Type::VERTEX_BUFFER);
-    strobe::Buffer elementBuffer = renderBackend.createBuffer(indicesMemory,
-                                                              strobe::Buffer::Usage::STATIC_DRAW,
-                                                              strobe::Buffer::Type::ELEMENT_BUFFER);
+    strobe::Buffer vertexBuffer = renderBackend.createBuffer(
+            //idk this cast is required for some annoying reason.
+            std::static_pointer_cast<strobe::ReadSharedMemoryBuffer<float>>(vertexMemory),
+            strobe::Buffer::Usage::STATIC_DRAW,
+            strobe::Buffer::Type::VERTEX_BUFFER);
 
-    {
-        // create the same element because both point to the same memory and are equal in all other states.
-        strobe::Buffer elementBuffer2 = renderBackend.createBuffer(indicesMemory,
-                                                                   strobe::Buffer::Usage::STATIC_DRAW,
-                                                                   strobe::Buffer::Type::ELEMENT_BUFFER);
-    }
+    strobe::Buffer elementBuffer = renderBackend.createBuffer(
+            std::static_pointer_cast<strobe::ReadSharedMemoryBuffer<unsigned int>>(indicesMemory),
+            strobe::Buffer::Usage::STATIC_DRAW,
+            strobe::Buffer::Type::ELEMENT_BUFFER);
 
-    strobe::GeometrieAttribute positionAttribute(0,
-                                                 strobe::GeometrieAttribute::Type::Vec4_32f,
-                                                 vertexBuffer,
-                                                 sizeof(float) * 4,
-                                                 0);
 
-    strobe::GeometrieIndices indices(elementBuffer,
-                                     strobe::GeometrieIndexType::U32);
+    strobe::Geometrie geometrie = renderBackend.createGeometrie(
+            strobe::GeometrieAttribute(0,
+                                       strobe::GeometrieAttribute::Type::Vec3_32f,
+                                       vertexBuffer,
+                                       sizeof(float) * 3,
+                                       0),
+            strobe::GeometrieIndices(elementBuffer, strobe::GeometrieIndexType::U32));
 
-    strobe::Geometrie geometrie = renderBackend.createGeometrie(positionAttribute);
-    strobe::Geometrie geometrie2 = renderBackend.createGeometrie(positionAttribute);
+    strobe::RenderObject renderObject;
+    renderObject.m_geometrieId = geometrie.id();
+
+    // TODO Memory Barrier.
 
     using std::chrono::high_resolution_clock;
     using std::chrono::duration_cast;
@@ -71,18 +67,21 @@ int main() {
     int frameCount = 0;
 
     while (renderBackend.isRunning()) {
-        using namespace std::chrono_literals;
         renderBackend.beginFrame();
+        using namespace std::chrono_literals;
         auto t1 = high_resolution_clock::now();
         // submit to render backend.
+        for(unsigned int i=0;i<10000;i++){
+            renderBackend.draw(renderObject);
+        }
         // update double buffered resources.
+        auto t2 = high_resolution_clock::now();
         renderBackend.endFrame();
         // update single buffered data.
         // swap buffers.
         // don't update double buffered resources after swap buffers. Duh!
 
 
-        auto t2 = high_resolution_clock::now();
         duration<double, std::milli> ms_double = t2 - t1;
         summedFrametime += ms_double.count();
         frameCount += 1;

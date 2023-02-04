@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 
-strobe::internal::GeometrieManager::~GeometrieManager(){
+strobe::internal::GeometrieManager::~GeometrieManager() {
     // Documentation states that invalids vao names are ignored.
     glDeleteVertexArrays(static_cast<GLsizei>(m_opengl_vao_names.size()),
                          m_opengl_vao_names.data());
@@ -15,7 +15,7 @@ void strobe::internal::GeometrieManager::processSubmissions() {
     processUpdateSubmissions();
 }
 
-void strobe::internal::GeometrieManager::endFrame() {
+void strobe::internal::GeometrieManager::swapBuffers() {
     m_destroyQueue.swap(m_destroyQueue_back);
     m_createQueue.swap(m_createQueue_back);
     m_updateQueue.swap(m_updateQueue_back);
@@ -72,10 +72,12 @@ strobe::Geometrie strobe::internal::GeometrieManager::foreignCreate(
     }
     // find next valid resource_id
     resource_id id = null_id;
-    for (unsigned int i = 0; i < m_refCounts.size(); ++i) {
-        if (m_refCounts[i] == 0) {
+    unsigned int i=0;
+    for (auto refCount : m_refCounts) {
+        if (refCount == 0) {
             id = resource_id(i);
         }
+        i += 1;
     }
     if (not id.isValid()) {
         id = resource_id(m_refCounts.size());
@@ -143,7 +145,7 @@ void strobe::internal::GeometrieManager::processDestroySubmissions() {
     if (m_destroyQueue_back.empty())return;
     m_internal_tmp_vector.resize(m_destroyQueue_back.size());
     for (unsigned int i = 0; i < m_destroyQueue_back.size(); ++i) {
-        const resource_id& id = m_destroyQueue_back[i];
+        const resource_id &id = m_destroyQueue_back[i];
         m_internal_tmp_vector[i] = id.asIntegral();
         m_opengl_vao_names[id.asIntegral()] = 0;
     }
@@ -169,6 +171,7 @@ void strobe::internal::GeometrieManager::processUpdateSubmissions() {
         resource_id id = m_updateQueue_back.back();
         m_updateQueue_back.pop_back();
         unsigned int vao = m_opengl_vao_names[id.asIntegral()];
+        assert(vao != 0);
         glBindVertexArray(vao);
         const std::vector<geometrie_attribute> &attributes = m_attributes[id.asIntegral()];
         for (const geometrie_attribute &attribute: attributes) {
@@ -189,7 +192,14 @@ void strobe::internal::GeometrieManager::processUpdateSubmissions() {
             glEnableVertexAttribArray(attribute.m_location);
         }
 
+        using wt = std::weak_ptr<GeometrieIndices>;
+        bool hasIndices = !(m_indices[id.asIntegral()]
+                                    .owner_before(wt{}) && !wt{}
+                .owner_before(m_indices[id.asIntegral()]));
+        if (hasIndices) {
+            m_bufferManager->bind(
+                    m_indices[id.asIntegral()].lock()->buffer()->resourceId());
+        }
     }
-    m_updateQueue_back.clear();
 }
 

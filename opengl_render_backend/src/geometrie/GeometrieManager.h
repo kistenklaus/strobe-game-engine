@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Geometrie.h"
+#include <deque>
 #include "../buffer/BufferManager.h"
 #include <glad/glad.h>
 #include "../resource_id.h"
@@ -15,16 +16,50 @@ namespace strobe::internal {
                 : m_bufferManager(nullptr) {}
 
         explicit GeometrieManager(BufferManager *bufferManager)
-                : m_bufferManager(bufferManager) {}
+                : m_bufferManager(bufferManager) {
+            //m_refCounts.reserve(1000);
+        }
 
         ~GeometrieManager();
 
         void processSubmissions();
 
-        void endFrame();
+        void swapBuffers();
 
         Geometrie foreignCreate(std::vector<GeometrieAttribute> attributes,
                                 std::shared_ptr<GeometrieIndices> indices = nullptr);
+
+
+        void bind(resource_id id) {
+            assert(m_opengl_vao_names[id.asIntegral()] != 0);
+            static unsigned int currentlyBound = 0;
+            if(m_opengl_vao_names[id.asIntegral()] == currentlyBound)return;
+            currentlyBound = m_opengl_vao_names[id.asIntegral()];
+            glBindVertexArray(m_opengl_vao_names[id.asIntegral()]);
+        }
+
+        void unbind() { //NOLINT
+            glBindVertexArray(0);
+        }
+
+        void renderGeometrie(resource_id id) {
+            assert(m_opengl_vao_names[id.asIntegral()] != 0);
+            bind(id);
+            //std::cout << "iwh" << std::endl;
+            using wt = std::weak_ptr<GeometrieIndices>;
+            bool hasIndices = !(m_indices[id.asIntegral()]
+                    .owner_before(wt{}) && !wt{}
+                    .owner_before(m_indices[id.asIntegral()]));
+
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+            if (hasIndices){
+                //TODO implement proper drawCounts and index types.
+            }else{
+                assert(false);
+                glDrawArrays(GL_TRIANGLES, 0, 12);
+            }
+
+        }
 
     private:
         struct geometrie_attribute {
@@ -57,7 +92,7 @@ namespace strobe::internal {
         std::vector<resource_id> m_createQueue_back;
         std::vector<resource_id> m_updateQueue_back;
 
-        std::vector<unsigned int> m_refCounts;
+        std::deque<unsigned int> m_refCounts;
         std::vector<std::vector<geometrie_attribute>> m_attributes;
         std::vector<std::weak_ptr<GeometrieIndices>> m_indices;
 

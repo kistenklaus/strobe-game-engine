@@ -101,6 +101,10 @@ namespace strobe {
         std::shared_ptr<GeometrieIndices>& getIndices(){
             return m_indices;
         }
+        [[nodiscard]] internal::resource_id id() const {
+            assert(m_id.isValid());
+            return m_id;
+        }
 
     private:
         unsigned int *m_refCount;

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <strobe/shared_memory_buffer.h>
+#include "renderobj/RenderObjectQueue.h"
+#include "renderobj/RenderObject.h"
 #include "./geometrie/GeometrieManager.h"
 #include <memory>
 #include <glm/glm.hpp>
@@ -8,9 +10,11 @@
 #include <thread>
 #include "GlfwWindow.h"
 #include "./buffer/BufferManager.h"
-#include "./synchronization/MemoryGuard.h"
+//
+#include "deprecated/ShaderProgram.h"
+#include "deprecated/Shader.h"
 
-namespace strobe {
+namespace strobe::internal {
 
     class RenderBackendRuntime {
     public:
@@ -44,6 +48,8 @@ namespace strobe {
 
         void endFrame();
 
+        void draw(const RenderObject& renderObject);
+
     private:
 
         void startup();
@@ -54,6 +60,11 @@ namespace strobe {
 
         void shutdown();
 
+        void runtimeBeginFrame();
+
+        void runtimeEndFrame();
+
+        void runtimeCompleteFrame();
 
     private:
 
@@ -66,8 +77,9 @@ namespace strobe {
         std::thread *m_thread;
         std::binary_semaphore m_runtimeStoppedSignal{0};
 
-        std::binary_semaphore m_frameBeginSemaphore{1};
-        std::binary_semaphore m_frameEndSemaphore{1};
+        std::binary_semaphore m_beginFrameSemaphore{0};
+        std::binary_semaphore m_endFrameSemaphore{0};
+        std::binary_semaphore m_completeFrameSemaphore{0};
 
         std::mutex m_frameBeginMutex;
         std::condition_variable m_frameBeginCV;
@@ -77,6 +89,9 @@ namespace strobe {
         std::condition_variable m_frameEndCV;
         bool m_frameFinished = false;
 
+        RenderObjectQueue m_renderObjectQueue;
+
+        std::unique_ptr<ShaderProgram> m_deprecatedShader;
 
     };
 

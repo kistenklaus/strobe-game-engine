@@ -1,7 +1,9 @@
 #pragma once
 
 #include "SharedMemoryBuffer.h"
+#include <vector>
 #include <stdexcept>
+#include <iostream>
 #include <cstring>
 
 namespace strobe {
@@ -11,7 +13,12 @@ namespace strobe {
     public:
         explicit ConstSharedMemoryBuffer(T *initialValue, unsigned int size = Size)
                 : m_size(size){
-            std::memcpy(m_data, initialValue, m_size);
+            std::memcpy(m_data, initialValue, m_size * sizeof(T));
+        }
+
+        explicit ConstSharedMemoryBuffer(const std::vector<T>& initialValue)
+                : m_size(initialValue.size()){
+            std::memcpy(m_data, initialValue.data(), m_size * sizeof(T));
         }
 
         void acquireNewRead() override {}
@@ -41,10 +48,7 @@ namespace strobe {
         [[nodiscard]] unsigned int capacity() const override { return Size; }
 
     private:
-        union {
-            T m_data[Size];
-            char m_bytes[Size * sizeof(T)];
-        };
+        T m_data[Size];
         unsigned int m_size;
     };
 
