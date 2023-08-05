@@ -4,6 +4,8 @@
 
 void renderer_begin_frame(render_context_t* context);
 
+int renderer_is_running(render_context_t* context);
+
 void renderer_end_frame(render_context_t* context);
 
 #endif

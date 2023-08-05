@@ -1,29 +1,39 @@
 #include "render_context.h"
 #include "frame_barrier.h"
 #include "frame_guard.h"
+#include "mesh_manager.h"
 #include "render_thread.h"
+#include <stdio.h>
 #include <stdlib.h>
-#include "phashtable.h"
+#include "containers.h"
+#include "mesh.h"
 
 void render_context_init(render_context_t *context,
                          render_context_create_info *createInfo) {
-  context->materialCount = 0;
-  context->materialDescriptions = NULL;
-  context->materialPropertyDescriptions = NULL;
+
   context->window = createInfo->window;
-  createInfo->backend.create_backend(&context->backend);
   context->frameGuard.frameCount = createInfo->swapBufferCount;
+  context->submitFrame = 0;
+  context->shouldClose = 0;
+  context->running = 0;
+  context->started = 0;
   frame_barrier_init(&context->frameBarrier);
 
+}
+
+void renderer_start(render_context_t* context){
+  if(context->started)return;
+  context->started = 1;
+  context->shouldClose = 0;
   render_thread_start(context);
 }
 
+void renderer_stop(render_context_t* context){
+  if(!context->started)return;
+  context->shouldClose = 1;
+  context->started = 0;
+  render_thread_join(context);
+}
+
 void render_context_destroy(render_context_t *context) {
-    free(context->materialDescriptions);
-    if(context->materialPropertyDescriptions != NULL){
-      for(unsigned int i = 0; i< context->materialCount; i++){
-        free(context->materialPropertyDescriptions[i]);
-      }
-      free(context->materialPropertyDescriptions);
-    }
 }

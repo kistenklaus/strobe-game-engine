@@ -24,15 +24,9 @@ typedef struct {
   mesh_attribute_create_info normals;
   mesh_attribute_create_info tangents;
   mesh_attribute_create_info bitangents;
+  mesh_attribute_create_info colors;
+  unsigned int vertexCount;
 } mesh_create_info;
-
-typedef struct {
-  void* data;
-  unsigned int size;
-  unsigned int stride;
-  unsigned int offset;
-  unsigned int meshId;
-} mesh_mapped_attribute;
 
 typedef enum {
   MESH_ATTRIBUTE_POSITION,
@@ -41,6 +35,10 @@ typedef enum {
   MESH_ATTRIBUTE_TANGENTS,
   MESH_ATTRIBUTE_BITANGENTS
 } mesh_attribute_type;
+
+typedef struct {
+
+} mesh_update_info;
 
 typedef struct {
   const char* name;
@@ -59,26 +57,8 @@ typedef struct {
   void* initalPropertyValues;
 } material_create_info;
 
+
 typedef struct {
-  int (*init)(unsigned int* frameCount, int forceFrameCount);
-  int (*destroy)();
-  int (*display)(unsigned int frame);
-
-  int (*create_mesh)(unsigned int frame, unsigned int * mesh, mesh_create_info* meshCreateInfo);
-  int (*destroy_mesh)(unsigned int frame, unsigned int mesh);
-  int (*map_mesh_attribute)(unsigned int frame, unsigned int mesh, mesh_attribute_type attributeType, mesh_mapped_attribute* attribute);
-  int (*unmap_mesh_attribute)(unsigned int frame, mesh_mapped_attribute* attribute);
-
-  int (*get_material_count)(unsigned int* materialCount);
-  int (*get_materials)(material_description* materialDescriptions);
-  int (*create_material)(unsigned int frame, unsigned int* material, material_create_info* materialDescription);
-  int (*get_material_description)(unsigned int material, material_description* materialDescription);
-  int (*get_material_properties)(material_description* materialDescription, material_property_description* properties);
-  int (*set_material_property)(unsigned int frame, unsigned int material, material_property_description* property, void* data);
-  int (*get_material_property)(unsigned int frame, unsigned int material, material_property_description* property, void* data);
-  int (*destroy_material)(unsigned int frame, unsigned int material);
-
-  int (*draw)(unsigned int frame, unsigned int mesh, unsigned int material, mat4f* transform);
 
 } render_backend;
 

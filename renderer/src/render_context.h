@@ -2,14 +2,21 @@
 #define STROBE_RENDERER_RENDER_CONTEXT_H
 
 #include "frame_barrier.h"
-#include "thread.h"
+#include "scene_manager.h"
+#include "threading.h"
 #include "frame_guard.h"
 #include "window.h"
 #include "render_backend.h"
-#include "phashtable.h"
+#include "containers.h"
+#include "allocators.h"
+#include "mesh_manager.h"
+#include "material_manager.h"
+#include "timeutil.h"
+#include "profiler.h"
+
 
 typedef struct {
-  thread_t renderThread;
+  thread renderThread;
   frame_guard_t frameGuard;
   frame_barrier_t frameBarrier;
   window_t* window;
@@ -17,9 +24,16 @@ typedef struct {
   unsigned int submitFrame;
   render_backend backend;
 
-  unsigned int materialCount;
-  material_description* materialDescriptions;
-  material_property_description** materialPropertyDescriptions;
+  mesh_manager meshManager;
+  material_manager materialManager;
+  scene_manager sceneManager;
+
+  int shouldClose;
+  int running;
+  int started;
+#ifdef STROBE_RENDERER_ENABLE_PROFILING
+  frame_profiler frameProfiler;
+#endif
 } render_context_t;
 
 
@@ -31,7 +45,11 @@ typedef struct {
 
 void render_context_init(render_context_t* context, render_context_create_info* createInfo);
 
+void renderer_start(render_context_t* context);
+
+void renderer_stop(render_context_t* context);
+
 void render_context_destroy(render_context_t*);
 
-#endif
 
+#endif

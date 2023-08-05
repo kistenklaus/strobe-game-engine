@@ -1,6 +1,13 @@
 #include "darray.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+static int cmp_int(const void *va, const void *vb)
+{
+  int a = *(int *)va, b = *(int *) vb;
+  return a < b ? -1 : a > b ? +1 : 0;
+}
 
 static void darray_grow(darray *darray) {
   void *oldMemory = darray->memory;
@@ -65,6 +72,10 @@ size_t darray_find(darray *darray, int (*cmp)(void *elem)) {
   return i;
 }
 
+void darray_sort(darray* darray, int (*cmp)(const void* a, const void* b)){
+  qsort(darray->memory, darray->count, darray->elementSize, cmp);
+}
+
 void darray_destroy(darray *darray) {
   free(darray->memory);
   darray->elementSize = 0;
@@ -79,7 +90,7 @@ darray_iterator darray_iterate(darray *darray) {
   darray_iterator iterator;
   iterator.cur = darray->memory;
   iterator.end =
-      ((char *)darray->memory) + darray->capacity * darray->elementSize;
+      ((char *)darray->memory) + darray->count * darray->elementSize;
   iterator.elementSize = darray->elementSize;
   return iterator;
 }
@@ -90,5 +101,5 @@ void *darray_iterator_next(darray_iterator *iterator) {
   return it;
 }
 int darray_iterator_has_next(darray_iterator *iterator) {
-  return ((char *)iterator->cur) < ((char *)iterator->end);
+  return iterator->cur != iterator->end; 
 }

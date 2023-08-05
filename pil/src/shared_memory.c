@@ -1,4 +1,5 @@
 #include "shared_memory.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 void shared_memory_create(shared_memory* sharedMemory, size_t size) {
@@ -8,7 +9,7 @@ void shared_memory_create(shared_memory* sharedMemory, size_t size) {
 }
 
 void shared_memory_make_shared(shared_memory sharedMemory) {
-  ((size_t *)(sharedMemory.data))[0]++;
+  (*((size_t *)(sharedMemory.data)))++;
 }
 
 void* shared_memory_get(shared_memory sharedMemory) {

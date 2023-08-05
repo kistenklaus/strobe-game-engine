@@ -2,6 +2,7 @@
 #define STROBE_PIL_D_ARRAY_H
 
 #include <stddef.h>
+
 typedef struct {
   void* memory;
   unsigned int elementSize;
@@ -27,11 +28,14 @@ void darray_clear(darray* darray);
 
 size_t darray_find(darray* darray, int (*cmp)(void* elem));
 
+void darray_sort(darray* darray, int (*cmp)(const void* a, const void* b));
+
 int darray_is_empty(darray* darray);
 
 size_t darray_size(darray* darray);
 
 void darray_destroy(darray* darray);
+
 
 typedef struct {
   void* end;

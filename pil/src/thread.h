@@ -5,10 +5,10 @@
 
 typedef struct {
   pthread_t pthreadId;
-} thread_t;
+} thread;
 
-int thread_create(thread_t* thread, void*(*entry_function)(void* arg), void* arg);
+int thread_create(thread* thread, void*(*entry_function)(void* arg), void* arg);
 
-int thread_join(thread_t* thread, void** retval);
+int thread_join(thread* thread, void** retval);
 
 #endif
