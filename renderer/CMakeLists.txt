@@ -4,7 +4,6 @@
 # @created     : Friday Apr 07, 2023 15:39:05 CEST
 ######################################################################
 
-add_subdirectory(common)
 add_subdirectory(trigon)
 
 
@@ -46,11 +45,12 @@ target_include_directories(${LIB_NAME} PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/src" #remove later.
   )
 target_link_libraries(${LIB_NAME} 
-  PUBLIC strobe_pil strobe_renderer_common strobe_lia strobe_logging strobe_profiler)
+  PUBLIC strobe_pil strobe_lia strobe_logging strobe_profiler)
 
 target_compile_definitions(${RENDERER_NAME} PUBLIC STROBE_RENDERER_ENABLE_PROFILING)
 
 add_subdirectory(glfw)
+add_subdirectory(opengl-backend)
 add_subdirectory(sandbox)
 
 #create_test_target(${LIB_NAME} test)

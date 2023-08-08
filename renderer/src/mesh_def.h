@@ -1,7 +1,7 @@
-#ifndef STROBE_RENDERER_COMMON_API_H
-#define STROBE_RENDERER_COMMON_API_H
+#ifndef STROBE_RENDERER_MESH_DEF_H
+#define STROBE_RENDERER_MESH_DEF_H
+
 #include "shared_memory.h"
-#include "mat.h"
 
 typedef enum {
   STROBE_MESH_ATTRIBUTE_USAGE_STATIC,
@@ -39,33 +39,5 @@ typedef enum {
 typedef struct {
 
 } mesh_update_info;
-
-typedef struct {
-  const char* name;
-  const char* typeHint;
-  unsigned int size;
-} material_property_description;
-
-typedef struct {
-  const char* name;
-  unsigned int id;
-  unsigned int propertyCount;
-} material_description;
-
-typedef struct {
-  material_description description;
-  void* initalPropertyValues;
-} material_create_info;
-
-
-typedef struct {
-
-} render_backend;
-
-
-typedef struct {
-  int (*create_backend)(render_backend* backend);
-} render_backend_create_info;
-
 
 #endif

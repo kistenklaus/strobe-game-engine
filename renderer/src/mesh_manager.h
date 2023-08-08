@@ -5,6 +5,8 @@
 #include "allocators.h"
 #include "containers.h"
 #include "render_backend.h"
+#include "mesh_def.h"
+
 
 typedef struct {
   unsigned int frameCount;

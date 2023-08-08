@@ -17,15 +17,19 @@ void render_context_init(render_context_t *context,
   context->shouldClose = 0;
   context->running = 0;
   context->started = 0;
+  createInfo->backend.constructor(&context->backend);
   frame_barrier_init(&context->frameBarrier);
-
 }
 
-void renderer_start(render_context_t* context){
-  if(context->started)return;
+int renderer_start(render_context_t* context){
+  if(context->started)return 1;
   context->started = 1;
   context->shouldClose = 0;
-  render_thread_start(context);
+  unsigned int code = render_thread_start(context);
+  if(code){
+    context->started = 0;
+  }
+  return code;
 }
 
 void renderer_stop(render_context_t* context){

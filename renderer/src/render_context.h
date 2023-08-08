@@ -34,6 +34,7 @@ typedef struct {
 #ifdef STROBE_RENDERER_ENABLE_PROFILING
   frame_profiler frameProfiler;
 #endif
+  darray requiredDestroyCalls; // function calls.
 } render_context_t;
 
 
@@ -45,7 +46,7 @@ typedef struct {
 
 void render_context_init(render_context_t* context, render_context_create_info* createInfo);
 
-void renderer_start(render_context_t* context);
+int renderer_start(render_context_t* context);
 
 void renderer_stop(render_context_t* context);
 

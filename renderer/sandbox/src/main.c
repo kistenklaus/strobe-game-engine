@@ -2,6 +2,7 @@
 #include "mat.h"
 #include "mesh.h"
 #include "trigon.h"
+#include "opengl_backend.h"
 #include "render_backend.h"
 #include "scene.h"
 #include "render_context.h"
@@ -17,25 +18,18 @@
 
 int main(int argc, char **argv) {
 
-
-  mat4f a;
-  mat4f b;
-  float x[2];
-  mat4f_mul(&a, &a, &b);
-
   window_t window;
   create_glfw_window(&window, 800, 600, "FLOATING");
 
-  render_backend_create_info backendCreateInfo;
 
   render_context_create_info contextCreateInfo;
   contextCreateInfo.window = &window;
   contextCreateInfo.swapBufferCount = 0;
-  contextCreateInfo.backend = backendCreateInfo;
+  contextCreateInfo.backend = OPENGL_RENDER_BACKEND;
   render_context_t context;
 
   render_context_init(&context, &contextCreateInfo);
-  renderer_start(&context);
+  if(renderer_start(&context))return 0;
 
   unsigned int scene;
   scene_create_info sceneCreateInfo = {};
@@ -47,6 +41,7 @@ int main(int argc, char **argv) {
   float data[] = {0, 0, 0};
   shared_memory meshVertexData;
   shared_memory_create(&meshVertexData, sizeof(float) * (3 + 2 + 3));
+
 
 
   unsigned int mesh;
