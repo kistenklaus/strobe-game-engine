@@ -1,3 +1,5 @@
 .vim-build/
 cmake-build-debug/
 target/
+build/
+.cache

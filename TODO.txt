@@ -1,3 +1,0 @@
-
-refactor backend-renderer esspecially the constructor! (helper methods)
-
