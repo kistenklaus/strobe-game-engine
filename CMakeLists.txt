@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.5)
 project(lvulkan CXX)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -15,22 +15,25 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 add_executable(${PROJECT_NAME} 
   src/main.cpp
-  src/vk/vk.cpp
-  src/vk/ext.cpp
-  src/glfw/glfw.cpp
+  src/window/glfw/GlfwWindow.cpp
+  src/window/glfw/GlfwWindow.hpp
+  src/window/Window.cpp
+  src/window/Window.hpp
+  src/window/WindowApi.hpp
 )
 target_include_directories(${PROJECT_NAME} 
   PUBLIC 
     ${Vulkan_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIRECTORY}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/
 )
 target_link_libraries(${PROJECT_NAME} 
   PUBLIC 
     glfw 
     ${Vulkan_LIBRARIES}
 )
+target_compile_definitions(${PROJECT_NAME} PRIVATE 
+  GLFW_INCLUDE_VULKAN)
 # target_compile_options(${PROJECT_NAME}
 #   PUBLIC
 #    -std=c++23
 # )
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_26)
