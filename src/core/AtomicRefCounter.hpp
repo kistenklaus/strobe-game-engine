@@ -7,9 +7,8 @@ namespace strobe {
 template <std::unsigned_integral T>
 class AtomicRefCounter {
  public:
-  void reset() {
-    m_counter.store(1);
-  }
+  AtomicRefCounter() : m_counter(1) {}
+  void reset() { m_counter.store(1); }
   bool inc() {
     auto current = m_counter.load();
     while (current > 0 &&

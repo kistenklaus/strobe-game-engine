@@ -34,6 +34,8 @@ class GlfwWindow final : public WindowContext {
 
   vk::SurfaceKHR createSurface(vk::Instance instance) final override;
 
+  std::span<const char* const> getRequiredVkInstanceExtensions() final override;
+
  private:
   void* m_ptr;
 };

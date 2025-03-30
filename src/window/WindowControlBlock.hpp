@@ -6,6 +6,7 @@
 #include <semaphore>
 #include <string>
 
+#include "core/ApplicationInfo.hpp"
 #include "input/Keyboard.hpp"
 #include "window/ClientApi.hpp"
 #include "window/WindowContext.hpp"
@@ -16,6 +17,10 @@ struct WindowControlBlock {
   // locked resources
   unsigned int width = 600;
   unsigned int height = 400;
+
+  unsigned int framebufferWidth;
+  unsigned int framebufferHeight;
+
   bool resizable = false;
   bool visible = true;
   bool vsync = false;
@@ -28,6 +33,8 @@ struct WindowControlBlock {
 
   // input
   std::shared_ptr<input::Keyboard> keyboard;
+
+  std::shared_ptr<ApplicationInfo> appInfo;
 
 };
 

@@ -4,6 +4,7 @@
 
 #include <cstring>
 #include <mutex>
+#include <print>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -25,6 +26,16 @@ static void window_size_callback(GLFWwindow* window, int width, int height) {
   controlBlock->height = height;
 }
 
+static void framebuffer_size_callback(GLFWwindow* window, int framebufferWidth,
+                                      int framebufferHeight) {
+  details::WindowControlBlock* controlBlock =
+      reinterpret_cast<details::WindowControlBlock*>(
+          glfwGetWindowUserPointer(window));
+  std::lock_guard<std::mutex> lck{controlBlock->mutex};
+  controlBlock->framebufferWidth = framebufferWidth;
+  controlBlock->framebufferHeight = framebufferHeight;
+}
+
 GlfwWindow::GlfwWindow(
     ClientApi api,
     const std::shared_ptr<details::WindowControlBlock>& controlBlock) {
@@ -37,6 +48,7 @@ GlfwWindow::GlfwWindow(
     }
     s_glfwUseCount++;
   }
+
   std::lock_guard<std::mutex> lck{controlBlock->mutex};
 
   if (std::holds_alternative<ClientApiVulkan>(*api)) {
@@ -52,6 +64,7 @@ GlfwWindow::GlfwWindow(
   GLFWwindow* ptr =
       glfwCreateWindow(controlBlock->width, controlBlock->height,
                        controlBlock->title.data(), nullptr, nullptr);
+
   if (!ptr) {
     glfwTerminate();
     std::runtime_error("Failed to create GLFW window");
@@ -60,6 +73,12 @@ GlfwWindow::GlfwWindow(
 
   glfwSetWindowUserPointer(ptr, controlBlock.get());
   glfwSetWindowSizeCallback(ptr, window_size_callback);
+
+  int framebufferWidth, framebufferHeight;
+  glfwGetFramebufferSize(ptr, &framebufferWidth, &framebufferHeight);
+  controlBlock->framebufferWidth = framebufferWidth;
+  controlBlock->framebufferHeight = framebufferHeight;
+  glfwSetFramebufferSizeCallback(ptr, framebuffer_size_callback);
 
   m_ptr = ptr;
 
@@ -87,11 +106,13 @@ void GlfwWindow::close() {
   glfwSetWindowShouldClose(reinterpret_cast<GLFWwindow*>(m_ptr), 1);
 }
 
-void GlfwWindow::setWidth(unsigned int width) {}
+void GlfwWindow::setWidth(unsigned int width) { setSize(width, getHeight()); }
 
-void GlfwWindow::setHeight(unsigned int height) {}
+void GlfwWindow::setHeight(unsigned int height) { setSize(getWidth(), height); }
 
-void GlfwWindow::setSize(unsigned int widht, unsigned int height) {}
+void GlfwWindow::setSize(unsigned int width, unsigned int height) {
+  glfwSetWindowSize(reinterpret_cast<GLFWwindow*>(m_ptr), width, height);
+}
 
 unsigned int GlfwWindow::getWidth() { return getSize().first; }
 
@@ -104,7 +125,10 @@ std::pair<unsigned int, unsigned int> GlfwWindow::getSize() {
   return std::make_pair(width, height);
 }
 
-void GlfwWindow::setTitle(std::string_view title) {};
+void GlfwWindow::setTitle(std::string_view title) {
+  std::string cstr(title);
+  glfwSetWindowTitle(reinterpret_cast<GLFWwindow*>(m_ptr), cstr.c_str());
+};
 
 std::string_view GlfwWindow::getTitle() {
   const char* title = glfwGetWindowTitle(reinterpret_cast<GLFWwindow*>(m_ptr));
@@ -124,4 +148,9 @@ vk::SurfaceKHR GlfwWindow::createSurface(vk::Instance instance) {
   return surface;
 };
 
+std::span<const char* const> GlfwWindow::getRequiredVkInstanceExtensions() {
+  uint32_t count;
+  const char** extensions = glfwGetRequiredInstanceExtensions(&count);
+  return std::span(extensions, count);
+}
 }  // namespace strobe::window

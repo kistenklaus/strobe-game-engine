@@ -1,39 +1,28 @@
-cmake_minimum_required(VERSION 3.5)
+# Clean and structured CMake setup for Vulkan + shaderc + spirv-tools
+cmake_minimum_required(VERSION 3.14)
 project(lvulkan CXX)
+
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+endif()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Vulkan REQUIRED)
-find_package(glfw3 REQUIRED)
+include(FetchContent)
 
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(EXECUTABLE ${PROJECT_NAME})
 
-add_executable(${PROJECT_NAME} 
-  src/main.cpp
-  src/window/glfw/GlfwWindow.cpp
-  src/window/glfw/GlfwWindow.hpp
-  src/window/Window.cpp
-  src/window/Window.hpp
-  src/window/WindowApi.hpp
+file(GLOB_RECURSE SRC_SOURCE_FILES CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB_RECURSE SRC_HEADER_FILES CONFIGURE_DEPENDS src/*.hpp)
+
+add_executable(${EXECUTABLE} ${SRC_SOURCE_FILES} ${SRC_HEADER_FILES})
+
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-target_include_directories(${PROJECT_NAME} 
-  PUBLIC 
-    ${Vulkan_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/
-)
-target_link_libraries(${PROJECT_NAME} 
-  PUBLIC 
-    glfw 
-    ${Vulkan_LIBRARIES}
-)
-target_compile_definitions(${PROJECT_NAME} PRIVATE 
-  GLFW_INCLUDE_VULKAN)
-# target_compile_options(${PROJECT_NAME}
-#   PUBLIC
-#    -std=c++23
-# )
+
+include(cmake/dependencies.cmake)
+include(cmake/compile_shaders.cmake)

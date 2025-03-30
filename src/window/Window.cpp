@@ -19,11 +19,14 @@ std::shared_ptr<WindowContext> Window::createContext(WindowApi windowApi) {
 
   switch (windowApi) {
     case WindowApi::GLFW: {
+
       auto context = std::make_shared<GlfwWindow>(m_controlBlock->clientApi, m_controlBlock);
+
       {
         std::lock_guard<std::mutex> lck{m_controlBlock->mutex};
         m_controlBlock->context = context;
       }
+
       m_controlBlock->initalized.notify_all();
       return context;
     }

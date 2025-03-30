@@ -27,6 +27,7 @@ class WindowContext {
   virtual void setResizable(bool resizable) = 0;
   virtual bool isResizable() = 0;
   virtual vk::SurfaceKHR createSurface(vk::Instance instance) = 0;
+  virtual std::span<const char* const> getRequiredVkInstanceExtensions() = 0;
 };
 
 }  // namespace strobe::window::api

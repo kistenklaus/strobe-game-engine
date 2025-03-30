@@ -14,8 +14,11 @@ namespace strobe::window {
 
 class Window {
  public:
-  Window() : m_controlBlock(std::make_shared<details::WindowControlBlock>()) {
-    m_controlBlock->title = "Strobe-Game-Engine";
+  Window() = default;
+  Window(std::shared_ptr<ApplicationInfo> appInfo)
+      : m_controlBlock(std::make_shared<details::WindowControlBlock>()) {
+    m_controlBlock->appInfo = appInfo;
+    m_controlBlock->title = appInfo->name;
   }
 
   void setWidth(unsigned int width) {
@@ -42,6 +45,22 @@ class Window {
   unsigned int getHeight() const {
     std::lock_guard<std::mutex> lck{m_controlBlock->mutex};
     return m_controlBlock->height;
+  }
+
+  unsigned int getFramebufferWidth() const {
+    std::lock_guard<std::mutex> lck{m_controlBlock->mutex};
+    return m_controlBlock->framebufferWidth;
+  }
+
+  unsigned int getFramebufferHeight() const {
+    std::lock_guard<std::mutex> lck{m_controlBlock->mutex};
+    return m_controlBlock->framebufferWidth;
+  }
+
+  std::pair<unsigned int, unsigned int> getFramebufferSize() const {
+    std::lock_guard<std::mutex> lck{m_controlBlock->mutex};
+    return std::make_pair(m_controlBlock->framebufferWidth,
+                          m_controlBlock->framebufferHeight);
   }
 
   void setTitle(std::string_view title) {
@@ -90,16 +109,37 @@ class Window {
         lock, [this]() { return !this->m_controlBlock->context.expired(); });
   }
 
+  void setClientApi(ClientApi clientApi) {
+    std::lock_guard<std::mutex> lck{m_controlBlock->mutex};
+    assert(!static_cast<bool>(m_controlBlock->clientApi));
+    m_controlBlock->clientApi = clientApi;
+  }
+
+  std::shared_ptr<ApplicationInfo> getApplicationInfo() {
+    std::lock_guard<std::mutex> lck{m_controlBlock->mutex};
+    return m_controlBlock->appInfo;
+  }
+
+  // vulkan specific
   vk::SurfaceKHR createVkSurface(vk::Instance instance) {
+    {
+      std::lock_guard<std::mutex> lck{m_controlBlock->mutex};
+      assert(m_controlBlock->clientApi == ClientApiVulkan{});
+    }
+
     auto context = getContext();
     assert(context != nullptr);
     return context->createSurface(instance);
   }
 
-  void setClientApi(ClientApi clientApi) {
-    std::lock_guard<std::mutex> lck{m_controlBlock->mutex};
-    assert(!static_cast<bool>(m_controlBlock->clientApi));
-    m_controlBlock->clientApi = clientApi;
+  std::span<const char* const> getRequiredVkInstanceExtensions() {
+    {
+      std::lock_guard<std::mutex> lck{m_controlBlock->mutex};
+      assert(m_controlBlock->clientApi == ClientApiVulkan{});
+    }
+    auto context = getContext();
+    assert(context != nullptr);
+    return context->getRequiredVkInstanceExtensions();
   }
 
  private:

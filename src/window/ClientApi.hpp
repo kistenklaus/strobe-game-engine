@@ -5,7 +5,12 @@
 #include <variant>
 namespace strobe::window {
 
-struct ClientApiVulkan {};
+struct ClientApiVulkan {
+  constexpr friend bool operator==(const ClientApiVulkan&,
+                                   const ClientApiVulkan&) noexcept {
+    return true;
+  }
+};
 
 class ClientApi {
  private:
@@ -23,8 +28,14 @@ class ClientApi {
     return *m_variant;
   }
 
-  [[maybe_unused]] operator bool() const {
-    return m_variant != std::nullopt;
+  [[maybe_unused]] operator bool() const { return m_variant != std::nullopt; }
+
+  friend inline bool operator==(const ClientApi& lhs, const ClientApi& rhs) {
+    return lhs.m_variant == rhs.m_variant;
+  }
+
+  friend inline bool operator!=(const ClientApi& lhs, const ClientApi& rhs) {
+    return !(lhs == rhs);
   }
 
  private:

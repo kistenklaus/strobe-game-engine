@@ -8,7 +8,6 @@
 #include "renderer/RenderContext.hpp"
 #include "renderer/RendererControlBlock.hpp"
 #include "renderer/resources.hpp"
-#include "renderer/vks/VksRenderer.hpp"
 #include "window/Window.hpp"
 
 namespace strobe::renderer {
@@ -42,17 +41,7 @@ class Renderer {
     m_controlBlock->context->endFrame();
   }
 
-  std::shared_ptr<RenderContext> createContext(RenderBackend backend) {
-    switch (backend) {
-      case RenderBackend::Vks: {
-        m_controlBlock->context =
-            std::make_shared<vks::VksRenderer>(m_controlBlock->window);
-        return m_controlBlock->context;
-      }
-      default:
-        std::unreachable();
-    }
-  }
+  std::shared_ptr<RenderContext> createContext(RenderBackend backend);
 
   std::shared_ptr<RenderContext> getContext() const {
     assert(m_controlBlock->context != nullptr);
