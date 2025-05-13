@@ -2,7 +2,7 @@
 
 #include <atomic>
 #include <random>
-#include <strobe/core/containers/ring_buffer.hpp>
+#include <strobe/core/sync/lockfree/lockfree_spsc_ring_buffer.hpp>
 #include <thread>
 
 // Basic Enqueue and Dequeue Test

@@ -1,10 +1,11 @@
 #include <gtest/gtest.h>
 
 #include <strobe/core/containers/ring_buffer.hpp>
+#include "strobe/core/memory/Mallocator.hpp"
 
 // Basic Initialization Test
 TEST(RingBuffer, BasicInitialization) {
-  strobe::RingBuffer<int, 8> buffer;
+  strobe::InplaceRingBuffer<int, 8> buffer;
   ASSERT_TRUE(buffer.empty());
   ASSERT_FALSE(buffer.full());
   ASSERT_EQ(buffer.size(), 0);
@@ -13,7 +14,26 @@ TEST(RingBuffer, BasicInitialization) {
 
 // Push and Pop Operations
 TEST(RingBuffer, PushBackPopFront) {
-  strobe::RingBuffer<int, 8> buffer;
+  strobe::InplaceRingBuffer<int, 8> buffer;
+  buffer.push_back(1);
+  buffer.push_back(2);
+  buffer.push_back(3);
+
+  ASSERT_EQ(buffer.front(), 1);
+  ASSERT_EQ(buffer.back(), 3);
+  ASSERT_EQ(buffer.size(), 3);
+
+  buffer.pop_front();
+  ASSERT_EQ(buffer.front(), 2);
+  ASSERT_EQ(buffer.size(), 2);
+
+  buffer.pop_front();
+  buffer.pop_front();
+  ASSERT_TRUE(buffer.empty());
+}
+
+TEST(RingBuffer, PushBackPopFrontDynamic) {
+  strobe::RingBuffer<int, strobe::Mallocator> buffer{8};
   buffer.push_back(1);
   buffer.push_back(2);
   buffer.push_back(3);
@@ -32,7 +52,7 @@ TEST(RingBuffer, PushBackPopFront) {
 }
 
 TEST(RingBuffer, PushFrontPopBack) {
-  strobe::RingBuffer<int, 8> buffer;
+  strobe::InplaceRingBuffer<int, 8> buffer;
   buffer.push_front(1);
   buffer.push_front(2);
   buffer.push_front(3);
@@ -52,7 +72,7 @@ TEST(RingBuffer, PushFrontPopBack) {
 
 // Queue-Like Operations (Enqueue/Dequeue)
 TEST(RingBuffer, EnqueueDequeue) {
-  strobe::RingBuffer<int, 8> buffer;
+  strobe::InplaceRingBuffer<int, 8> buffer;
   ASSERT_TRUE(buffer.enqueue(1));
   ASSERT_TRUE(buffer.enqueue(2));
   ASSERT_TRUE(buffer.enqueue(3));
@@ -66,7 +86,7 @@ TEST(RingBuffer, EnqueueDequeue) {
 
 // Full and Empty Conditions
 TEST(RingBuffer, FullAndEmptyConditions) {
-  strobe::RingBuffer<int, 3> buffer;
+  strobe::InplaceRingBuffer<int, 3> buffer;
   ASSERT_TRUE(buffer.empty());
   ASSERT_FALSE(buffer.full());
 
@@ -85,7 +105,7 @@ TEST(RingBuffer, FullAndEmptyConditions) {
 
 // Front and Back Access
 TEST(RingBuffer, FrontAndBackAccess) {
-  strobe::RingBuffer<int, 8> buffer;
+  strobe::InplaceRingBuffer<int, 8> buffer;
   buffer.push_back(10);
   buffer.push_back(20);
   buffer.push_back(30);
@@ -100,7 +120,7 @@ TEST(RingBuffer, FrontAndBackAccess) {
 
 // Clear Operation
 TEST(RingBuffer, ClearOperation) {
-  strobe::RingBuffer<int, 8> buffer;
+  strobe::InplaceRingBuffer<int, 8> buffer;
   buffer.push_back(10);
   buffer.push_back(20);
   buffer.push_back(30);
@@ -138,7 +158,7 @@ TEST(RingBuffer, MemorySafety) {
   using namespace ringbuffer_test;
   
   {
-    strobe::RingBuffer<Tracked, 4> buffer;
+    strobe::InplaceRingBuffer<Tracked, 4> buffer;
 
     // Enqueue some items
     buffer.push_back(Tracked(1));
@@ -146,9 +166,11 @@ TEST(RingBuffer, MemorySafety) {
     buffer.push_back(Tracked(3));
     ASSERT_EQ(Tracked::instance_count.load(), 3);
 
+
     // Dequeue some items
     buffer.pop_front();
     ASSERT_EQ(Tracked::instance_count.load(), 2);
+
 
     // Enqueue again to trigger wrapping
     buffer.push_back(Tracked(4));
@@ -158,7 +180,10 @@ TEST(RingBuffer, MemorySafety) {
     // Clear the buffer
     buffer.clear();
     ASSERT_EQ(Tracked::instance_count.load(), 0);
+
   }
+
+
 
   // After scope ends, all instances should be destroyed
   ASSERT_EQ(Tracked::instance_count.load(), 0);
@@ -169,7 +194,7 @@ TEST(RingBuffer, MemorySafetyClearReuse) {
   using namespace ringbuffer_test;
 
   {
-    strobe::RingBuffer<Tracked, 4> buffer;
+    strobe::InplaceRingBuffer<Tracked, 4> buffer;
 
     // Enqueue some items
     buffer.push_back(Tracked(1));
@@ -200,7 +225,7 @@ TEST(RingBuffer, MemorySafetyPartialDestruction) {
   using namespace ringbuffer_test;
 
   {
-    strobe::RingBuffer<Tracked, 4> buffer;
+    strobe::InplaceRingBuffer<Tracked, 4> buffer;
 
     // Enqueue some items
     buffer.push_back(Tracked(1));

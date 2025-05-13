@@ -4,3 +4,4 @@ target/
 build/
 .cache
 **.bin
+.idea
