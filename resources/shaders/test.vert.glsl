@@ -1,6 +1,0 @@
-
-abssd
-asin
-asf
-asind
-

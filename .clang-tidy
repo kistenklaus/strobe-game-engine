@@ -1,0 +1,5 @@
+Checks: '-*,clang-analyzer-*'
+WarningsAsErrors: ''
+HeaderFilterRegex: '.*'
+UseColor: true
+ExtraArgs: ['-Wno-unused-include']

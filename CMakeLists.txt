@@ -1,6 +1,6 @@
 # Clean and structured CMake setup for Vulkan + shaderc + spirv-tools
 cmake_minimum_required(VERSION 3.14)
-project(lvulkan CXX)
+project(strobe CXX)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
@@ -10,19 +10,18 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-include(FetchContent)
-
-set(EXECUTABLE ${PROJECT_NAME})
-
-file(GLOB_RECURSE SRC_SOURCE_FILES CONFIGURE_DEPENDS src/*.cpp)
-file(GLOB_RECURSE SRC_HEADER_FILES CONFIGURE_DEPENDS src/*.hpp)
-
-add_executable(${EXECUTABLE} ${SRC_SOURCE_FILES} ${SRC_HEADER_FILES})
-
-target_include_directories(${PROJECT_NAME}
-  PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(cmake/colorful.cmake)
 include(cmake/dependencies.cmake)
-include(cmake/compile_shaders.cmake)
+include(cmake/configuration.cmake)
+
+# Subsystem configuration
+select_strobe_window_api()
+
+
+add_subdirectory(libs/core)
+
+# add_subdirectory(subsystems/window)
+add_subdirectory(sandbox)
+
+
