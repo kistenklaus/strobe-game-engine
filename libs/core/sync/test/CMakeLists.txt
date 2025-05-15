@@ -5,9 +5,10 @@ enable_testing()
 
 add_executable(${STROBE_CORE_SYNC_TESTS} 
   ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-  # ${CMAKE_CURRENT_SOURCE_DIR}/RingBuffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/LockFreeSPSCRingBuffer.cpp
-  # ${CMAKE_CURRENT_SOURCE_DIR}/LockFreeMPSCRingBuffer.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/LockFreeMPSCRingBuffer.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/mpsc.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/spsc.cpp
 )
 
 target_compile_options(${STROBE_CORE_SYNC_TESTS} PUBLIC -g -O0)

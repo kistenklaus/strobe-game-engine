@@ -5,6 +5,7 @@ add_library(${STROBE_CORE_MEMORY_LIB}
   STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/memory/PageAllocator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/memory/pages.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/memory/static_test.cpp
 )
 
 # Use PUBLIC here to propagate the include directories

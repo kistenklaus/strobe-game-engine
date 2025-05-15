@@ -2,12 +2,14 @@
 
 #include <atomic>
 #include <random>
-#include <strobe/core/sync/lockfree/lockfree_spsc_ring_buffer.hpp>
+#include <strobe/core/sync/lockfree/spsc_ring_buffer.hpp>
 #include <thread>
+
+using namespace strobe::sync;
 
 // Basic Enqueue and Dequeue Test
 TEST(LockFreeSPSCRingBuffer, EnqueueDequeue) {
-  strobe::LockFreeSPSCRingBuffer<int, 8> buffer;
+  InplaceLockFreeSPSCRingBuffer<int, 8> buffer;
   ASSERT_TRUE(buffer.enqueue(1));
   ASSERT_TRUE(buffer.enqueue(2));
   ASSERT_TRUE(buffer.enqueue(3));
@@ -18,9 +20,23 @@ TEST(LockFreeSPSCRingBuffer, EnqueueDequeue) {
   ASSERT_FALSE(buffer.dequeue().has_value());
 }
 
+TEST(LockFreeSPSCRingBuffer, EnqueueDequeueDynamic) {
+  LockFreeSPSCRingBuffer<int, strobe::Mallocator> buffer{8};
+  ASSERT_TRUE(buffer.enqueue(1));
+  ASSERT_TRUE(buffer.enqueue(2));
+  ASSERT_TRUE(buffer.enqueue(3));
+
+  ASSERT_EQ(buffer.dequeue().value(), 1);
+  ASSERT_EQ(buffer.dequeue().value(), 2);
+  ASSERT_EQ(buffer.dequeue().value(), 3);
+  ASSERT_FALSE(buffer.dequeue().has_value());
+}
+
+
+
 // True Wrap-Around Test (Corrected)
 TEST(LockFreeSPSCRingBuffer, WrapAroundTest) {
-  strobe::LockFreeSPSCRingBuffer<int, 4> buffer;
+  InplaceLockFreeSPSCRingBuffer<int, 4> buffer;
 
   // Fill the buffer to full capacity (4 items)
   ASSERT_TRUE(buffer.enqueue(1));
@@ -45,7 +61,7 @@ TEST(LockFreeSPSCRingBuffer, WrapAroundTest) {
 
 // Multi-Threaded SPSC Test (Basic)
 TEST(LockFreeSPSCRingBuffer, MultiThreadedProducerConsumer) {
-  strobe::LockFreeSPSCRingBuffer<int, 1024> buffer;
+  InplaceLockFreeSPSCRingBuffer<int, 1024> buffer;
   std::atomic<size_t> produced_count{0};
   std::atomic<size_t> consumed_count{0};
   std::atomic<bool> stop_flag{false};
@@ -83,7 +99,7 @@ TEST(LockFreeSPSCRingBuffer, MultiThreadedProducerConsumer) {
 
 // Balanced Throughput Test
 TEST(LockFreeSPSCRingBuffer, BalancedThroughput) {
-  strobe::LockFreeSPSCRingBuffer<int, 1024> buffer;
+  InplaceLockFreeSPSCRingBuffer<int, 1024> buffer;
   std::atomic<size_t> produced_count{0};
   std::atomic<size_t> consumed_count{0};
   std::atomic<bool> stop_flag{false};
@@ -115,7 +131,7 @@ TEST(LockFreeSPSCRingBuffer, BalancedThroughput) {
 
 // High Contention Test
 TEST(LockFreeSPSCRingBuffer, HighContentionTest) {
-  strobe::LockFreeSPSCRingBuffer<int, 1024> buffer;
+  InplaceLockFreeSPSCRingBuffer<int, 1024> buffer;
   std::atomic<size_t> produced_count{0};
   std::atomic<size_t> consumed_count{0};
   std::atomic<bool> stop_flag{false};
@@ -168,7 +184,7 @@ std::atomic<int> Tracked::instance_count{0};
 TEST(LockFreeSPSCRingBuffer, MemorySafety) {
   using namespace spsc_test;
   {
-    strobe::LockFreeSPSCRingBuffer<spsc_test::Tracked, 4> buffer;
+    InplaceLockFreeSPSCRingBuffer<spsc_test::Tracked, 4> buffer;
     ASSERT_EQ(Tracked::instance_count.load(), 0);
 
     buffer.enqueue(Tracked(1));

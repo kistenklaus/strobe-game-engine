@@ -9,3 +9,6 @@
 #include <strobe/core/memory/align.hpp>
 #include <strobe/core/memory/pages.hpp>
 #include <strobe/core/memory/trivially_destructible_after_move.hpp>
+
+#include <strobe/core/memory/smart_pointers/SharedBlock.hpp>
+#include <strobe/core/memory/smart_pointers/SharedPtr.hpp>

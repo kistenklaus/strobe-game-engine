@@ -1,15 +1,16 @@
 #pragma once
 
 #include <string_view>
+#include <strobe/core/sync/spsc.hpp>
 #include <strobe/lina.hpp>
 #include <strobe/memory.hpp>
-#include <utility>
 
 namespace strobe::window {
 
 class WindowImpl {
  public:
-  WindowImpl(uvec2 size, std::string_view title, PolyAllocator allocator);
+  WindowImpl(uvec2 size, std::string_view title,
+             PolyAllocatorReference allocator);
   ~WindowImpl();
 
   WindowImpl(const WindowImpl&) = delete;
@@ -30,8 +31,11 @@ class WindowImpl {
   void setResizable(bool resizable);
   bool isResizable() const;
 
+  spsc::SharedReceiver<int> keyboardEventChannel();
+  spsc::SharedReceiver<int> mouseEventChannel();
+
  private:
   void* m_internals;
 };
 
-}  // namespace strobe::window::details
+}  // namespace strobe::window

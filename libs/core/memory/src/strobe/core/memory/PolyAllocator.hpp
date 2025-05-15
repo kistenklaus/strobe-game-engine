@@ -2,63 +2,37 @@
 
 #include <cstddef>
 
+#include "strobe/core/memory/AllocatorReference.hpp"
 #include "strobe/core/memory/AllocatorTraits.hpp"
-#include "strobe/core/memory/Mallocator.hpp"
+
 namespace strobe {
 
-namespace detail {
-
-class MemoryResource {
+class PolyMemoryResource {
  public:
+  virtual ~PolyMemoryResource() = default;
   virtual void* allocate(std::size_t size, std::size_t align) = 0;
   virtual void deallocate(void* ptr, std::size_t size, std::size_t align) = 0;
 };
 
 template <Allocator A>
-class MemoryResourceAllocatorAdapter : public MemoryResource {
-  using Traits = AllocatorTraits<A>;
+class MemoryResource : public PolyMemoryResource {
+  using ATraits = AllocatorTraits<A>;
 
  public:
-  explicit MemoryResourceAllocatorAdapter(A* upstream) : m_upstream(upstream) {}
+  MemoryResource(const A& alloc) : m_allocator(alloc) {}
 
   void* allocate(std::size_t size, std::size_t align) final override {
-    return Traits::allocate(*m_upstream, size, align);
+    return ATraits::allocate(m_allocator, size, align);
   }
   void deallocate(void* ptr, std::size_t size,
                   std::size_t align) final override {
-    return Traits::deallocate(*m_upstream, ptr, size, align);
+    ATraits::deallocate(m_allocator, ptr, size, align);
   }
 
  private:
-  A* m_upstream;
+  [[no_unique_address]] A m_allocator;
 };
 
-}  // namespace detail
-
-class PolyAllocator {
- public:
-  template <Allocator A>
-  PolyAllocator(A* upstream) {
-    using Adapter = detail::MemoryResourceAllocatorAdapter<A>;
-    static_assert(sizeof(Adapter) <= sizeof(m_storage));
-    new (m_storage) Adapter(upstream);
-  }
-
-  void* allocate(std::size_t size, std::size_t align) {
-    detail::MemoryResource* resource =
-        reinterpret_cast<detail::MemoryResource*>(this->m_storage);
-    return resource->allocate(size, align);
-  }
-
-  void deallocate(void* ptr, std::size_t size, std::size_t align) {
-    detail::MemoryResource* resource =
-        reinterpret_cast<detail::MemoryResource*>(this->m_storage);
-    resource->deallocate(ptr, size, align);
-  }
-
- private:
-  alignas(detail::MemoryResourceAllocatorAdapter<Mallocator>) std::byte
-      m_storage[sizeof(detail::MemoryResourceAllocatorAdapter<Mallocator>)];
-};
+using PolyAllocatorReference = AllocatorReference<PolyMemoryResource>;
 
 }  // namespace strobe

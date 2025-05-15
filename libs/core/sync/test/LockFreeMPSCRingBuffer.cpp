@@ -1,18 +1,20 @@
 #include <gtest/gtest.h>
 
-#include <strobe/core/containers/ring_buffer.hpp>
+#include <strobe/core/sync/lockfree/mpsc_ring_buffer.hpp>
 
 
 #include <gtest/gtest.h>
-#include <strobe/core/containers/ring_buffer.hpp>
 #include <atomic>
 #include <thread>
 #include <unordered_set>
 #include <vector>
 
+using namespace strobe::sync;
+
+
 // Basic Initialization Test (Refactored)
 TEST(LockFreeMPSCRingBuffer, BasicInitialization) {
-  strobe::LockFreeMPSCRingBuffer<int, 8> buffer;
+  InplaceLockFreeMPSCRingBuffer<int, 8> buffer;
   ASSERT_EQ(buffer.capacity(), 8);
 
   // Attempt to dequeue from an empty buffer
@@ -21,7 +23,7 @@ TEST(LockFreeMPSCRingBuffer, BasicInitialization) {
 
 // Enqueue and Dequeue Test (No Size, Full, or Empty)
 TEST(LockFreeMPSCRingBuffer, EnqueueDequeueBasic) {
-  strobe::LockFreeMPSCRingBuffer<int, 4> buffer;
+  InplaceLockFreeMPSCRingBuffer<int, 4> buffer;
 
   // Enqueue items up to capacity
   ASSERT_TRUE(buffer.enqueue(1));
@@ -60,7 +62,7 @@ TEST(LockFreeMPSCRingBuffer, EnqueueDequeueBasic) {
 
 // Overwrite Test (Single-Threaded)
 TEST(LockFreeMPSCRingBuffer, OverwriteTest) {
-  strobe::LockFreeMPSCRingBuffer<int, 4> buffer;
+  InplaceLockFreeMPSCRingBuffer<int, 4> buffer;
 
   // Fill the buffer
   ASSERT_TRUE(buffer.enqueue(1));
@@ -82,7 +84,7 @@ TEST(LockFreeMPSCRingBuffer, OverwriteTest) {
 
 // Clear Test (Single-Threaded)
 TEST(LockFreeMPSCRingBuffer, ClearTest) {
-  strobe::LockFreeMPSCRingBuffer<int, 4> buffer;
+  InplaceLockFreeMPSCRingBuffer<int, 4> buffer;
 
   // Enqueue several items
   ASSERT_TRUE(buffer.enqueue(1));
@@ -109,7 +111,7 @@ TEST(LockFreeMPSCRingBuffer, ClearTest) {
 
 // Wrap-Around Test (Single-Threaded)
 TEST(LockFreeMPSCRingBuffer, WrapAroundSingleThread) {
-  strobe::LockFreeMPSCRingBuffer<int, 4> buffer;
+  InplaceLockFreeMPSCRingBuffer<int, 4> buffer;
 
   // Enqueue items to fill capacity
   ASSERT_TRUE(buffer.enqueue(1));
@@ -135,7 +137,7 @@ TEST(LockFreeMPSCRingBuffer, WrapAroundSingleThread) {
 
 // Alternate Enqueue and Dequeue (Single-Threaded)
 TEST(LockFreeMPSCRingBuffer, AlternatingEnqueueDequeue) {
-  strobe::LockFreeMPSCRingBuffer<int, 4> buffer;
+  InplaceLockFreeMPSCRingBuffer<int, 4> buffer;
 
   // Alternate between enqueue and dequeue
   ASSERT_TRUE(buffer.enqueue(1));
@@ -151,7 +153,7 @@ TEST(LockFreeMPSCRingBuffer, AlternatingEnqueueDequeue) {
 
 // Mixed Enqueue and Dequeue Test (Single-Threaded)
 TEST(LockFreeMPSCRingBuffer, MixedEnqueueDequeue) {
-  strobe::LockFreeMPSCRingBuffer<int, 4> buffer;
+  InplaceLockFreeMPSCRingBuffer<int, 4> buffer;
 
   // Enqueue and immediately dequeue
   ASSERT_TRUE(buffer.enqueue(1));
@@ -175,7 +177,7 @@ TEST(LockFreeMPSCRingBuffer, MixedEnqueueDequeue) {
 
 // Bulk Enqueue and Dequeue Test (Single-Threaded)
 TEST(LockFreeMPSCRingBuffer, BulkEnqueueDequeue) {
-  strobe::LockFreeMPSCRingBuffer<int, 8> buffer;
+  InplaceLockFreeMPSCRingBuffer<int, 8> buffer;
 
   // Enqueue multiple items
   for (int i = 0; i < 8; ++i) {
@@ -228,7 +230,7 @@ std::atomic<int> Tracked::instance_count{0};
 TEST(LockFreeMPSCRingBuffer, MemorySafety) {
   using namespace mpsc_test;
   {
-    strobe::LockFreeMPSCRingBuffer<Tracked, 4> buffer;
+    InplaceLockFreeMPSCRingBuffer<Tracked, 4> buffer;
     buffer.enqueue(Tracked(1));
     buffer.enqueue(Tracked(2));
     buffer.enqueue(Tracked(3));
@@ -246,7 +248,7 @@ TEST(LockFreeMPSCRingBuffer, MemorySafety) {
 
 // High-Frequency Enqueue/Dequeue Test (Single-Threaded)
 TEST(LockFreeMPSCRingBuffer, HighFrequencyEnqueueDequeue) {
-  strobe::LockFreeMPSCRingBuffer<int, 1024> buffer;
+  InplaceLockFreeMPSCRingBuffer<int, 1024> buffer;
 
   // Rapid enqueue and dequeue
   for (int i = 0; i < 1000000; ++i) {

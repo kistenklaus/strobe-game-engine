@@ -23,7 +23,7 @@ void* PageAllocator::allocate(std::size_t size, std::size_t alignment) {
     return nullptr;
   }
   const std::size_t page = page_size();
-  size = align_up(size, page);
+  size = memory::align_up(size, page);
 
   std::size_t totalSize = size;
   if (USE_GUARD_PAGES) {
@@ -51,7 +51,7 @@ void PageAllocator::deallocate(void* ptr, std::size_t size,
 
   const std::size_t page = page_size();
   alignment = std::max(alignment, page);
-  size = align_up(size, page);
+  size = memory::align_up(size, page);
 
   void* raw = ptr;
   std::size_t totalSize = size;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string_view>
-#include <strobe/core/lina/vec.hpp>
+#include <strobe/lina.hpp>
 #include <strobe/memory.hpp>
 
 #include "strobe/window/WindowImpl.hpp"
@@ -15,8 +15,10 @@ template <strobe::Allocator A>
 class WindowSubsystem {
  public:
   WindowSubsystem(uvec2 size, std::string_view title, const A& allocator = {})
-      : m_allocator(allocator), m_window(size, title, &m_allocator) {}
+      : m_allocator(allocator), m_window(size, title, PolyAllocatorReference(&m_allocator)) {}
+
   ~WindowSubsystem() = default;
+
   // Ensure object identity
   WindowSubsystem(const WindowSubsystem&) = delete;
   WindowSubsystem& operator=(const WindowSubsystem&) = delete;
@@ -31,7 +33,7 @@ class WindowSubsystem {
   bool shouldClose() const { return m_window.shouldClose(); }
 
  private:
-  [[no_unique_address]] A m_allocator;
+  [[no_unique_address]] MemoryResource<A> m_allocator;
   window::WindowImpl m_window;
 };
 

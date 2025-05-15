@@ -7,7 +7,7 @@ namespace strobe {
 
 template <typename A>
 concept Allocator =
-    requires(A a, std::size_t size, std::size_t align, void *ptr) {
+    requires(A &a, std::size_t size, std::size_t align, void *ptr) {
       { a.allocate(size, align) } -> std::same_as<void *>;
       { a.deallocate(ptr, size, align) };
     };
@@ -43,10 +43,12 @@ concept ComparibleAllocator = Allocator<A> && requires(A a) {
   { a != a } -> std::same_as<bool>;
 };
 
-template <Allocator A> struct AllocatorTraits {
-
-  template <typename T> using pointer = T *;
-  template <typename T> using const_pointer = const T *;
+template <Allocator A>
+struct AllocatorTraits {
+  template <typename T>
+  using pointer = T *;
+  template <typename T>
+  using const_pointer = const T *;
 
   static inline void *allocate(A &a, std::size_t size, std::size_t align) {
     return a.allocate(size, align);
@@ -62,7 +64,8 @@ template <Allocator A> struct AllocatorTraits {
     return a.deallocate(ptr);
   }
 
-  template <typename T> static inline T *allocate(A &a, std::size_t n = 1) {
+  template <typename T>
+  static inline T *allocate(A &a, std::size_t n = 1) {
     return reinterpret_cast<T *>(allocate(a, n * sizeof(T), alignof(T)));
   }
 
@@ -84,8 +87,9 @@ template <Allocator A> struct AllocatorTraits {
     return a;
   }
 
-private:
-  template <class U> static constexpr bool pocca_value() noexcept {
+ private:
+  template <class U>
+  static constexpr bool pocca_value() noexcept {
     if constexpr (requires {
                     {
                       U::propagate_on_container_copy_assignment
@@ -96,7 +100,8 @@ private:
       return false;
     }
   }
-  template <class U> static inline constexpr bool pomca_value() noexcept {
+  template <class U>
+  static inline constexpr bool pomca_value() noexcept {
     if constexpr (requires {
                     {
                       U::propagate_on_container_move_assignment
@@ -117,7 +122,7 @@ private:
       return false;
   }
 
-public:
+ public:
   static constexpr bool propagate_on_container_copy_assignment =
       pocca_value<A>();
 
@@ -132,9 +137,9 @@ constexpr bool alloc_equals(const L &lhs, const R &rhs) noexcept {
   /* ---------- same type ------------------------------------------------- */
   if constexpr (std::same_as<L, R>) {
     if constexpr (ComparibleAllocator<L>) {
-      return lhs == rhs; // (1)
+      return lhs == rhs;  // (1)
     } else {
-      return AllocatorTraits<L>::is_always_equal; // still fine
+      return AllocatorTraits<L>::is_always_equal;  // still fine
     }
   }
   /* ---------- different types ------------------------------------------ */
@@ -142,8 +147,8 @@ constexpr bool alloc_equals(const L &lhs, const R &rhs) noexcept {
     constexpr bool lhs_always = AllocatorTraits<L>::is_always_equal;
     constexpr bool rhs_always = AllocatorTraits<R>::is_always_equal;
 
-    return lhs_always && rhs_always; // (2)  otherwise false
+    return lhs_always && rhs_always;  // (2)  otherwise false
   }
 }
 
-} // namespace strobe
+}  // namespace strobe

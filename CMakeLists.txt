@@ -21,7 +21,7 @@ select_strobe_window_api()
 
 add_subdirectory(libs/core)
 
-# add_subdirectory(subsystems/window)
+add_subdirectory(subsystems/window)
 add_subdirectory(sandbox)
 
 
