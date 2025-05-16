@@ -4,7 +4,7 @@
 
 namespace strobe {
 
-template <typename K, typename V, Allocator A>
+template <std::unsigned_integral K, typename V, Allocator A>
 class DenseIndexTable {
  public:
   DenseIndexTable() {}

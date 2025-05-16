@@ -6,10 +6,11 @@
 #include "event_dispatcher_interface.hpp"
 #include "event_listener.hpp"
 #include "event_listener_handle.hpp"
+#include "strobe/core/containers/linear_set.hpp"
 
 namespace strobe {
 
-template <events::Event E>
+template <events::Event E, Allocator A>
 class EventDispatcher : protected events::details::IEventDispatcher {
  public:
   using payload_type = E::payload_type;
@@ -24,25 +25,10 @@ class EventDispatcher : protected events::details::IEventDispatcher {
   void dispatch(payload_type v) { dispatch(E(std::move(v))); }
 
   void dispatch(const E& e) {
-    for (const auto& l : m_compactListeners) {
-      if constexpr (e.canceled()) {
-        break;
-      }
-      l(e);
-    }
   }
 
   EventListenerHandle addListener(EventListenerRef<E> listener) {
-    std::uint32_t id;
-    if (m_freeIds.empty()) {
-      id = m_freeIds.top();
-      m_freeIds.pop();
-      m_compactListeners[id] = listener;
-    } else {
-      id = m_listenerIdMap.size();
-      m_compactListeners.push_back(listener);
-    
-    }
+    std::uint32_t id = 0;
 
     return this->makeHandle(id, this,
                             &EventDispatcher::removeListenerInternally);
@@ -54,10 +40,9 @@ class EventDispatcher : protected events::details::IEventDispatcher {
 
  private:
   bool removeListenerInternally(std::uint32_t id) {}
+  
 
-  strobe::SmallVector<EventListenerRef<E>, 1> m_compactListeners;
-  strobe::SmallVector<std::uint32_t, 8> m_listenerIdMap;
-  strobe::SmallVector<std::uint32_t, 4> m_freeIds;
+  LinearSet<EventListenerRef<E>, A> m_listeners;
 };
 
 }  // namespace strobe

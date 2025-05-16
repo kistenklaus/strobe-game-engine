@@ -1,19 +1,20 @@
 #pragma once
 
-#include <strobe/memory.hpp>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <iterator>
 #include <memory>
 #include <ranges>
+#include <strobe/memory.hpp>
 #include <type_traits>
 namespace strobe {
 
-template <typename T, Allocator A = strobe::Mallocator> class Vector {
+template <typename T, Allocator A = strobe::Mallocator>
+class Vector {
   using ATraits = AllocatorTraits<A>;
 
-public:
+ public:
   // NOTE: Required for the competition!
   using value_type = T;
   using allocator_type = A;
@@ -79,15 +80,15 @@ public:
         std::uninitialized_copy(std::ranges::begin(rg), std::ranges::end(rg),
                                 m_buffer);
     } else {
-      for (const T &v : rg)
-        push_back(v);
+      for (const T &v : rg) push_back(v);
     }
   }
 
   ~Vector() { reset(); }
 
   Vector(const Vector &o)
-      : m_capacity(o.m_size), m_size(o.m_size),
+      : m_capacity(o.m_size),
+        m_size(o.m_size),
         m_allocator(
             ATraits::select_on_container_copy_construction(o.m_allocator)) {
     m_buffer = ATraits::template allocate<T>(m_allocator, m_size);
@@ -138,14 +139,12 @@ public:
         m_allocator(std::move(o.m_allocator)) {}
 
   Vector &operator=(Vector &&o) noexcept {
-    if (this == &o)
-      return *this;
+    if (this == &o) return *this;
 
     const bool equalAllocator =
         strobe::alloc_equals(m_allocator, o.m_allocator);
 
     if (ATraits::propagate_on_container_move_assignment || equalAllocator) {
-
       // Safe to take over the buffer directly.
       reset();
       m_allocator = std::move(o.m_allocator);
@@ -203,7 +202,8 @@ public:
     m_size++;
   }
 
-  template <typename... Args> T &emplace_back(Args &&...args) {
+  template <typename... Args>
+  T &emplace_back(Args &&...args) {
     if (m_size == m_capacity) {
       grow(m_capacity == 0 ? 1 : m_capacity * 2);
     }
@@ -320,13 +320,13 @@ public:
       m_capacity = newCapacity;
       if (old != nullptr) {
         destructive_move_construct_from_helper(
-            m_buffer, old, index); // copy first index elements (does not
-                                   // include the element at index itself)
+            m_buffer, old, index);  // copy first index elements (does not
+                                    // include the element at index itself)
         new (m_buffer + index) T(value);
         std::size_t remaining = m_size - index;
         destructive_move_construct_from_helper(
             m_buffer + index + 1, old + index,
-            remaining); // copy remaining elements after the index
+            remaining);  // copy remaining elements after the index
         ATraits::template deallocate<T>(m_allocator, old, oldCapacity);
       }
     } else {
@@ -348,7 +348,8 @@ public:
   }
 
   // ========================= Range insertion ==================
-  template <std::ranges::range R> void append(const R &range) {
+  template <std::ranges::range R>
+  void append(const R &range) {
     size_type rangeSize = std::ranges::size(range);
     if (rangeSize == 0) {
       return;
@@ -375,8 +376,7 @@ public:
   template <std::ranges::range R>
   iterator insert(const_iterator pos, const R &range) {
     const size_type n = std::ranges::size(range);
-    if (n == 0)
-      return const_cast<iterator>(pos);
+    if (n == 0) return const_cast<iterator>(pos);
 
     if (pos == cend()) {
       append(range);
@@ -430,6 +430,23 @@ public:
     return begin() + index;
   }
 
+  void erase(const_iterator pos) {
+    std::size_t index = pos - begin();
+
+    if (index == size() - 1) {
+      pop_back();
+      return;
+    }
+
+    if constexpr (std::is_trivially_move_assignable_v<T>) {
+      std::size_t n = size() - 1 - index;
+      std::memmove(m_buffer + index, m_buffer + index + 1, sizeof(T) * n);
+    } else {
+      std::move(begin() + index + 1, end(), begin() + index);
+    }
+    pop_back();
+  }
+
   // ================= Stack Interface ==============
   inline void push(const T &value) { push_back(value); }
   inline T &top() { return back(); }
@@ -463,9 +480,7 @@ public:
     }
   }
   // ================= FIFO-Queue Interface ================
-  void enqueue(const T &value) { 
-    push_back(value);
-  }
+  void enqueue(const T &value) { push_back(value); }
 
   const T &peek() const { return front(); }
 
@@ -499,7 +514,7 @@ public:
     return const_reverse_iterator(begin());
   }
 
-private:
+ private:
   void grow(size_type newCapacity) {
     assert(newCapacity > m_capacity);
     T *old = m_buffer;
@@ -613,4 +628,4 @@ private:
   [[no_unique_address]] A m_allocator;
 };
 
-} // namespace strobe
+}  // namespace strobe
