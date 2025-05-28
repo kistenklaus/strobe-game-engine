@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <concepts>
 #include <cstddef>
 #include <utility>
@@ -38,10 +39,7 @@ concept SizeIndepdententAllocator = Allocator<A> && requires(A a, void *ptr) {
 };
 
 template <typename A>
-concept ComparibleAllocator = Allocator<A> && requires(A a) {
-  { a == a } -> std::same_as<bool>;
-  { a != a } -> std::same_as<bool>;
-};
+concept ComparibleAllocator = Allocator<A> && std::equality_comparable<A>;
 
 template <Allocator A>
 struct AllocatorTraits {
@@ -84,7 +82,11 @@ struct AllocatorTraits {
 
   // Copy semantics
   static inline A select_on_container_copy_construction(const A &a) {
-    return a;
+    if (requires { a.select_on_container_copy_construction(); }) {
+      return a.select_on_container_copy_construction();
+    } else {
+      return a;
+    }
   }
 
  private:
@@ -97,7 +99,7 @@ struct AllocatorTraits {
                   }) {
       return static_cast<bool>(U::propagate_on_container_copy_assignment);
     } else {
-      return false;
+      return true;
     }
   }
   template <class U>
@@ -109,7 +111,7 @@ struct AllocatorTraits {
                   })
       return static_cast<bool>(U::propagate_on_container_move_assignment);
     else
-      return false;
+      return true;
   }
 
   template <class U>
@@ -136,19 +138,13 @@ template <class L, class R>
 constexpr bool alloc_equals(const L &lhs, const R &rhs) noexcept {
   /* ---------- same type ------------------------------------------------- */
   if constexpr (std::same_as<L, R>) {
-    if constexpr (ComparibleAllocator<L>) {
+    if constexpr (AllocatorTraits<L>::is_always_equal) {
+      return true;
+    } else if constexpr (ComparibleAllocator<L>) {
       return lhs == rhs;  // (1)
-    } else {
-      return AllocatorTraits<L>::is_always_equal;  // still fine
     }
   }
-  /* ---------- different types ------------------------------------------ */
-  else {
-    constexpr bool lhs_always = AllocatorTraits<L>::is_always_equal;
-    constexpr bool rhs_always = AllocatorTraits<R>::is_always_equal;
-
-    return lhs_always && rhs_always;  // (2)  otherwise false
-  }
+  return false;
 }
 
 }  // namespace strobe

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <concepts>
 
 #include "strobe/core/containers/vector.hpp"
 namespace strobe {
@@ -18,7 +19,15 @@ class LinearSet {
   const_iterator find(const T& v) const {
     return std::ranges::find(m_values, v);
   }
-  iterator find(const T& v) { return std::ranges::find(m_values, v); }
+
+  template <std::equality_comparable_with<T> K>
+  iterator find(const K& v) {
+    if constexpr (std::same_as<K, T>) {
+      return std::ranges::find(m_values, v);
+    } else {
+      return std::ranges::find_if(m_values, [&](const T& o) { return v == o; });
+    }
+  }
 
   iterator insert(T&& v) {
     auto it = find(v);
@@ -27,6 +36,11 @@ class LinearSet {
     }
     m_values.push_back(std::forward<T>(v));
     return end() - 1;
+  }
+
+  void insert_unchecked(T&& v) {
+    assert(!contains(v));
+    m_values.push_back(std::forward<T>(v));
   }
 
   bool contains(const T& v) { return find(v) != m_values.end(); }
@@ -40,7 +54,10 @@ class LinearSet {
     return pos;
   }
 
-  bool erase(const T& v) { return erase(find(v)) != end(); }
+  template <std::equality_comparable_with<T> K>
+  bool erase(const K& v) {
+    return erase(find(v)) != end();
+  }
 
   size_type size() const { return m_values.size(); }
 

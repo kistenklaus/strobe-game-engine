@@ -1,6 +1,9 @@
 #pragma once
 
+#include <print>
 #include <utility>
+
+#include "strobe/core/events/event_listener.hpp"
 namespace strobe {
 
 namespace events::details {
@@ -10,12 +13,15 @@ class IEventDispatcher;
 class EventListenerHandle {
  public:
   friend events::details::IEventDispatcher;
-  using UnregisterCallback = void (*)(void* userData, std::size_t id);
+  using UnregisterCallback = void (*)(void* userData,
+                                      events::EventListenerId id);
 
   EventListenerHandle()
-      : m_id(0), m_unregisterUserData(nullptr), m_unregisterCallback(nullptr) {}
+      : m_id(), m_unregisterUserData(nullptr), m_unregisterCallback(nullptr) {}
 
-  ~EventListenerHandle() {}
+  ~EventListenerHandle() {
+    release();
+  }
 
   EventListenerHandle(const EventListenerHandle&) = delete;
   EventListenerHandle& operator=(const EventListenerHandle&) = delete;
@@ -48,11 +54,22 @@ class EventListenerHandle {
     }
   }
 
- private:
-  explicit EventListenerHandle(std::uint32_t id, void* unregisterUserData,
-                               UnregisterCallback unregisterCallback) {}
+  // NOTE: this function will deferr the destruction (unregister/release) to another object.
+  // A deferred callback MUST call eventDispatcher.removeListener directly with the handle!
+  void deferr(void* deferredUserData, UnregisterCallback deferredCallback) {
+    m_unregisterUserData = deferredUserData;
+    m_unregisterCallback = deferredCallback;
+  }
 
-  std::uint32_t m_id;
+ public:
+  explicit EventListenerHandle(events::EventListenerId id,
+                               void* unregisterUserData,
+                               UnregisterCallback unregisterCallback)
+      : m_id(id),
+        m_unregisterUserData(unregisterUserData),
+        m_unregisterCallback(unregisterCallback) {}
+
+  events::EventListenerId m_id;
   void* m_unregisterUserData;
   UnregisterCallback m_unregisterCallback;
 };

@@ -15,7 +15,7 @@ namespace events {
 template <typename L, typename E>
 concept EventCallableListener =
     events::Event<E> &&
-    requires(L& listener, const typename E::payload_type& e) {
+    requires(L& listener, const E& e) {
       { listener(e) };
     };
 
@@ -46,6 +46,7 @@ class EventListenerRef {
     m_callback(m_userData, e);
   }
 
+  // ref == ref
   bool operator==(const EventListenerRef& ref) const noexcept {
     return ref.m_userData == m_userData && ref.m_callback == m_callback;
   }
@@ -57,8 +58,8 @@ class EventListenerRef {
     assert(m_callback != nullptr);
   }
 
-  const void* m_userData;
-  const EventCallback<E> m_callback;
+  void* m_userData;
+  EventCallback<E> m_callback;
 };
 
 namespace events {
@@ -70,30 +71,72 @@ class EventListenerId {
       : m_userData(ref.m_userData),
         m_callback(reinterpret_cast<std::uintptr_t>(ref.m_callback)) {}
 
- private:
+  EventListenerId() : m_userData(nullptr), m_callback(reinterpret_cast<std::uintptr_t>(nullptr)){
+
+  }
+
+  template <events::Event E>
+  friend bool operator==(const EventListenerRef<E>& ref,
+                         const EventListenerId& id) noexcept;
+
+  template <events::Event E>
+  friend bool operator!=(const EventListenerRef<E>& ref,
+                         const EventListenerId& id) noexcept;
+
   bool operator==(const EventListenerId& o) const noexcept {
     return o.m_userData == m_userData && o.m_callback == m_callback;
   }
 
   bool operator!=(const EventListenerId& o) const noexcept = default;
 
-  template <events::Event E>
-  bool operator==(const EventListenerRef<E>& ref) const noexcept {
-    return ref.m_userData == m_userData &&
-           reinterpret_cast<std::uintptr_t>(ref.m_callback) == m_callback;
-  }
-  template <events::Event E>
-  bool operator!=(const EventListenerRef<E>& ref) const noexcept {
-    return !(*this == ref);
-  }
+ private:
+  // id == id
 
-  void* m_userData;
-  std::uintptr_t m_callback;
+  const void* m_userData;
+  const std::uintptr_t m_callback;
 };
+
+// ref == id
+template <events::Event E>
+bool operator==(const EventListenerRef<E>& ref,
+                const EventListenerId& id) noexcept {
+  return EventListenerId(ref) == id;
+}
+
+template <events::Event E>
+bool operator!=(const EventListenerRef<E>& ref,
+                const EventListenerId& id) noexcept {
+  return !(ref == id);
+}
+
+template <events::Event E>
+bool operator==(const EventListenerId& id,
+                const EventListenerRef<E>& ref) noexcept {
+  return ref == id;
+}
+
+template <events::Event E>
+bool operator!=(const EventListenerId& id,
+                const EventListenerRef<E>& ref) noexcept {
+  return !(ref == id);
+}
+
 }  // namespace events
 
+static void foo() {
+  EventListenerRef<BasicEvent<int>> ref =
+      EventListenerRef<BasicEvent<int>>::fromNative(nullptr, nullptr);
+
+  events::EventListenerId id(ref);
+
+  bool b1 = ref == id;
+  bool b2 = id == ref;
+  bool b3 = id == id;
+  bool b4 = ref == ref;
+}
+
 static_assert(std::equality_comparable<EventListenerRef<BasicEvent<int>>>);
-static_assert(std::equality_comparable_with<
-              EventListenerRef<BasicEvent<int>>, events::EventListenerId>);
+static_assert(std::equality_comparable_with<EventListenerRef<BasicEvent<int>>,
+                                            events::EventListenerId>);
 
 }  // namespace strobe

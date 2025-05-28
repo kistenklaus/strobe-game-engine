@@ -12,7 +12,7 @@ public:
   }
 
   void deallocate(void *ptr, std::size_t size, std::size_t align) {
-    return Traits::free(*m_resource, ptr, size, align);
+    return Traits::deallocate(*m_resource, ptr, size, align);
   }
 
   void deallocate(void *ptr)

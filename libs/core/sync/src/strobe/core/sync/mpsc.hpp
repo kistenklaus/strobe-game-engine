@@ -193,8 +193,7 @@ class Receiver {
 };
 
 template <typename T, std::size_t Capacity, Allocator A>
-static std::pair<Sender<T>, Receiver<T>> channel(std::size_t capacity,
-                                                 const A& allocator = {}) {
+static std::pair<Sender<T>, Receiver<T>> channel(const A& allocator = {}) {
   auto state = details::SharedChannelState<T>(allocator, Capacity);
   auto tx = Sender(state);
   return std::pair{std::move(tx), Receiver(std::move(state))};

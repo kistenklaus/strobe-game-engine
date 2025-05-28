@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <iterator>
-#include <print>
 #include <strobe/core/containers/small_vector.hpp>
 
 #include "event.hpp"
@@ -13,9 +12,9 @@
 namespace strobe {
 
 template <events::Event E, Allocator A>
-class EventDispatcher : protected events::details::IEventDispatcher {
+class SyncEventDispatcher : protected events::details::IEventDispatcher {
  private:
-  using Self = EventDispatcher<E, A>;
+  using Self = SyncEventDispatcher<E, A>;
   using Container = SmallVector<EventListenerRef<E>, A>;
   using iterator = Container::iterator;
   using size_type = Container::size_type;
@@ -23,12 +22,12 @@ class EventDispatcher : protected events::details::IEventDispatcher {
  public:
   using payload_type = E::payload_type;
 
-  EventDispatcher(A alloc = {}) : m_listeners(alloc) { m_dispatchIdx = -1; }
+  SyncEventDispatcher() { m_dispatchIdx = -1; }
 
-  EventDispatcher(const EventDispatcher&) = delete;
-  EventDispatcher& operator=(const EventDispatcher&) = delete;
-  EventDispatcher(EventDispatcher&&) = delete;
-  EventDispatcher& operator=(EventDispatcher&&) = delete;
+  SyncEventDispatcher(const Self&) = delete;
+  SyncEventDispatcher& operator=(const Self&) = delete;
+  SyncEventDispatcher(Self&&) = delete;
+  SyncEventDispatcher& operator=(Self&&) = delete;
 
   void dispatch(payload_type v) {
     E event(std::move(v));
@@ -46,22 +45,26 @@ class EventDispatcher : protected events::details::IEventDispatcher {
     m_dispatchIdx = -1;
   }
 
+  // NOTE: adding a listener while inside of a callback will never crash,
+  // but keep in mind that this listener will be called for the event unless 
+  // the event is actively canceled.
   EventListenerHandle addListener(const EventListenerRef<E>& listener) {
     assert((std::ranges::find(m_listeners, listener) == m_listeners.end()) &&
            "Attempted to register the same listener twice.");
     m_listeners.push_back(listener);
     return this->makeHandle<E>(
         listener, reinterpret_cast<void*>(this),
-        [](void* userData, events::EventListenerId id) {
-          reinterpret_cast<Self*>(userData)->removeListener(id);
+        [](void* userData, events::EventListenerId e) {
+          reinterpret_cast<Self*>(userData)->removeListenerInternally(e);
         });
   }
 
   bool removeListener(EventListenerHandle& handle) {
-    return removeListener(this->detachHandle(handle));
+    return removeListenerInternally(this->detachHandle(handle));
   }
 
-  bool removeListener(const events::EventListenerId& id) {
+ private:
+  bool removeListenerInternally(const events::EventListenerId& id) {
     auto it = std::ranges::find_if(m_listeners,
                                    [&](const auto& ref) { return ref == id; });
 
@@ -85,12 +88,11 @@ class EventDispatcher : protected events::details::IEventDispatcher {
     return true;
   }
 
- public:
   Container m_listeners;
   ptrdiff_t m_dispatchIdx;
 };
 
 template <events::Event E, Allocator A>
-using SharedEventDispatcher = SharedBlock<EventDispatcher<E, A>, A>;
+using SharedSyncEventDispatcher = SharedBlock<SyncEventDispatcher<E, A>, A>;
 
 }  // namespace strobe

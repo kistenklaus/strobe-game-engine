@@ -9,19 +9,19 @@
 
 // Basic Initialization Test
 TEST(MPSCChannel, BasicInitialization) {
-  auto [sender, receiver] = strobe::mpsc::channel<int, 8, strobe::Mallocator>(8);
+  auto [sender, receiver] = strobe::mpsc::channel<int, 8, strobe::Mallocator>();
   ASSERT_FALSE(receiver.recv().has_value()); // Receiver should be empty initially
 }
 
 // Basic Send and Receive Test (Single-Threaded)
 TEST(MPSCChannel, SingleSend) {
-  auto [sender, receiver] = strobe::mpsc::channel<int, 4, strobe::Mallocator>(4);
+  auto [sender, receiver] = strobe::mpsc::channel<int, 4, strobe::Mallocator>();
   ASSERT_TRUE(sender.send(1));
 }
 
 // Basic Send and Receive Test (Single-Threaded)
 TEST(MPSCChannel, SendReceiveBasic) {
-  auto [sender, receiver] = strobe::mpsc::channel<int, 4, strobe::Mallocator>(4);
+  auto [sender, receiver] = strobe::mpsc::channel<int, 4, strobe::Mallocator>();
 
   ASSERT_TRUE(sender.send(1));
   ASSERT_TRUE(sender.send(2));
@@ -61,7 +61,7 @@ std::atomic<int> Tracked::instance_count{0};
 TEST(MPSCChannel, MemorySafety) {
   using namespace sync_testing::mpsc_test;
   {
-    auto [sender, receiver] = strobe::mpsc::channel<Tracked, 4, strobe::Mallocator>(4);
+    auto [sender, receiver] = strobe::mpsc::channel<Tracked, 4, strobe::Mallocator>();
     sender.send(Tracked(1));
     sender.send(Tracked(2));
     sender.send(Tracked(3));
@@ -80,7 +80,7 @@ TEST(MPSCChannel, MemorySafety) {
 
 // Multi-Producer Single Consumer Test
 TEST(MPSCChannel, MultiProducerSingleConsumer) {
-  auto [sender, receiver] = strobe::mpsc::channel<int, 1024, strobe::Mallocator>(1024);
+  auto [sender, receiver] = strobe::mpsc::channel<int, 1024, strobe::Mallocator>();
   std::atomic<size_t> produced_count{0};
   std::atomic<size_t> consumed_count{0};
 
@@ -120,7 +120,7 @@ TEST(MPSCChannel, MultiProducerSingleConsumer) {
 
 // Overwrite Test (Single Consumer)
 TEST(MPSCChannel, OverwriteTest) {
-  auto [sender, receiver] = strobe::mpsc::channel<int, 4, strobe::Mallocator>(4);
+  auto [sender, receiver] = strobe::mpsc::channel<int, 4, strobe::Mallocator>();
 
   // Fill the buffer
   ASSERT_TRUE(sender.send(1));
@@ -143,7 +143,7 @@ TEST(MPSCChannel, OverwriteTest) {
 
 // Stress Test with Random Producers
 TEST(MPSCChannel, StressTestRandomProducers) {
-  auto [sender, receiver] = strobe::mpsc::channel<int, 16384, strobe::Mallocator>(16384);
+  auto [sender, receiver] = strobe::mpsc::channel<int, 16384, strobe::Mallocator>();
   std::atomic<size_t> produced_count{0};
   std::atomic<size_t> consumed_count{0};
 
@@ -182,7 +182,7 @@ TEST(MPSCChannel, StressTestRandomProducers) {
 
 // Stress Test with Many Producers
 TEST(MPSCChannel, StressTestLotsProducers) {
-  auto [sender, receiver] = strobe::mpsc::channel<int, 16384, strobe::Mallocator>(16384);
+  auto [sender, receiver] = strobe::mpsc::channel<int, 16384, strobe::Mallocator>();
   std::atomic<size_t> produced_count{0};
   std::atomic<size_t> consumed_count{0};
 

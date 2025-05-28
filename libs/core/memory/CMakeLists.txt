@@ -14,3 +14,5 @@ target_precompile_headers(${STROBE_CORE_MEMORY_LIB}
   PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/strobe/memory.hpp
 )
+
+add_subdirectory(test)

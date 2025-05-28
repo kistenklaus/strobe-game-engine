@@ -7,6 +7,7 @@ add_executable(${STROBE_CORE_CONTAINERS_TESTS}
   ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/RingBuffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/IndexPool.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/List.cpp
   # ${CMAKE_CURRENT_SOURCE_DIR}/LockFreeSPSCRingBuffer.cpp
   # ${CMAKE_CURRENT_SOURCE_DIR}/LockFreeMPSCRingBuffer.cpp
 )

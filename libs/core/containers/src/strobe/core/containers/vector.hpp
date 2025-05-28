@@ -300,6 +300,12 @@ class Vector {
     assert(m_size != 0);
     return m_buffer[0];
   }
+  const T* data() const {
+    return m_buffer;
+  }
+  T* data() {
+    return m_buffer;
+  }
 
   // ==================== Special Algorithms ========================
   iterator insert(const_iterator pos, const T &value) {
@@ -512,6 +518,10 @@ class Vector {
   }
   inline const_reverse_iterator crend() const {
     return const_reverse_iterator(begin());
+  }
+
+  bool _validIterator(const_iterator toCheck) {
+    return begin() <= toCheck && toCheck <= end();
   }
 
  private:

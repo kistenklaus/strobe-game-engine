@@ -9,6 +9,7 @@ class ReferenceCounter {
  public:
   ReferenceCounter() : m_counter(1) {}
   void reset() { m_counter.store(1); }
+
   bool inc() {
     auto current = m_counter.load();
     while (current > 0 &&
@@ -24,4 +25,4 @@ class ReferenceCounter {
   std::atomic<T> m_counter;
 };
 
-}  // namespace strobe
+}  // namespace strobe::memory

@@ -3,6 +3,8 @@
 #include "strobe/core/memory/AllocatorTraits.hpp"
 #include "strobe/core/memory/ReferenceCounter.hpp"
 #include "strobe/core/memory/align.hpp"
+
+#include <algorithm>
 namespace strobe {
 
 template <typename T>
