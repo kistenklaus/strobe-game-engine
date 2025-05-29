@@ -3,6 +3,7 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 
+#include <print>
 #include <string_view>
 #include <strobe/lina.hpp>
 #include <strobe/memory.hpp>
@@ -42,19 +43,44 @@ class WindowSubsystem {
 
   bool isResizable() const { return m_window.isResizable(); }
 
-  EventListenerHandle addMouseButtonEventListener(
-      EventListenerRef<window::MouseButtonEvent> listener) {
-    return m_window.addMouseButtonEventListener(listener);
-  }
-
   EventListenerHandle addKeyboardListener(
       EventListenerRef<window::KeyboardEvent> listener) {
     return m_window.addKeyboardEventListener(listener);
   }
 
+  EventListenerHandle addCharEventListener(
+      EventListenerRef<window::CharEvent> listener) {
+    return m_window.addCharEventListener(listener);
+  }
+
+  EventListenerHandle addResizeListener(
+      EventListenerRef<window::ResizeEvent> listener) {
+    return m_window.addResizeListener(listener);
+  }
+
   EventListenerHandle addFramebufferSizeListener(
       EventListenerRef<window::ResizeEvent> listener) {
     return m_window.addFramebufferSizeListener(listener);
+  }
+
+  EventListenerHandle addMouseButtonEventListener(
+      EventListenerRef<window::MouseButtonEvent> listener) {
+    return m_window.addMouseButtonEventListener(listener);
+  }
+
+  EventListenerHandle addMouseMoveEventListener(
+      EventListenerRef<window::MouseMoveEvent> listener) {
+    return m_window.addMouseMoveEventListener(listener);
+  }
+
+  EventListenerHandle addMouseScrollEventListener(
+      EventListenerRef<window::MouseScrollEvent> listener) {
+    return m_window.addMouseScrollEventListener(listener);
+  }
+
+  EventListenerHandle addShutdownEventListener(
+      EventListenerRef<window::ShutdownEvent> listener) {
+    return m_window.addShutdownEventListener(listener);
   }
 
   // bool setKeyboardCallback() const { return m_window.

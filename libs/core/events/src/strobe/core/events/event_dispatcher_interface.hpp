@@ -18,12 +18,6 @@ class IEventDispatcher {
     return EventListenerHandle(EventListenerId(ref), userData,
                                unregisterCallback);
   }
-
-  EventListenerId detachHandle(EventListenerHandle& handle) {
-    EventListenerId id = handle.m_id;
-    handle.detach();
-    return id;
-  }
 };
 
 }  // namespace strobe::events::details

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <print>
 
 #include "basic_event.hpp"
 #include "event.hpp"
@@ -14,12 +15,20 @@ namespace events {
 
 template <typename L, typename E>
 concept EventCallableListener =
-    events::Event<E> &&
-    requires(L& listener, const E& e) {
+    events::Event<E> && requires(L& listener, const E& e) {
       { listener(e) };
     };
 
 class EventListenerId;  // fwd
+                        //
+namespace details {
+
+template <events::Event E, typename M, void (M::*MemberFunc)(const E&)>
+void bindMemberFunc(void* userData, const E& e) {
+  (reinterpret_cast<M*>(userData)->*MemberFunc)(e);
+}
+
+}  // namespace details
 
 }  // namespace events
 
@@ -39,6 +48,12 @@ class EventListenerRef {
     return EventListenerRef<E>(callable, [](void* userData, const E& e) {
       (*reinterpret_cast<L*>(userData))(e);
     });
+  }
+
+  template <typename M, void (M::*MemberFunc)(const E&)>
+  static EventListenerRef fromMemberFunction(M* self) {
+    return EventListenerRef<E>(
+        self, events::details::bindMemberFunc<E, M, MemberFunc>);
   }
 
   void operator()(const E& e) const {
@@ -71,9 +86,9 @@ class EventListenerId {
       : m_userData(ref.m_userData),
         m_callback(reinterpret_cast<std::uintptr_t>(ref.m_callback)) {}
 
-  EventListenerId() : m_userData(nullptr), m_callback(reinterpret_cast<std::uintptr_t>(nullptr)){
-
-  }
+  EventListenerId()
+      : m_userData(nullptr),
+        m_callback(reinterpret_cast<std::uintptr_t>(nullptr)) {}
 
   template <events::Event E>
   friend bool operator==(const EventListenerRef<E>& ref,
@@ -89,11 +104,11 @@ class EventListenerId {
 
   bool operator!=(const EventListenerId& o) const noexcept = default;
 
- private:
+ public:
   // id == id
 
-  const void* m_userData;
-  const std::uintptr_t m_callback;
+  void* m_userData;
+  std::uintptr_t m_callback;
 };
 
 // ref == id

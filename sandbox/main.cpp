@@ -1,54 +1,49 @@
 #include <GLFW/glfw3.h>
 
 #include <chrono>
-#include <functional>
 #include <print>
 #include <strobe/memory.hpp>
 #include <strobe/window/WindowSubsystem.hpp>
 #include <thread>
+
+#include "strobe/core/events/event_listener_handle.hpp"
+#include "strobe/core/memory/Mallocator.hpp"
 #include "strobe/window/WindowImpl.hpp"
 
-int main() {
-  using namespace strobe;
-  using namespace std::chrono_literals;
+using namespace strobe;
+using namespace std::chrono_literals;
 
+class Keyboard {
+ public:
+  Keyboard(strobe::WindowSubsystem<strobe::Mallocator>& window) {
+    m_listenerHandle = window.addKeyboardListener(
+        EventListenerRef<window::KeyboardEvent>::fromMemberFunction<
+            Keyboard, &Keyboard::callback>(this));
+
+  }
+
+  ~Keyboard() { std::println("Keyboard destructor"); }
+
+  void callback(const strobe::window::KeyboardEvent& event) {
+    std::println("EVETN");
+    m_listenerHandle.release();
+  }
+
+  strobe::EventListenerHandle m_listenerHandle;
+};
+
+int main() {
   WindowSubsystem<Mallocator> window{
       uvec2(800, 600),
       "my-cool-title",
   };
   window.setResizable(true);
 
-  std::println("Window Created");
-
-  std::function<void(const window::KeyboardEvent&)> callback =
-      [](const window::KeyboardEvent& event) {
-        std::println("Keyboard event");
-        return;
-      };
-  auto handle = window.addKeyboardListener(
-      EventListenerRef<window::KeyboardEvent>::fromCallable(&callback));
-
-  std::function<void(const window::ResizeEvent&)> sizeCallback =
-      [](const window::ResizeEvent& event) {
-        std::println("Resize event");
-        return;
-      };
-
-  auto handle2 = window.addFramebufferSizeListener(
-      EventListenerRef<window::ResizeEvent>::fromCallable(&sizeCallback));
-
-  std::function<void(const window::MouseButtonEvent&)> mouseButtonCallback =
-      [](const window::MouseButtonEvent& event) {
-        std::println("Mouse event");
-        return;
-      };
-
-  auto handle3 = window.addMouseButtonEventListener(
-      EventListenerRef<window::MouseButtonEvent>::fromCallable(
-          &mouseButtonCallback));
+  Keyboard keyboard(window);
+  // keyboard.m_listenerHandle.release();
 
   while (!window.closed()) {
-    std::this_thread::yield();
+    std::this_thread::sleep_for(100ms);
   }
-  return 0;
+  std::println("EXIT loop");
 }

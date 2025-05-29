@@ -19,9 +19,7 @@ class EventListenerHandle {
   EventListenerHandle()
       : m_id(), m_unregisterUserData(nullptr), m_unregisterCallback(nullptr) {}
 
-  ~EventListenerHandle() {
-    release();
-  }
+  ~EventListenerHandle() { release(); }
 
   EventListenerHandle(const EventListenerHandle&) = delete;
   EventListenerHandle& operator=(const EventListenerHandle&) = delete;
@@ -36,14 +34,16 @@ class EventListenerHandle {
       return *this;
     }
     release();
+    m_id = o.m_id;
     m_unregisterUserData = std::exchange(o.m_unregisterUserData, nullptr);
     m_unregisterCallback = std::exchange(o.m_unregisterCallback, nullptr);
     return *this;
   }
 
-  void detach() {
+  events::EventListenerId detach() {
     m_unregisterUserData = nullptr;
     m_unregisterCallback = nullptr;
+    return std::move(m_id);
   }
 
   void release() {
@@ -51,11 +51,13 @@ class EventListenerHandle {
       m_unregisterCallback(m_unregisterUserData, m_id);
       m_unregisterCallback = nullptr;
       m_unregisterUserData = nullptr;
+      m_id = {};
     }
   }
 
-  // NOTE: this function will deferr the destruction (unregister/release) to another object.
-  // A deferred callback MUST call eventDispatcher.removeListener directly with the handle!
+  // NOTE: this function will deferr the destruction (unregister/release) to
+  // another object. A deferred callback MUST call
+  // eventDispatcher.removeListener directly with the handle!
   void deferr(void* deferredUserData, UnregisterCallback deferredCallback) {
     m_unregisterUserData = deferredUserData;
     m_unregisterCallback = deferredCallback;

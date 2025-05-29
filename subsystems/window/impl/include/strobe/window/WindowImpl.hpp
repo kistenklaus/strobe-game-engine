@@ -5,7 +5,6 @@
 #include <strobe/lina.hpp>
 #include <strobe/memory.hpp>
 
-#include "strobe/core/events/basic_event.hpp"
 #include "strobe/core/events/event_listener.hpp"
 #include "strobe/core/events/event_listener_handle.hpp"
 
@@ -204,6 +203,34 @@ class MouseButtonEvent {
   [[no_unique_address]] Payload m_payload;
 };
 
+class MouseMoveEvent {
+ public:
+  using payload_type = vec2;
+
+  explicit MouseMoveEvent(payload_type&& v) : m_payload(std::move(v)) {}
+  explicit MouseMoveEvent(const payload_type& v) : m_payload(v) {}
+
+  const payload_type& payload() const { return m_payload; }
+  constexpr bool canceled() const { return false; }
+
+ private:
+  [[no_unique_address]] payload_type m_payload;
+};
+
+class MouseScrollEvent {
+ public:
+  using payload_type = dvec2;
+
+  explicit MouseScrollEvent(payload_type&& v) : m_payload(std::move(v)) {}
+  explicit MouseScrollEvent(const payload_type& v) : m_payload(v) {}
+
+  const payload_type& payload() const { return m_payload; }
+  constexpr bool canceled() const { return false; }
+
+ private:
+  [[no_unique_address]] payload_type m_payload;
+};
+
 class KeyboardEvent {
  public:
   struct Payload {
@@ -223,6 +250,37 @@ class KeyboardEvent {
 
  private:
   [[no_unique_address]] Payload m_payload;
+};
+
+class CharEvent {
+ public:
+  using payload_type = char32_t;
+
+  explicit CharEvent(payload_type&& v) : m_payload(std::move(v)) {}
+  explicit CharEvent(const payload_type& v) : m_payload(v) {}
+
+  const payload_type& payload() const { return m_payload; }
+  constexpr bool canceled() const { return false; }
+
+ private:
+  [[no_unique_address]] payload_type m_payload;
+};
+
+class ShutdownEvent {
+ public:
+  enum class State {
+    CLOSED,
+    EXITED,
+  };
+  using payload_type = State;
+  explicit ShutdownEvent(payload_type&& v) : m_payload(std::move(v)) {}
+  explicit ShutdownEvent(const payload_type& v) : m_payload(v) {}
+
+  const payload_type& payload() const { return m_payload; }
+  constexpr bool canceled() const { return false; }
+
+ private:
+  [[no_unique_address]] payload_type m_payload;
 };
 
 static_assert(events::Event<KeyboardEvent>);
@@ -254,11 +312,25 @@ class WindowImpl {
   EventListenerHandle addKeyboardEventListener(
       EventListenerRef<KeyboardEvent> listener);
 
+  EventListenerHandle addCharEventListener(
+      EventListenerRef<CharEvent> listener);
+
+  EventListenerHandle addResizeListener(EventListenerRef<ResizeEvent> listener);
+
   EventListenerHandle addFramebufferSizeListener(
       EventListenerRef<ResizeEvent> listener);
 
   EventListenerHandle addMouseButtonEventListener(
       EventListenerRef<MouseButtonEvent> listener);
+
+  EventListenerHandle addMouseMoveEventListener(
+      EventListenerRef<MouseMoveEvent> listener);
+
+  EventListenerHandle addMouseScrollEventListener(
+      EventListenerRef<MouseScrollEvent> listener);
+
+  EventListenerHandle addShutdownEventListener(
+      EventListenerRef<ShutdownEvent> listener);
 
  private:
   void* m_internals;

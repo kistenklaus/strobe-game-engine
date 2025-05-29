@@ -73,6 +73,10 @@ using vec2 = details::vec<2, float>;
 using vec3 = details::vec<3, float>;
 using vec4 = details::vec<4, float>;
 
+using dvec2 = details::vec<2, double>;
+using dvec3 = details::vec<3, double>;
+using dvec4 = details::vec<4, double>;
+
 using uvec2 = details::vec<2, unsigned int>;
 using uvec3 = details::vec<3, unsigned int>;
 using uvec4 = details::vec<4, unsigned int>;

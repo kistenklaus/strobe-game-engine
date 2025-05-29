@@ -58,7 +58,7 @@ class EventDispatcher : protected events::details::IEventDispatcher {
   }
 
   bool removeListener(EventListenerHandle& handle) {
-    return removeListener(this->detachHandle(handle));
+    return removeListener(handle.detach());
   }
 
   bool removeListener(const events::EventListenerId& id) {
@@ -82,8 +82,12 @@ class EventDispatcher : protected events::details::IEventDispatcher {
       m_listeners[m_dispatchIdx] = std::move(m_listeners.back());
       m_dispatchIdx--;
     }
+
+
     return true;
   }
+
+  bool empty() const { return m_listeners.empty(); }
 
  public:
   Container m_listeners;
