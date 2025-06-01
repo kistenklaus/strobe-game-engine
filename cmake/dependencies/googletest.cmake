@@ -1,26 +1,23 @@
 include_guard(GLOBAL)
 
-# Function to require GoogleTest (optional 'force' argument, default: FALSE)
+
 function(require_googletest)
-  # Optional 'force' argument (default is FALSE)
   set(FORCE FALSE)
   if (DEFINED ARGV0)
     set(FORCE ${ARGV0})
   endif()
 
-  # Check if GoogleTest has already been found (using a cache variable)
-  if (DEFINED GTEST_FOUND AND GTEST_FOUND)
-    return()
-  endif()
-
-  # Attempt to find GoogleTest (only once)
+  # Always call find_package so that imported targets are defined
   if (FORCE)
     find_package(GTest REQUIRED)
   else()
     find_package(GTest QUIET)
   endif()
 
-  # If GoogleTest is not found, download and build it
+  # Update the cached result
+  set(GTEST_FOUND ${GTest_FOUND} CACHE INTERNAL "GoogleTest found status")
+
+  # If not found, fetch it
   if (NOT GTEST_FOUND)
     if (FORCE)
       include(FetchContent)
@@ -35,13 +32,16 @@ function(require_googletest)
     endif()
   endif()
 
-  # Log result
-  if (GTEST_FOUND)
-    log_success("✅ GoogleTest available")
-  elseif(FORCE)
-    log_error("❌ GoogleTest not available, but it was required!")
-  else()
-    log_warn("⚠️ GoogleTest not available (optional)")
+  # Check if we've already logged
+  if (NOT DEFINED GTEST_LOGGED)
+    if (GTEST_FOUND)
+      log_success("✅ GoogleTest available")
+    elseif(FORCE)
+      log_error("❌ GoogleTest not available, but it was required!")
+    else()
+      log_warn("⚠️ GoogleTest not available (optional)")
+    endif()
+    set(GTEST_LOGGED TRUE CACHE INTERNAL "GoogleTest logging done")
   endif()
 endfunction()
 

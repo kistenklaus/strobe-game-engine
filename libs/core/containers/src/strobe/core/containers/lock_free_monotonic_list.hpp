@@ -30,9 +30,11 @@ class LockFreeMonotonicForwardList {
   }
   // Both are in principle possible.
   LockFreeMonotonicForwardList(const LockFreeMonotonicForwardList&) = delete;
-  LockFreeMonotonicForwardList&operator=(const LockFreeMonotonicForwardList&) = delete;
+  LockFreeMonotonicForwardList& operator=(const LockFreeMonotonicForwardList&) =
+      delete;
   LockFreeMonotonicForwardList(LockFreeMonotonicForwardList&&) = delete;
-  LockFreeMonotonicForwardList&operator=(LockFreeMonotonicForwardList&&) = delete;
+  LockFreeMonotonicForwardList& operator=(LockFreeMonotonicForwardList&&) =
+      delete;
 
   class iterator {
    public:

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <algorithm>
-#include <iterator>
 #include <cassert>
+#include <iterator>
 #include <print>
 #include <strobe/core/containers/small_vector.hpp>
 
@@ -50,7 +50,18 @@ class EventDispatcher : protected events::details::IEventDispatcher {
   EventListenerHandle addListener(const EventListenerRef<E>& listener) {
     assert((std::ranges::find(m_listeners, listener) == m_listeners.end()) &&
            "Attempted to register the same listener twice.");
+
     m_listeners.push_back(listener);
+    if (m_dispatchIdx != -1) {
+      if (m_dispatchIdx == m_listeners.size() - 1) {
+        m_dispatchIdx++;  // skip element
+        // last iteration.
+      } else {
+        std::swap(m_listeners[m_dispatchIdx + 1], m_listeners.back());
+        m_dispatchIdx++;
+      }
+    }
+
     return this->makeHandle<E>(
         listener, reinterpret_cast<void*>(this),
         [](void* userData, events::EventListenerId id) {
@@ -83,7 +94,6 @@ class EventDispatcher : protected events::details::IEventDispatcher {
       m_listeners[m_dispatchIdx] = std::move(m_listeners.back());
       m_dispatchIdx--;
     }
-
 
     return true;
   }

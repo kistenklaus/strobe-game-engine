@@ -37,15 +37,7 @@ class WindowManager {
 
   WindowHandle createWindow(uvec2 size, std::string_view title,
                             bool resizable = false,
-                            bool closeOnCallback = true) {
-    static_assert(std::constructible_from<window::Window, window::Window&&>);
-    static_assert(std::movable<window::Window>);
-    static_assert(std::is_destructible_v<window::Window>);
-    window::Window window =
-        m_context.createWindow(size, title, resizable, closeOnCallback);
-    return WindowHandle(window::details::makeAllocatorRef(m_allocator),
-                        std::move(window));
-  }
+                            bool closeOnCallback = true);
 
  private:
   [[no_unique_address]] window::allocator m_allocator;

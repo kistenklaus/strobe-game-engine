@@ -3,6 +3,7 @@
 #include <cassert>
 #include <concepts>
 #include <cstdint>
+#include <print>
 
 #include "basic_event.hpp"
 #include "event.hpp"
@@ -64,7 +65,7 @@ class EventListenerRef {
 
   // ref == ref
   bool operator==(const EventListenerRef& ref) const noexcept {
-    return ref.m_userData == m_userData && ref.m_callback == m_callback;
+    return (ref.m_userData == m_userData) && (ref.m_callback == m_callback);
   }
   bool operator!=(const EventListenerRef& ref) const noexcept = default;
 

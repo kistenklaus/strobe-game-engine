@@ -1,7 +1,4 @@
-
-
 set(STROBE_CORE_LIB ${PROJECT_NAME}-core CACHE INTERNAL "")
-
 
 add_subdirectory(memory)
 add_subdirectory(lina)

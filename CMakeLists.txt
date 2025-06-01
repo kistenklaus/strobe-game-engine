@@ -2,6 +2,9 @@
 cmake_minimum_required(VERSION 3.14)
 project(strobe CXX)
 
+option(STROBE_BUILD_TESTS "Build the test suite" OFF)
+option(STROBE_BUILD_SANDBOXES OFF)
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 endif()
@@ -15,6 +18,7 @@ include(cmake/colorful.cmake)
 include(cmake/dependencies.cmake)
 include(cmake/configuration.cmake)
 
+
 # Subsystem configuration
 select_strobe_window_api()
 
@@ -23,6 +27,12 @@ add_subdirectory(libs/core)
 
 add_subdirectory(subsystems/window)
 add_subdirectory(subsystems/input)
-add_subdirectory(sandbox)
+
+add_subdirectory(test)
+
+
+if (STROBE_BUILD_SANDBOXES)
+  add_subdirectory(sandbox)
+endif()
 
 

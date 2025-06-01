@@ -5,3 +5,5 @@ build/
 .cache
 **.bin
 .idea
+.clang-format
+.clang-tidy
