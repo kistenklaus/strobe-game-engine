@@ -3,12 +3,12 @@
 #include "GlfwWindow.hpp"
 #include "GlfwWindowContext.hpp"
 #include "strobe/core/memory/AllocatorTraits.hpp"
-#include "strobe/core/memory/PolyAllocator.hpp"
+#include "strobe/window/allocator.hpp"
 
 namespace strobe::window {
 
-WindowContext::WindowContext(PolyAllocatorReference allocator) {
-  using ATraits = AllocatorTraits<PolyAllocatorReference>;
+WindowContext::WindowContext(window::allocator_ref allocator) {
+  using ATraits = AllocatorTraits<window::allocator_ref>;
   auto ctx = ATraits::allocate<GlfwWindowContext>(allocator);
   new (ctx) GlfwWindowContext(std::move(allocator));
   m_internals = static_cast<void*>(ctx);

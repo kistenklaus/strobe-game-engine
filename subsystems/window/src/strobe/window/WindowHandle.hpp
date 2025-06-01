@@ -13,6 +13,7 @@ class WindowHandle {
 
   window::Window& operator*() const noexcept { return *m_window; }
   window::Window* operator->() const noexcept { return m_window.get(); }
+
   operator bool() const noexcept { return static_cast<bool>(m_window); }
   bool valid() const noexcept { return m_window.valid(); }
 

@@ -9,7 +9,7 @@ using allocator_ref = AllocatorReference<allocator>;
 
 namespace details {
 
-allocator_ref makeAllocatorRef(allocator& alloc) {
+inline allocator_ref makeAllocatorRef(allocator& alloc) {
   return allocator_ref(&alloc);
 }
 

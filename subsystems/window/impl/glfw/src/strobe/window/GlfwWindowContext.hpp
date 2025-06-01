@@ -5,18 +5,16 @@
 #include <algorithm>
 #include <concepts>
 #include <exception>
-#include <future>
 #include <iostream>
 #include <ostream>
 #include <print>
 #include <semaphore>
-#include <stdexcept>
 #include <thread>
 #include <tuple>
 #include <type_traits>
 
-#include "strobe/core/memory/PolyAllocator.hpp"
 #include "strobe/core/sync/mpsc.hpp"
+#include "strobe/window/allocator.hpp"
 namespace strobe::window {
 
 class GlfwWindowContext {
@@ -27,14 +25,13 @@ class GlfwWindowContext {
     void operator()() { func(userData); }
   };
 
-  GlfwWindowContext(PolyAllocatorReference allocator)
+  GlfwWindowContext(window::allocator_ref allocator)
       : m_allocator(std::move(allocator)),
         m_jobQueue(
             std::move(strobe::mpsc::channel<DeferredLambda, 10>(m_allocator))),
         m_waitForShutdown(0) {
     std::binary_semaphore initComp{0};
-    m_thread =
-        std::jthread(&GlfwWindowContext::glfwMain, this, &initComp);
+    m_thread = std::jthread(&GlfwWindowContext::glfwMain, this, &initComp);
     initComp.acquire();
   }
 
@@ -123,10 +120,10 @@ class GlfwWindowContext {
     }
   }
 
-  PolyAllocatorReference getAllocator() { return m_allocator; }
+  window::allocator_ref getAllocator() { return m_allocator; }
 
  private:
-  PolyAllocatorReference m_allocator;
+  window::allocator_ref m_allocator;
   std::jthread m_thread;
   std::binary_semaphore m_waitForShutdown;
   std::pair<strobe::mpsc::Sender<DeferredLambda>,

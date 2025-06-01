@@ -37,7 +37,7 @@ class GlfwWindow {
             .mutex = {},
             .size = size,
             .framebufferSize = uvec2(0, 0),
-            .ctitle = Vector<char, PolyAllocatorReference>(
+            .ctitle = Vector<char, window::allocator_ref>(
                 title.size() + 1, context->getAllocator()),
         }),
         m_mouseButtonEventDispatcher(context->getAllocator()),
@@ -374,23 +374,23 @@ class GlfwWindow {
     mutable std::mutex mutex;
     uvec2 size;
     uvec2 framebufferSize;
-    Vector<char, PolyAllocatorReference> ctitle;
+    Vector<char, window::allocator_ref> ctitle;
   } m_attribs;
 
-  EventDispatcher<MouseButtonEvent, PolyAllocatorReference>
+  EventDispatcher<MouseButtonEvent, window::allocator_ref>
       m_mouseButtonEventDispatcher;
-  EventDispatcher<MouseMoveEvent, PolyAllocatorReference>
+  EventDispatcher<MouseMoveEvent, window::allocator_ref>
       m_mouseMoveEventDispatcher;
-  EventDispatcher<MouseScrollEvent, PolyAllocatorReference>
+  EventDispatcher<MouseScrollEvent, window::allocator_ref>
       m_mouseScrollEventDispatcher;
 
-  EventDispatcher<KeyboardEvent, PolyAllocatorReference>
+  EventDispatcher<KeyboardEvent, window::allocator_ref>
       m_keyboardEventDispatcher;
-  EventDispatcher<CharEvent, PolyAllocatorReference> m_charEventDispatcher;
+  EventDispatcher<CharEvent, window::allocator_ref> m_charEventDispatcher;
 
-  EventDispatcher<ResizeEvent, PolyAllocatorReference>
+  EventDispatcher<ResizeEvent, window::allocator_ref>
       m_framebufferSizeEventDispatcher;
-  EventDispatcher<ResizeEvent, PolyAllocatorReference> m_resizeEventDispatcher;
+  EventDispatcher<ResizeEvent, window::allocator_ref> m_resizeEventDispatcher;
 };
 
 }  // namespace strobe::window

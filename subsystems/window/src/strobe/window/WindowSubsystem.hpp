@@ -21,9 +21,11 @@ namespace strobe {
 class WindowManager {
  public:
   WindowManager(const window::allocator& allocator = {})
-      : m_allocator(allocator), m_context(&m_allocator) {}
+      : m_allocator(allocator),
+        m_context(window::details::makeAllocatorRef(m_allocator)) {}
   WindowManager(window::allocator&& allocator)
-      : m_allocator(std::move(allocator)), m_context(&m_allocator) {}
+      : m_allocator(std::move(allocator)),
+        m_context(window::details::makeAllocatorRef(m_allocator)) {}
 
   ~WindowManager() = default;
 
@@ -41,12 +43,12 @@ class WindowManager {
     static_assert(std::is_destructible_v<window::Window>);
     window::Window window =
         m_context.createWindow(size, title, resizable, closeOnCallback);
-    return WindowHandle(window::details::makeAllocatorRef(*m_allocator),
+    return WindowHandle(window::details::makeAllocatorRef(m_allocator),
                         std::move(window));
   }
 
  private:
-  [[no_unique_address]] MemoryResource<window::allocator> m_allocator;
+  [[no_unique_address]] window::allocator m_allocator;
   window::WindowContext m_context;
 };
 
