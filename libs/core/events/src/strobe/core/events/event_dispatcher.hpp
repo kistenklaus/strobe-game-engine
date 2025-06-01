@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <cassert>
 #include <print>
 #include <strobe/core/containers/small_vector.hpp>
 

@@ -1,7 +1,8 @@
 #pragma once
 
+#include <cassert>
 #include <concepts>
-#include <print>
+#include <cstdint>
 
 #include "basic_event.hpp"
 #include "event.hpp"

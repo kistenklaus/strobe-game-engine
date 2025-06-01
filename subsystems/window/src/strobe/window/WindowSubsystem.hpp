@@ -3,91 +3,51 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 
-#include <print>
+#include <concepts>
 #include <string_view>
+#include <strobe/core/memory/Mallocator.hpp>
+#include <strobe/core/memory/PolyAllocator.hpp>
 #include <strobe/lina.hpp>
 #include <strobe/memory.hpp>
+#include <strobe/window/Window.hpp>
+#include <strobe/window/WindowContext.hpp>
+#include <strobe/window/allocator.hpp>
+#include <type_traits>
 
-#include "strobe/core/events/event_listener.hpp"
-#include "strobe/core/events/event_listener_handle.hpp"
-#include "strobe/window/WindowImpl.hpp"
+#include "./WindowHandle.hpp"
 
 namespace strobe {
 
-template <strobe::Allocator A>
-class WindowSubsystem {
+class WindowManager {
  public:
-  WindowSubsystem(uvec2 size, std::string_view title, const A& allocator = {})
-      : m_allocator(allocator),
-        m_window(size, title, PolyAllocatorReference(&m_allocator)) {}
+  WindowManager(const window::allocator& allocator = {})
+      : m_allocator(allocator), m_context(&m_allocator) {}
+  WindowManager(window::allocator&& allocator)
+      : m_allocator(std::move(allocator)), m_context(&m_allocator) {}
 
-  ~WindowSubsystem() = default;
+  ~WindowManager() = default;
 
   // Ensure object identity
-  WindowSubsystem(const WindowSubsystem&) = delete;
-  WindowSubsystem& operator=(const WindowSubsystem&) = delete;
-  WindowSubsystem(WindowSubsystem&&) = delete;
-  WindowSubsystem& operator=(WindowSubsystem&&) = delete;
+  WindowManager(const WindowManager&) = delete;
+  WindowManager& operator=(const WindowManager&) = delete;
+  WindowManager(WindowManager&&) = delete;
+  WindowManager& operator=(WindowManager&&) = delete;
 
-  void close() { m_window.close(); }
-
-  bool closed() const { return m_window.closed(); }
-
-  uvec2 getFramebufferSize() const { return m_window.getFramebufferSize(); }
-
-  void setTitle(std::string_view title) { m_window.setTitle(title); }
-
-  std::string getTitle() const { return m_window.getTitle(); }
-
-  void setResizable(bool resizable) { return m_window.setResizable(resizable); }
-
-  bool isResizable() const { return m_window.isResizable(); }
-
-  EventListenerHandle addKeyboardListener(
-      EventListenerRef<window::KeyboardEvent> listener) {
-    return m_window.addKeyboardEventListener(listener);
+  WindowHandle createWindow(uvec2 size, std::string_view title,
+                            bool resizable = false,
+                            bool closeOnCallback = true) {
+    static_assert(std::constructible_from<window::Window, window::Window&&>);
+    static_assert(std::movable<window::Window>);
+    static_assert(std::is_destructible_v<window::Window>);
+    window::Window window =
+        m_context.createWindow(size, title, resizable, closeOnCallback);
+    return WindowHandle(window::details::makeAllocatorRef(*m_allocator),
+                        std::move(window));
   }
-
-  EventListenerHandle addCharEventListener(
-      EventListenerRef<window::CharEvent> listener) {
-    return m_window.addCharEventListener(listener);
-  }
-
-  EventListenerHandle addResizeListener(
-      EventListenerRef<window::ResizeEvent> listener) {
-    return m_window.addResizeListener(listener);
-  }
-
-  EventListenerHandle addFramebufferSizeListener(
-      EventListenerRef<window::ResizeEvent> listener) {
-    return m_window.addFramebufferSizeListener(listener);
-  }
-
-  EventListenerHandle addMouseButtonEventListener(
-      EventListenerRef<window::MouseButtonEvent> listener) {
-    return m_window.addMouseButtonEventListener(listener);
-  }
-
-  EventListenerHandle addMouseMoveEventListener(
-      EventListenerRef<window::MouseMoveEvent> listener) {
-    return m_window.addMouseMoveEventListener(listener);
-  }
-
-  EventListenerHandle addMouseScrollEventListener(
-      EventListenerRef<window::MouseScrollEvent> listener) {
-    return m_window.addMouseScrollEventListener(listener);
-  }
-
-  EventListenerHandle addShutdownEventListener(
-      EventListenerRef<window::ShutdownEvent> listener) {
-    return m_window.addShutdownEventListener(listener);
-  }
-
-  // bool setKeyboardCallback() const { return m_window.
 
  private:
-  [[no_unique_address]] MemoryResource<A> m_allocator;
-  window::WindowImpl m_window;
+  [[no_unique_address]] MemoryResource<window::allocator> m_allocator;
+  window::WindowContext m_context;
 };
 
 }  // namespace strobe

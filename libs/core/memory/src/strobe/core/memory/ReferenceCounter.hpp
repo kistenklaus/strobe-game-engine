@@ -8,6 +8,8 @@ template <std::unsigned_integral T = std::size_t>
 class ReferenceCounter {
  public:
   ReferenceCounter() : m_counter(1) {}
+  ReferenceCounter(T inital) : m_counter(inital) {}
+
   void reset() { m_counter.store(1); }
 
   bool inc() {
@@ -17,9 +19,20 @@ class ReferenceCounter {
     return current > 0;
   }
 
+  void resurrect() { 
+    m_counter.fetch_add(1, std::memory_order_release); 
+  }
+
   bool dec() { return m_counter.fetch_sub(1) == 1; }
 
-  T useCount() const { return m_counter.load(); }
+  [[deprecated(
+      "Unclear semantics. Use isZero if possible. Might also clash with "
+      "waitless designs.")]]
+  T useCount() const {
+    return m_counter.load();
+  }
+
+  bool isZero() const { return m_counter.load() == 0; }
 
  private:
   std::atomic<T> m_counter;

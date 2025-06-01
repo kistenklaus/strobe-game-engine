@@ -10,9 +10,9 @@ add_library(${STROBE_CORE_MEMORY_LIB}
 
 # Use PUBLIC here to propagate the include directories
 target_include_directories(${STROBE_CORE_MEMORY_LIB} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_precompile_headers(${STROBE_CORE_MEMORY_LIB}
-  PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/strobe/memory.hpp
-)
+# target_precompile_headers(${STROBE_CORE_MEMORY_LIB}
+#   PUBLIC
+#   ${CMAKE_CURRENT_SOURCE_DIR}/include/strobe/memory.hpp
+# )
 
 add_subdirectory(test)

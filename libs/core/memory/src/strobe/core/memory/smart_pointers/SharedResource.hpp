@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include "strobe/core/memory/AllocatorTraits.hpp"
 #include "strobe/core/memory/ReferenceCounter.hpp"
 #include "strobe/core/memory/align.hpp"
@@ -17,7 +18,9 @@ class ObjectDestructor {
 template <typename T>
 class SharedResource {
  private:
+
   typedef void (*Deleter)(void* self);
+
   struct ControlBlock {
     memory::ReferenceCounter<std::size_t> m_referenceCounter;
     Deleter m_deleter;

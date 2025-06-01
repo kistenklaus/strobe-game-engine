@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <random>
 #include <strobe/core/memory/monotonic_pool_allocator.hpp>
+#include <strobe/core/memory/Mallocator.hpp>
 #include <unordered_set>
 
 using namespace strobe;

@@ -436,12 +436,12 @@ class Vector {
     return begin() + index;
   }
 
-  void erase(const_iterator pos) {
+  iterator erase(const_iterator pos) {
     std::size_t index = pos - begin();
 
     if (index == size() - 1) {
       pop_back();
-      return;
+      return end();
     }
 
     if constexpr (std::is_trivially_move_assignable_v<T>) {
@@ -451,6 +451,7 @@ class Vector {
       std::move(begin() + index + 1, end(), begin() + index);
     }
     pop_back();
+    return begin() + index;
   }
 
   // ================= Stack Interface ==============

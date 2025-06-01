@@ -6,6 +6,7 @@
 #include <strobe/core/sync/mpsc.hpp>
 #include <thread>
 #include <unordered_set>
+#include <strobe/core/memory/Mallocator.hpp>
 
 // Basic Initialization Test
 TEST(MPSCChannel, BasicInitialization) {

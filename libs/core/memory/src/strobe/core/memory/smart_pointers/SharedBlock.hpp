@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <strobe/core/memory/AllocatorTraits.hpp>
 
 #include "strobe/core/memory/ReferenceCounter.hpp"
@@ -24,7 +25,7 @@ class SharedBlock {
 
  public:
   template <typename... Args>
-  SharedBlock make(A alloc, Args&&... args) {
+  static SharedBlock make(A alloc, Args&&... args) {
     ControlBlock* controlBlock =
         ATraits::template allocate<ControlBlock>(alloc);
     new (controlBlock)
@@ -79,8 +80,8 @@ class SharedBlock {
   void release() {
     if (m_controlBlock != nullptr && m_controlBlock->m_referenceCounter.dec()) {
       A alloc = m_controlBlock->m_allocator;
-      m_controlBlock.~ControlBlock();
-      ATraits::template deallocate<ControlBlock>(m_controlBlock);
+      m_controlBlock->~ControlBlock();
+      ATraits::template deallocate<ControlBlock>(alloc, m_controlBlock);
       m_controlBlock = nullptr;
     }
   }
@@ -101,6 +102,7 @@ class SharedBlock {
 };
 
 template <typename T, Allocator A, typename... Args>
+  requires std::constructible_from<T, Args...>
 static SharedBlock<T, A> makeSharedBlock(A alloc, Args&&... args) {
   return SharedBlock<T, A>::template make<Args...>(std::move(alloc),
                                                    std::forward<Args>(args)...);

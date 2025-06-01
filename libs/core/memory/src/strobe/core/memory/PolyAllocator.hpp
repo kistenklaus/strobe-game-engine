@@ -29,6 +29,9 @@ class MemoryResource : public PolyMemoryResource {
     ATraits::deallocate(m_allocator, ptr, size, align);
   }
 
+  const A& operator*() const { return m_allocator; }
+  A& operator*() { return m_allocator; }
+
  private:
   [[no_unique_address]] A m_allocator;
 };

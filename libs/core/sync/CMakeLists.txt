@@ -11,9 +11,9 @@ add_library(${STROBE_CORE_SYNC_LIB}
 target_include_directories(${STROBE_CORE_SYNC_LIB} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${STROBE_CORE_SYNC_LIB} PUBLIC ${STROBE_CORE_MEMORY_LIB})
 
-target_precompile_headers(${STROBE_CORE_SYNC_LIB}
-  PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/strobe/sync.hpp
-)
+# target_precompile_headers(${STROBE_CORE_SYNC_LIB}
+#   PUBLIC
+#   ${CMAKE_CURRENT_SOURCE_DIR}/include/strobe/sync.hpp
+# )
 
 add_subdirectory(test)
