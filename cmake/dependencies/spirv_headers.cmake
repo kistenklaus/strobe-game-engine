@@ -8,6 +8,7 @@ if (NOT TARGET SPIRV-Headers)
     spirv_headers
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Headers.git
     GIT_TAG        main
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   )
   FetchContent_MakeAvailable(spirv_headers)
 

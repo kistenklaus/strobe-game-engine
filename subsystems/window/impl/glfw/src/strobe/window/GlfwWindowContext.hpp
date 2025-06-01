@@ -7,7 +7,6 @@
 #include <exception>
 #include <iostream>
 #include <ostream>
-#include <print>
 #include <semaphore>
 #include <thread>
 #include <tuple>
@@ -40,7 +39,7 @@ class GlfwWindowContext {
 
   void glfwMain(std::stop_token token, std::binary_semaphore* initComp) {
     if (glfwInit() == GLFW_FALSE) {
-      std::println("FATAL-ERROR: Failed to initalize glfw");
+      // std::println("FATAL-ERROR: Failed to initalize glfw");
       std::flush(std::cout);
       std::terminate();
       return;

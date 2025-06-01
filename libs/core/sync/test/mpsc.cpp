@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include <atomic>
-#include <print>
 #include <random>
 #include <strobe/core/sync/mpsc.hpp>
 #include <thread>

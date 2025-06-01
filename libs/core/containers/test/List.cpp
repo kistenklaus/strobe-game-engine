@@ -3,7 +3,6 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
-#include <print>
 
 #include "strobe/core/memory/Mallocator.hpp"
 

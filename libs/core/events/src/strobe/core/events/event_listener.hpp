@@ -3,7 +3,6 @@
 #include <cassert>
 #include <concepts>
 #include <cstdint>
-#include <print>
 
 #include "basic_event.hpp"
 #include "event.hpp"

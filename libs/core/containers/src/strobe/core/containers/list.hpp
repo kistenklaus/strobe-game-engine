@@ -1,10 +1,10 @@
 #pragma once
 
 #include <concepts>
-#include <print>
 
 #include "strobe/core/memory/AllocatorTraits.hpp"
 #include "strobe/core/memory/monotonic_pool_allocator.hpp"
+
 namespace strobe {
 
 template <typename T, Allocator A>
@@ -231,7 +231,6 @@ class List {
     }
 
     const_reverse_iterator& operator++() {
-      std::println("--");
       assert(m_node != nullptr);
       assert(m_node != m_node->prev);
       m_node = m_node->prev;

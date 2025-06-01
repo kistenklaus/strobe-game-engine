@@ -1,4 +1,3 @@
-#include <print>
 #include <strobe/window/WindowManager.hpp>
 #include <strobe/lina.hpp>
 #include <thread>

@@ -8,11 +8,7 @@ function(require_googletest)
   endif()
 
   # Always call find_package so that imported targets are defined
-  if (FORCE)
-    find_package(GTest REQUIRED)
-  else()
-    find_package(GTest QUIET)
-  endif()
+  find_package(GTest QUIET)
 
   # Update the cached result
   set(GTEST_FOUND ${GTest_FOUND} CACHE INTERNAL "GoogleTest found status")
@@ -24,6 +20,8 @@ function(require_googletest)
       FetchContent_Declare(
         googletest
         URL https://github.com/google/googletest/archive/refs/heads/main.zip
+        GIT_TAG 52eb8108c5bdec04579160ae17225d66034bd723
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
       )
       FetchContent_MakeAvailable(googletest)
       set(GTEST_FOUND TRUE CACHE INTERNAL "GoogleTest was fetched and built")

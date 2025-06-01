@@ -8,6 +8,7 @@ if (NOT TARGET glslang)
     glslang
     GIT_REPOSITORY https://github.com/KhronosGroup/glslang.git
     GIT_TAG        main
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   )
   FetchContent_MakeAvailable(glslang)
 

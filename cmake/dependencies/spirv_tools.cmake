@@ -17,6 +17,7 @@ if (NOT TARGET SPIRV-Tools-opt)
     spirv_tools
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Tools.git
     GIT_TAG        main
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   )
   FetchContent_MakeAvailable(spirv_tools)
 

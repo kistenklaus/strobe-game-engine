@@ -1,6 +1,5 @@
 #pragma once
 
-#include <print>
 #include <utility>
 
 #include "strobe/core/events/event_listener.hpp"

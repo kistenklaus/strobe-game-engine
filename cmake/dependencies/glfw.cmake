@@ -1,30 +1,58 @@
 include_guard(GLOBAL)
 
-# Function to require GLFW (optional 'force' argument, default: FALSE)
 function(require_glfw)
-  # Optional 'force' argument (default is FALSE)
   set(FORCE FALSE)
   if (DEFINED ARGV0)
     set(FORCE ${ARGV0})
   endif()
 
-  # Check if GLFW has already been found (using a cache variable)
   if (DEFINED GLFW_FOUND AND GLFW_FOUND)
     return()
   endif()
 
-  # Attempt to find GLFW (only once)
+  # Try to find system GLFW
   if (FORCE)
     find_package(glfw3 REQUIRED)
   else()
     find_package(glfw3 QUIET)
   endif()
 
-  # Cache the result of the search (so it is only done once)
-  set(GLFW_FOUND ${glfw3_FOUND} CACHE INTERNAL "Tracks if GLFW has been found once")
+  set(GLFW_FOUND ${glfw3_FOUND} CACHE INTERNAL "GLFW found status")
 
-  # Log result
-  if (glfw3_FOUND)
+  if (NOT GLFW_FOUND)
+    # Check for X11
+    find_package(X11 QUIET)
+    if (X11_FOUND)
+      set(GLFW_BUILD_X11 ON CACHE BOOL "Enable X11 backend")
+    else()
+      set(GLFW_BUILD_X11 OFF CACHE BOOL "Disable X11 backend")
+    endif()
+
+    # Check for Wayland
+    find_package(PkgConfig QUIET)
+    if (PkgConfig_FOUND)
+      pkg_check_modules(WAYLAND wayland-client>=0.2.7 wayland-egl wayland-cursor)
+      pkg_check_modules(XKBCOMMON xkbcommon)
+    endif()
+
+    if (WAYLAND_FOUND AND XKBCOMMON_FOUND)
+      set(GLFW_BUILD_WAYLAND ON CACHE BOOL "Enable Wayland backend")
+    else()
+      set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "Disable Wayland backend")
+    endif()
+    # Fallback: FetchContent
+    include(FetchContent)
+    FetchContent_Declare(
+      glfw
+      GIT_REPOSITORY https://github.com/glfw/glfw.git
+      GIT_TAG 43c9fb329116fcd57e94c8edc9ce2c1619a370a8
+      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    FetchContent_MakeAvailable(glfw)
+    set(GLFW_FOUND TRUE CACHE INTERNAL "GLFW was fetched and built")
+  endif()
+
+  if (GLFW_FOUND)
     log_success("✅ GLFW available")
   elseif(FORCE)
     log_error("❌ GLFW not available, but it was required!")
@@ -33,9 +61,7 @@ function(require_glfw)
   endif()
 endfunction()
 
-# Function to link GLFW to a target
 function(target_link_glfw target visibility)
-  # Ensure GLFW is found (required in this context)
   require_glfw(TRUE)
   target_link_libraries(${target} ${visibility} glfw)
 endfunction()

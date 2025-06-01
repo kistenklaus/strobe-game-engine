@@ -38,6 +38,7 @@ FetchContent_Declare(
   shaderc
   GIT_REPOSITORY https://github.com/google/shaderc.git
   GIT_TAG        main
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(shaderc)
 

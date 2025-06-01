@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
-#include <print>
 #include <strobe/core/containers/small_vector.hpp>
 
 #include "event.hpp"
