@@ -2,7 +2,7 @@
 
 #include <print>
 #include <strobe/memory.hpp>
-#include <strobe/window/WindowSubsystem.hpp>
+#include <strobe/window/WindowManager.hpp>
 #include <thread>
 
 #include "strobe/core/memory/Mallocator.hpp"

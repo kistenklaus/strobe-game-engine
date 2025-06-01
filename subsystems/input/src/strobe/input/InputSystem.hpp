@@ -7,7 +7,7 @@
 #include "strobe/input/Keyboard.hpp"
 #include "strobe/input/Mouse.hpp"
 #include "strobe/input/allocator.hpp"
-#include "strobe/window/WindowSubsystem.hpp"
+#include "strobe/window/WindowManager.hpp"
 
 namespace strobe {
 
