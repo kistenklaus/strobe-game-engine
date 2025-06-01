@@ -1,3 +1,0 @@
-[2025-05-12 19:38:46.666] [info] Loading File "./resources/shaders/test.vert.glsl"
-[2025-05-12 19:38:46.666] [error] Loading File "./resources/shaders/test.vert.glsl" failed:
-Failed to open file ./resources/shaders/test.vert.glsl
