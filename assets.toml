@@ -1,0 +1,16 @@
+[[shader]]
+name = "basic-vertex"
+lang = "glsl"
+path = "assets/shaders/basic.vert.glsl"
+
+[[material]]
+name = "basic-material"
+vertex-shader = "basic-vertex"
+fragment-shader = "basic-fragment"
+[material.parameters]
+color = "#FFF000"
+
+[[shader]]
+name = "basic-fragment"
+lang = "glsl"
+path = "asserts/shaders/basic.frag.glsl"

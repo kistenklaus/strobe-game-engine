@@ -1,6 +1,5 @@
 include_guard(GLOBAL)
 
-
 function (select_strobe_window_api)
     if (DEFINED ARGV0)
       set(api ${ARGV0})
@@ -19,4 +18,19 @@ function (select_strobe_window_api)
       log_error("❌ Failed to select window api!")
     endif()
     # we will discuss the section later
+endfunction()
+
+
+function (set_strobe_asset_manifest)
+  if (DEFINED ARGV0) 
+    set(path ${PROJECT_SOURCE_DIR}/${ARGV0})
+    if (EXISTS ${path})
+      set(STROBE_ASSET_MANIFEST_PATH ${path} CACHE INTERNAL "Set manifest path")
+      log_success("${path} is set as the manifest path")
+    else()
+      log_error("Asset manifest ${path} does not exist.")
+    endif()
+  else()
+    log_error("set_strobe_asset_manifest expects a path to the asset manifest")
+  endif()
 endfunction()

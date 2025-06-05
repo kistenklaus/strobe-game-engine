@@ -1,0 +1,21 @@
+include_guard(GLOBAL)
+
+set(STROBE_ASSETS_PREPROCESSOR ${PROJECT_NAME}-assets-preprocessor CACHE INTERNAL "")
+
+set(STROBE_ASSETS_PREPROCESS ${PROJECT_NAME}-assets-preprocess CACHE INTERNAL "")
+
+add_executable(${STROBE_ASSETS_PREPROCESSOR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/assets/preprocessor/main.cpp
+)
+
+target_include_directories(${STROBE_ASSETS_PREPROCESSOR} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_link_libraries(${STROBE_ASSETS_PREPROCESSOR} PUBLIC ${STROBE_CORE_LIB})
+
+add_custom_target(${STROBE_ASSETS_PREPROCESS}
+    COMMAND ${STROBE_ASSETS_PREPROCESSOR}
+    COMMENT "Update asset database"
+    USES_TERMINAL
+)
+
+add_dependencies(${STROBE_ASSETS_PREPROCESS} ${STROBE_ASSETS_PREPROCESSOR})

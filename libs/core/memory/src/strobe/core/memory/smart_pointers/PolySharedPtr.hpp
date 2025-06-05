@@ -5,31 +5,39 @@
 #include "strobe/core/memory/align.hpp"
 
 #include <algorithm>
+#include <type_traits>
 namespace strobe {
 
-namespace memory::shared_ptr::details {
+namespace memory::poly_shared_ptr::details {
 
-template <typename T> struct ControlBlock {
+struct ControlBlockHeader {
   typedef void (*Deleter)(void *self);
-  T m_value;
   memory::ReferenceCounter<std::size_t> m_referenceCounter;
   Deleter m_deleter;
 
+  ControlBlockHeader(Deleter del) : m_deleter(del) {}
+};
+
+template <typename T> struct ControlBlock : ControlBlockHeader {
+  T m_value;
+
   template <typename... Args>
   ControlBlock(Deleter del, Args &&...args)
-      : m_value(std::forward<Args>(args)...), m_referenceCounter(),
-        m_deleter(del) {}
+      : ControlBlockHeader(del), m_value(std::forward<Args>(args)...) {}
 };
-} // namespace memory::details
+} // namespace memory::poly_shared_ptr::details
 
-template <typename T> class SharedPtr {
+template <typename T> class PolySharedPtr {
 private:
   typedef void (*Deleter)(void *self);
-  using ControlBlock = memory::shared_ptr::details::ControlBlock<T>;
+  using ControlBlockHeader =
+      memory::poly_shared_ptr::details::ControlBlockHeader;
 
 public:
   template <Allocator A, typename... Args>
-  static SharedPtr make(A alloc, Args &&...args) {
+  static PolySharedPtr make(A alloc, Args &&...args) {
+
+    using ControlBlock = memory::poly_shared_ptr::details::ControlBlock<T>;
     constexpr std::size_t headerSize = sizeof(ControlBlock);
     constexpr std::size_t allocatorOffset =
         memory::align_up(headerSize, alignof(A));
@@ -62,45 +70,86 @@ public:
           ATraits::deallocate(alloc, self, controlBlockSize, controlBlockAlign);
         },
         std::forward<Args>(args)...);
-    return SharedPtr(controlBlock);
-  }
-  ~SharedPtr() { release(); }
 
-  SharedPtr(const SharedPtr &o)
-      : m_controlBlock(copyControlBlock(o.m_controlBlock)) {}
-  SharedPtr &operator=(const SharedPtr &o) {
+    return PolySharedPtr<T>(controlBlock, &controlBlock->m_value);
+  }
+  ~PolySharedPtr() { release(); }
+
+  PolySharedPtr(const PolySharedPtr &o)
+      : m_controlBlock(copyControlBlock(o.m_controlBlock)), m_ptr(o.m_ptr) {}
+
+  PolySharedPtr &operator=(const PolySharedPtr &o) {
     if (m_controlBlock == o.m_controlBlock) {
       return *this;
     }
     release();
     m_controlBlock = copyControlBlock(o.m_controlBlock);
+    m_ptr = o.m_ptr;
     return *this;
   }
 
-  SharedPtr(SharedPtr &&o)
-      : m_controlBlock(std::exchange(o.m_controlBlock, nullptr)) {}
+  template <typename D>
+    requires(std::is_base_of_v<T, D>)
+  PolySharedPtr(const PolySharedPtr<D> &o)
+      : m_controlBlock(copyControlBlock(o.m_controlBlock)),
+        m_ptr(static_cast<T *>(o.m_ptr)) {}
 
-  SharedPtr &operator=(SharedPtr &&o) {
+  template <typename D>
+    requires(std::is_base_of_v<T, D>)
+  PolySharedPtr &operator=(const PolySharedPtr<D> &o) {
+    if (m_controlBlock == o.m_controlBlock) {
+      return *this;
+    }
+    release();
+    m_controlBlock = copyControlBlock(o.m_controlBlock);
+    m_ptr = static_cast<T *>(o.m_ptr);
+    return *this;
+  }
+
+  PolySharedPtr(PolySharedPtr &&o)
+      : m_controlBlock(std::exchange(o.m_controlBlock, nullptr)),
+        m_ptr(std::exchange(o.m_ptr, nullptr)) {}
+
+  PolySharedPtr &operator=(PolySharedPtr &&o) {
     if (m_controlBlock == o.m_controlBlock) {
       return *this;
     }
     release();
     m_controlBlock = std::exchange(o.m_controlBlock, nullptr);
+    m_ptr = std::exchange(o.m_ptr, nullptr);
+    return *this;
+  }
+
+  template <typename D>
+    requires(std::is_base_of_v<T, D>)
+  PolySharedPtr(PolySharedPtr<D> &&o)
+      : m_controlBlock(std::exchange(o.m_controlBlock, nullptr)),
+        m_ptr(static_cast<T*>(std::exchange(o.m_ptr, nullptr))) {}
+
+  template <typename D>
+    requires(std::is_base_of_v<T, D>)
+  PolySharedPtr &operator=(PolySharedPtr<D> &&o) {
+    if (m_controlBlock == o.m_controlBlock) {
+      return *this;
+    }
+    release();
+    m_controlBlock = std::exchange(o.m_controlBlock, nullptr);
+    m_ptr = static_cast<T*>(std::exchange(o.m_ptr, nullptr));
     return *this;
   }
 
   T &operator*() const noexcept {
-    assert(m_controlBlock);
-    return m_controlBlock->m_value;
+    assert(valid());
+    return *m_ptr;
   }
 
   T *operator->() const noexcept {
-    assert(m_controlBlock);
-    return &m_controlBlock->m_value;
+    assert(valid());
+    return m_ptr;
   }
 
   T *get() const noexcept {
-    return m_controlBlock == nullptr ? nullptr : &m_controlBlock->m_value;
+    return m_controlBlock == nullptr ? nullptr : m_ptr;
   }
 
   operator bool() const noexcept { return m_controlBlock != nullptr; }
@@ -111,11 +160,12 @@ public:
     if (m_controlBlock != nullptr && m_controlBlock->m_referenceCounter.dec()) {
       m_controlBlock->m_deleter(m_controlBlock);
       m_controlBlock = nullptr;
+      m_ptr = nullptr;
     }
   }
 
 private:
-  static inline ControlBlock *copyControlBlock(ControlBlock *o) {
+  static inline ControlBlockHeader *copyControlBlock(ControlBlockHeader *o) {
     if (o->m_referenceCounter.inc()) {
       return o;
     } else {
@@ -123,16 +173,17 @@ private:
     }
   }
 
-  explicit SharedPtr(ControlBlock *controlBlock)
-      : m_controlBlock(controlBlock) {}
+  explicit PolySharedPtr(ControlBlockHeader *controlBlock, T *ptr)
+      : m_controlBlock(controlBlock), m_ptr(ptr) {}
 
-  ControlBlock *m_controlBlock;
+  ControlBlockHeader *m_controlBlock;
+  T *m_ptr;
 };
 
 template <typename T, Allocator A, typename... Args>
-static SharedPtr<T> makeSharedPtr(A alloc, Args &&...args) {
-  return SharedPtr<T>::template make<A, Args...>(std::move(alloc),
-                                          std::forward<Args>(args)...);
+static PolySharedPtr<T> makeSharedPtr(A alloc, Args &&...args) {
+  return PolySharedPtr<T>::template make<A, Args...>(std::move(alloc),
+                                              std::forward<Args>(args)...);
 }
 
 } // namespace strobe

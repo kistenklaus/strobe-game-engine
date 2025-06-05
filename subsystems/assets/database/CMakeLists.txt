@@ -1,0 +1,14 @@
+include_guard(GLOBAL)
+
+set(STROBE_ASSETS_DATABASE ${PROJECT_NAME}-assets-database CACHE INTERNAL "")
+
+add_library(${STROBE_ASSETS_DATABASE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/assets/AssetDatabase.cpp
+)
+
+target_include_directories(${STROBE_ASSETS_DATABASE} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_link_libraries(${STROBE_ASSETS_DATABASE} PUBLIC ${STROBE_CORE_LIB})
+
+add_dependencies(${STROBE_ASSETS_DATABASE} ${STROBE_ASSETS_PREPROCESS})
+
