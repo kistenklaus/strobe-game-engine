@@ -64,4 +64,10 @@ endfunction()
 function(target_link_glfw target visibility)
   require_glfw(TRUE)
   target_link_libraries(${target} ${visibility} glfw)
+
+  # Add the include directory from the glfw target itself
+  # get_target_property(GLFW_INCLUDE_DIR glfw INTERFACE_INCLUDE_DIRECTORIES)
+  # if (GLFW_INCLUDE_DIR)
+  #   target_include_directories(${target} ${visibility} ${GLFW_INCLUDE_DIR})
+  # endif()
 endfunction()

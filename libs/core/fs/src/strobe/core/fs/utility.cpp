@@ -1,5 +1,6 @@
 #include "./utility.hpp"
 #include <cassert>
+#include <iterator>
 
 namespace strobe::fs::details {
 

@@ -1,7 +1,7 @@
 set(STROBE_CORE_FS_LIB ${STROBE_CORE_LIB}-fs CACHE INTERNAL "")
 
 
-add_library(${STROBE_CORE_FS_LIB} STATIC
+add_library(${STROBE_CORE_FS_LIB} STATIC EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/exists.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/mkdir.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/mv.cpp

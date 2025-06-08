@@ -2,6 +2,7 @@
 #include <atomic>
 #include <cassert>
 #include <ratio>
+#include <algorithm>
 
 #include "strobe/core/memory/AllocatorTraits.hpp"
 
@@ -57,7 +58,7 @@ class LockFreeMonotonicPoolResource {
     Node* freelistHead = m_freelist.load(std::memory_order_relaxed);
 
     while (freelistHead != nullptr) {
-      Node* next = freelistHead->next;
+      Node* next = freelistHead->free.next;
       if (m_freelist.compare_exchange_weak(freelistHead, next,
                                            std::memory_order_acquire,
                                            std::memory_order_relaxed)) {

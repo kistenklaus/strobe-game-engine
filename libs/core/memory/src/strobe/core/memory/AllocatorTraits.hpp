@@ -64,7 +64,7 @@ struct AllocatorTraits {
 
   template <typename T>
   static inline T *allocate(A &a, std::size_t n = 1) {
-    return reinterpret_cast<T *>(allocate(a, n * sizeof(T), alignof(T)));
+    return static_cast<T *>(allocate(a, n * sizeof(T), alignof(T)));
   }
 
   template <typename T>

@@ -5,8 +5,6 @@
 #include <fcntl.h>
 #include <format>
 #include <iostream>
-#include <linux/limits.h>
-#include <linux/types.h>
 #include <ostream>
 #include <print>
 #include <stdexcept>

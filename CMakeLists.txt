@@ -1,6 +1,6 @@
 # Clean and structured CMake setup for Vulkan + shaderc + spirv-tools
 cmake_minimum_required(VERSION 3.14)
-project(strobe CXX)
+project(strobe LANGUAGES CXX)
 
 option(STROBE_BUILD_TESTS "Build the test suite" OFF)
 option(STROBE_BUILD_SANDBOXES OFF)

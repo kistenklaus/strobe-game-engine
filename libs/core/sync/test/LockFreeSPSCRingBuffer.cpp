@@ -21,11 +21,10 @@ TEST(LockFreeSPSCRingBuffer, EnqueueDequeue) {
 }
 
 TEST(LockFreeSPSCRingBuffer, EnqueueDequeueDynamic) {
-  LockFreeSPSCRingBuffer<int, strobe::Mallocator> buffer{8};
+  LockFreeSPSCRingBuffer<int, strobe::Mallocator> buffer{8, strobe::Mallocator{}};
   ASSERT_TRUE(buffer.enqueue(1));
   ASSERT_TRUE(buffer.enqueue(2));
   ASSERT_TRUE(buffer.enqueue(3));
-
   ASSERT_EQ(buffer.dequeue().value(), 1);
   ASSERT_EQ(buffer.dequeue().value(), 2);
   ASSERT_EQ(buffer.dequeue().value(), 3);

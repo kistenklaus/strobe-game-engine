@@ -11,43 +11,40 @@ namespace strobe::sync {
 namespace details {
 
 // Optimized LockFreeMPSCRingBuffer (Multiple-Producer, Single-Consumer)
-template <typename T>
-class LockFreeMPSCRingBufferBase {
- protected:
-  LockFreeMPSCRingBufferBase(T* buffer, std::size_t capacity)
+template <typename T> class LockFreeMPSCRingBufferBase {
+protected:
+  LockFreeMPSCRingBufferBase(T *buffer, std::size_t capacity)
       : m_head(0), m_tail(0), m_buffer(buffer), m_capacity(capacity) {}
 
- public:
+public:
   // Enqueue (Multiple Producers)
-  bool enqueue(const T& value) {
+  bool enqueue(const T &value) {
     size_t current_tail;
     size_t next_tail;
+
     do {
       current_tail = m_tail.load(std::memory_order_relaxed);
       next_tail = (current_tail + 1) % (m_capacity + 1);
       if (next_tail == m_head.load(std::memory_order_acquire)) {
-        return false;  // Buffer is full
+        return false; // Buffer is full
       }
-    } while (!m_tail.compare_exchange_weak(current_tail, next_tail,
-                                           std::memory_order_release,
-                                           std::memory_order_relaxed));
+    } while (!m_tail.compare_exchange_weak(current_tail, next_tail));
 
     std::construct_at(m_buffer + current_tail, value);
+
     return true;
   }
 
-  bool enqueue(T&& value) {
+  bool enqueue(T &&value) {
     size_t current_tail;
     size_t next_tail;
     do {
-      current_tail = m_tail.load(std::memory_order_relaxed);
+      current_tail = m_tail.load();
       next_tail = (current_tail + 1) % (m_capacity + 1);
-      if (next_tail == m_head.load(std::memory_order_acquire)) {
-        return false;  // Buffer is full
+      if (next_tail == m_head.load()) {
+        return false; // Buffer is full
       }
-    } while (!m_tail.compare_exchange_weak(current_tail, next_tail,
-                                           std::memory_order_release,
-                                           std::memory_order_relaxed));
+    } while (!m_tail.compare_exchange_weak(current_tail, next_tail));
 
     std::construct_at(m_buffer + current_tail, std::move(value));
     return true;
@@ -58,10 +55,10 @@ class LockFreeMPSCRingBufferBase {
     size_t current_head = m_head.load(std::memory_order_relaxed);
 
     if (current_head == m_tail.load(std::memory_order_acquire)) {
-      return std::nullopt;  // Buffer is empty
+      return std::nullopt; // Buffer is empty
     }
 
-    T* element_ptr = m_buffer + current_head;
+    T *element_ptr = m_buffer + current_head;
     T value = std::move(*element_ptr);
     std::destroy_at(element_ptr);
 
@@ -71,33 +68,36 @@ class LockFreeMPSCRingBufferBase {
   }
 
   // Clear the buffer (Single Consumer)
-  void clear() { while (dequeue().has_value()); }
+  void clear() {
+    while (dequeue().has_value())
+      ;
+  }
 
   // Capacity Information (Constant)
   std::size_t capacity() const { return m_capacity; }
 
- protected:
+protected:
   static constexpr size_t CacheLineSize = 64;
 
   alignas(CacheLineSize) std::atomic<size_t> m_head;
   alignas(CacheLineSize) std::atomic<size_t> m_tail;
-  T* m_buffer;
+  T *m_buffer;
   std::size_t m_capacity;
 };
 
-}  // namespace details
+} // namespace details
 
 template <typename T, std::size_t Capacity>
 class InplaceLockFreeMPSCRingBuffer
     : public details::LockFreeMPSCRingBufferBase<T> {
- public:
+public:
   InplaceLockFreeMPSCRingBuffer()
-      : details::LockFreeMPSCRingBufferBase<T>(reinterpret_cast<T*>(m_storage),
+      : details::LockFreeMPSCRingBufferBase<T>(reinterpret_cast<T *>(m_storage),
                                                Capacity) {}
 
   ~InplaceLockFreeMPSCRingBuffer() { this->clear(); }
 
- private:
+private:
   alignas(alignof(T)) std::byte m_storage[(Capacity + 1) * sizeof(T)];
 };
 
@@ -105,7 +105,7 @@ template <typename T, Allocator A>
 class LockFreeMPSCRingBuffer : public details::LockFreeMPSCRingBufferBase<T> {
   using ATraits = AllocatorTraits<A>;
 
- public:
+public:
   LockFreeMPSCRingBuffer(std::size_t capacity, A alloc = {})
       : details::LockFreeMPSCRingBufferBase<T>(
             ATraits::template allocate<T>(alloc, capacity), capacity),
@@ -117,26 +117,26 @@ class LockFreeMPSCRingBuffer : public details::LockFreeMPSCRingBufferBase<T> {
                                     this->m_capacity);
   }
 
- private:
+private:
   [[no_unique_address]] A m_allocator;
 };
 
 template <typename T>
 class FlexibleLockFreeMPSCRingBuffer
     : public details::LockFreeMPSCRingBufferBase<T> {
- public:
+public:
   FlexibleLockFreeMPSCRingBuffer(std::size_t flexibleBufferSize)
       : details::LockFreeMPSCRingBufferBase<T>(m_storage,
                                                flexibleBufferSize - 1) {}
   ~FlexibleLockFreeMPSCRingBuffer() { this->clear(); }
 
-  FlexibleLockFreeMPSCRingBuffer(const FlexibleLockFreeMPSCRingBuffer&) =
+  FlexibleLockFreeMPSCRingBuffer(const FlexibleLockFreeMPSCRingBuffer &) =
       delete;
-  FlexibleLockFreeMPSCRingBuffer& operator=(
-      const FlexibleLockFreeMPSCRingBuffer&) = delete;
-  FlexibleLockFreeMPSCRingBuffer(FlexibleLockFreeMPSCRingBuffer&&) = delete;
-  FlexibleLockFreeMPSCRingBuffer& operator=(FlexibleLockFreeMPSCRingBuffer&&) =
-      delete;
+  FlexibleLockFreeMPSCRingBuffer &
+  operator=(const FlexibleLockFreeMPSCRingBuffer &) = delete;
+  FlexibleLockFreeMPSCRingBuffer(FlexibleLockFreeMPSCRingBuffer &&) = delete;
+  FlexibleLockFreeMPSCRingBuffer &
+  operator=(FlexibleLockFreeMPSCRingBuffer &&) = delete;
 
   static constexpr std::size_t requiredByteSize(std::size_t capacity) {
     // compute aligned corrected flexible size.
@@ -148,12 +148,10 @@ class FlexibleLockFreeMPSCRingBuffer
 
   std::size_t byteSize() const { return requiredByteSize(this->m_capacity); }
 
-  std::size_t bufferSize() const { 
-    return this->m_capacity + 1;
-  }
+  std::size_t bufferSize() const { return this->m_capacity + 1; }
 
- private:
-  T m_storage[0];  // flexible array layout!
+private:
+  T m_storage[0]; // flexible array layout!
 };
 
-}  // namespace strobe::sync
+} // namespace strobe::sync

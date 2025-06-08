@@ -10,6 +10,7 @@
 #include <system_error>
 #include <unistd.h>
 #include <utime.h>
+#include <sys/stat.h>
 
 namespace strobe::fs {
 
@@ -48,10 +49,17 @@ void mv(PathView src, PathView dst, MvFlags flags) {
   bool preserveTimestamps = (flags & MvFlagBits::PreserveTimestamps) ==
                             MvFlagBits::PreserveTimestamps;
   if (preserveTimestamps) {
+#ifdef __APPLE__
+    times[0].tv_sec = src_stat.st_atimespec.tv_sec;
+    times[0].tv_usec = src_stat.st_atimespec.tv_nsec / 1000;
+    times[1].tv_sec = src_stat.st_mtimespec.tv_sec;
+    times[1].tv_usec = src_stat.st_mtimespec.tv_nsec / 1000;
+#else
     times[0].tv_sec = src_stat.st_atim.tv_sec;
     times[0].tv_usec = src_stat.st_atim.tv_nsec / 1000;
     times[1].tv_sec = src_stat.st_mtim.tv_sec;
     times[1].tv_usec = src_stat.st_mtim.tv_nsec / 1000;
+#endif
   }
 
   // Perform the rename

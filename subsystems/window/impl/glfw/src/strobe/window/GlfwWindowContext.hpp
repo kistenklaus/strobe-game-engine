@@ -1,7 +1,5 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
-
 #include <algorithm>
 #include <concepts>
 #include <exception>
@@ -11,6 +9,8 @@
 #include <thread>
 #include <tuple>
 #include <type_traits>
+#include <stop_token>
+#include <thread>
 
 #include "strobe/core/sync/mpsc.hpp"
 #include "strobe/window/allocator.hpp"

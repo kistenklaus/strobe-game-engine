@@ -3,7 +3,6 @@
 #include <atomic>
 #include <optional>
 #include <strobe/memory.hpp>
-#include <type_traits>
 
 #include "strobe/core/memory/AllocatorTraits.hpp"
 
@@ -11,14 +10,15 @@ namespace strobe::sync {
 
 namespace details {
 
-template <typename T>
-class LockFreeSPSCRingBufferBase {
- protected:
-  LockFreeSPSCRingBufferBase(T* buffer, std::size_t capacity)
-      : m_head(0), m_tail(0), m_buffer(buffer), m_capacity(capacity) {}
+template <typename T> class LockFreeSPSCRingBufferBase {
+protected:
+  LockFreeSPSCRingBufferBase(T *buffer, std::size_t capacity)
+      : m_head(0), m_tail(0), m_buffer(buffer), m_capacity(capacity) {
+    assert(buffer != nullptr);
+  }
 
- public:
-  bool enqueue(const T& value) {
+public:
+  bool enqueue(const T &value) {
     size_t current_tail = m_tail.load(std::memory_order_relaxed);
     size_t next_tail = (current_tail + 1) % (m_capacity + 1);
 
@@ -31,7 +31,7 @@ class LockFreeSPSCRingBufferBase {
     return true;
   }
 
-  bool enqueue(T&& value) {
+  bool enqueue(T &&value) {
     size_t current_tail = m_tail.load(std::memory_order_relaxed);
     size_t next_tail = (current_tail + 1) % (m_capacity + 1);
 
@@ -51,7 +51,7 @@ class LockFreeSPSCRingBufferBase {
       return std::nullopt;
     }
 
-    T* obj_ptr = m_buffer + current_head;
+    T *obj_ptr = m_buffer + current_head;
     T value = std::move(*obj_ptr);
     std::destroy_at(obj_ptr);
 
@@ -60,39 +60,42 @@ class LockFreeSPSCRingBufferBase {
     return value;
   }
 
-  void clear() { while (dequeue().has_value()); }
+  void clear() {
+    while (dequeue().has_value())
+      ;
+  }
 
   std::size_t capacity() const { return m_capacity; }
 
- protected:
+protected:
   static constexpr size_t CacheLineSize = 64;
   alignas(CacheLineSize) std::atomic<size_t> m_head;
   alignas(CacheLineSize) std::atomic<size_t> m_tail;
-  T* m_buffer;
+  T *m_buffer;
   std::size_t m_capacity;
 };
 
-}  // namespace details
+} // namespace details
 
 template <typename T, std::size_t Capacity>
 class InplaceLockFreeSPSCRingBuffer final
     : public details::LockFreeSPSCRingBufferBase<T> {
- public:
+public:
   InplaceLockFreeSPSCRingBuffer()
-      : details::LockFreeSPSCRingBufferBase<T>(reinterpret_cast<T*>(m_storage),
+      : details::LockFreeSPSCRingBufferBase<T>(reinterpret_cast<T *>(m_storage),
                                                Capacity) {}
 
   ~InplaceLockFreeSPSCRingBuffer() { this->clear(); }
 
-  InplaceLockFreeSPSCRingBuffer(const InplaceLockFreeSPSCRingBuffer& o) =
+  InplaceLockFreeSPSCRingBuffer(const InplaceLockFreeSPSCRingBuffer &o) =
       delete;
-  InplaceLockFreeSPSCRingBuffer& operator=(
-      const InplaceLockFreeSPSCRingBuffer& o) = delete;
-  InplaceLockFreeSPSCRingBuffer(InplaceLockFreeSPSCRingBuffer&& o) = delete;
-  InplaceLockFreeSPSCRingBuffer& operator=(InplaceLockFreeSPSCRingBuffer&& o) =
-      delete;
+  InplaceLockFreeSPSCRingBuffer &
+  operator=(const InplaceLockFreeSPSCRingBuffer &o) = delete;
+  InplaceLockFreeSPSCRingBuffer(InplaceLockFreeSPSCRingBuffer &&o) = delete;
+  InplaceLockFreeSPSCRingBuffer &
+  operator=(InplaceLockFreeSPSCRingBuffer &&o) = delete;
 
- private:
+private:
   alignas(alignof(T)) std::byte m_storage[(Capacity + 1) * sizeof(T)];
 };
 
@@ -101,10 +104,10 @@ class LockFreeSPSCRingBuffer final
     : public details::LockFreeSPSCRingBufferBase<T> {
   using ATraits = AllocatorTraits<A>;
 
- public:
+public:
   LockFreeSPSCRingBuffer(std::size_t capacity, A allocator = {})
       : details::LockFreeSPSCRingBufferBase<T>(
-            ATraits::template allocate<T>(allocator, capacity), capacity),
+            ATraits::template allocate<T>(allocator, capacity + 1), capacity),
         m_allocator(std::move(allocator)) {}
   ~LockFreeSPSCRingBuffer() {
     this->clear();
@@ -112,26 +115,26 @@ class LockFreeSPSCRingBuffer final
                                     this->m_capacity);
   }
 
- private:
+private:
   [[no_unique_address]] A m_allocator;
 };
 
 template <typename T>
 class FlexibleLockFreeSPSCRingBuffer final
     : public details::LockFreeSPSCRingBufferBase<T> {
- public:
+public:
   FlexibleLockFreeSPSCRingBuffer(std::size_t flexibleBufferSize)
       : details::LockFreeSPSCRingBufferBase<T>(m_storage, flexibleBufferSize) {}
 
   ~FlexibleLockFreeSPSCRingBuffer() { this->clear(); }
 
-  FlexibleLockFreeSPSCRingBuffer(const FlexibleLockFreeSPSCRingBuffer&) =
+  FlexibleLockFreeSPSCRingBuffer(const FlexibleLockFreeSPSCRingBuffer &) =
       delete;
-  FlexibleLockFreeSPSCRingBuffer& operator=(
-      const FlexibleLockFreeSPSCRingBuffer&) = delete;
-  FlexibleLockFreeSPSCRingBuffer(FlexibleLockFreeSPSCRingBuffer&&) = delete;
-  FlexibleLockFreeSPSCRingBuffer& operator=(FlexibleLockFreeSPSCRingBuffer&&) =
-      delete;
+  FlexibleLockFreeSPSCRingBuffer &
+  operator=(const FlexibleLockFreeSPSCRingBuffer &) = delete;
+  FlexibleLockFreeSPSCRingBuffer(FlexibleLockFreeSPSCRingBuffer &&) = delete;
+  FlexibleLockFreeSPSCRingBuffer &
+  operator=(FlexibleLockFreeSPSCRingBuffer &&) = delete;
 
   static constexpr std::size_t requiredByteSize(std::size_t capacity) {
     // compute aligned corrected flexible size.
@@ -145,8 +148,8 @@ class FlexibleLockFreeSPSCRingBuffer final
 
   std::size_t bufferSize() const { return this->m_capacity + 1; }
 
- private:
-  T m_storage[0];  // <- flexible array member.
+private:
+  T m_storage[0]; // <- flexible array member.
 };
 
-}  // namespace strobe::sync
+} // namespace strobe::sync

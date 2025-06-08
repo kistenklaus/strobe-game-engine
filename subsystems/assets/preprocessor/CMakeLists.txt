@@ -4,7 +4,7 @@ set(STROBE_ASSETS_PREPROCESSOR ${PROJECT_NAME}-assets-preprocessor CACHE INTERNA
 
 set(STROBE_ASSETS_PREPROCESS ${PROJECT_NAME}-assets-preprocess CACHE INTERNAL "")
 
-add_executable(${STROBE_ASSETS_PREPROCESSOR}
+add_executable(${STROBE_ASSETS_PREPROCESSOR} EXCLUDE_FROM_ALL 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/assets/preprocessor/main.cpp
 )
 

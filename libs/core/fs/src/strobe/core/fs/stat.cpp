@@ -1,6 +1,7 @@
 #include "./stat.hpp"
 #include <format>
 #include <sys/stat.h>
+#include <system_error>
 
 namespace strobe::fs {
 

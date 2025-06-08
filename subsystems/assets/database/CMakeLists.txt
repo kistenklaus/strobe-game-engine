@@ -2,7 +2,7 @@ include_guard(GLOBAL)
 
 set(STROBE_ASSETS_DATABASE ${PROJECT_NAME}-assets-database CACHE INTERNAL "")
 
-add_library(${STROBE_ASSETS_DATABASE}
+add_library(${STROBE_ASSETS_DATABASE} EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/assets/AssetDatabase.cpp
 )
 
