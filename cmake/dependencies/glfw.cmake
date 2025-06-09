@@ -16,41 +16,44 @@ function(require_glfw)
   # Try to find system GLFW
   find_package(glfw3 QUIET)
 
-  if (NOT ${glfw3_FOUND})
-    # Check for X11
-    find_package(X11 QUIET)
-    if (X11_FOUND)
-      set(GLFW_BUILD_X11 ON CACHE BOOL "Enable X11 backend")
+  if (NOT glfw3_FOUND)
+    if (APPLE)
+      # On macOS, use Cocoa by default, so skip X11/Wayland checks
+      set(GLFW_BUILD_COCOA ON CACHE BOOL "Enable Cocoa backend")
     else()
-      set(GLFW_BUILD_X11 OFF CACHE BOOL "Disable X11 backend")
+      # Check for X11
+      find_package(X11 QUIET)
+      if (X11_FOUND)
+        set(GLFW_BUILD_X11 ON CACHE BOOL "Enable X11 backend")
+      else()
+        set(GLFW_BUILD_X11 OFF CACHE BOOL "Disable X11 backend")
+      endif()
+
+      # Check for Wayland
+      find_package(PkgConfig QUIET)
+      if (PkgConfig_FOUND)
+        pkg_check_modules(WAYLAND wayland-client>=0.2.7 wayland-egl wayland-cursor)
+        pkg_check_modules(XKBCOMMON xkbcommon)
+      endif()
+
+      if (WAYLAND_FOUND AND XKBCOMMON_FOUND)
+        set(GLFW_BUILD_WAYLAND ON CACHE BOOL "Enable Wayland backend")
+      else()
+        set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "Disable Wayland backend")
+      endif()
     endif()
 
-    # Check for Wayland
-    find_package(PkgConfig QUIET)
-    if (PkgConfig_FOUND)
-      pkg_check_modules(WAYLAND wayland-client>=0.2.7 wayland-egl wayland-cursor)
-      pkg_check_modules(XKBCOMMON xkbcommon)
-    endif()
-
-    if (WAYLAND_FOUND AND XKBCOMMON_FOUND)
-      set(GLFW_BUILD_WAYLAND ON CACHE BOOL "Enable Wayland backend")
-    else()
-      set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "Disable Wayland backend")
-    endif()
-    if (WAYLAND_FOUND OR XKBCOMMON_FOUND)
-      # Fallback: FetchContent
-      include(FetchContent)
-      FetchContent_Declare(
-        glfw
-        GIT_REPOSITORY https://github.com/glfw/glfw.git
-        GIT_TAG 43c9fb329116fcd57e94c8edc9ce2c1619a370a8
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-      )
-      FetchContent_MakeAvailable(glfw)
-      set(glfw3_FOUND TRUE)
-    endif()
+    # Fetch GLFW
+    include(FetchContent)
+    FetchContent_Declare(
+      glfw
+      GIT_REPOSITORY https://github.com/glfw/glfw.git
+      GIT_TAG 43c9fb329116fcd57e94c8edc9ce2c1619a370a8
+      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    FetchContent_MakeAvailable(glfw)
+    set(glfw3_FOUND TRUE)
   endif()
-
 
   if (glfw3_FOUND)
     glfw_found_log()
@@ -63,6 +66,7 @@ function(require_glfw)
   endif()
 
 endfunction()
+
 
 function(target_link_glfw target visibility)
   require_glfw(TRUE)
