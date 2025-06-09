@@ -1,7 +1,13 @@
 #pragma once
 
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) ||               \
+    defined(_M_IX86)
+#include <emmintrin.h>
+#endif
+
 #include <atomic>
 #include <strobe/core/memory/ReferenceCounter.hpp>
+#include <thread>
 #include <utility>
 
 #include "strobe/core/memory/align.hpp"
@@ -159,8 +165,7 @@ template <typename T> struct SharedChannelState {
   }
 
   SharedChannelState(SharedChannelState &&o)
-      : m_controlBlock(std::exchange(o.m_controlBlock, nullptr)) {
-  }
+      : m_controlBlock(std::exchange(o.m_controlBlock, nullptr)) {}
 
   SharedChannelState &operator=(SharedChannelState &&o) {
     if (m_controlBlock == o.m_controlBlock) {
@@ -181,9 +186,9 @@ template <typename T> struct SharedChannelState {
     }
   }
 
-  bool enqueue(const T &v) const { 
+  bool enqueue(const T &v) const {
     assert(m_controlBlock != nullptr);
-    auto x = m_controlBlock->queue().enqueue(v); 
+    auto x = m_controlBlock->queue().enqueue(v);
     if (x) {
       m_controlBlock->notifySend();
     }
@@ -198,25 +203,60 @@ template <typename T> struct SharedChannelState {
     }
     return x;
   }
-
-  void blocking_enqueue(const T &v) const {
-    while (!m_controlBlock->queue().enqueue(v)) {
-      m_controlBlock->waitUntilRecv();
-    }
-    m_controlBlock->notifySend();
+  static inline void cpu_relax() noexcept {
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) ||               \
+    defined(_M_IX86)
+    _mm_pause();
+#elif defined(__aarch64__) || defined(_M_ARM64)
+    // Use yield on ARM64
+    __asm__ volatile("yield" ::: "memory");
+#elif defined(__arm__) || defined(_M_ARM)
+    __asm__ volatile("yield" ::: "memory");
+#else
+    // Fallback
+    std::this_thread::yield();
+#endif
   }
 
-  void blocking_enqueue(T &&v) const {
-    while (!m_controlBlock->queue().enqueue(std::move(v))) {
-      m_controlBlock->waitUntilRecv();
+  void blocking_enqueue(const T &v) const {
+
+    std::size_t it = 0;
+    while (!m_controlBlock->queue().enqueue(v) && ++it < 100) {
+      if (it < 10) {
+        // Tight spin
+        cpu_relax();
+      } else {
+        // Cooperative yield
+        std::this_thread::yield();
+      }
     }
+    if (it >= 100) {
+      while (!m_controlBlock->queue().enqueue(v)) {
+        m_controlBlock->waitUntilRecv();
+      }
+    }
+
     m_controlBlock->notifySend();
   }
 
   T blocking_dequeue() const {
     std::optional<T> v;
-    while (!(v = m_controlBlock->queue().dequeue()).has_value()) {
-      m_controlBlock->waitUntilSend();
+
+    std::size_t it = 0;
+    while (!(v = m_controlBlock->queue().dequeue()).has_value() && ++it < 100) {
+      if (it < 10) {
+        // Tight spin
+        cpu_relax();
+      } else {
+        // Cooperative yield
+        std::this_thread::yield();
+      }
+    }
+
+    if (!v.has_value()) {
+      while (!(v = m_controlBlock->queue().dequeue()).has_value()) {
+        m_controlBlock->waitUntilSend();
+      }
     }
     m_controlBlock->notifyRecv();
     return *v;
@@ -244,7 +284,6 @@ public:
   bool send(const T &v) const { return m_state.enqueue(v); }
   bool send(T &&v) const { return m_state.enqueue(std::move(v)); }
   void blocking_send(const T &v) const { m_state.blocking_enqueue(v); }
-  void blocking_send(T &&v) const { m_state.blocking_enqueue(std::move(v)); }
 
 private:
   details::SharedChannelState<T> m_state;

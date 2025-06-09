@@ -94,6 +94,7 @@ TEST(MPSCChannel, MultiProducerSingleConsumer) {
     producers.emplace_back([&]() {
       for (int i = 0; i < 250'000; ++i) {
         while (!sender.send(i)) {
+          std::this_thread::yield();
         } // Busy-wait until successfully sent
         produced_count.fetch_add(1, std::memory_order_relaxed);
       }
@@ -110,6 +111,8 @@ TEST(MPSCChannel, MultiProducerSingleConsumer) {
       if (value.has_value()) {
         consumed_values.insert(value.value());
         consumed_count.fetch_add(1, std::memory_order_relaxed);
+      } else {
+        std::this_thread::yield();
       }
     }
 
@@ -165,6 +168,7 @@ TEST(MPSCChannel, StressTestRandomProducers) {
       for (int i = 0; i < 50'000; ++i) {
         int value = dist(rng);
         while (!sender.send(value)) {
+          std::this_thread::yield();
         }
         produced_count.fetch_add(1);
       }
@@ -177,6 +181,8 @@ TEST(MPSCChannel, StressTestRandomProducers) {
     while (consumed_count < 800'000 && !forceStop) {
       if (auto value = receiver.recv(); value.has_value()) {
         auto x = consumed_count.fetch_add(1);
+      } else {
+        std::this_thread::yield();
       }
     }
   });
@@ -208,6 +214,7 @@ TEST(MPSCChannel, StressTestLotsProducers) {
     producers.emplace_back([&]() {
       for (int i = 0; i < ItemsPerProducers; ++i) {
         while (!sender.send(i)) {
+          std::this_thread::yield();
         }
       }
     });
@@ -219,6 +226,7 @@ TEST(MPSCChannel, StressTestLotsProducers) {
     for (std::size_t t = 0; t < Items; ++t) {
       std::optional<int> v;
       while (!(v = receiver.recv()).has_value()) {
+        std::this_thread::yield();
       }
     }
   });
@@ -316,7 +324,7 @@ TEST(MPSCChannel, BlockingReceiveWaitsForData) {
   ASSERT_TRUE(received.load(std::memory_order_acquire));
 }
 
-TEST(MPSCChannelTest, StressTestMultipleProducersSingleConsumer) {
+TEST(MPSCChannel, StressTestMultipleProducersSingleConsumer) {
   using namespace strobe::mpsc;
 
   constexpr std::size_t Capacity = 64;
