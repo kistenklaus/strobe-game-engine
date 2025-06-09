@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <print>
 #include <strobe/core/memory/ReferenceCounter.hpp>
 #include <utility>
 
@@ -21,7 +22,7 @@ public:
   template <Allocator A>
   static ChannelStateControlBlock<T> *make(const A &allocator,
                                            std::size_t capacity) {
-    std::size_t flexibleBufferSize = capacity;
+    std::size_t flexibleBufferSize = capacity + 1;
     std::size_t flexibleBufferOffset = sizeof(ChannelStateControlBlock<T>);
 
     // NOTE should be a noop
@@ -44,7 +45,8 @@ public:
     auto controlBlock = reinterpret_cast<ChannelStateControlBlock<T> *>(ptr);
     auto raw = reinterpret_cast<std::byte *>(ptr);
     auto allocPtr = reinterpret_cast<A *>(raw + allocatorOffset);
-    auto bufferPtr = reinterpret_cast<FreelistNode*>(raw + flexibleBufferOffset);
+    auto bufferPtr =
+        reinterpret_cast<FreelistNode *>(raw + flexibleBufferOffset);
     new (allocPtr) A(std::move(alloc));
 
     new (controlBlock)
@@ -54,7 +56,8 @@ public:
           // destruct queue (i.e. destruct all pending messages)
           std::size_t flexMPSCBufferSize = controlBlock->m_flexBufferSize;
           std::size_t offset = sizeof(ChannelStateControlBlock<T>);
-          offset = memory::align_up(offset, alignof(ChannelStateControlBlock<T>));
+          offset =
+              memory::align_up(offset, alignof(ChannelStateControlBlock<T>));
           offset = memory::align_up(offset, alignof(FreelistNode));
           offset = offset + sizeof(FreelistNode) * flexMPSCBufferSize;
           offset = memory::align_up(offset, alignof(A));
@@ -83,8 +86,9 @@ public:
   auto &queue() { return m_flexMPSC; }
 
   auto waitUntilSend() {
-    m_sendFlag.store(false, std::memory_order_relaxed);
-    m_sendFlag.wait(false, std::memory_order_acquire);
+    while (!m_sendFlag.exchange(false, std::memory_order_acquire)) {
+      m_sendFlag.wait(false, std::memory_order_acquire);
+    }
   }
 
   auto notifySend() {
@@ -93,8 +97,9 @@ public:
   }
 
   auto waitUntilRecv() {
-    m_recvFlag.store(false, std::memory_order_relaxed);
-    m_recvFlag.wait(false, std::memory_order_acquire);
+    while (!m_recvFlag.exchange(false, std::memory_order_acquire)) {
+      m_recvFlag.wait(false, std::memory_order_acquire);
+    }
   }
 
   auto notifyRecv() {
@@ -184,11 +189,22 @@ template <typename T> struct SharedChannelState {
     }
   }
 
-  bool enqueue(const T &v) const { return m_controlBlock->queue().enqueue(v); }
+  bool enqueue(const T &v) const { 
+    assert(m_controlBlock != nullptr);
+    auto x = m_controlBlock->queue().enqueue(v); 
+    if (x) {
+      m_controlBlock->notifySend();
+    }
+    return x;
+  }
 
   bool enqueue(T &&v) const {
     assert(m_controlBlock != nullptr);
-    return m_controlBlock->queue().enqueue(std::move(v));
+    auto x = m_controlBlock->queue().enqueue(std::move(v));
+    if (x) {
+      m_controlBlock->notifySend();
+    }
+    return x;
   }
 
   void blocking_enqueue(const T &v) const {
@@ -214,7 +230,13 @@ template <typename T> struct SharedChannelState {
     return *v;
   }
 
-  std::optional<T> dequeue() const { return m_controlBlock->queue().dequeue(); }
+  std::optional<T> dequeue() const {
+    auto x = m_controlBlock->queue().dequeue();
+    if (x) {
+      m_controlBlock->notifyRecv();
+    }
+    return x;
+  }
 
 private:
   ChannelStateControlBlock<T> *m_controlBlock;

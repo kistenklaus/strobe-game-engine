@@ -316,3 +316,57 @@ TEST(MPSCChannel, BlockingReceiveWaitsForData) {
   consumer.join();
   ASSERT_TRUE(received.load(std::memory_order_acquire));
 }
+
+TEST(MPSCChannelTest, StressTestMultipleProducersSingleConsumer) {
+  using namespace strobe::mpsc;
+
+  constexpr std::size_t Capacity = 64;
+  constexpr std::size_t NumProducers = 64;
+  constexpr std::size_t NumMessagesPerProducer = 10000;
+
+  // Use std::allocator for simplicity
+  auto [sender, receiver] =
+      strobe::mpsc::channel<int, Capacity, strobe::Mallocator>();
+
+  std::atomic<std::size_t> messages_sent{0};
+  std::atomic<std::size_t> messages_received{0};
+
+  // Launch producers
+  std::vector<std::thread> producer_threads;
+  for (std::size_t i = 0; i < NumProducers; ++i) {
+    producer_threads.emplace_back([&, i]() {
+      for (std::size_t j = 0; j < NumMessagesPerProducer; ++j) {
+        sender.blocking_send(static_cast<int>(i * NumMessagesPerProducer + j));
+        messages_sent.fetch_add(1, std::memory_order_relaxed);
+
+        // Optional: add a small random sleep to increase stress
+        if (j % 500 == 0) {
+          std::this_thread::sleep_for(std::chrono::microseconds(10));
+        }
+      }
+    });
+  }
+
+  // Launch single consumer
+  std::thread consumer_thread([&]() {
+    std::unordered_set<int> seen_values;
+    while (messages_received.load(std::memory_order_relaxed) <
+           NumProducers * NumMessagesPerProducer) {
+      int value = receiver.blocking_recv();
+      // Check for duplicates (for debugging)
+      ASSERT_TRUE(seen_values.insert(value).second)
+          << "Duplicate value received: " << value;
+      messages_received.fetch_add(1, std::memory_order_relaxed);
+    }
+  });
+
+  // Join all threads
+  for (auto &t : producer_threads) {
+    t.join();
+  }
+  consumer_thread.join();
+
+  // Final sanity checks
+  EXPECT_EQ(messages_sent.load(), NumProducers * NumMessagesPerProducer);
+  EXPECT_EQ(messages_received.load(), NumProducers * NumMessagesPerProducer);
+}
