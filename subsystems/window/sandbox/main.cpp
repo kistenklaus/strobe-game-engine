@@ -1,5 +1,3 @@
-#include <GLFW/glfw3.h>
-
 #include <strobe/memory.hpp>
 #include <strobe/window/WindowManager.hpp>
 #include <strobe/lina.hpp>

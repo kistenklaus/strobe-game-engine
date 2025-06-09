@@ -13,11 +13,13 @@
 
 #if defined(_WIN32)
 static_assert(false, "Not implemented for windows");
-#else
+#elifdef __linux__
+#include <linux/limits.h>
 #define _POSIX_C_SOURCE 200809L
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#elifdef __APPLE__
 #endif
 
 namespace strobe::fs {
@@ -67,6 +69,7 @@ static void mkdir_and_parents(std::span<char> path) {
 void mkdir(PathView path, MkdirFlags flags) {
   const char *cpath = path.c_str();
   if (flags & MkdirFlagBits::Parents) {
+#ifdef __linux__
     char pathBuffer[PATH_MAX];
     if (path.size() + 1 >= PATH_MAX) {
       throw std::runtime_error("Normalized path exceeds PATH_MAX");
@@ -81,6 +84,7 @@ void mkdir(PathView path, MkdirFlags flags) {
         details::normalize_path_inplace(std::span<char>(pathBuffer, pathSize));
     assert(normalizedSize + 1 < PATH_MAX);
     pathBuffer[normalizedSize] = '\0';
+#endif
     mkdir_and_parents(std::span<char>(pathBuffer, normalizedSize + 1));
   } else {
     if (::mkdir(cpath, 0755) == -1) {
