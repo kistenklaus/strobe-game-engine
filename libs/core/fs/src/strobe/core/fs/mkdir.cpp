@@ -9,7 +9,6 @@
 #include <cstring>
 #include <format>
 #include <print>
-#include <sys/syslimits.h>
 #include <system_error>
 
 #if defined(_WIN32)
@@ -22,6 +21,7 @@ static_assert(false, "Not implemented for windows");
 #include <unistd.h>
 #elifdef __APPLE__
 #define _POSIX_C_SOURCE 200809L
+#include <sys/syslimits.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
