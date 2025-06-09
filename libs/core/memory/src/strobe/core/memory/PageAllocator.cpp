@@ -1,4 +1,5 @@
 #include "./PageAllocator.hpp"
+#include <algorithm>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -74,7 +75,7 @@ void PageAllocator::deallocate(void* ptr, std::size_t size, std::size_t alignmen
     return;
 
   const std::size_t page = strobe::page_size();
-  alignment = ::std::max(alignment, page);
+  alignment = ::std::max<std::size_t>(alignment, page);
   size = strobe::memory::align_up(size, page);
 
   void* raw = ptr;

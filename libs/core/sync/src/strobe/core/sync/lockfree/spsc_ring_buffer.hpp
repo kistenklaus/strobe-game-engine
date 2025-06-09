@@ -124,7 +124,7 @@ class FlexibleLockFreeSPSCRingBuffer final
     : public details::LockFreeSPSCRingBufferBase<T> {
 public:
   FlexibleLockFreeSPSCRingBuffer(std::size_t flexibleBufferSize)
-      : details::LockFreeSPSCRingBufferBase<T>(m_storage, flexibleBufferSize) {}
+      : details::LockFreeSPSCRingBufferBase<T>(reinterpret_cast<T*>(m_storage), flexibleBufferSize) {}
 
   ~FlexibleLockFreeSPSCRingBuffer() { this->clear(); }
 
@@ -149,7 +149,7 @@ public:
   std::size_t bufferSize() const { return this->m_capacity + 1; }
 
 private:
-  T m_storage[0]; // <- flexible array member.
+  alignas(T) std::byte m_storage[sizeof(T)];
 };
 
 } // namespace strobe::sync

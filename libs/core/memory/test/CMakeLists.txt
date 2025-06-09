@@ -8,7 +8,7 @@ add_executable(${STROBE_CORE_MEMORY_TESTS} EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/MonotonicPoolResource.cpp
 )
 
-target_compile_options(${STROBE_CORE_MEMORY_TESTS} PUBLIC -g -O0)
+# target_compile_options(${STROBE_CORE_MEMORY_TESTS} PUBLIC -g -O0)
 
 target_link_googletest(${STROBE_CORE_MEMORY_TESTS} PRIVATE)
 
