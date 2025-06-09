@@ -9,6 +9,7 @@
 #include <cstring>
 #include <format>
 #include <print>
+#include <sys/syslimits.h>
 #include <system_error>
 
 #if defined(_WIN32)
@@ -20,6 +21,11 @@ static_assert(false, "Not implemented for windows");
 #include <sys/types.h>
 #include <unistd.h>
 #elifdef __APPLE__
+#define _POSIX_C_SOURCE 200809L
+#include <limits.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #endif
 
 namespace strobe::fs {
@@ -70,6 +76,21 @@ void mkdir(PathView path, MkdirFlags flags) {
   const char *cpath = path.c_str();
   if (flags & MkdirFlagBits::Parents) {
 #ifdef __linux__
+    char pathBuffer[PATH_MAX];
+    if (path.size() + 1 >= PATH_MAX) {
+      throw std::runtime_error("Normalized path exceeds PATH_MAX");
+    }
+    std::size_t pathSize = path.size();
+    std::memcpy(pathBuffer, path.c_str(), (path.size() + 1) * sizeof(char));
+    if (pathBuffer[pathSize - 1] != '/') {
+      pathBuffer[pathSize] = '/';
+      pathSize += 1;
+    }
+    std::size_t normalizedSize =
+        details::normalize_path_inplace(std::span<char>(pathBuffer, pathSize));
+    assert(normalizedSize + 1 < PATH_MAX);
+    pathBuffer[normalizedSize] = '\0';
+#elifdef __APPLE__
     char pathBuffer[PATH_MAX];
     if (path.size() + 1 >= PATH_MAX) {
       throw std::runtime_error("Normalized path exceeds PATH_MAX");
