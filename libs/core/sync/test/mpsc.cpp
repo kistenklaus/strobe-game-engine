@@ -197,16 +197,18 @@ TEST(MPSCChannel, StressTestRandomProducers) {
 TEST(MPSCChannel, StressTestLotsProducers) {
   auto [sender, receiver] =
       strobe::mpsc::channel<int, 16384, strobe::Mallocator>();
-  std::atomic<size_t> produced_count{0};
-  std::atomic<size_t> consumed_count{0};
 
   std::vector<std::thread> producers;
-  for (int t = 0; t < 128; ++t) {
+
+  constexpr std::size_t NumProducers = 128;
+  constexpr std::size_t ItemsPerProducers = 1000;
+  constexpr std::size_t Items = NumProducers * ItemsPerProducers;
+
+  for (std::size_t t = 0; t < NumProducers; ++t) {
     producers.emplace_back([&]() {
-      for (int i = 0; i < 100; ++i) {
+      for (int i = 0; i < ItemsPerProducers; ++i) {
         while (!sender.send(i)) {
         }
-        produced_count.fetch_add(1, std::memory_order_relaxed);
       }
     });
   }
@@ -214,9 +216,9 @@ TEST(MPSCChannel, StressTestLotsProducers) {
   std::atomic<bool> forceStop = false;
 
   std::thread consumer([&]() {
-    while (consumed_count < produced_count && !forceStop) {
-      if (auto value = receiver.recv(); value.has_value()) {
-        consumed_count.fetch_add(1, std::memory_order_relaxed);
+    for (std::size_t t = 0; t < Items; ++t) {
+      std::optional<int> v;
+      while (!(v = receiver.recv()).has_value()) {
       }
     }
   });
@@ -229,9 +231,6 @@ TEST(MPSCChannel, StressTestLotsProducers) {
   forceStop.store(true);
 
   consumer.join();
-
-  ASSERT_EQ(produced_count.load(), 12'800);
-  ASSERT_EQ(consumed_count.load(), 12'800);
 }
 
 TEST(MPSCChannel, BlockingSendAndReceiveSingleThread) {
