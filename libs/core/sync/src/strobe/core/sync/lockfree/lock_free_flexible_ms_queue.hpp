@@ -34,6 +34,7 @@ private:
   static constexpr std::size_t NULL_POINTER_OFFSET =
       std::numeric_limits<pointer_offset>::max();
 
+public:
   struct Pointer {
     pointer_offset ptrOffset;
     counter_type count;
@@ -67,8 +68,8 @@ private:
     ~FreelistNode() {}
   };
 
-public:
-  LockFreeFlexibleMSQueue(std::size_t flexibleBufferSize) {
+  LockFreeFlexibleMSQueue(std::size_t flexibleBufferSize, FreelistNode *buffer)
+      : m_buffer(buffer) {
     assert((flexibleBufferSize + 1) <
            std::numeric_limits<pointer_offset>::max());
 
@@ -203,10 +204,10 @@ private:
   inline Node *derefNode(Pointer p) {
     return &m_buffer[p.ptrOffset].value.node;
   }
-  std::atomic<Pointer> m_freelistPtr;
   std::atomic<Pointer> m_head;
+  std::atomic<Pointer> m_freelistPtr;
   std::atomic<Pointer> m_tail;
-  FreelistNode m_buffer[0]; // Flexible array layout (hacky)
+  FreelistNode *m_buffer; // Flexible array layout (hacky)
 };
 
 } // namespace strobe::sync

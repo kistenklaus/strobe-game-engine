@@ -15,20 +15,23 @@ namespace details {
 template <typename T> class ChannelStateControlBlock {
   using Rc = memory::ReferenceCounter<std::size_t>;
   typedef void (*Deleter)(void *self);
+  using Queue = sync::LockFreeFlexibleMSQueue<T>;
 
 public:
   template <Allocator A>
   static ChannelStateControlBlock<T> *make(const A &allocator,
                                            std::size_t capacity) {
-    std::size_t flexibleBufferSize = capacity + 1;
+    std::size_t flexibleBufferSize = capacity;
     std::size_t flexibleBufferOffset = sizeof(ChannelStateControlBlock<T>);
 
     // NOTE should be a noop
-    flexibleBufferOffset = memory::align_up(
-        flexibleBufferOffset, alignof(ChannelStateControlBlock<T>));
+    using FreelistNode = Queue::FreelistNode;
+
+    flexibleBufferOffset =
+        memory::align_up(flexibleBufferOffset, alignof(FreelistNode));
 
     std::size_t allocatorOffset =
-        flexibleBufferOffset + (flexibleBufferSize) * sizeof(T);
+        flexibleBufferOffset + (flexibleBufferSize) * sizeof(FreelistNode);
 
     allocatorOffset = memory::align_up(allocatorOffset, alignof(A));
 
@@ -41,18 +44,19 @@ public:
     auto controlBlock = reinterpret_cast<ChannelStateControlBlock<T> *>(ptr);
     auto raw = reinterpret_cast<std::byte *>(ptr);
     auto allocPtr = reinterpret_cast<A *>(raw + allocatorOffset);
+    auto bufferPtr = reinterpret_cast<FreelistNode*>(raw + flexibleBufferOffset);
     new (allocPtr) A(std::move(alloc));
 
     new (controlBlock)
-        ChannelStateControlBlock(flexibleBufferSize, [](void *self) {
+        ChannelStateControlBlock(flexibleBufferSize, bufferPtr, [](void *self) {
           auto controlBlock =
               reinterpret_cast<ChannelStateControlBlock *>(self);
           // destruct queue (i.e. destruct all pending messages)
           std::size_t flexMPSCBufferSize = controlBlock->m_flexBufferSize;
           std::size_t offset = sizeof(ChannelStateControlBlock<T>);
-          offset =
-              memory::align_up(offset, alignof(ChannelStateControlBlock<T>));
-          offset = offset + sizeof(T) * flexMPSCBufferSize;
+          offset = memory::align_up(offset, alignof(ChannelStateControlBlock<T>));
+          offset = memory::align_up(offset, alignof(FreelistNode));
+          offset = offset + sizeof(FreelistNode) * flexMPSCBufferSize;
           offset = memory::align_up(offset, alignof(A));
           std::size_t byteSize = offset + sizeof(A);
           std::byte *raw = reinterpret_cast<std::byte *>(self);
@@ -106,10 +110,11 @@ public:
 
 private:
   ~ChannelStateControlBlock() = delete;
-  ChannelStateControlBlock(std::size_t flexibleBufferSize, Deleter deleter)
+  ChannelStateControlBlock(std::size_t flexibleBufferSize,
+                           Queue::FreelistNode *buffer, Deleter deleter)
       : m_referenceCounter(), m_deleter(deleter),
         m_flexBufferSize(flexibleBufferSize), m_recvFlag(true),
-        m_sendFlag(false), m_flexMPSC(flexibleBufferSize) {
+        m_sendFlag(false), m_flexMPSC(flexibleBufferSize, buffer) {
     // std::println("Created control block 0x{:X}",
     // reinterpret_cast<std::size_t>(this));
   }
@@ -119,7 +124,7 @@ private:
   std::size_t m_flexBufferSize;
   std::atomic<bool> m_recvFlag;
   std::atomic<bool> m_sendFlag;
-  sync::LockFreeFlexibleMSQueue<T> m_flexMPSC; // flexible container
+  Queue m_flexMPSC; // flexible container
   // <- A type erased allocator is stored after the flexible container.
 };
 

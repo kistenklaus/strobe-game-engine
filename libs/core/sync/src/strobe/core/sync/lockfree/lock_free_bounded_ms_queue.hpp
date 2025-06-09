@@ -16,6 +16,7 @@ namespace details {
 #ifdef __APPLE__
 // apple architecture is weird, they have conditional stores 
 // instead of CAS, and for some magical reason CAS2 is faster here.
+
 static constexpr bool LockFreeBoundedMSQueueUseCAS2Default = true; 
 #else
 static constexpr bool LockFreeBoundedMSQueueUseCAS2Default = false;

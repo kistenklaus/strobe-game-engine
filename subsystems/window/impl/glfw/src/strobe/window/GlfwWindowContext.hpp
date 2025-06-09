@@ -1,26 +1,27 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <concepts>
 #include <exception>
 #include <iostream>
 #include <ostream>
 #include <semaphore>
+#include <stop_token>
 #include <thread>
 #include <tuple>
 #include <type_traits>
-#include <stop_token>
-#include <thread>
 
 #include "strobe/core/sync/mpsc.hpp"
 #include "strobe/window/allocator.hpp"
+#include <GLFW/glfw3.h>
 namespace strobe::window {
 
 class GlfwWindowContext {
- public:
+public:
   struct DeferredLambda {
-    void* userData;
-    void (*func)(void*);
+    void *userData;
+    void (*func)(void *);
     void operator()() { func(userData); }
   };
 
@@ -28,25 +29,25 @@ class GlfwWindowContext {
       : m_allocator(std::move(allocator)),
         m_jobQueue(
             std::move(strobe::mpsc::channel<DeferredLambda, 10>(m_allocator))),
-        m_waitForShutdown(0) {
-    std::binary_semaphore initComp{0};
-    m_thread = std::jthread(&GlfwWindowContext::glfwMain, this, &initComp);
-    initComp.acquire();
+        m_waitForShutdown(0), m_requestStop(false),
+        m_initComp(0),
+        m_thread(&GlfwWindowContext::glfwMain, this){
+      m_initComp.acquire();
   }
 
-  GlfwWindowContext(const GlfwWindowContext&) = delete;
-  GlfwWindowContext& operator=(const GlfwWindowContext&) = delete;
+  GlfwWindowContext(const GlfwWindowContext &) = delete;
+  GlfwWindowContext &operator=(const GlfwWindowContext &) = delete;
 
-  void glfwMain(std::stop_token token, std::binary_semaphore* initComp) {
+  void glfwMain() {
     if (glfwInit() == GLFW_FALSE) {
       // std::println("FATAL-ERROR: Failed to initalize glfw");
       std::flush(std::cout);
       std::terminate();
       return;
     }
-    initComp->release();
+    m_initComp.release();
 
-    while (!token.stop_requested()) {
+    while (!m_requestStop.load(std::memory_order_acquire)) {
       glfwWaitEvents();
 
       std::optional<DeferredLambda> job;
@@ -59,7 +60,7 @@ class GlfwWindowContext {
   }
 
   ~GlfwWindowContext() {
-    m_thread.request_stop();
+    m_requestStop.store(true, std::memory_order_release);
     // TODO: Here we actually have a small problem because
     // glfwTermiante could have already been executed.
     glfwPostEmptyEvent();
@@ -68,7 +69,7 @@ class GlfwWindowContext {
   }
 
   // NOTE: the func is just enqueued it's not executed directly!
-  void unsafeExec(void* userData, void (*func)(void*)) {
+  void unsafeExec(void *userData, void (*func)(void *)) {
     auto job = DeferredLambda{
         .userData = userData,
         .func = func,
@@ -77,8 +78,8 @@ class GlfwWindowContext {
       job();
     } else {
       while (!m_jobQueue.first.send(job)) {
-        glfwPostEmptyEvent();       // <- can be called from any thread.
-        std::this_thread::yield();  // <- should essentially never happen.
+        glfwPostEmptyEvent();      // <- can be called from any thread.
+        std::this_thread::yield(); // <- should essentially never happen.
       }
       glfwPostEmptyEvent();
     }
@@ -86,7 +87,7 @@ class GlfwWindowContext {
 
   template <typename Fn, typename... Args>
     requires std::invocable<Fn, Args...>
-  auto exec(Fn&& fn, Args&&... args) -> std::invoke_result_t<Fn, Args...> {
+  auto exec(Fn &&fn, Args &&...args) -> std::invoke_result_t<Fn, Args...> {
     using return_type = std::invoke_result_t<Fn, Args...>;
     using mock_void =
         std::conditional_t<std::is_void_v<return_type>, int, return_type>;
@@ -102,8 +103,8 @@ class GlfwWindowContext {
         .sem = std::binary_semaphore(0),
         .ret = std::nullopt,
     };
-    static auto lambda = [](void* userData) {
-      auto wrap = static_cast<FnWrapper*>(userData);
+    static auto lambda = [](void *userData) {
+      auto wrap = static_cast<FnWrapper *>(userData);
       if constexpr (std::is_void_v<return_type>) {
         std::apply(wrap->func, wrap->args);
       } else {
@@ -121,13 +122,16 @@ class GlfwWindowContext {
 
   window::allocator_ref getAllocator() { return m_allocator; }
 
- private:
+private:
   window::allocator_ref m_allocator;
-  std::jthread m_thread;
+  std::atomic<bool> m_requestStop;
   std::binary_semaphore m_waitForShutdown;
   std::pair<strobe::mpsc::Sender<DeferredLambda>,
             strobe::mpsc::Receiver<DeferredLambda>>
       m_jobQueue;
+
+  std::binary_semaphore m_initComp;
+  std::thread m_thread;
 };
 
-};  // namespace strobe::window
+}; // namespace strobe::window
