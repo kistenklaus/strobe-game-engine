@@ -50,6 +50,7 @@ function(require_glfw)
       GIT_REPOSITORY https://github.com/glfw/glfw.git
       GIT_TAG 43c9fb329116fcd57e94c8edc9ce2c1619a370a8
       DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+      EXCLUDE_FROM_ALL
     )
     FetchContent_MakeAvailable(glfw)
     set(glfw3_FOUND TRUE)
