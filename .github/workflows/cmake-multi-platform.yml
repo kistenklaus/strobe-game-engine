@@ -23,7 +23,7 @@ jobs:
       #
       # To add more build types (Release, Debug, RelWithDebInfo, etc.) customize the build_type list.
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-lastest]
         build_type: [Release,Debug]
         c_compiler: [gcc, clang]
         include:
@@ -34,9 +34,16 @@ jobs:
         - os: macos-latest
           c_compiler: clang
           cpp_compiler: clang++
+        - os: windows-latest
+          c_compiler: cl
+          cpp_compiler: cl
         exclude:
         - os: macos-latest
           c_compiler: gcc
+        - os: windows-latest
+          c_compiler: gcc
+        - os: windows-latest
+          c_compiler: clang
 
     steps:
     - uses: actions/checkout@v4
