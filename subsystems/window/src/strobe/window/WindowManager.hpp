@@ -1,8 +1,5 @@
 #pragma once
 
-#include <GL/gl.h>
-#include <GL/glext.h>
-
 #include <concepts>
 #include <string_view>
 #include <strobe/core/memory/Mallocator.hpp>
