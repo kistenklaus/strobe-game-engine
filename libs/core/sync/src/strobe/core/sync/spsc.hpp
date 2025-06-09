@@ -63,7 +63,6 @@ class ChannelStateControlBlock {
   }
 
   static void free(ChannelStateControlBlock<T>* controlBlock) {
-    // std::println("Free control block");
 
     controlBlock->m_deleter(controlBlock);
   }
@@ -85,7 +84,6 @@ class ChannelStateControlBlock {
   ~ChannelStateControlBlock() = delete;
   ChannelStateControlBlock(std::size_t flexibleBufferSize, Deleter deleter)
       : m_closed(false), m_deleter(deleter), m_flexMPSC(flexibleBufferSize) {
-    // std::println("Created control block 0x{:X}",
     // reinterpret_cast<std::size_t>(this));
   }
 

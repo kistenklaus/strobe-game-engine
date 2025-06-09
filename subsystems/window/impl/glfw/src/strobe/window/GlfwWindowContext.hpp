@@ -7,7 +7,6 @@
 #include <iostream>
 #include <ostream>
 #include <semaphore>
-#include <stop_token>
 #include <thread>
 #include <tuple>
 #include <type_traits>
@@ -39,7 +38,6 @@ public:
 
   void glfwMain() {
     if (glfwInit() == GLFW_FALSE) {
-      // std::println("FATAL-ERROR: Failed to initalize glfw");
       std::flush(std::cout);
       std::terminate();
       return;

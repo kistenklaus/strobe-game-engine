@@ -1,7 +1,6 @@
 #pragma once
 
 #include <atomic>
-#include <print>
 #include <strobe/core/memory/ReferenceCounter.hpp>
 #include <utility>
 
@@ -74,7 +73,6 @@ public:
   }
 
   static void free(ChannelStateControlBlock<T> *controlBlock) {
-    // std::println("Free control block");
 
     controlBlock->m_deleter(controlBlock);
   }
@@ -120,7 +118,6 @@ private:
       : m_referenceCounter(), m_deleter(deleter),
         m_flexBufferSize(flexibleBufferSize), m_recvFlag(true),
         m_sendFlag(false), m_flexMPSC(flexibleBufferSize, buffer) {
-    // std::println("Created control block 0x{:X}",
     // reinterpret_cast<std::size_t>(this));
   }
 
@@ -142,14 +139,12 @@ template <typename T> struct SharedChannelState {
 
   SharedChannelState(const SharedChannelState &o)
       : m_controlBlock(o.m_controlBlock) {
-    // std::println("COPY construct");
     if (m_controlBlock != nullptr && !m_controlBlock->incRefCount()) {
       m_controlBlock = nullptr; // Failed to increment ref counter.
     }
   }
 
   SharedChannelState &operator=(const SharedChannelState &o) {
-    // std::println("COPY assign");
     if (m_controlBlock == o.m_controlBlock) {
       return *this;
     }
@@ -165,11 +160,9 @@ template <typename T> struct SharedChannelState {
 
   SharedChannelState(SharedChannelState &&o)
       : m_controlBlock(std::exchange(o.m_controlBlock, nullptr)) {
-    // std::println("MOVE construct");
   }
 
   SharedChannelState &operator=(SharedChannelState &&o) {
-    // std::println("MOVE assign");
     if (m_controlBlock == o.m_controlBlock) {
       return *this;
     }
@@ -181,7 +174,6 @@ template <typename T> struct SharedChannelState {
   }
 
   ~SharedChannelState() {
-    // std::println("Destruct Shared {}",
     // reinterpret_cast<std::size_t>(m_controlBlock));
     if (m_controlBlock != nullptr && m_controlBlock->decRefCount()) {
       ChannelStateControlBlock<T>::free(m_controlBlock);
