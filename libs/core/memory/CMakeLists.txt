@@ -10,6 +10,4 @@ add_library(${STROBE_CORE_MEMORY_LIB} EXCLUDE_FROM_ALL
 
 target_include_directories(${STROBE_CORE_MEMORY_LIB} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-if (STROBE_BUILD_TESTS)
-  add_subdirectory(test)
-endif()
+add_subdirectory(test)

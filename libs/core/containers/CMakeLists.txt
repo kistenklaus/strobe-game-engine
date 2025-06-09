@@ -5,6 +5,4 @@ add_library(${STROBE_CORE_CONTAINERS_LIB} INTERFACE)
 target_include_directories(${STROBE_CORE_CONTAINERS_LIB} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${STROBE_CORE_CONTAINERS_LIB} INTERFACE ${STROBE_CORE_MEMORY_LIB})
 
-if (STROBE_BUILD_TESTS)
-  add_subdirectory(test)
-endif()
+add_subdirectory(test)

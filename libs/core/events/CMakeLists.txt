@@ -9,6 +9,4 @@ target_link_libraries(${STROBE_CORE_EVENTS_LIB} INTERFACE ${STROBE_CORE_MEMORY_L
 target_link_libraries(${STROBE_CORE_EVENTS_LIB} INTERFACE ${STROBE_CORE_SYNC_LIB})
 target_link_libraries(${STROBE_CORE_EVENTS_LIB} INTERFACE ${STROBE_CORE_CONTAINER_LIB})
 
-if (STROBE_BUILD_TESTS) 
-  add_subdirectory(test)
-endif()
+add_subdirectory(test)

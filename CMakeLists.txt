@@ -2,8 +2,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(strobe LANGUAGES CXX)
 
-option(STROBE_BUILD_TESTS "Build the test suite" OFF)
-option(STROBE_BUILD_SANDBOXES OFF)
+option(STROBE_BUILD_SANDBOXES ON)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
@@ -13,10 +12,17 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# set(CMAKE_CXX_COMPILER clang++)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
+    CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(cmake/colorful.cmake)
 include(cmake/dependencies.cmake)
 include(cmake/configuration.cmake)
+include(cmake/testing.cmake)
 
 
 # Subsystem configuration
@@ -29,9 +35,6 @@ add_subdirectory(libs/core)
 add_subdirectory(subsystems/window)
 add_subdirectory(subsystems/input)
 add_subdirectory(subsystems/assets)
-
-add_subdirectory(test)
-
 
 if (STROBE_BUILD_SANDBOXES)
   add_subdirectory(sandbox)
