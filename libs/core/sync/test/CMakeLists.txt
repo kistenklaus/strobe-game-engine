@@ -8,7 +8,7 @@ add_library(${STROBE_CORE_SYNC_TESTS}
   OBJECT EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/LockFreeSPSCRingBuffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/LockFreeBoundedMSQueue.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/mpsc.cpp
+  # ${CMAKE_CURRENT_SOURCE_DIR}/mpsc.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/spsc.cpp
 )
 

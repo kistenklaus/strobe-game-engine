@@ -11,7 +11,7 @@ function (select_strobe_window_api)
     endif()
 
     require_glfw(FALSE)
-    if (GLFW_FOUND)
+    if (TARGET glfw)
       log_success("✅ Selected GLFW as the window api.")
       set(STROBE_WINDOW_API GLFW CACHE INTERNAL "Selected strobe window api")
     else()

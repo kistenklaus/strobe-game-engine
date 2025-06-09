@@ -1,25 +1,22 @@
 include_guard(GLOBAL)
 
+function(glfw_found_log)
+  if (NOT GLFW_FOUND_LOG)
+    log_success("✅ GLFW available")
+  endif()
+  set(GLFW_FOUND_LOG TRUE CACHE INTERNAL "")
+endfunction()
+
 function(require_glfw)
   set(FORCE FALSE)
   if (DEFINED ARGV0)
     set(FORCE ${ARGV0})
   endif()
 
-  if (DEFINED GLFW_FOUND AND GLFW_FOUND)
-    return()
-  endif()
-
   # Try to find system GLFW
-  if (FORCE)
-    find_package(glfw3 REQUIRED)
-  else()
-    find_package(glfw3 QUIET)
-  endif()
+  find_package(glfw3 QUIET)
 
-  set(GLFW_FOUND ${glfw3_FOUND} CACHE INTERNAL "GLFW found status")
-
-  if (NOT GLFW_FOUND)
+  if (NOT ${glfw3_FOUND})
     # Check for X11
     find_package(X11 QUIET)
     if (X11_FOUND)
@@ -40,25 +37,31 @@ function(require_glfw)
     else()
       set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "Disable Wayland backend")
     endif()
-    # Fallback: FetchContent
-    include(FetchContent)
-    FetchContent_Declare(
-      glfw
-      GIT_REPOSITORY https://github.com/glfw/glfw.git
-      GIT_TAG 43c9fb329116fcd57e94c8edc9ce2c1619a370a8
-      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    )
-    FetchContent_MakeAvailable(glfw)
-    set(GLFW_FOUND TRUE CACHE INTERNAL "GLFW was fetched and built")
+    if (WAYLAND_FOUND OR XKBCOMMON_FOUND)
+      # Fallback: FetchContent
+      include(FetchContent)
+      FetchContent_Declare(
+        glfw
+        GIT_REPOSITORY https://github.com/glfw/glfw.git
+        GIT_TAG 43c9fb329116fcd57e94c8edc9ce2c1619a370a8
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+      )
+      FetchContent_MakeAvailable(glfw)
+      set(glfw3_FOUND TRUE)
+    endif()
   endif()
 
-  if (GLFW_FOUND)
-    log_success("✅ GLFW available")
+
+  if (glfw3_FOUND)
+    glfw_found_log()
   elseif(FORCE)
     log_error("❌ GLFW not available, but it was required!")
+    set(GLFW_FOUND_LOG FALSE CACHE INTERNAL "")
   else()
     log_warn("⚠️ GLFW not available (optional)")
+    set(GLFW_FOUND_LOG FALSE CACHE INTERNAL "")
   endif()
+
 endfunction()
 
 function(target_link_glfw target visibility)
