@@ -5,7 +5,10 @@ add_library(${STROBE_CORE_SYNC_LIB} INTERFACE)
 
 
 target_include_directories(${STROBE_CORE_SYNC_LIB} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${STROBE_CORE_SYNC_LIB} INTERFACE ${STROBE_CORE_MEMORY_LIB} atomic)
-target_link_options(${STROBE_CORE_SYNC_LIB} INTERFACE -latomic)
+target_link_libraries(${STROBE_CORE_SYNC_LIB} INTERFACE ${STROBE_CORE_MEMORY_LIB})
+
+if (COMPILER_ID STREQUAL "GNU" OR COMPILER_ID STREQUAL "Clang")
+    target_link_libraries(${STROBE_CORE_SYNC_LIB} INTERFACE atomic)
+endif()
 
 add_subdirectory(test)
