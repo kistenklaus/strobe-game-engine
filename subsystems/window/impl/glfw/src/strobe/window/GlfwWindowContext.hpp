@@ -29,10 +29,9 @@ public:
       : m_allocator(std::move(allocator)),
         m_jobQueue(
             std::move(strobe::mpsc::channel<DeferredLambda, 10>(m_allocator))),
-        m_waitForShutdown(0), m_requestStop(false),
-        m_initComp(0),
-        m_thread(&GlfwWindowContext::glfwMain, this){
-      m_initComp.acquire();
+        m_waitForShutdown(0), m_requestStop(false), m_initComp(0),
+        m_thread(&GlfwWindowContext::glfwMain, this) {
+    m_initComp.acquire();
   }
 
   GlfwWindowContext(const GlfwWindowContext &) = delete;
