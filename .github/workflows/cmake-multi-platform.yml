@@ -23,13 +23,16 @@ jobs:
       #
       # To add more build types (Release, Debug, RelWithDebInfo, etc.) customize the build_type list.
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
         build_type: [Release,Debug]
         c_compiler: [gcc, clang]
         include:
         - c_compiler: gcc
           cpp_compiler: g++
         - c_compiler: clang
+          cpp_compiler: clang++
+        - os: macos-latest
+          c_compiler: clang
           cpp_compiler: clang++
 
     steps:
