@@ -6,7 +6,7 @@ add_library(${STROBE_CORE_SYNC_LIB} INTERFACE)
 
 
 target_include_directories(${STROBE_CORE_SYNC_LIB} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${STROBE_CORE_SYNC_LIB} INTERFACE ${STROBE_CORE_MEMORY_LIB})
+target_link_libraries(${STROBE_CORE_SYNC_LIB} INTERFACE ${STROBE_CORE_MEMORY_LIB} atomic)
 
 if (STROBE_BUILD_TESTS)
   add_subdirectory(test)
