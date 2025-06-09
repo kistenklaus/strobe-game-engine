@@ -2,7 +2,6 @@
 #include <gtest/gtest.h>
 
 #include <atomic>
-#include <print>
 #include <random>
 #include <strobe/core/memory/Mallocator.hpp>
 #include <strobe/core/sync/mpsc.hpp>
@@ -85,8 +84,7 @@ TEST(MPSCChannel, MemorySafety) {
 
 // Multi-Producer Single Consumer Test
 TEST(MPSCChannel, MultiProducerSingleConsumer) {
-  auto [sender, receiver] =
-      strobe::mpsc::channel<int, 8, strobe::Mallocator>();
+  auto [sender, receiver] = strobe::mpsc::channel<int, 8, strobe::Mallocator>();
   std::atomic<size_t> produced_count{0};
   std::atomic<size_t> consumed_count{0};
 
@@ -125,7 +123,6 @@ TEST(MPSCChannel, MultiProducerSingleConsumer) {
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   forceStop.store(true);
   consumer.join();
-
 
   ASSERT_EQ(consumed_count.load(), 1'000'000);
 }
@@ -235,4 +232,87 @@ TEST(MPSCChannel, StressTestLotsProducers) {
 
   ASSERT_EQ(produced_count.load(), 12'800);
   ASSERT_EQ(consumed_count.load(), 12'800);
+}
+
+TEST(MPSCChannel, BlockingSendAndReceiveSingleThread) {
+  {
+    auto [sender, receiver] =
+        strobe::mpsc::channel<int, 2, strobe::Mallocator>();
+
+    // Fill the queue to capacity with blocking_send
+    sender.blocking_send(1);
+    sender.blocking_send(2);
+
+    // Attempting a normal send should fail (queue is full)
+    ASSERT_FALSE(sender.send(3));
+
+    // Drain the queue with blocking_recv
+    auto v1 = receiver.recv();
+    ASSERT_TRUE(v1.has_value());
+    ASSERT_EQ(*v1, 1);
+
+    auto v2 = receiver.recv();
+    ASSERT_TRUE(v2.has_value());
+    ASSERT_EQ(*v2, 2);
+
+    // Now it should be empty
+    ASSERT_FALSE(receiver.recv().has_value());
+  }
+}
+
+TEST(MPSCChannel, BlockingSendWaitsForSpace) {
+  auto [sender, receiver] = strobe::mpsc::channel<int, 1, strobe::Mallocator>();
+
+  // Fill queue
+  sender.blocking_send(1);
+
+  std::atomic<bool> sent_second{false};
+
+  // Try to blocking_send another in a thread; should block until space
+  std::thread producer([&]() {
+    sender.blocking_send(2);
+    sent_second.store(true, std::memory_order_release);
+  });
+
+  // Sleep a bit to ensure producer is likely waiting
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  ASSERT_FALSE(sent_second.load(std::memory_order_acquire));
+
+  // Drain one value, unblocking producer
+  auto v = receiver.recv();
+  ASSERT_TRUE(v.has_value());
+  ASSERT_EQ(*v, 1);
+
+  // Wait for producer to finish
+  producer.join();
+  ASSERT_TRUE(sent_second.load(std::memory_order_acquire));
+
+  // Receive second value
+  auto v2 = receiver.recv();
+  ASSERT_TRUE(v2.has_value());
+  ASSERT_EQ(*v2, 2);
+}
+
+TEST(MPSCChannel, BlockingReceiveWaitsForData) {
+  auto [sender, receiver] = strobe::mpsc::channel<int, 2, strobe::Mallocator>();
+
+  std::atomic<bool> received{false};
+
+  // Consumer thread blocks on blocking_recv()
+  std::thread consumer([&]() {
+    int v = receiver.blocking_recv();
+    ASSERT_EQ(v, 42);
+    received.store(true, std::memory_order_release);
+  });
+
+  // Sleep a bit to ensure consumer is likely waiting
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  ASSERT_FALSE(received.load(std::memory_order_acquire));
+
+  // Producer sends
+  sender.send(42);
+
+  // Wait for consumer to finish
+  consumer.join();
+  ASSERT_TRUE(received.load(std::memory_order_acquire));
 }

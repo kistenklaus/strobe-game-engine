@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <strobe/core/memory/ReferenceCounter.hpp>
 #include <utility>
 
@@ -57,8 +58,8 @@ public:
           std::byte *raw = reinterpret_cast<std::byte *>(self);
           A *allocPtr = reinterpret_cast<A *>(raw + offset);
           A alloc = *allocPtr; // copy allocator out of control buffer.
-
           std::destroy_at(&controlBlock);
+          std::destroy_at(allocPtr);
           ATraits::deallocate(alloc, self, byteSize,
                               alignof(ChannelStateControlBlock<T>));
         });
@@ -77,6 +78,26 @@ public:
 
   auto &queue() { return m_flexMPSC; }
 
+  auto waitUntilSend() {
+    m_sendFlag.store(false, std::memory_order_relaxed);
+    m_sendFlag.wait(false, std::memory_order_acquire);
+  }
+
+  auto notifySend() {
+    m_sendFlag.store(true, std::memory_order_release);
+    m_sendFlag.notify_one();
+  }
+
+  auto waitUntilRecv() {
+    m_recvFlag.store(false, std::memory_order_relaxed);
+    m_recvFlag.wait(false, std::memory_order_acquire);
+  }
+
+  auto notifyRecv() {
+    m_recvFlag.store(true, std::memory_order_release);
+    m_recvFlag.notify_one();
+  }
+
   ChannelStateControlBlock(const ChannelStateControlBlock &o) = delete;
   ChannelStateControlBlock &
   operator=(const ChannelStateControlBlock &o) = delete;
@@ -87,7 +108,8 @@ private:
   ~ChannelStateControlBlock() = delete;
   ChannelStateControlBlock(std::size_t flexibleBufferSize, Deleter deleter)
       : m_referenceCounter(), m_deleter(deleter),
-        m_flexBufferSize(flexibleBufferSize), m_flexMPSC(flexibleBufferSize) {
+        m_flexBufferSize(flexibleBufferSize), m_recvFlag(true),
+        m_sendFlag(false), m_flexMPSC(flexibleBufferSize) {
     // std::println("Created control block 0x{:X}",
     // reinterpret_cast<std::size_t>(this));
   }
@@ -95,6 +117,8 @@ private:
   Rc m_referenceCounter;
   Deleter m_deleter;
   std::size_t m_flexBufferSize;
+  std::atomic<bool> m_recvFlag;
+  std::atomic<bool> m_sendFlag;
   sync::LockFreeFlexibleMSQueue<T> m_flexMPSC; // flexible container
   // <- A type erased allocator is stored after the flexible container.
 };
@@ -105,7 +129,6 @@ template <typename T> struct SharedChannelState {
       : m_controlBlock(ChannelStateControlBlock<T>::make(alloc, capacity)) {
     assert(m_controlBlock != nullptr);
   }
-  SharedChannelState() = default; // TODO REMOVE me
 
   SharedChannelState(const SharedChannelState &o)
       : m_controlBlock(o.m_controlBlock) {
@@ -144,6 +167,7 @@ template <typename T> struct SharedChannelState {
       ChannelStateControlBlock<T>::free(m_controlBlock);
     }
     m_controlBlock = std::exchange(o.m_controlBlock, nullptr);
+    return *this;
   }
 
   ~SharedChannelState() {
@@ -162,6 +186,29 @@ template <typename T> struct SharedChannelState {
     return m_controlBlock->queue().enqueue(std::move(v));
   }
 
+  void blocking_enqueue(const T &v) const {
+    while (!m_controlBlock->queue().enqueue(v)) {
+      m_controlBlock->waitUntilRecv();
+    }
+    m_controlBlock->notifySend();
+  }
+
+  void blocking_enqueue(T &&v) const {
+    while (!m_controlBlock->queue().enqueue(std::move(v))) {
+      m_controlBlock->waitUntilRecv();
+    }
+    m_controlBlock->notifySend();
+  }
+
+  T blocking_dequeue() const {
+    std::optional<T> v;
+    while (!(v = m_controlBlock->queue().dequeue()).has_value()) {
+      m_controlBlock->waitUntilSend();
+    }
+    m_controlBlock->notifyRecv();
+    return *v;
+  }
+
   std::optional<T> dequeue() const { return m_controlBlock->queue().dequeue(); }
 
 private:
@@ -177,6 +224,8 @@ public:
 
   bool send(const T &v) const { return m_state.enqueue(v); }
   bool send(T &&v) const { return m_state.enqueue(std::move(v)); }
+  void blocking_send(const T &v) const { m_state.blocking_enqueue(v); }
+  void blocking_send(T &&v) const { m_state.blocking_enqueue(std::move(v)); }
 
 private:
   details::SharedChannelState<T> m_state;
@@ -194,6 +243,7 @@ public:
   Receiver &operator=(Receiver &&) = default;
 
   std::optional<T> recv() const { return m_state.dequeue(); }
+  T blocking_recv() const { return m_state.blocking_dequeue(); }
 
 private:
   details::SharedChannelState<T> m_state;
