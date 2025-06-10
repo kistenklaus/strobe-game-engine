@@ -89,35 +89,22 @@ public:
       m_path.push_back('/');
     }
     assert(isDirectory());
-    m_path.append_range(o.m_path);
+    m_path.append(o.m_path.begin(), o.m_path.end());
     return *this;
   }
 
   Path &append(const PathView &o) {
     if (m_path.empty()) {
-      m_path.assign_range(o.span());
+      m_path.assign(o.span().begin(), o.span().end());
       return *this;
     }
     if (!isDirectory()) {
       m_path.push_back('/');
     }
     assert(isDirectory());
-    m_path.append_range(o.span());
+    m_path.append(o.span().begin(), o.span().end());
     return *this;
   }
-
-  // Path &append(const std::string_view o) {
-  //   if (m_path.empty()) {
-  //     m_path.assign_range(o);
-  //     return *this;
-  //   }
-  //   if (!isDirectory()) {
-  //     m_path.push_back('/');
-  //   }
-  //   assert(isDirectory());
-  //   m_path.append_range(o);
-  //   return *this;
-  // }
 
   std::string_view extension() const {
     assert(isFile());
