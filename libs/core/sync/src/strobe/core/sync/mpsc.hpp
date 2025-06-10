@@ -221,6 +221,7 @@ template <typename T> struct SharedChannelState {
   void blocking_enqueue(const T &v) const {
 
     std::size_t it = 0;
+#ifdef _MSC_VER
     while (!m_controlBlock->queue().enqueue(v) && ++it < 100) {
       if (it < 10) {
         // Tight spin
@@ -235,6 +236,11 @@ template <typename T> struct SharedChannelState {
         m_controlBlock->waitUntilRecv();
       }
     }
+#else
+    while (!m_controlBlock->queue().enqueue(v)) {
+      m_controlBlock->waitUntilRecv();
+    }
+#endif
 
     m_controlBlock->notifySend();
   }
@@ -242,6 +248,7 @@ template <typename T> struct SharedChannelState {
   T blocking_dequeue() const {
     std::optional<T> v;
 
+#ifdef _MSC_VER
     std::size_t it = 0;
     while (!(v = m_controlBlock->queue().dequeue()).has_value() && ++it < 100) {
       if (it < 10) {
@@ -258,6 +265,11 @@ template <typename T> struct SharedChannelState {
         m_controlBlock->waitUntilSend();
       }
     }
+#else
+    while (!(v = m_controlBlock->queue().dequeue()).has_value()) {
+      m_controlBlock->waitUntilSend();
+    }
+#endif
     m_controlBlock->notifyRecv();
     return *v;
   }
