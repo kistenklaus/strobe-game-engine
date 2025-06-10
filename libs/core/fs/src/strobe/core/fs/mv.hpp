@@ -39,7 +39,7 @@ constexpr MvFlagBits operator~(MvFlagBits rhs) {
 struct MvFlags {
   MvFlagBits bits;
 
-  MvFlags(MvFlagBits bits) : bits(bits) {}
+  constexpr MvFlags(MvFlagBits bits) : bits(bits) {}
 
   constexpr operator bool() const {
     return std::underlying_type_t<MvFlagBits>(bits) != 0;

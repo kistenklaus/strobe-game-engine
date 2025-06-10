@@ -40,7 +40,7 @@ inline constexpr RmFlagBits &operator&=(RmFlagBits &lhs, RmFlagBits rhs) {
 
 struct RmFlags {
   RmFlagBits bits;
-  RmFlags(RmFlagBits bits) : bits(bits) {}
+  constexpr RmFlags(RmFlagBits bits) : bits(bits) {}
 
   constexpr operator bool() const {
     return static_cast<std::underlying_type_t<RmFlagBits>>(bits) != 0;
