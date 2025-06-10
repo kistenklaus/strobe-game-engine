@@ -8,7 +8,7 @@ namespace strobe::event_dispatcher::testing {
 
 using namespace strobe;
 
-}  // namespace strobe::event_dispatcher::testing
+} // namespace strobe::event_dispatcher::testing
 
 using namespace strobe::event_dispatcher::testing;
 
@@ -17,8 +17,8 @@ TEST(EventDispatcherTest, BasicDispatch) {
 
   int callCount = 0;
   auto listener = EventListenerRef<BasicEvent<int>>::fromNative(
-      &callCount, [](void* userData, const BasicEvent<int>& e) {
-        int* counter = static_cast<int*>(userData);
+      &callCount, [](void *userData, const BasicEvent<int> &) {
+        int *counter = static_cast<int *>(userData);
         (*counter)++;
       });
 
@@ -34,8 +34,8 @@ TEST(EventDispatcherTest, RemoveListener) {
 
   int callCount = 0;
   auto listener = EventListenerRef<BasicEvent<int>>::fromNative(
-      &callCount, +[](void* userData, const BasicEvent<int>& e) {
-        int* counter = static_cast<int*>(userData);
+      &callCount, +[](void *userData, const BasicEvent<int> &) {
+        int *counter = static_cast<int *>(userData);
         (*counter)++;
       });
 
@@ -53,13 +53,13 @@ TEST(EventDispatcherTest, MultipleListeners) {
 
   int callCount1 = 0, callCount2 = 0;
   auto listener1 = EventListenerRef<BasicEvent<int>>::fromNative(
-      &callCount1, +[](void* userData, const BasicEvent<int>& e) {
-        int* counter = static_cast<int*>(userData);
+      &callCount1, +[](void *userData, const BasicEvent<int> &) {
+        int *counter = static_cast<int *>(userData);
         (*counter)++;
       });
   auto listener2 = EventListenerRef<BasicEvent<int>>::fromNative(
-      &callCount2, +[](void* userData, const BasicEvent<int>& e) {
-        int* counter = static_cast<int*>(userData);
+      &callCount2, +[](void *userData, const BasicEvent<int> &) {
+        int *counter = static_cast<int *>(userData);
         (*counter)++;
       });
 
@@ -80,14 +80,13 @@ TEST(EventDispatcherTest, RemoveListenerDuringDispatch) {
   };
 
   Container c;
-  c.handle = std::move(
+  c.handle =
       c.dispatcher.addListener(EventListenerRef<BasicEvent<int>>::fromNative(
-          static_cast<void*>(&c), [](void* userData, const BasicEvent<int>&
-          e) {
-            auto c = static_cast<Container*>(userData);
+          static_cast<void *>(&c), [](void *userData, const BasicEvent<int> &) {
+            auto c = static_cast<Container *>(userData);
             c->callCount++;
             c->handle.release();
-          })));
+          }));
 
   c.dispatcher.dispatch(0);
   c.dispatcher.dispatch(0);
@@ -105,20 +104,21 @@ TEST(EventDispatcherTest, AddListenerDuringDispatch) {
   };
 
   Container c;
-  c.handleA = std::move(
+  c.handleA =
       c.dispatcher.addListener(EventListenerRef<BasicEvent<int>>::fromNative(
-          static_cast<void*>(&c), [](void* userData, const BasicEvent<int>& e) {
-            auto c = static_cast<Container*>(userData);
+          static_cast<void *>(&c),
+          [](void *userData, const BasicEvent<int> &) {
+            auto c = static_cast<Container *>(userData);
             c->callCountA++;
             if (c->callCountA == 1) {
-              c->handleB = std::move(c->dispatcher.addListener(
+              c->handleB = c->dispatcher.addListener(
                   EventListenerRef<BasicEvent<int>>::fromNative(
-                      c, [](void* userData, const BasicEvent<int>& e) {
-                        auto c = static_cast<Container*>(userData);
+                      c, [](void *userData, const BasicEvent<int> &) {
+                        auto c = static_cast<Container *>(userData);
                         c->callCountB++;
-                      })));
+                      }));
             }
-          })));
+          }));
 
   c.dispatcher.dispatch(0);
   c.dispatcher.dispatch(0);
@@ -130,5 +130,5 @@ TEST(EventDispatcherTest, AddListenerDuringDispatch) {
 TEST(EventDispatcherTest, EmptyDispatch) {
   EventDispatcher<BasicEvent<int>, strobe::Mallocator> dispatcher;
 
-  dispatcher.dispatch(42);  // No listeners, should not crash
+  dispatcher.dispatch(42); // No listeners, should not crash
 }

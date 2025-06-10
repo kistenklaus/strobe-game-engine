@@ -133,7 +133,7 @@ TEST(IndexPool, ComplexTypeDestruction) {
   {
     strobe::IndexPool<unsigned int, DestructionCounter, strobe::Mallocator> indexPool{};
     unsigned int a = indexPool.insert();
-    unsigned int b = indexPool.insert();
+    indexPool.insert();
     indexPool.erase(a);
     ASSERT_EQ(DestructionCounter::destroyedCount, 1);
   } // Destructor should trigger destruction of b

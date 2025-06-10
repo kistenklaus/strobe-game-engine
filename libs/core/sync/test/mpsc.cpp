@@ -180,7 +180,7 @@ TEST(MPSCChannel, StressTestRandomProducers) {
   std::thread consumer([&]() {
     while (consumed_count < 800'000 && !forceStop) {
       if (auto value = receiver.recv(); value.has_value()) {
-        auto x = consumed_count.fetch_add(1);
+        consumed_count.fetch_add(1);
       } else {
         std::this_thread::yield();
       }
@@ -212,8 +212,8 @@ TEST(MPSCChannel, StressTestLotsProducers) {
 
   for (std::size_t t = 0; t < NumProducers; ++t) {
     producers.emplace_back([&]() {
-      for (int i = 0; i < ItemsPerProducers; ++i) {
-        while (!sender.send(i)) {
+      for (std::size_t i = 0; i < ItemsPerProducers; ++i) {
+        while (!sender.send(static_cast<int>(i))) {
           std::this_thread::yield();
         }
       }

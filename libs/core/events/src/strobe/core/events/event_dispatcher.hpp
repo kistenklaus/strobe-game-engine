@@ -36,7 +36,7 @@ class EventDispatcher : protected events::details::IEventDispatcher {
   }
 
   void dispatch(E& e) {
-    for (m_dispatchIdx = 0; m_dispatchIdx < m_listeners.size();
+    for (m_dispatchIdx = 0; m_dispatchIdx < static_cast<std::ptrdiff_t>(m_listeners.size());
          m_dispatchIdx++) {
       if (e.canceled()) {
         break;
@@ -52,7 +52,7 @@ class EventDispatcher : protected events::details::IEventDispatcher {
 
     m_listeners.push_back(listener);
     if (m_dispatchIdx != -1) {
-      if (m_dispatchIdx == m_listeners.size() - 1) {
+      if (m_dispatchIdx == static_cast<std::ptrdiff_t>(m_listeners.size()) - 1) {
         m_dispatchIdx++;  // skip element
         // last iteration.
       } else {
@@ -101,7 +101,7 @@ class EventDispatcher : protected events::details::IEventDispatcher {
 
  public:
   Container m_listeners;
-  ptrdiff_t m_dispatchIdx;
+  std::ptrdiff_t m_dispatchIdx;
 };
 
 template <events::Event E, Allocator A>

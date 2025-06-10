@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <cassert>
 
 #include "strobe/core/memory/align.hpp"
 #include "strobe/core/memory/pages.hpp"
@@ -31,6 +32,7 @@ void* PageAllocator::allocate(std::size_t size, std::size_t alignment) {
   }
   const std::size_t page = strobe::page_size();
   size = memory::align_up(size, page);
+  assert(page % alignment == 0);
 
   std::size_t totalSize = size;
   if (USE_GUARD_PAGES) {

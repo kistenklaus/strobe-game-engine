@@ -41,8 +41,11 @@ TEST(List, PushBack) {
     ref.push_back(x);
   }
 
+  auto refIt = ref.begin();
   for (auto it = list.begin(); it != list.end(); ++it) {
     int v = *it;
+    int r = *refIt++;
+    ASSERT_EQ(v, r);
   }
 
   ASSERT_TRUE(std::ranges::equal(ref, list));

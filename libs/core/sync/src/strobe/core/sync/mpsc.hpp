@@ -1,7 +1,7 @@
 #pragma once
 
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) ||               \
-    defined(_M_IX86)
+#if defined(__MSC_VER) && (defined(__x86_64__) || defined(_M_X64) ||           \
+                           defined(__i386) || defined(_M_IX86))
 #include <emmintrin.h>
 #endif
 
@@ -204,8 +204,8 @@ template <typename T> struct SharedChannelState {
     return x;
   }
   static inline void cpu_relax() noexcept {
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) ||               \
-    defined(_M_IX86)
+#if defined(__MSC_VER) && (defined(__x86_64__) || defined(_M_X64) ||           \
+                           defined(__i386) || defined(_M_IX86))
     _mm_pause();
 #elif defined(__aarch64__) || defined(_M_ARM64)
     // Use yield on ARM64
@@ -220,8 +220,8 @@ template <typename T> struct SharedChannelState {
 
   void blocking_enqueue(const T &v) const {
 
-    std::size_t it = 0;
 #ifdef _MSC_VER
+    std::size_t it = 0;
     while (!m_controlBlock->queue().enqueue(v) && ++it < 100) {
       if (it < 10) {
         // Tight spin

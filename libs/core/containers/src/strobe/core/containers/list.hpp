@@ -58,10 +58,7 @@ class List {
     iterator& operator++() {
       assert(m_node != nullptr);
       assert(m_node != m_node->next);
-      Node* next = m_node->next;
       m_node = m_node->next;
-
-
       return *this;
     }
     iterator operator++(int) {

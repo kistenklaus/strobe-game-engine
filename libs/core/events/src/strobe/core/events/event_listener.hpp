@@ -139,18 +139,6 @@ bool operator!=(const EventListenerId& id,
 
 }  // namespace events
 
-static void foo() {
-  EventListenerRef<BasicEvent<int>> ref =
-      EventListenerRef<BasicEvent<int>>::fromNative(nullptr, nullptr);
-
-  events::EventListenerId id(ref);
-
-  bool b1 = ref == id;
-  bool b2 = id == ref;
-  bool b3 = id == id;
-  bool b4 = ref == ref;
-}
-
 static_assert(std::equality_comparable<EventListenerRef<BasicEvent<int>>>);
 static_assert(std::equality_comparable_with<EventListenerRef<BasicEvent<int>>,
                                             events::EventListenerId>);
