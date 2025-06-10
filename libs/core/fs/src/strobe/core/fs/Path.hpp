@@ -4,7 +4,9 @@
 #include "strobe/core/fs/utility.hpp"
 #include "strobe/core/memory/AllocatorTraits.hpp"
 #include <algorithm>
+#include <cstring>
 #include <iterator>
+#include <utility>
 #include <span>
 #include <string_view>
 
@@ -57,6 +59,8 @@ public:
     return m_path.size() - 1;
   }
 
+  std::span<const char> span() const { return m_path; }
+
 private:
   std::span<const char> m_path;
 };
@@ -64,11 +68,11 @@ private:
 template <Allocator A> class Path {
 public:
   friend class PathView;
-  Path(const A &alloc = {}) : m_path(/*TODO*/) {}
+  Path([[maybe_unused]] const A &alloc = {}) : m_path(/*TODO*/) {}
   explicit Path(const String<A> &path) : m_path(path) {}
   explicit Path(String<A> &&path) : m_path(std::move(path)) {}
 
-  explicit Path(PathView view, const A &alloc = {})
+  explicit Path(PathView view, [[maybe_unused]] const A &alloc = {})
       : m_path(view.c_str(), view.c_str() + view.size() /*TODO all alloc*/) {}
 
   const char *c_str() const { return m_path.c_str(); }
@@ -78,8 +82,37 @@ public:
       m_path = o.m_path;
       return *this;
     }
+    if (!isDirectory()) {
+      m_path.push_back('/');
+    }
     assert(isDirectory());
     m_path.append_range(o.m_path);
+    return *this;
+  }
+
+  Path &append(const PathView &o) {
+    if (m_path.empty()) {
+      m_path.assign_range(o.span());
+      return *this;
+    }
+    if (!isDirectory()) {
+      m_path.push_back('/');
+    }
+    assert(isDirectory());
+    m_path.append_range(o.span());
+    return *this;
+  }
+
+  Path &append(const std::string_view o) {
+    if (m_path.empty()) {
+      m_path.assign_range(o);
+      return *this;
+    }
+    if (!isDirectory()) {
+      m_path.push_back('/');
+    }
+    assert(isDirectory());
+    m_path.append_range(o);
     return *this;
   }
 
@@ -94,19 +127,10 @@ public:
   }
 
   Path parent() const {
-    if (isFile()) {
-      auto rit = std::find(m_path.rbegin(), m_path.rend(), '/');
-      return Path(String<A>(m_path.begin(), rit.base()),
-                  m_path.get_allocator());
-    } else {
-      auto rit = std::find(m_path.rbegin() + 1, m_path.rend(), '/');
-      if (rit == m_path.rend()) {
-        return Path("./", m_path.get_allocator());
-      }
-      // NOTE: it::base skips one. (so we include the / here)
-      return Path(String<A>(m_path.begin(), rit.base()),
-                  m_path.get_allocator());
-    }
+    Path parent = *this;
+    parent.append("../");
+    parent.normalize();
+    return parent;
   }
 
   std::string_view name() const {

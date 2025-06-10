@@ -17,3 +17,5 @@ target_include_directories(${STROBE_CORE_FS_LIB} PUBLIC
 
 target_link_libraries(${STROBE_CORE_FS_LIB} PUBLIC ${STROBE_CORE_MEMORY_LIB})
 target_link_libraries(${STROBE_CORE_FS_LIB} PUBLIC ${STROBE_CORE_CONTAINERS_LIB})
+
+add_subdirectory(test)
