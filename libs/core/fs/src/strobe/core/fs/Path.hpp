@@ -20,6 +20,7 @@ public:
 
   // Takes a null terminated string.
   PathView(std::span<const char> path) : m_path(path) {}
+  PathView(const char* cpath) : m_path(cpath, std::strlen(cpath) + 1) {}
 
   template <Allocator PA> PathView(const Path<PA> &path);
 
@@ -69,8 +70,10 @@ template <Allocator A> class Path {
 public:
   friend class PathView;
   Path([[maybe_unused]] const A &alloc = {}) : m_path(/*TODO*/) {}
-  explicit Path(const String<A> &path) : m_path(path) {}
-  explicit Path(String<A> &&path) : m_path(std::move(path)) {}
+
+  // explicit Path(const String<A> &path) : m_path(path) {}
+  
+  // explicit Path(String<A> &&path) : m_path(std::move(path)) {}
 
   explicit Path(PathView view, [[maybe_unused]] const A &alloc = {})
       : m_path(view.c_str(), view.c_str() + view.size() /*TODO all alloc*/) {}
@@ -103,18 +106,18 @@ public:
     return *this;
   }
 
-  Path &append(const std::string_view o) {
-    if (m_path.empty()) {
-      m_path.assign_range(o);
-      return *this;
-    }
-    if (!isDirectory()) {
-      m_path.push_back('/');
-    }
-    assert(isDirectory());
-    m_path.append_range(o);
-    return *this;
-  }
+  // Path &append(const std::string_view o) {
+  //   if (m_path.empty()) {
+  //     m_path.assign_range(o);
+  //     return *this;
+  //   }
+  //   if (!isDirectory()) {
+  //     m_path.push_back('/');
+  //   }
+  //   assert(isDirectory());
+  //   m_path.append_range(o);
+  //   return *this;
+  // }
 
   std::string_view extension() const {
     assert(isFile());

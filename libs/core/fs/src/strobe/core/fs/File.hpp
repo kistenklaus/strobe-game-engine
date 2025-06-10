@@ -30,8 +30,6 @@ public:
 
     int flags = 0;
 
-    using T = std::underlying_type_t<FileAccessBits>;
-
     if (access & FileAccessBits::ReadWrite) {
       flags |= O_RDWR;
     } else if (access & FileAccessBits::Read) {
