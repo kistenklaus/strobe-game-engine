@@ -1,7 +1,6 @@
 #include "strobe/core/fs/File.hpp"
 #include "strobe/core/fs/FileAccessFlags.hpp"
 #include "strobe/core/fs/rm.hpp"
-#include <print>
 #include <strobe/core/fs/Path.hpp>
 #include <strobe/core/fs/mkdir.hpp>
 #include <strobe/core/memory/Mallocator.hpp>
