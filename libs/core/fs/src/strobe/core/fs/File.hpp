@@ -174,7 +174,7 @@ public:
     return total;
   }
 
-  void seek(std::size_t offset, FileSeekFlags flags = FileSeekFlags::Set) {
+  void seek(long offset, FileSeekFlags flags = FileSeekFlags::Set) {
     assert(isOpen());
 
     int os_whence;
