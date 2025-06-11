@@ -4,7 +4,6 @@
 #if defined(_WIN32)
 #include <windows.h>
 #else
-#include <cerrno>
 #include <sys/mman.h>
 #include <unistd.h>
 #endif
@@ -26,7 +25,7 @@ static constexpr bool USE_GUARD_PAGES = false;
 static constexpr bool USE_GUARD_PAGES = false;
 #endif
 
-void* PageAllocator::allocate(std::size_t size, std::size_t alignment) {
+void* PageAllocator::allocate(std::size_t size, [[maybe_unused]] std::size_t alignment) {
   if (size == 0) {
     return nullptr;
   }
@@ -72,12 +71,13 @@ void* PageAllocator::allocate(std::size_t size, std::size_t alignment) {
 #endif
 }
 
-void PageAllocator::deallocate(void* ptr, std::size_t size, std::size_t alignment) {
+void PageAllocator::deallocate(void* ptr, std::size_t size, [[maybe_unused]] std::size_t alignment) {
   if (!ptr)
     return;
 
   const std::size_t page = strobe::page_size();
   alignment = ::std::max<std::size_t>(alignment, page);
+  assert(page % alignment == 0);
   size = strobe::memory::align_up(size, page);
 
   void* raw = ptr;
