@@ -28,7 +28,6 @@ int main() {
   //                                  strobe::FileAccessBits::Write |
   //                                  strobe::FileAccessBits::Trunc};
   //
-  // std::println("path-view: {}", path.c_str());
   //
   // // strobe::File file2{filepath, strobe::FileAccessBits::Read};
   // //

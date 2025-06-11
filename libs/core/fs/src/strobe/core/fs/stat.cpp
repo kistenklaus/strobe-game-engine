@@ -1,5 +1,5 @@
 #include "./stat.hpp"
-#include <format>
+#include <fmt/format.h>
 #include <sys/stat.h>
 #include <system_error>
 
@@ -12,13 +12,13 @@ Stat stat(PathView path, StatFlags flags) {
     if (::stat(path.c_str(), &stat) == -1) {
       throw std::system_error(
           errno, std::generic_category(),
-          std::format("Failed to lstat '{}'", path.c_str()));
+          fmt::format("Failed to lstat '{}'", path.c_str()));
     }
   } else {
     if (::lstat(path.c_str(), &stat) == -1) {
       throw std::system_error(
           errno, std::generic_category(),
-          std::format("Failed to lstat '{}'", path.c_str()));
+          fmt::format("Failed to lstat '{}'", path.c_str()));
     }
   }
   if (S_ISREG(stat.st_mode)) {

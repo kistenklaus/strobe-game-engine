@@ -5,7 +5,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
-#include <format>
+#include <fmt/format.h>
 #include <iostream>
 #include <linux/limits.h>
 #include <stdexcept>
@@ -22,7 +22,7 @@ public:
     m_dir = ::opendir(path.c_str());
     if (m_dir == nullptr) {
       throw std::system_error(errno, std::generic_category(),
-                              std::format("Failed to open directory '{}': {}",
+                              fmt::format("Failed to open directory '{}': {}",
                                           path.c_str(), std::strerror(errno)));
     }
   }
@@ -78,7 +78,7 @@ public:
       if (::fstatat(fd, ent->d_name, &stat, AT_SYMLINK_NOFOLLOW) < 0) {
         throw std::system_error(
             errno, std::generic_category(),
-            std::format("Unknown file type. Falling back to fstatat failed: {}",
+            fmt::format("Unknown file type. Falling back to fstatat failed: {}",
                         std::strerror(errno)));
       }
       if (S_ISREG(stat.st_mode)) {
@@ -108,7 +108,7 @@ public:
       if (::closedir(m_dir) != 0) {
         throw std::system_error(
             errno, std::generic_category(),
-            std::format("Failed to closedir: {}", std::strerror(errno)));
+            fmt::format("Failed to closedir: {}", std::strerror(errno)));
       }
       m_dir = nullptr;
     }

@@ -1,9 +1,10 @@
 #include "./rm.hpp"
+#include "strobe/core/fs/exists.hpp"
 #include "strobe/core/fs/stat.hpp"
 #include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
-#include <format>
+#include <fmt/format.h>
 #include <iostream>
 #include <ostream>
 #include <stdexcept>
@@ -21,7 +22,7 @@ static void rm_dir_content_recursive(int fd) {
     ::close(fd);
     throw std::system_error(
         errno, std::generic_category(),
-        std::format("Failed to fdopendir: {}", std::strerror(errno)));
+        fmt::format("Failed to fdopendir: {}", std::strerror(errno)));
   }
 
   struct dirent *ent;
@@ -39,7 +40,7 @@ static void rm_dir_content_recursive(int fd) {
       if (::fstatat(fd, ent->d_name, &stat, AT_SYMLINK_NOFOLLOW) < 0) {
         ::closedir(dir);
         throw std::system_error(errno, std::generic_category(),
-                                std::format("Failed to stat '{}': {}",
+                                fmt::format("Failed to stat '{}': {}",
                                             ent->d_name, std::strerror(errno)));
         // TODO error with fstatat.
       }
@@ -53,7 +54,7 @@ static void rm_dir_content_recursive(int fd) {
         ::closedir(dir);
         throw std::system_error(
             errno, std::generic_category(),
-            std::format("Failed to open subdirectory '{}': {}", ent->d_name,
+            fmt::format("Failed to open subdirectory '{}': {}", ent->d_name,
                         std::strerror(errno)));
       }
       rm_dir_content_recursive(subdir);
@@ -61,7 +62,7 @@ static void rm_dir_content_recursive(int fd) {
         ::closedir(dir);
         throw std::system_error(
             errno, std::generic_category(),
-            std::format("Failed to remove directory '{}': {}", ent->d_name,
+            fmt::format("Failed to remove directory '{}': {}", ent->d_name,
                         std::strerror(errno)));
       }
 
@@ -69,14 +70,14 @@ static void rm_dir_content_recursive(int fd) {
       if (::unlinkat(fd, ent->d_name, 0) != 0) {
         throw std::system_error(
             errno, std::generic_category(),
-            std::format("Failed to remove file: {}", std::strerror(errno)));
+            fmt::format("Failed to remove file: {}", std::strerror(errno)));
       }
     }
   }
   if (::closedir(dir) != 0) {
     throw std::system_error(
         errno, std::generic_category(),
-        std::format("Failed to close directory: {}", std::strerror(errno)));
+        fmt::format("Failed to close directory: {}", std::strerror(errno)));
   }
 }
 
@@ -84,24 +85,24 @@ void rm(PathView path, const Stat *stat, RmFlags flags) {
   if (stat->isDirectory()) {
     if (!(flags & RmFlagBits::Recursive)) {
       throw std::invalid_argument(
-          std::format("Cannot remove '{}': Is a directory", path.c_str()));
+          fmt::format("Cannot remove '{}': Is a directory", path.c_str()));
       return;
     }
     int fd = ::open(path.c_str(), O_RDONLY | O_DIRECTORY);
     if (fd == -1) {
       throw std::system_error(errno, std::generic_category(),
-                              std::format("Failed to open directory '{}': {}",
+                              fmt::format("Failed to open directory '{}': {}",
                                           path.c_str(), std::strerror(errno)));
     }
     try {
       rm_dir_content_recursive(fd);
     } catch (const std::exception &e) {
-      throw std::runtime_error(std::format(
+      throw std::runtime_error(fmt::format(
           "Failed to remove directory '{}': \n{}", path.c_str(), e.what()));
     }
     if (::rmdir(path.c_str()) != 0) {
       throw std::system_error(errno, std::generic_category(),
-                              std::format("Failed to remove directory '{}': {}",
+                              fmt::format("Failed to remove directory '{}': {}",
                                           path.c_str(), std::strerror(errno)));
     }
 
@@ -109,7 +110,7 @@ void rm(PathView path, const Stat *stat, RmFlags flags) {
     // files or links.
     if (::unlink(path.c_str()) != 0) {
       throw std::system_error(errno, std::generic_category(),
-                              std::format("Failed to remove file '{}': {}",
+                              fmt::format("Failed to remove file '{}': {}",
                                           path.c_str(), std::strerror(errno)));
     }
   }
@@ -118,7 +119,7 @@ void rm(PathView path, const Stat *stat, RmFlags flags) {
 void rm(PathView path, RmFlags flags) {
   if (!strobe::fs::exists(path)) {
     if (!(flags & RmFlagBits::Force)) {
-      throw std::invalid_argument(std::format(
+      throw std::invalid_argument(fmt::format(
           "Cannot remove '{}': No such file or directory", path.c_str()));
     }
     return;

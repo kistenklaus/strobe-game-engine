@@ -2,6 +2,7 @@
 
 #include "FileAccessFlags.hpp"
 #include "FileSeekFlags.hpp"
+#include <fmt/format.h>
 #include "Path.hpp"
 #include <cstring>
 #include <exception>
@@ -38,7 +39,7 @@ public:
       flags |= O_WRONLY;
     } else {
       throw std::invalid_argument(
-          std::format("Failed to open file '{}'. Must specify either "
+          fmt::format("Failed to open file '{}'. Must specify either "
                       "Read and or Write access flags.",
                       path.c_str()));
     }
@@ -53,7 +54,7 @@ public:
       flags |= O_TRUNC;
       if (!(access & FileAccessBits::Write)) {
         throw std::invalid_argument(
-            std::format("Failed to open file '{}'. Invalid file access. Trunc "
+            fmt::format("Failed to open file '{}'. Invalid file access. Trunc "
                         "requires Write.",
                         path.c_str()));
       }
@@ -62,7 +63,7 @@ public:
       flags |= O_APPEND;
       if (!(access & FileAccessBits::Write)) {
         throw std::invalid_argument(
-            std::format("Failed to open file '{}'. Invalid file access. Append "
+            fmt::format("Failed to open file '{}'. Invalid file access. Append "
                         "requires Write.",
                         path.c_str()));
       }
@@ -82,7 +83,7 @@ public:
     if (m_fd == -1) {
       throw std::system_error(
           errno, std::generic_category(),
-          std::format("Failed to open file '{}' (errno: {}): {}", path.c_str(),
+          fmt::format("Failed to open file '{}' (errno: {}): {}", path.c_str(),
                       errno, std::strerror(errno)));
     }
   }
@@ -115,7 +116,7 @@ public:
       if (::close(std::exchange(m_fd, -1)) == -1) {
         throw std::system_error(
             errno, std::generic_category(),
-            std::format("Failed to close file (errno: {}): {}", errno,
+            fmt::format("Failed to close file (errno: {}): {}", errno,
                         std::strerror(errno)));
       }
     }
@@ -128,7 +129,7 @@ public:
     if (::fstat(m_fd, &st) == -1) {
       throw std::system_error(
           errno, std::generic_category(),
-          std::format("Failed to get file size (errno: {}): {}", errno,
+          fmt::format("Failed to get file size (errno: {}): {}", errno,
                       std::strerror(errno)));
     }
 
@@ -145,7 +146,7 @@ public:
       if (result == -1) {
         throw std::system_error(
             errno, std::generic_category(),
-            std::format("Failed to read from file (errno: {}): {}", errno,
+            fmt::format("Failed to read from file (errno: {}): {}", errno,
                         std::strerror(errno)));
       }
       if (result == 0) {
@@ -166,7 +167,7 @@ public:
       if (result == -1) {
         throw std::system_error(
             errno, std::generic_category(),
-            std::format("Failed to write to file (errno: {}): {}", errno,
+            fmt::format("Failed to write to file (errno: {}): {}", errno,
                         std::strerror(errno)));
       }
       total += result;
@@ -195,7 +196,7 @@ public:
     if (::lseek(m_fd, static_cast<off_t>(offset), os_whence) == -1) {
       throw std::system_error(
           errno, std::generic_category(),
-          std::format("Failed to seek in file (errno: {}): {}", errno,
+          fmt::format("Failed to seek in file (errno: {}): {}", errno,
                       std::strerror(errno)));
     }
   }
@@ -207,7 +208,7 @@ public:
     if (pos == -1) {
       throw std::system_error(
           errno, std::generic_category(),
-          std::format("Failed to get file position (errno: {}): {}", errno,
+          fmt::format("Failed to get file position (errno: {}): {}", errno,
                       std::strerror(errno)));
     }
 
@@ -221,7 +222,7 @@ public:
     if (::ftruncate(m_fd, static_cast<off_t>(new_size)) == -1) {
       throw std::system_error(
           errno, std::generic_category(),
-          std::format("Failed to truncate file (errno: {}): {}", errno,
+          fmt::format("Failed to truncate file (errno: {}): {}", errno,
                       std::strerror(errno)));
     }
   }

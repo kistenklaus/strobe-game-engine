@@ -1,9 +1,8 @@
 #include "./mv.hpp"
-#include "strobe/core/fs/rm.hpp"
 #include <cerrno>
 #include <cstring>
 #include <dirent.h>
-#include <format>
+#include <fmt/format.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -25,12 +24,12 @@ void mv(PathView src, PathView dst, MvFlags flags) {
         if (::unlink(dst.c_str()) != 0) {
           throw std::system_error(
               errno, std::generic_category(),
-              std::format("Failed to remove destination file '{}': {}",
+              fmt::format("Failed to remove destination file '{}': {}",
                           dst.c_str(), std::strerror(errno)));
         }
       }
     } else {
-      throw std::runtime_error(std::format(
+      throw std::runtime_error(fmt::format(
           "Destination '{}' exists and Force flag not set", dst.c_str()));
     }
   }
@@ -39,7 +38,7 @@ void mv(PathView src, PathView dst, MvFlags flags) {
   struct stat src_stat;
   if (::stat(src.c_str(), &src_stat) == -1) {
     throw std::system_error(errno, std::generic_category(),
-                            std::format("Failed to stat source '{}': {}",
+                            fmt::format("Failed to stat source '{}': {}",
                                         src.c_str(), std::strerror(errno)));
   }
 
@@ -65,7 +64,7 @@ void mv(PathView src, PathView dst, MvFlags flags) {
   // Perform the rename
   if (::rename(src.c_str(), dst.c_str()) == -1) {
     throw std::system_error(errno, std::generic_category(),
-                            std::format("Failed to move '{}' to '{}': {}",
+                            fmt::format("Failed to move '{}' to '{}': {}",
                                         src.c_str(), dst.c_str(),
                                         std::strerror(errno)));
   }
@@ -75,7 +74,7 @@ void mv(PathView src, PathView dst, MvFlags flags) {
     if (::utimes(dst.c_str(), times) == -1) {
       throw std::system_error(
           errno, std::generic_category(),
-          std::format("Failed to preserve timestamps on '{}': {}", dst.c_str(),
+          fmt::format("Failed to preserve timestamps on '{}': {}", dst.c_str(),
                       std::strerror(errno)));
     }
   }

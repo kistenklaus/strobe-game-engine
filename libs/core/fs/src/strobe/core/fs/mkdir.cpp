@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <cstring>
-#include <format>
+#include <fmt/format.h>
 #include <system_error>
 
 #if defined(_WIN32)
@@ -37,7 +37,7 @@ static void mkdir_and_parents(std::span<char> path) {
   PathView pathView{path};
   if (exists(pathView)) {
     if (!stat(pathView).isDirectory()) {
-      throw std::runtime_error(std::format(
+      throw std::runtime_error(fmt::format(
           "Cannot create directory '{}': File exists", path.data()));
     }
     return; // directory already exists.
@@ -50,7 +50,7 @@ static void mkdir_and_parents(std::span<char> path) {
       if (::mkdir(path.data(), 0755) == -1) {
         throw std::system_error(
             errno, std::generic_category(),
-            std::format("Failed to create directory '{}': {}", path.data(),
+            fmt::format("Failed to create directory '{}': {}", path.data(),
                         std::strerror(errno)));
       }
     } else {
@@ -64,7 +64,7 @@ static void mkdir_and_parents(std::span<char> path) {
       if (::mkdir(path.data(), 0755) == -1) {
         throw std::system_error(
             errno, std::generic_category(),
-            std::format("Failed to create directory '{}': {}", path.data(),
+            fmt::format("Failed to create directory '{}': {}", path.data(),
                         std::strerror(errno)));
       }
     }
@@ -109,7 +109,7 @@ void mkdir(PathView path, MkdirFlags flags) {
   } else {
     if (::mkdir(cpath, 0755) == -1) {
       throw std::system_error(errno, std::generic_category(),
-                              std::format("Failed to create directory '{}': {}",
+                              fmt::format("Failed to create directory '{}': {}",
                                           cpath, std::strerror(errno)));
     }
   }
