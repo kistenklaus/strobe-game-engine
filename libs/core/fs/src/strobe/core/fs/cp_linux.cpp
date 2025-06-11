@@ -1,6 +1,7 @@
 #include "./cp.hpp"
 #include "fmt/format.h"
 #include <cerrno>
+#include <cstdio>
 #include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
@@ -20,7 +21,6 @@
 namespace strobe::fs {
 
 static bool cp_file_fallback(int src_fd, int dst_fd) {
-
   constexpr size_t BufferSize = 16 * 1024;
   char buffer[BufferSize];
   ssize_t n;
@@ -29,8 +29,6 @@ static bool cp_file_fallback(int src_fd, int dst_fd) {
     while (written < n) {
       ssize_t w = ::write(dst_fd, buffer + written, n - written);
       if (w < 0) {
-        ::close(src_fd);
-        ::close(dst_fd);
         throw std::system_error(
             errno, std::generic_category(),
             fmt::format("Failed to copy file : {}", std::strerror(errno)));
@@ -62,17 +60,40 @@ static void cp_file(int src_fd, int dst_fd, struct stat *src_stat,
   }
 
   if (!reflinked) {
-    try {
-      cp_file_fallback(src_fd, dst_fd);
-    } catch (...) {
-      ::close(src_fd);
-      ::close(dst_fd);
-      throw;
+    size_t bytes_remaining = static_cast<size_t>(src_stat->st_size);
+    static constexpr size_t chunk_size = 64 * 1024;
+
+    while (bytes_remaining > 0) {
+      ssize_t bytes_copied =
+          ::copy_file_range(src_fd, nullptr, dst_fd, nullptr,
+                            std::min(chunk_size, bytes_remaining), 0);
+      if (bytes_copied == 0)
+        break; // EOF reached
+
+      if (bytes_copied < 0) {
+        if (errno == EXDEV || errno == EINVAL || errno == ENOSYS) {
+          ::lseek(src_fd, 0, SEEK_SET);
+          ::lseek(dst_fd, 0, SEEK_SET);
+          // Fallback to read/write
+          try {
+            cp_file_fallback(src_fd, dst_fd);
+          } catch (...) {
+            ::close(src_fd);
+            ::close(dst_fd);
+            throw;
+          }
+          break;
+        }
+        ::close(src_fd);
+        ::close(dst_fd);
+        // Unexpected error, propagate
+        throw std::system_error(errno, std::generic_category(),
+                                "copy_file_range failed");
+      }
+
+      bytes_remaining -= static_cast<size_t>(bytes_copied);
     }
   }
-
-  ::close(src_fd);
-  ::close(dst_fd);
 
   if (preserve) {
     struct timeval times[2];
@@ -82,11 +103,16 @@ static void cp_file(int src_fd, int dst_fd, struct stat *src_stat,
     times[1].tv_usec = src_stat->st_mtim.tv_nsec / 1000;
 
     if (::futimes(dst_fd, times) == -1) {
+      ::close(src_fd);
+      ::close(dst_fd);
       throw std::system_error(errno, std::generic_category(),
                               fmt::format("Failed to preserve timestamps : {}",
                                           std::strerror(errno)));
     }
   }
+
+  ::close(src_fd);
+  ::close(dst_fd);
 }
 
 static void cp_dir(int src_fd, int dst_fd, bool preserve) {
@@ -100,6 +126,7 @@ static void cp_dir(int src_fd, int dst_fd, bool preserve) {
     }
     struct stat ent_src_stat;
     if (fstatat(src_fd, dirent->d_name, &ent_src_stat, 0) < 0) {
+      closedir(dir);
       throw std::system_error(
           errno, std::generic_category(),
           fmt::format("Failed to stat : {}", std::strerror(errno)));
@@ -107,6 +134,7 @@ static void cp_dir(int src_fd, int dst_fd, bool preserve) {
     if (S_ISDIR(ent_src_stat.st_mode)) {
       int ent_src_fd = ::openat(src_fd, dirent->d_name, O_DIRECTORY);
       if (ent_src_fd < 0) {
+        closedir(dir);
         throw std::system_error(
             errno, std::generic_category(),
             fmt::format("Failed to open directory src entry directory '{}'",
@@ -118,6 +146,8 @@ static void cp_dir(int src_fd, int dst_fd, bool preserve) {
         // dst does not exists.
         mode_t mode = preserve ? ent_src_stat.st_mode : 0755;
         if (::mkdirat(dst_fd, dirent->d_name, mode) < 0) {
+          ::close(ent_src_fd);
+          closedir(dir);
           throw std::system_error(
               errno, std::generic_category(),
               fmt::format(
@@ -126,6 +156,8 @@ static void cp_dir(int src_fd, int dst_fd, bool preserve) {
         }
         int ent_dst_fd = ::openat(dst_fd, dirent->d_name, O_DIRECTORY);
         if (ent_dst_fd < 0) {
+          ::close(ent_src_fd);
+          closedir(dir);
           throw std::system_error(
               errno, std::generic_category(),
               fmt::format(
@@ -133,8 +165,11 @@ static void cp_dir(int src_fd, int dst_fd, bool preserve) {
                   dirent->d_name));
         }
         cp_dir(ent_src_fd, ent_dst_fd, preserve);
+        ::close(ent_dst_fd);
       } else {
         if (!S_ISDIR(ent_dst_stat.st_mode)) {
+          ::close(ent_src_fd);
+          closedir(dir);
           throw std::runtime_error(
               fmt::format("Failed to copy directory entry. Directory -> File "
                           "mismatch for entry '{}'",
@@ -142,6 +177,8 @@ static void cp_dir(int src_fd, int dst_fd, bool preserve) {
         } else {
           int ent_dst_fd = ::openat(dst_fd, dirent->d_name, O_DIRECTORY);
           if (ent_dst_fd < 0) {
+            ::close(ent_src_fd);
+            closedir(dir);
             throw std::system_error(
                 errno, std::generic_category(),
                 fmt::format(
@@ -149,13 +186,16 @@ static void cp_dir(int src_fd, int dst_fd, bool preserve) {
                     dirent->d_name));
           }
           cp_dir(ent_src_fd, ent_dst_fd, preserve);
+          ::close(ent_dst_fd);
         }
       }
+      ::close(ent_src_fd);
 
     } else {
       struct stat ent_dst_stat;
       int ent_src_fd = ::openat(src_fd, dirent->d_name, O_RDONLY);
       if (ent_src_fd < 0) {
+        closedir(dir);
         throw std::system_error(
             errno, std::generic_category(),
             fmt::format("Failed to open directory src entry '{}'",
@@ -170,6 +210,7 @@ static void cp_dir(int src_fd, int dst_fd, bool preserve) {
         int ent_dst_fd = ::openat(dst_fd, dirent->d_name,
                                   O_WRONLY | O_CREAT | O_TRUNC, mode);
         if (ent_dst_fd < 0) {
+          closedir(dir);
           throw std::system_error(
               errno, std::generic_category(),
               fmt::format("Failed to directory dst entry '{}'",
@@ -180,6 +221,7 @@ static void cp_dir(int src_fd, int dst_fd, bool preserve) {
         // dst entry does exist
 
         if (S_ISDIR(ent_src_stat.st_mode)) {
+          closedir(dir);
           throw std::runtime_error(
               fmt::format("Failed to copy directory entry. File -> Directory "
                           "mismatch for entry '{}'",
@@ -190,6 +232,7 @@ static void cp_dir(int src_fd, int dst_fd, bool preserve) {
           int ent_dst_fd =
               ::openat(dst_fd, dirent->d_name, O_WRONLY | O_TRUNC, mode);
           if (ent_dst_fd < 0) {
+            closedir(dir);
             throw std::system_error(
                 errno, std::generic_category(),
                 fmt::format("Failed to directory dst entry '{}'",
@@ -229,8 +272,7 @@ void cp(PathView src, PathView dst, CpFlags flags) {
 
   // Stat destination
   struct stat dst_stat;
-  bool dst_exists = false;
-  dst_exists = ::stat(dst.c_str(), &dst_stat) == 0;
+  bool dst_exists = ::stat(dst.c_str(), &dst_stat) == 0;
 
   int dst_fd = -1;
   if (dst_exists) {
