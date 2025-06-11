@@ -16,7 +16,9 @@
 #include <unistd.h>
 #include <utime.h>
 
+#ifdef __linux
 #include <linux/fs.h>
+#endif
 
 namespace strobe::fs {
 
@@ -49,6 +51,7 @@ static void cp_file(int src_fd, int dst_fd, struct stat *src_stat,
 
   bool reflinked = false;
 
+#ifdef __linux
   if (ioctl(dst_fd, FICLONE, src_fd) == 0) {
     reflinked = true;
   } else if (errno != EOPNOTSUPP && errno != EXDEV) {
@@ -58,8 +61,10 @@ static void cp_file(int src_fd, int dst_fd, struct stat *src_stat,
         errno, std::generic_category(),
         fmt::format("Failed to reflink file: {}", std::strerror(errno)));
   }
+#endif
 
   if (!reflinked) {
+#ifdef __linux
     size_t bytes_remaining = static_cast<size_t>(src_stat->st_size);
     static constexpr size_t chunk_size = 64 * 1024;
 
@@ -93,14 +98,30 @@ static void cp_file(int src_fd, int dst_fd, struct stat *src_stat,
 
       bytes_remaining -= static_cast<size_t>(bytes_copied);
     }
+#else
+    try {
+      cp_file_fallback(src_fd, dst_fd);
+    } catch (...) {
+      ::close(src_fd);
+      ::close(dst_fd);
+      throw;
+    }
+#endif
   }
 
   if (preserve) {
     struct timeval times[2];
+#ifdef __linux
     times[0].tv_sec = src_stat->st_atim.tv_sec;
     times[0].tv_usec = src_stat->st_atim.tv_nsec / 1000;
     times[1].tv_sec = src_stat->st_mtim.tv_sec;
     times[1].tv_usec = src_stat->st_mtim.tv_nsec / 1000;
+#else
+    times[0].tv_sec = src_stat->st_atimespec.tv_sec;
+    times[0].tv_usec = src_stat->st_atimespec.tv_nsec / 1000;
+    times[1].tv_sec = src_stat->st_mtimespec.tv_sec;
+    times[1].tv_usec = src_stat->st_mtimespec.tv_nsec / 1000;
+#endif
 
     if (::futimes(dst_fd, times) == -1) {
       ::close(src_fd);
