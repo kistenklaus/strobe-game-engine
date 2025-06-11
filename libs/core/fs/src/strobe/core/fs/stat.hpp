@@ -64,7 +64,10 @@ public:
   bool isFile() const { return m_type == Type::File; }
   bool isDirectory() const { return m_type == Type::Directory; }
   Type type() const { return m_type; }
-  std::size_t size() const { return m_size; }
+  std::size_t size() const { 
+    assert(isFile());
+    return m_size; 
+  }
 
 private:
   Stat() = default;

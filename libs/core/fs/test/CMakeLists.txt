@@ -4,9 +4,13 @@ set(STROBE_CORE_FS_TESTS ${STROBE_CORE_FS_LIB}-test)
 enable_testing()
 
 add_executable(${STROBE_CORE_FS_TESTS} EXCLUDE_FROM_ALL
-  ${CMAKE_CURRENT_SOURCE_DIR}/Path.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/File.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/Path.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/exists.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/mkdir.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rm.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/stat.cpp
 )
 
 target_link_googletest(${STROBE_CORE_FS_TESTS} PRIVATE)
