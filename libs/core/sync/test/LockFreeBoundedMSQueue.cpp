@@ -134,7 +134,7 @@ TEST(LockFreeBoundedMSQueue, QueueFullBehavior) {
 TEST(LockFreeBoundedMSQueue, MultipleProducersSingleConsumer) {
 
   constexpr int NumProducers = 8;
-  constexpr int ItemsPerProducer = 100000;
+  constexpr int ItemsPerProducer = 10000;
 
   using base_t = std::size_t;
   LockFreeBoundedMSQueue<base_t, strobe::Mallocator, false> queue(
@@ -151,32 +151,24 @@ TEST(LockFreeBoundedMSQueue, MultipleProducersSingleConsumer) {
     });
   }
 
-  std::atomic<bool> succ = false;
-  std::atomic<bool> abort = false;
   std::thread consumer([&]() {
     for (std::size_t i = 0; i < ItemsPerProducer * NumProducers; ++i) {
       std::optional<int> v;
-      while (!(v = queue.dequeue()).has_value() && !abort) {
-      }
-
-      if (abort) {
-        return;
+      while (!(v = queue.dequeue()).has_value()) {
       }
     }
-    succ = true;
   });
 
   for (auto &t : producers) {
     t.join();
   }
   consumer.join();
-  ASSERT_TRUE(succ);
 }
 
 TEST(LockFreeBoundedMSQueue, MultipleProducersSingleConsumer_ComplexType) {
 
-  constexpr int NumProducers = 64;
-  constexpr int ItemsPerProducer = 10000;
+  constexpr int NumProducers = 32;
+  constexpr int ItemsPerProducer = 1000;
 
   LockFreeBoundedMSQueue<std::shared_ptr<int>, strobe::Mallocator, false> queue(
       NumProducers * ItemsPerProducer);

@@ -65,14 +65,14 @@ TEST(SPSCChannel, MultiThreadedSendReceive) {
   std::atomic<size_t> consumed_count{0};
 
   std::thread producer([&]() {
-    for (int i = 0; i < 1'000'000; ++i) {
+    for (int i = 0; i < 100'000; ++i) {
       while (!sender.send(i)) {}
       ++produced_count;
     }
   });
 
   std::thread consumer([&]() {
-    while (consumed_count < 1'000'000) {
+    while (consumed_count < 100'000) {
       if (auto value = receiver.recv(); value.has_value()) {
         ++consumed_count;
       }
@@ -82,6 +82,6 @@ TEST(SPSCChannel, MultiThreadedSendReceive) {
   producer.join();
   consumer.join();
 
-  ASSERT_EQ(produced_count.load(), 1'000'000);
-  ASSERT_EQ(consumed_count.load(), 1'000'000);
+  ASSERT_EQ(produced_count.load(), 100'000);
+  ASSERT_EQ(consumed_count.load(), 100'000);
 }

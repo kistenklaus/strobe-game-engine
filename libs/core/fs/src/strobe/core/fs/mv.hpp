@@ -6,9 +6,8 @@ namespace strobe::fs {
 
 enum class MvFlagBits {
   None = 0,
-  Force = 1 << 1, // overwrite 
-  Recursive = 1 << 2, // move directories
-  PreserveTimestamps = 1 << 3 // preserve timestamps.
+  Force = 1 << 0, // overwrite 
+  PreserveTimestamps = 1 << 1 // preserve timestamps.
 };
 
 constexpr MvFlagBits operator|(MvFlagBits lhs, MvFlagBits rhs) {

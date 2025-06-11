@@ -6,9 +6,9 @@
 #include <algorithm>
 #include <cstring>
 #include <iterator>
-#include <utility>
 #include <span>
 #include <string_view>
+#include <utility>
 
 namespace strobe {
 
@@ -20,7 +20,7 @@ public:
 
   // Takes a null terminated string.
   PathView(std::span<const char> path) : m_path(path) {}
-  PathView(const char* cpath) : m_path(cpath, std::strlen(cpath) + 1) {}
+  PathView(const char *cpath) : m_path(cpath, std::strlen(cpath) + 1) {}
 
   template <Allocator PA> PathView(const Path<PA> &path);
 
@@ -51,6 +51,21 @@ public:
     }
   }
 
+  const char *c_str_name() const {
+    if (isFile()) {
+      auto rit = std::find(m_path.rbegin(), m_path.rend(), '/');
+      // NOTE: it::base skips one. (so we do not include /)
+      return rit.base().base();
+    } else {
+      auto rit = std::find(m_path.rbegin() + 1, m_path.rend(), '/');
+      if (rit == m_path.rend()) {
+        return m_path.begin().base();
+      } else {
+        return rit.base().base();
+      }
+    }
+  }
+
   bool isDirectory() const { return m_path.back() == '/'; }
 
   bool isFile() const { return !isDirectory(); }
@@ -72,7 +87,7 @@ public:
   Path([[maybe_unused]] const A &alloc = {}) : m_path(/*TODO*/) {}
 
   // explicit Path(const String<A> &path) : m_path(path) {}
-  
+
   // explicit Path(String<A> &&path) : m_path(std::move(path)) {}
 
   explicit Path(PathView view, [[maybe_unused]] const A &alloc = {})

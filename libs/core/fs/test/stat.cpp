@@ -35,6 +35,7 @@ TEST(stat, basic_file) {
 TEST(stat, basic_directory) {
   strobe::fs::rm("testdir", strobe::fs::RmFlagBits::Force |
                                 strobe::fs::RmFlagBits::Recursive);
+
   strobe::fs::mkdir("testdir");
 
   ASSERT_TRUE(strobe::fs::exists("testdir"));

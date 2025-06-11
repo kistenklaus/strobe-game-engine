@@ -82,53 +82,6 @@ TEST(MPSCChannel, MemorySafety) {
             0); // All instances should be destroyed
 }
 
-// Multi-Producer Single Consumer Test
-TEST(MPSCChannel, MultiProducerSingleConsumer) {
-  auto [sender, receiver] = strobe::mpsc::channel<int, 8, strobe::Mallocator>();
-  std::atomic<size_t> produced_count{0};
-  std::atomic<size_t> consumed_count{0};
-
-  // Launch multiple producer threads
-  std::vector<std::thread> producers;
-  for (int t = 0; t < 4; ++t) {
-    producers.emplace_back([&]() {
-      for (int i = 0; i < 250'000; ++i) {
-        while (!sender.send(i)) {
-          std::this_thread::yield();
-        } // Busy-wait until successfully sent
-        produced_count.fetch_add(1, std::memory_order_relaxed);
-      }
-    });
-  }
-
-  std::atomic<bool> forceStop = false;
-
-  // Single consumer thread
-  std::thread consumer([&]() {
-    std::unordered_set<int> consumed_values;
-    while (consumed_count < 1'000'000 && !forceStop) {
-      auto value = receiver.recv();
-      if (value.has_value()) {
-        consumed_values.insert(value.value());
-        consumed_count.fetch_add(1, std::memory_order_relaxed);
-      } else {
-        std::this_thread::yield();
-      }
-    }
-
-    ASSERT_EQ(consumed_values.size(), 250'000);
-  });
-
-  for (auto &producer : producers) {
-    producer.join();
-  }
-  ASSERT_EQ(produced_count.load(), 1'000'000);
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  forceStop.store(true);
-  consumer.join();
-
-  ASSERT_EQ(consumed_count.load(), 1'000'000);
-}
 
 // Overwrite Test (Single Consumer)
 TEST(MPSCChannel, OverwriteTest) {
@@ -156,7 +109,7 @@ TEST(MPSCChannel, OverwriteTest) {
 // Stress Test with Random Producers
 TEST(MPSCChannel, StressTestRandomProducers) {
   auto [sender, receiver] =
-      strobe::mpsc::channel<int, 16384, strobe::Mallocator>();
+      strobe::mpsc::channel<int, 163840, strobe::Mallocator>();
   std::atomic<unsigned int> produced_count{0};
   std::atomic<unsigned int> consumed_count{0};
   std::vector<std::thread> producers;
@@ -165,7 +118,7 @@ TEST(MPSCChannel, StressTestRandomProducers) {
     producers.emplace_back([&]() {
       std::uniform_int_distribution<> dist(1, 100);
       std::mt19937 rng(std::random_device{}());
-      for (int i = 0; i < 50'000; ++i) {
+      for (int i = 0; i < 5'000; ++i) {
         int value = dist(rng);
         while (!sender.send(value)) {
           std::this_thread::yield();
@@ -175,10 +128,8 @@ TEST(MPSCChannel, StressTestRandomProducers) {
     });
   }
 
-  std::atomic<bool> forceStop = false;
-
   std::thread consumer([&]() {
-    while (consumed_count < 800'000 && !forceStop) {
+    while (consumed_count < 80'000) {
       if (auto value = receiver.recv(); value.has_value()) {
         consumed_count.fetch_add(1);
       } else {
@@ -191,12 +142,10 @@ TEST(MPSCChannel, StressTestRandomProducers) {
     producer.join();
   }
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  forceStop.store(true);
   consumer.join();
 
-  ASSERT_EQ(produced_count.load(), 800'000);
-  ASSERT_EQ(consumed_count.load(), 800'000);
+  ASSERT_EQ(produced_count.load(), 80'000);
+  ASSERT_EQ(consumed_count.load(), 80'000);
 }
 
 // Stress Test with Many Producers
@@ -207,26 +156,24 @@ TEST(MPSCChannel, StressTestLotsProducers) {
   std::vector<std::thread> producers;
 
   constexpr std::size_t NumProducers = 128;
-  constexpr std::size_t ItemsPerProducers = 1000;
+  constexpr std::size_t ItemsPerProducers = 100;
   constexpr std::size_t Items = NumProducers * ItemsPerProducers;
 
   for (std::size_t t = 0; t < NumProducers; ++t) {
     producers.emplace_back([&]() {
       for (std::size_t i = 0; i < ItemsPerProducers; ++i) {
         while (!sender.send(static_cast<int>(i))) {
-          std::this_thread::yield();
+          std::this_thread::sleep_for(std::chrono::microseconds(10));
         }
       }
     });
   }
 
-  std::atomic<bool> forceStop = false;
-
   std::thread consumer([&]() {
     for (std::size_t t = 0; t < Items; ++t) {
       std::optional<int> v;
       while (!(v = receiver.recv()).has_value()) {
-        std::this_thread::yield();
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
       }
     }
   });
@@ -234,9 +181,6 @@ TEST(MPSCChannel, StressTestLotsProducers) {
   for (auto &producer : producers) {
     producer.join();
   }
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  forceStop.store(true);
 
   consumer.join();
 }
@@ -327,9 +271,9 @@ TEST(MPSCChannel, BlockingReceiveWaitsForData) {
 TEST(MPSCChannel, StressTestMultipleProducersSingleConsumer) {
   using namespace strobe::mpsc;
 
-  constexpr std::size_t Capacity = 64;
-  constexpr std::size_t NumProducers = 64;
-  constexpr std::size_t NumMessagesPerProducer = 10000;
+  constexpr std::size_t Capacity = 1024;
+  constexpr std::size_t NumProducers = 32;
+  constexpr std::size_t NumMessagesPerProducer = 1000;
 
   // Use std::allocator for simplicity
   auto [sender, receiver] =

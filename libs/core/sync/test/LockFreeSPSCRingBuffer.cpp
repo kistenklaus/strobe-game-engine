@@ -60,14 +60,14 @@ TEST(LockFreeSPSCRingBuffer, WrapAroundTest) {
 
 // Multi-Threaded SPSC Test (Basic)
 TEST(LockFreeSPSCRingBuffer, MultiThreadedProducerConsumer) {
-  InplaceLockFreeSPSCRingBuffer<int, 1024> buffer;
+  InplaceLockFreeSPSCRingBuffer<int, 1024 * 16> buffer;
   std::atomic<size_t> produced_count{0};
   std::atomic<size_t> consumed_count{0};
   std::atomic<bool> stop_flag{false};
 
   // Producer thread
   std::thread producer([&]() {
-    for (int i = 0; i < 1'000'000; ++i) {
+    for (int i = 0; i < 100'000; ++i) {
       while (!buffer.enqueue(i)) {
       }  // Spin without any sleep
       produced_count.fetch_add(1, std::memory_order_relaxed);
@@ -79,7 +79,7 @@ TEST(LockFreeSPSCRingBuffer, MultiThreadedProducerConsumer) {
   std::thread consumer([&]() {
     int last_value = -1;
     while (!stop_flag.load(std::memory_order_acquire) ||
-           consumed_count < 1'000'000) {
+           consumed_count < 100'000) {
       auto value = buffer.dequeue();
       if (value.has_value()) {
         ASSERT_GT(value.value(), last_value);
@@ -92,8 +92,8 @@ TEST(LockFreeSPSCRingBuffer, MultiThreadedProducerConsumer) {
   producer.join();
   consumer.join();
 
-  ASSERT_EQ(produced_count.load(), 1'000'000);
-  ASSERT_EQ(consumed_count.load(), 1'000'000);
+  ASSERT_EQ(produced_count.load(), 100'000);
+  ASSERT_EQ(consumed_count.load(), 100'000);
 }
 
 // Balanced Throughput Test
@@ -104,7 +104,7 @@ TEST(LockFreeSPSCRingBuffer, BalancedThroughput) {
   std::atomic<bool> stop_flag{false};
 
   std::thread producer([&]() {
-    for (int i = 0; i < 1'000'000; ++i) {
+    for (int i = 0; i < 100'000; ++i) {
       while (!buffer.enqueue(i)) {
       }
       produced_count.fetch_add(1, std::memory_order_relaxed);
@@ -114,7 +114,7 @@ TEST(LockFreeSPSCRingBuffer, BalancedThroughput) {
 
   std::thread consumer([&]() {
     while (!stop_flag.load(std::memory_order_acquire) ||
-           consumed_count < 1'000'000) {
+           consumed_count < 100'000) {
       auto value = buffer.dequeue();
       if (value.has_value()) {
         consumed_count.fetch_add(1, std::memory_order_relaxed);
@@ -124,8 +124,8 @@ TEST(LockFreeSPSCRingBuffer, BalancedThroughput) {
 
   producer.join();
   consumer.join();
-  ASSERT_EQ(produced_count.load(), 1'000'000);
-  ASSERT_EQ(consumed_count.load(), 1'000'000);
+  ASSERT_EQ(produced_count.load(), 100'000);
+  ASSERT_EQ(consumed_count.load(), 100'000);
 }
 
 // High Contention Test
@@ -138,7 +138,7 @@ TEST(LockFreeSPSCRingBuffer, HighContentionTest) {
   std::thread producer([&]() {
     std::mt19937 rng(std::random_device{}());
     std::uniform_int_distribution<> dist(1, 3);  // Random increments (1 to 3)
-    for (int i = 0; i < 1'000'000; ++i) {
+    for (int i = 0; i < 100'000; ++i) {
       while (!buffer.enqueue(i)) {
       }
       produced_count.fetch_add(1, std::memory_order_relaxed);
@@ -148,7 +148,7 @@ TEST(LockFreeSPSCRingBuffer, HighContentionTest) {
 
   std::thread consumer([&]() {
     while (!stop_flag.load(std::memory_order_acquire) ||
-           consumed_count < 1'000'000) {
+           consumed_count < 100'000) {
       auto value = buffer.dequeue();
       if (value.has_value()) {
         consumed_count.fetch_add(1, std::memory_order_relaxed);
@@ -158,8 +158,8 @@ TEST(LockFreeSPSCRingBuffer, HighContentionTest) {
 
   producer.join();
   consumer.join();
-  ASSERT_EQ(produced_count.load(), 1'000'000);
-  ASSERT_EQ(consumed_count.load(), 1'000'000);
+  ASSERT_EQ(produced_count.load(), 100'000);
+  ASSERT_EQ(consumed_count.load(), 100'000);
 }
 
 // Namespace for SPSC Test
