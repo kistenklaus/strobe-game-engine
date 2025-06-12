@@ -1,6 +1,5 @@
 #include "strobe/core/fs/stat.hpp"
 #include "strobe/core/fs/File.hpp"
-#include "strobe/core/fs/FileAccessFlags.hpp"
 #include "strobe/core/fs/exists.hpp"
 #include "strobe/core/fs/mkdir.hpp"
 #include "strobe/core/fs/rm.hpp"
@@ -14,8 +13,8 @@ TEST(stat, basic_file) {
   std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                              std::strlen(text));
   {
-    strobe::File file("testfile", strobe::FileAccessBits::Create |
-                                      strobe::FileAccessBits::Write);
+    strobe::fs::File file("testfile", strobe::fs::FileAccessBits::Create |
+                                      strobe::fs::FileAccessBits::Write);
 
     std::size_t written = 0;
     while (written != bytes.size()) {

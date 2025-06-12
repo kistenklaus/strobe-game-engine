@@ -1,5 +1,4 @@
 #include "strobe/core/fs/File.hpp"
-#include "strobe/core/fs/FileAccessFlags.hpp"
 #include "strobe/core/fs/mkdir.hpp"
 #include "strobe/core/fs/exists.hpp"
 #include "strobe/core/fs/rm.hpp"
@@ -10,7 +9,7 @@
 TEST(rm, basic) {
   strobe::fs::rm("testfile", strobe::fs::RmFlagBits::Force);
 
-  strobe::File file("testfile", strobe::FileAccessBits::Create | strobe::FileAccessBits::Write);
+  strobe::fs::File file("testfile", strobe::fs::FileAccessBits::Create | strobe::fs::FileAccessBits::Write);
 
   ASSERT_TRUE(strobe::fs::exists("testfile"));
   ASSERT_TRUE(strobe::fs::stat("testfile").isFile());
@@ -24,7 +23,7 @@ TEST(rm, recursive) {
 
   strobe::fs::mkdir("testdir/xyz/foo", strobe::fs::MkdirFlagBits::Parents);
 
-  strobe::File file("testdir/testfile", strobe::FileAccessBits::Create | strobe::FileAccessBits::Write);
+  strobe::fs::File file("testdir/testfile", strobe::fs::FileAccessBits::Create | strobe::fs::FileAccessBits::Write);
 
   ASSERT_TRUE(strobe::fs::exists("testdir"));
   ASSERT_TRUE(strobe::fs::exists("testdir/xyz"));

@@ -1,4 +1,4 @@
-#include "./rm.hpp"
+#include "../rm.hpp"
 #include "strobe/core/fs/exists.hpp"
 #include "strobe/core/fs/stat.hpp"
 #include <cstring>
@@ -114,19 +114,6 @@ void rm(PathView path, const Stat *stat, RmFlags flags) {
                                           path.c_str(), std::strerror(errno)));
     }
   }
-}
-
-void rm(PathView path, RmFlags flags) {
-  if (!strobe::fs::exists(path)) {
-    if (!(flags & RmFlagBits::Force)) {
-      throw std::invalid_argument(fmt::format(
-          "Cannot remove '{}': No such file or directory", path.c_str()));
-    }
-    return;
-  }
-
-  Stat stat = strobe::fs::stat(path);
-  rm(path, &stat, flags);
 }
 
 } // namespace strobe::fs

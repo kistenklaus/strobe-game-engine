@@ -1,6 +1,8 @@
 #pragma once
 
+#include "fmt/format.h"
 #include "strobe/core/fs/Path.hpp"
+#include "strobe/core/fs/exists.hpp"
 #include "strobe/core/fs/stat.hpp"
 #include <type_traits>
 
@@ -69,6 +71,17 @@ inline constexpr RmFlags &operator&=(RmFlags &lhs, RmFlagBits rhs) {
 
 void rm(PathView path, const Stat *stat, RmFlags flags = RmFlagBits::None);
 
-void rm(PathView path, RmFlags flags = RmFlagBits::None);
+inline void rm(PathView path, RmFlags flags = RmFlagBits::None) {
+  if (!strobe::fs::exists(path)) {
+    if (!(flags & RmFlagBits::Force)) {
+      throw std::invalid_argument(fmt::format(
+          "Cannot remove '{}': No such file or directory", path.c_str()));
+    }
+    return;
+  }
+
+  Stat stat = strobe::fs::stat(path);
+  rm(path, &stat, flags);
+}
 
 } // namespace strobe::fs

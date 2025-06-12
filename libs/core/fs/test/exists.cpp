@@ -7,8 +7,8 @@
 // Basic allocation and deallocation
 TEST(strobe_fs_exists, file) {
 
-  strobe::File file("file-exists-test", strobe::FileAccessBits::Create |
-                                          strobe::FileAccessBits::Write);
+  strobe::fs::File file("file-exists-test", strobe::fs::FileAccessBits::Create |
+                                          strobe::fs::FileAccessBits::Write);
 
   ASSERT_TRUE(strobe::fs::exists("file-exists-test"));
   ASSERT_FALSE(strobe::fs::exists("ajkhsdkajshd123"));

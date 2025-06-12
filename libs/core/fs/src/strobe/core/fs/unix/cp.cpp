@@ -1,4 +1,4 @@
-#include "./cp.hpp"
+#include "../cp.hpp"
 #include "fmt/format.h"
 #include <cerrno>
 #include <cstdio>

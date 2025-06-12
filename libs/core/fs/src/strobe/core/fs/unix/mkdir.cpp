@@ -1,4 +1,4 @@
-#include "./mkdir.hpp"
+#include "../mkdir.hpp"
 #include "strobe/core/fs/Path.hpp"
 #include "strobe/core/fs/exists.hpp"
 #include "strobe/core/fs/stat.hpp"
@@ -10,15 +10,13 @@
 #include <fmt/format.h>
 #include <system_error>
 
-#if defined(_WIN32)
-static_assert(false, "Not implemented for windows");
-#elifdef __linux__
+#ifdef __linux__
 #include <linux/limits.h>
 #define _POSIX_C_SOURCE 200809L
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#elifdef __APPLE__
+#elif defined(__APPLE__)
 #define _POSIX_C_SOURCE 200809L
 #include <sys/syslimits.h>
 #include <limits.h>

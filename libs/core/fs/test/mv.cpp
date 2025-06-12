@@ -1,6 +1,5 @@
 #include "strobe/core/fs/mv.hpp"
 #include "strobe/core/fs/File.hpp"
-#include "strobe/core/fs/FileAccessFlags.hpp"
 #include "strobe/core/fs/exists.hpp"
 #include "strobe/core/fs/mkdir.hpp"
 #include "strobe/core/fs/rm.hpp"
@@ -13,8 +12,8 @@ TEST(mv, move_file) {
   strobe::fs::rm("testfile-foo", strobe::fs::RmFlagBits::Force);
 
   {
-    strobe::File file("testfile", strobe::FileAccessBits::Create |
-                                      strobe::FileAccessBits::Write);
+    strobe::fs::File file("testfile", strobe::fs::FileAccessBits::Create |
+                                      strobe::fs::FileAccessBits::Write);
   }
 
   ASSERT_TRUE(strobe::fs::exists("testfile"));
@@ -37,8 +36,8 @@ TEST(mv, move_directory) {
 
   strobe::fs::mkdir("testdir/xyz/foo", strobe::fs::MkdirFlagBits::Parents);
 
-  strobe::File file("testdir/testfile", strobe::FileAccessBits::Create |
-                                            strobe::FileAccessBits::Write);
+  strobe::fs::File file("testdir/testfile", strobe::fs::FileAccessBits::Create |
+                                            strobe::fs::FileAccessBits::Write);
 
   ASSERT_TRUE(strobe::fs::exists("testdir"));
   ASSERT_TRUE(strobe::fs::exists("testdir/xyz"));

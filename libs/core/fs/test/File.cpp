@@ -1,5 +1,3 @@
-#include "strobe/core/fs/FileAccessFlags.hpp"
-#include "strobe/core/fs/FileSeekFlags.hpp"
 #include "strobe/core/fs/Path.hpp"
 #include "strobe/core/fs/exists.hpp"
 #include "strobe/core/fs/rm.hpp"
@@ -13,8 +11,8 @@
 TEST(File, Create) {
   strobe::fs::rm("file-open-test", strobe::fs::RmFlagBits::Force);
 
-  strobe::File file("file-open-test", strobe::FileAccessBits::Create |
-                                          strobe::FileAccessBits::Write);
+  strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
+                                          strobe::fs::FileAccessBits::Write);
   ASSERT_TRUE(file);
   ASSERT_TRUE(file.isOpen());
 
@@ -27,8 +25,8 @@ TEST(File, Create) {
 TEST(File, Write) {
   strobe::fs::rm("file-open-test", strobe::fs::RmFlagBits::Force);
 
-  strobe::File file("file-open-test", strobe::FileAccessBits::Create |
-                                          strobe::FileAccessBits::Write);
+  strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
+                                          strobe::fs::FileAccessBits::Write);
   ASSERT_TRUE(file);
   ASSERT_TRUE(file.isOpen());
 
@@ -55,8 +53,8 @@ TEST(File, Read) {
   std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                              std::strlen(text));
   {
-    strobe::File file("file-open-test", strobe::FileAccessBits::Create |
-                                            strobe::FileAccessBits::Write);
+    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
+                                            strobe::fs::FileAccessBits::Write);
     ASSERT_TRUE(file);
     ASSERT_TRUE(file.isOpen());
 
@@ -71,8 +69,8 @@ TEST(File, Read) {
   ASSERT_TRUE(strobe::fs::exists("file-open-test"));
 
   {
-    strobe::File file("file-open-test", strobe::FileAccessBits::Create |
-                                            strobe::FileAccessBits::Write);
+    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
+                                            strobe::fs::FileAccessBits::Write);
 
     std::size_t bytesRead = 0;
     std::vector<std::byte> out(bytes.size());
@@ -93,8 +91,8 @@ TEST(File, Seek) {
   char text[] = "foobar";
   std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                              std::strlen(text));
-  strobe::File file("file-open-test", strobe::FileAccessBits::Create |
-                                          strobe::FileAccessBits::Write);
+  strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
+                                          strobe::fs::FileAccessBits::Write);
   ASSERT_TRUE(file);
   ASSERT_TRUE(file.isOpen());
 
@@ -119,7 +117,7 @@ TEST(File, Seek) {
     ASSERT_TRUE(std::ranges::equal(out, bytes));
   }
 
-  file.seek(-static_cast<long>(bytes.size()), strobe::FileSeekFlags::Cur);
+  file.seek(-static_cast<long>(bytes.size()), strobe::fs::FileSeekFlags::Cur);
   {
     std::size_t bytesRead = 0;
     std::vector<std::byte> out(bytes.size());
@@ -130,7 +128,7 @@ TEST(File, Seek) {
     ASSERT_TRUE(std::ranges::equal(out, bytes));
   }
 
-  file.seek(-static_cast<long>(bytes.size()), strobe::FileSeekFlags::End);
+  file.seek(-static_cast<long>(bytes.size()), strobe::fs::FileSeekFlags::End);
   {
     std::size_t bytesRead = 0;
     std::vector<std::byte> out(bytes.size());
@@ -152,8 +150,8 @@ TEST(File, Append) {
     char text[] = "foobar";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                                std::strlen(text));
-    strobe::File file("file-open-test", strobe::FileAccessBits::Create |
-                                            strobe::FileAccessBits::Write);
+    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
+                                            strobe::fs::FileAccessBits::Write);
     ASSERT_TRUE(file);
     ASSERT_TRUE(file.isOpen());
 
@@ -168,8 +166,8 @@ TEST(File, Append) {
     char text[] = "foobar";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                                std::strlen(text));
-    strobe::File file("file-open-test", strobe::FileAccessBits::Append |
-                                            strobe::FileAccessBits::Write);
+    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Append |
+                                            strobe::fs::FileAccessBits::Write);
     ASSERT_TRUE(file);
     ASSERT_TRUE(file.isOpen());
 
@@ -180,10 +178,10 @@ TEST(File, Append) {
     }
   }
 
-  strobe::File file("file-open-test", strobe::FileAccessBits::Read);
+  strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Read);
   ASSERT_TRUE(file);
 
-  file.seek(0, strobe::FileSeekFlags::Set);
+  file.seek(0, strobe::fs::FileSeekFlags::Set);
 
   // Cleanup
   ASSERT_TRUE(strobe::fs::exists("file-open-test"));
@@ -213,8 +211,8 @@ TEST(File, Trunc) {
     char text[] = "foobar";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                                std::strlen(text));
-    strobe::File file("file-open-test", strobe::FileAccessBits::Create |
-                                            strobe::FileAccessBits::Write);
+    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
+                                            strobe::fs::FileAccessBits::Write);
     ASSERT_TRUE(file);
     ASSERT_TRUE(file.isOpen());
 
@@ -229,8 +227,8 @@ TEST(File, Trunc) {
     char text[] = "foobar";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                                std::strlen(text));
-    strobe::File file("file-open-test", strobe::FileAccessBits::Trunc |
-                                            strobe::FileAccessBits::Write);
+    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Trunc |
+                                            strobe::fs::FileAccessBits::Write);
     ASSERT_TRUE(file);
     ASSERT_TRUE(file.isOpen());
 
@@ -241,10 +239,10 @@ TEST(File, Trunc) {
     }
   }
 
-  strobe::File file("file-open-test", strobe::FileAccessBits::Read);
+  strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Read);
   ASSERT_TRUE(file);
 
-  file.seek(0, strobe::FileSeekFlags::Set);
+  file.seek(0, strobe::fs::FileSeekFlags::Set);
 
   // Cleanup
   ASSERT_TRUE(strobe::fs::exists("file-open-test"));
@@ -274,8 +272,8 @@ TEST(File, Exclusive) {
     char text[] = "foobar";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                                std::strlen(text));
-    strobe::File file("file-open-test", strobe::FileAccessBits::Create |
-                                            strobe::FileAccessBits::Write);
+    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
+                                            strobe::fs::FileAccessBits::Write);
     ASSERT_TRUE(file);
     ASSERT_TRUE(file.isOpen());
 
@@ -287,10 +285,10 @@ TEST(File, Exclusive) {
   }
 
   {
-    EXPECT_ANY_THROW(strobe::File file("file-open-test",
-                                       strobe::FileAccessBits::Create |
-                                           strobe::FileAccessBits::Exclusive |
-                                           strobe::FileAccessBits::Write););
+    EXPECT_ANY_THROW(strobe::fs::File file("file-open-test",
+                                       strobe::fs::FileAccessBits::Create |
+                                           strobe::fs::FileAccessBits::Exclusive |
+                                           strobe::fs::FileAccessBits::Write););
   }
 
   strobe::fs::rm("file-open-test");

@@ -55,7 +55,6 @@ enum class Type { File, Directory, SymLink };
 struct Stat;
 
 Stat stat(PathView path, StatFlags flags = StatFlagBits::None);
-Stat stat(int path, StatFlags flags = StatFlagBits::None);
 
 struct Stat {
 public:
