@@ -26,9 +26,9 @@ public:
 
   GlfwWindowContext(window::allocator_ref allocator)
       : m_allocator(std::move(allocator)),
-        m_jobQueue(
-            std::move(strobe::mpsc::channel<DeferredLambda, 10>(m_allocator))),
-        m_waitForShutdown(0), m_requestStop(false), m_initComp(0),
+        m_requestStop(false),
+        m_waitForShutdown(0), m_jobQueue(
+            strobe::mpsc::channel<DeferredLambda, 10>(m_allocator)), m_initComp(0),
         m_thread(&GlfwWindowContext::glfwMain, this) {
     m_initComp.acquire();
   }
@@ -52,20 +52,20 @@ public:
         (*job)();
       }
     }
+    // wait for posting empty events!
     m_waitForShutdown.acquire();
     glfwTerminate();
   }
 
   ~GlfwWindowContext() {
     m_requestStop.store(true, std::memory_order_release);
-    // TODO: Here we actually have a small problem because
-    // glfwTermiante could have already been executed.
     glfwPostEmptyEvent();
-    m_waitForShutdown.release();
-    m_thread.join();
+    m_waitForShutdown.release(); // signal main to exit
+    m_thread.join(); // collect zombie
   }
 
   // NOTE: the func is just enqueued it's not executed directly!
+  // userData must remain live!
   void unsafeExec(void *userData, void (*func)(void *)) {
     auto job = DeferredLambda{
         .userData = userData,
@@ -109,7 +109,9 @@ public:
       }
       wrap->sem.release();
     };
+    // submit lambda to window event queue
     unsafeExec(&wrapper, lambda);
+    // wait for Fn to complte
     wrapper.sem.acquire();
     if constexpr (!std::is_void_v<return_type>) {
       assert(wrapper.ret.has_value());

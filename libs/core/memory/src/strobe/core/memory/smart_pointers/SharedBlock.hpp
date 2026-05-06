@@ -7,9 +7,10 @@
 
 namespace strobe {
 
-template <typename T, Allocator A>
-class SharedBlock {
- private:
+/// shared ptr, with static allocator
+/// and no support for polymorphism (no alias ptr)
+template <typename T, Allocator A> class SharedBlock {
+private:
   using ATraits = AllocatorTraits<A>;
   struct ControlBlock {
     T m_value;
@@ -17,16 +18,14 @@ class SharedBlock {
     [[no_unique_address]] A m_allocator;
 
     template <typename... Args>
-    explicit ControlBlock(A alloc, Args&&... args)
-        : m_value(std::forward<Args>(args)...),
-          m_referenceCounter(),
+    explicit ControlBlock(A alloc, Args &&...args)
+        : m_value(std::forward<Args>(args)...), m_referenceCounter(),
           m_allocator(std::move(alloc)) {}
   };
 
- public:
-  template <typename... Args>
-  static SharedBlock make(A alloc, Args&&... args) {
-    ControlBlock* controlBlock =
+public:
+  template <typename... Args> static SharedBlock make(A alloc, Args &&...args) {
+    ControlBlock *controlBlock =
         ATraits::template allocate<ControlBlock>(alloc);
     new (controlBlock)
         ControlBlock(std::move(alloc), std::forward<Args>(args)...);
@@ -35,10 +34,10 @@ class SharedBlock {
 
   ~SharedBlock() { release(); }
 
-  SharedBlock(const SharedBlock& o)
+  SharedBlock(const SharedBlock &o)
       : m_controlBlock(copyControlBlock(o.m_controlBlock)) {}
 
-  SharedBlock& operator=(const SharedBlock& o) {
+  SharedBlock &operator=(const SharedBlock &o) {
     if (m_controlBlock == o.m_controlBlock) {
       return *this;
     }
@@ -47,10 +46,10 @@ class SharedBlock {
     return *this;
   }
 
-  SharedBlock(SharedBlock&& o)
+  SharedBlock(SharedBlock &&o)
       : m_controlBlock(std::exchange(o.m_controlBlock, nullptr)) {}
 
-  SharedBlock& operator=(SharedBlock&& o) {
+  SharedBlock &operator=(SharedBlock &&o) {
     if (m_controlBlock == o.m_controlBlock) {
       return *this;
     }
@@ -59,17 +58,17 @@ class SharedBlock {
     return *this;
   }
 
-  T& operator*() const noexcept {
+  T &operator*() const noexcept {
     assert(m_controlBlock);
     return m_controlBlock->m_value;
   }
 
-  T* operator->() const noexcept {
+  T *operator->() const noexcept {
     assert(m_controlBlock);
     return &m_controlBlock->m_value;
   }
 
-  T* get() const noexcept {
+  T *get() const noexcept {
     return m_controlBlock == nullptr ? nullptr : &m_controlBlock->m_value;
   }
 
@@ -86,26 +85,26 @@ class SharedBlock {
     }
   }
 
- private:
-  static inline ControlBlock* copyControlBlock(ControlBlock* o) {
+private:
+  static inline ControlBlock *copyControlBlock(ControlBlock *o) {
     if (o->m_referenceCounter.inc()) {
       return o;
     } else {
       return nullptr;
     }
   }
-  explicit SharedBlock(ControlBlock* controlBlock)
+  explicit SharedBlock(ControlBlock *controlBlock)
       : m_controlBlock(controlBlock) {
     assert(m_controlBlock != nullptr);
   }
-  ControlBlock* m_controlBlock;
+  ControlBlock *m_controlBlock;
 };
 
 template <typename T, Allocator A, typename... Args>
   requires std::constructible_from<T, Args...>
-static SharedBlock<T, A> makeSharedBlock(A alloc, Args&&... args) {
+static SharedBlock<T, A> makeSharedBlock(A alloc, Args &&...args) {
   return SharedBlock<T, A>::template make<Args...>(std::move(alloc),
                                                    std::forward<Args>(args)...);
 }
 
-}  // namespace strobe
+} // namespace strobe

@@ -12,12 +12,10 @@
 
 #ifdef __linux__
 #include <linux/limits.h>
-#define _POSIX_C_SOURCE 200809L
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #elif defined(__APPLE__)
-#define _POSIX_C_SOURCE 200809L
 #include <sys/syslimits.h>
 #include <limits.h>
 #include <sys/stat.h>

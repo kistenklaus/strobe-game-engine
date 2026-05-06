@@ -7,6 +7,7 @@
 namespace strobe {
 
 class WindowManager;
+
 class WindowHandle {
  public:
   friend class WindowManager;

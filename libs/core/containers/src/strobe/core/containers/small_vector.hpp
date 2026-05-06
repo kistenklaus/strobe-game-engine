@@ -4,7 +4,7 @@
 namespace strobe {
 
 // TODO actually implement SVO.
-template <typename T, Allocator A, std::size_t MinSVOCapacity = 8>
+template <typename T, std::size_t MinSVOCapacity = 8, Allocator A = strobe::Mallocator>
 using SmallVector = Vector<T, A>;
 
 }  // namespace strobe

@@ -1,12 +1,11 @@
-#include <strobe/window/WindowManager.hpp>
+#include <fmt/printf.h>
 #include <strobe/lina.hpp>
+#include <strobe/window/WindowManager.hpp>
 #include <thread>
-#include <chrono>
 
 #include "strobe/input/InputSystem.hpp"
 
 using namespace strobe;
-using namespace std::chrono_literals;
 
 int main() {
   WindowManager windowManager{};
@@ -16,5 +15,16 @@ int main() {
 
   Keyboard keyboard = inputSys.createKeyboard();
   keyboard.addSource(window);
-  
+
+  inputSys.pollEvents();
+
+  while (!window->closed()) {
+    inputSys.pollEvents();
+    if (keyboard.isKeyDown(Key::Space)) {
+      fmt::println("DOWN");
+    } else {
+      fmt::println("UP");
+    }
+    std::this_thread::sleep_for(std::chrono::duration<float>(0.01));
+  }
 }

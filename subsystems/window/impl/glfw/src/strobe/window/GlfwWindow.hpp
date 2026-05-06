@@ -23,16 +23,12 @@ namespace strobe::window {
 class Window;
 
 class GlfwWindow {
- public:
+public:
   friend class Window;
-  GlfwWindow(GlfwWindowContext* context, uvec2 size, std::string_view title,
+  GlfwWindow(GlfwWindowContext *context, uvec2 size, std::string_view title,
              bool resizable, bool closeOnCallback)
-      : m_context(context),
-        m_referenceCounter(),
-        m_window(nullptr),
-        m_closed(false),
-        m_alive(true),
-        m_closeOnCallback(closeOnCallback),
+      : m_context(context), m_referenceCounter(), m_window(nullptr),
+        m_closed(false), m_alive(true), m_closeOnCallback(closeOnCallback),
         m_attribs(Attributes{
             .mutex = {},
             .size = size,
@@ -88,20 +84,20 @@ class GlfwWindow {
     });
   }
 
-  GlfwWindow(const GlfwWindow&) = delete;
-  GlfwWindow& operator=(const GlfwWindow&) = delete;
+  GlfwWindow(const GlfwWindow &) = delete;
+  GlfwWindow &operator=(const GlfwWindow &) = delete;
 
-  GlfwWindow(GlfwWindow&&) = delete;
-  GlfwWindow& operator=(GlfwWindow&&) = delete;
+  GlfwWindow(GlfwWindow &&) = delete;
+  GlfwWindow &operator=(GlfwWindow &&) = delete;
 
   ~GlfwWindow() = default;
 
-  EventListenerHandle addMouseButtonEventListener(
-      EventListenerRef<MouseButtonEvent> listener) {
+  EventListenerHandle
+  addMouseButtonEventListener(EventListenerRef<MouseButtonEvent> listener) {
     return m_context->exec([listener, this]() {
       auto handle = this->m_mouseButtonEventDispatcher.addListener(listener);
-      handle.deferr(this, [](void* userData, events::EventListenerId id) {
-        auto win = static_cast<GlfwWindow*>(userData);
+      handle.deferr(this, [](void *userData, events::EventListenerId id) {
+        auto win = static_cast<GlfwWindow *>(userData);
         win->m_context->exec([win, id]() {
           win->m_mouseButtonEventDispatcher.removeListener(id);
           release(win);
@@ -111,12 +107,12 @@ class GlfwWindow {
     });
   }
 
-  EventListenerHandle addMouseMoveEventListener(
-      EventListenerRef<MouseMoveEvent> listener) {
+  EventListenerHandle
+  addMouseMoveEventListener(EventListenerRef<MouseMoveEvent> listener) {
     return m_context->exec([listener, this]() {
       auto handle = this->m_mouseMoveEventDispatcher.addListener(listener);
-      handle.deferr(this, [](void* userData, events::EventListenerId id) {
-        auto win = static_cast<GlfwWindow*>(userData);
+      handle.deferr(this, [](void *userData, events::EventListenerId id) {
+        auto win = static_cast<GlfwWindow *>(userData);
         win->m_context->exec([win, id]() {
           win->m_mouseMoveEventDispatcher.removeListener(id);
         });
@@ -125,15 +121,15 @@ class GlfwWindow {
     });
   }
 
-  EventListenerHandle addMouseScrollEventListener(
-      EventListenerRef<MouseScrollEvent> listener) {
+  EventListenerHandle
+  addMouseScrollEventListener(EventListenerRef<MouseScrollEvent> listener) {
     if (!m_referenceCounter.inc()) {
       return EventListenerHandle();
     }
     return m_context->exec([listener, this]() {
       auto handle = this->m_mouseScrollEventDispatcher.addListener(listener);
-      handle.deferr(this, [](void* userData, events::EventListenerId id) {
-        auto win = static_cast<GlfwWindow*>(userData);
+      handle.deferr(this, [](void *userData, events::EventListenerId id) {
+        auto win = static_cast<GlfwWindow *>(userData);
         win->m_context->exec([win, id]() {
           win->m_mouseScrollEventDispatcher.removeListener(id);
           release(win);
@@ -143,15 +139,15 @@ class GlfwWindow {
     });
   }
 
-  EventListenerHandle addKeyboardEventListener(
-      EventListenerRef<KeyboardEvent> listener) {
+  EventListenerHandle
+  addKeyboardEventListener(EventListenerRef<KeyboardEvent> listener) {
     if (!m_referenceCounter.inc()) {
       return EventListenerHandle();
     }
     return m_context->exec([listener, this]() {
       auto handle = this->m_keyboardEventDispatcher.addListener(listener);
-      handle.deferr(this, [](void* userData, events::EventListenerId id) {
-        auto win = static_cast<GlfwWindow*>(userData);
+      handle.deferr(this, [](void *userData, events::EventListenerId id) {
+        auto win = static_cast<GlfwWindow *>(userData);
         win->m_context->exec([win, id]() {
           win->m_keyboardEventDispatcher.removeListener(id);
           release(win);
@@ -161,15 +157,15 @@ class GlfwWindow {
     });
   }
 
-  EventListenerHandle addCharEventListener(
-      EventListenerRef<CharEvent> listener) {
+  EventListenerHandle
+  addCharEventListener(EventListenerRef<CharEvent> listener) {
     if (!m_referenceCounter.inc()) {
       return EventListenerHandle();
     }
     return m_context->exec([listener, this]() {
       auto handle = this->m_charEventDispatcher.addListener(listener);
-      handle.deferr(this, [](void* userData, events::EventListenerId id) {
-        auto win = static_cast<GlfwWindow*>(userData);
+      handle.deferr(this, [](void *userData, events::EventListenerId id) {
+        auto win = static_cast<GlfwWindow *>(userData);
         win->m_context->exec([win, id]() {
           win->m_charEventDispatcher.removeListener(id);
           release(win);
@@ -179,16 +175,16 @@ class GlfwWindow {
     });
   }
 
-  EventListenerHandle addFramebufferResizeEventListener(
-      EventListenerRef<ResizeEvent> listener) {
+  EventListenerHandle
+  addFramebufferResizeEventListener(EventListenerRef<ResizeEvent> listener) {
     if (!m_referenceCounter.inc()) {
       return EventListenerHandle();
     }
     return m_context->exec([listener, this]() {
       auto handle =
           this->m_framebufferSizeEventDispatcher.addListener(listener);
-      handle.deferr(this, [](void* userData, events::EventListenerId id) {
-        auto win = static_cast<GlfwWindow*>(userData);
+      handle.deferr(this, [](void *userData, events::EventListenerId id) {
+        auto win = static_cast<GlfwWindow *>(userData);
         win->m_context->exec([win, id]() {
           win->m_framebufferSizeEventDispatcher.removeListener(id);
           release(win);
@@ -198,15 +194,15 @@ class GlfwWindow {
     });
   }
 
-  EventListenerHandle addResizeEventListener(
-      EventListenerRef<ResizeEvent> listener) {
+  EventListenerHandle
+  addResizeEventListener(EventListenerRef<ResizeEvent> listener) {
     if (!m_referenceCounter.inc()) {
       return EventListenerHandle();
     }
     return m_context->exec([listener, this]() {
       auto handle = this->m_resizeEventDispatcher.addListener(listener);
-      handle.deferr(this, [](void* userData, events::EventListenerId id) {
-        auto win = static_cast<GlfwWindow*>(userData);
+      handle.deferr(this, [](void *userData, events::EventListenerId id) {
+        auto win = static_cast<GlfwWindow *>(userData);
         win->m_context->exec([win, id]() {
           win->m_resizeEventDispatcher.removeListener(id);
           release(win);
@@ -268,7 +264,7 @@ class GlfwWindow {
 
   bool closed() const { return m_closed.load(std::memory_order_relaxed); }
 
-  static void kill(GlfwWindow* window) {
+  static void kill(GlfwWindow *window) {
     window->close();
     // NOTE: Can maybe be relaxed but don't care.
     window->m_alive.store(false, std::memory_order_seq_cst);
@@ -279,9 +275,12 @@ class GlfwWindow {
     release(window);
   }
 
- private:
-  static void release(GlfwWindow* window) {
+private:
+  static void release(GlfwWindow *window) {
     if (window->m_referenceCounter.dec()) {
+      // might still work, because we do reference counting to some extend, 
+      // but should still not happen would indicate unclean design at least 
+      // somewhere. Where listeners are not properly destroyed / unregisted.
       assert(window->m_referenceCounter.isZero());
       assert(window->m_mouseButtonEventDispatcher.empty());
       assert(window->m_mouseMoveEventDispatcher.empty());
@@ -297,9 +296,9 @@ class GlfwWindow {
     }
   }
 
-  static void mouse_button_callback(GLFWwindow* window, int button, int action,
+  static void mouse_button_callback(GLFWwindow *window, int button, int action,
                                     int mods) {
-    auto win = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(window));
+    auto win = static_cast<GlfwWindow *>(glfwGetWindowUserPointer(window));
     win->m_mouseButtonEventDispatcher.dispatch(MouseButtonEvent::Payload{
         .button = MouseButton(button),
         .action = Action(action),
@@ -307,19 +306,20 @@ class GlfwWindow {
     });
   }
 
-  static void mouse_move_callback(GLFWwindow* window, double x, double y) {
-    auto win = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(window));
+  static void mouse_move_callback(GLFWwindow *window, double x, double y) {
+    auto win = static_cast<GlfwWindow *>(glfwGetWindowUserPointer(window));
     win->m_mouseMoveEventDispatcher.dispatch(vec2(x, y));
   }
 
-  static void mouse_scroll_callback(GLFWwindow* window, double dx, double dy) {
-    auto win = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(window));
+  static void mouse_scroll_callback(GLFWwindow *window, double dx, double dy) {
+    auto win = static_cast<GlfwWindow *>(glfwGetWindowUserPointer(window));
     win->m_mouseScrollEventDispatcher.dispatch(dvec2(dx, dy));
   }
 
-  static void keyboard_callback(GLFWwindow* window, int key, int scancode,
-                                int action, int mods) {
-    auto win = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(window));
+  static void keyboard_callback(GLFWwindow *window, int key,
+                                [[maybe_unused]] int scancode, int action,
+                                int mods) {
+    auto win = static_cast<GlfwWindow *>(glfwGetWindowUserPointer(window));
     win->m_keyboardEventDispatcher.dispatch(KeyboardEvent::Payload{
         .key = Key(key),
         .action = Action(action),
@@ -327,46 +327,46 @@ class GlfwWindow {
     });
   }
 
-  static void char_callback(GLFWwindow* window, unsigned int codepoint) {
-    auto win = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(window));
+  static void char_callback(GLFWwindow *window, unsigned int codepoint) {
+    auto win = static_cast<GlfwWindow *>(glfwGetWindowUserPointer(window));
     win->m_charEventDispatcher.dispatch(char32_t(codepoint));
   }
 
-  static void framebuffer_resize_callback(GLFWwindow* window, int w, int h) {
-    auto win = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(window));
+  static void framebuffer_resize_callback(GLFWwindow *window, int w, int h) {
+    auto win = static_cast<GlfwWindow *>(glfwGetWindowUserPointer(window));
     {
       std::lock_guard lck{win->m_attribs.mutex};
       win->m_attribs.framebufferSize = uvec2(w, h);
     }
     win->m_framebufferSizeEventDispatcher.dispatch(uvec2(w, h));
   }
-  friend void framebuffer_resize_callback(GLFWwindow*, int, int);
+  friend void framebuffer_resize_callback(GLFWwindow *, int, int);
 
-  static void resize_callback(GLFWwindow* window, int w, int h) {
-    auto win = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(window));
+  static void resize_callback(GLFWwindow *window, int w, int h) {
+    auto win = static_cast<GlfwWindow *>(glfwGetWindowUserPointer(window));
     {
       std::lock_guard lck{win->m_attribs.mutex};
       win->m_attribs.size = uvec2(w, h);
     }
     win->m_resizeEventDispatcher.dispatch(uvec2(w, h));
   }
-  friend void resize_callback(GLFWwindow*, int, int);
+  friend void resize_callback(GLFWwindow *, int, int);
 
-  static void close_callback(GLFWwindow* window) {
-    auto win = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(window));
+  static void close_callback(GLFWwindow *window) {
+    auto win = static_cast<GlfwWindow *>(glfwGetWindowUserPointer(window));
     if (win->m_closeOnCallback) {
       win->close();
     }
   }
-  friend void close_callback(GLFWwindow*);
+  friend void close_callback(GLFWwindow *);
 
-  GlfwWindowContext* m_context;
+  GlfwWindowContext *m_context;
   // NOTE: This includes the strobe::winodw::Window instance itself
   // and all listeners. This way we ensure that any listener which tries
   // to unregister itself after the window was destructed still hit's valid
   // memory.
   memory::ReferenceCounter<std::size_t> m_referenceCounter;
-  GLFWwindow* m_window;
+  GLFWwindow *m_window;
   std::atomic<bool> m_closed;
   std::atomic<bool> m_alive;
   bool m_closeOnCallback;
@@ -393,4 +393,4 @@ class GlfwWindow {
   EventDispatcher<ResizeEvent, window::allocator_ref> m_resizeEventDispatcher;
 };
 
-}  // namespace strobe::window
+} // namespace strobe::window

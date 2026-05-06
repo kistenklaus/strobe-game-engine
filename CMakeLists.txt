@@ -36,7 +36,8 @@ add_subdirectory(libs/core)
 
 add_subdirectory(subsystems/window)
 add_subdirectory(subsystems/input)
-add_subdirectory(subsystems/assets)
+add_subdirectory(subsystems/ecs)
+# add_subdirectory(subsystems/assets)
 
 if (STROBE_BUILD_SANDBOXES)
   add_subdirectory(sandbox)

@@ -16,7 +16,7 @@ template <events::Event E, Allocator A>
 class EventDispatcher : protected events::details::IEventDispatcher {
  private:
   using Self = EventDispatcher<E, A>;
-  using Container = SmallVector<EventListenerRef<E>, A>;
+  using Container = SmallVector<EventListenerRef<E>, 4, A>;
   using iterator = Container::iterator;
   using size_type = Container::size_type;
 

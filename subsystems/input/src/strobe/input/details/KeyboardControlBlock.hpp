@@ -31,7 +31,7 @@ class KeyboardControlBlock {
   void keyCallback(const strobe::window::KeyboardEvent& event);
 
   // THIS right here should probably be replaced with a SmallLockFreeStack.
-  SmallVector<EventListenerHandle, input::allocator_ref, 1> m_sources;
+  SmallVector<EventListenerHandle, 1, input::allocator_ref> m_sources;
   std::atomic<std::uint64_t> m_keyState[KEY_WORD_COUNT];
   std::atomic<std::uint64_t> m_keyStateBack[KEY_WORD_COUNT];
 };

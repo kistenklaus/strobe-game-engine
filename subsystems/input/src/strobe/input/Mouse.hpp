@@ -13,20 +13,26 @@
 namespace strobe {
 
 class Mouse {
- public:
+public:
   using Block =
       ::strobe::Block<input::details::MouseControlBlock, input::allocator_ref>;
   using Ref = Block::Ref;
   friend class strobe::InputSystem;
 
-  void addSource(const WindowHandle& window);
+  // thread safe! (because no removeSource is supported)
+  // Just create a new keyboard if required.
+  void addSource(const WindowHandle &window);
+
+  // thread safe! (frame sync)
   vec2 pos() const;
+  // thread safe! (frame sync)
   vec2 scroll() const;
+  // thread safe! (frame sync)
   bool isButtonDown(MouseButton button) const;
 
- private:
+private:
   Mouse(Ref controlBlock) : m_controlBlock(std::move(controlBlock)) {}
   Ref m_controlBlock;
 };
 
-}  // namespace strobe
+} // namespace strobe

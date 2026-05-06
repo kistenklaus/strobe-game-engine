@@ -131,7 +131,7 @@ private:
 
 template <typename T, Allocator A, typename... Args>
 static SharedPtr<T> makeSharedPtr(A alloc, Args &&...args) {
-  return SharedPtr<T>::template make<A, Args...>(std::move(alloc),
+  SharedPtr<T>::template make<A, Args...>(std::move(alloc),
                                           std::forward<Args>(args)...);
 }
 

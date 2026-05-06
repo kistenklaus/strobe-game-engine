@@ -1,5 +1,6 @@
 #include "./Keyboard.hpp"
 #include "./Action.hpp"
+#include <fmt/printf.h>
 
 namespace strobe {
 
@@ -19,7 +20,7 @@ bool KeyboardControlBlock::isKeyDown(Key key) const {
   uint_key wordidx = keyidx / (sizeof(bitset_type) * 8);
   uint_key offset = keyidx % (sizeof(bitset_type) * 8);
   assert(wordidx < KEY_WORD_COUNT);
-  return (m_keyStateBack[wordidx].load(std::memory_order_relaxed) &
+  return (m_keyState[wordidx].load(std::memory_order_relaxed) &
           (bitset_type(0x1) << offset)) != 0;
 }
 

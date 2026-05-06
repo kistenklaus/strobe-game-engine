@@ -39,7 +39,7 @@ class MouseControlBlock {
 
   bool isButtonDown(MouseButton button) const;
 
-  SmallVector<EventListenerHandle, allocator_ref> m_sources;
+  SmallVector<EventListenerHandle, 1, allocator_ref> m_sources;
   struct MousePos {
     std::atomic<float> x;
     std::atomic<float> y;

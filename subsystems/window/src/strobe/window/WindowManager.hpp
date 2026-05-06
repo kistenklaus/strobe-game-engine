@@ -1,6 +1,5 @@
 #pragma once
 
-#include <concepts>
 #include <string_view>
 #include <strobe/core/memory/Mallocator.hpp>
 #include <strobe/core/memory/PolyAllocator.hpp>
@@ -9,7 +8,6 @@
 #include <strobe/window/Window.hpp>
 #include <strobe/window/WindowContext.hpp>
 #include <strobe/window/allocator.hpp>
-#include <type_traits>
 
 #include "./WindowHandle.hpp"
 
