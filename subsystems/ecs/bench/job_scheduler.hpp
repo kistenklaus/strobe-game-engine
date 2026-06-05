@@ -1,10 +1,8 @@
 #pragma once
-#include <benchmark/benchmark.h>
-#include "strobe/ecs/schedule/job_scheduler.hpp"
 #include "small_matmul_kernel.hpp"
-
 #include "strobe/ecs/schedule/allocator.hpp"
 #include "strobe/ecs/schedule/job_scheduler.hpp"
+#include <benchmark/benchmark.h>
 
 #include <algorithm>
 #include <atomic>
@@ -13,8 +11,7 @@
 #include <thread>
 #include <vector>
 
-template <uint32_t N, typename T = float>
-struct SchedulerMatMulDesc {
+template <uint32_t N, typename T = float> struct SchedulerMatMulDesc {
   T const *a;
   T const *b;
   T *c;
@@ -84,13 +81,12 @@ static void BM_JobSchedulerSmallMatMul(benchmark::State &state) {
     for (uint32_t m = 0; m < matrixCount; ++m) {
       Desc *desc = &descs[m];
 
-      scheduler.submit([desc]() noexcept {
-        desc->run();
-      });
+      scheduler.submit([desc]() noexcept { desc->run(); });
     }
   };
 
-  // Untimed warm-up. This primes worker queues, slot reuse, and allocator paths.
+  // Untimed warm-up. This primes worker queues, slot reuse, and allocator
+  // paths.
   submit_all();
   wait_until_done2(remainingJobs);
 
@@ -125,8 +121,6 @@ static void BM_JobSchedulerSmallMatMul(benchmark::State &state) {
       static_cast<double>(totalMatrices),
       benchmark::Counter::kIsRate | benchmark::Counter::kInvert);
 }
-
-
 
 BENCHMARK_TEMPLATE(BM_JobSchedulerSmallMatMul, 2, float)
     ->Args({1 << 20, 8, 1 << 14})

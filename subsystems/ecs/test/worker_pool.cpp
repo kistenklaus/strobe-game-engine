@@ -1,9 +1,7 @@
-#include <chrono>
 #include <gtest/gtest.h>
 
-#include "strobe/ecs/schedule/allocator.hpp"
-#include "strobe/ecs/schedule/job_scheduler.hpp"
-#include "strobe/ecs/schedule/worker_pool.hpp"
+#include "strobe/ecs/scheduler/allocator.hpp"
+#include "strobe/ecs/scheduler/worker_pool.hpp"
 
 struct TestFn {
   std::function<void(void *)> execute;
@@ -13,7 +11,7 @@ struct TestFn {
 // Basic Initialization Test
 TEST(WorkerPool, Basic) {
   strobe::ecs::allocator alloc;
-  strobe::ecs::job_allocator job_alloc{std::in_place, &alloc};
+  strobe::ecs::scheduler::allocator job_alloc{std::in_place, &alloc};
   const uint32_t threadCount = 8;
 
   strobe::ecs::WorkerPool<TestFn> pool{&job_alloc, threadCount};

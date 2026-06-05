@@ -53,14 +53,14 @@ public:
     return *this;
   }
 
-  void *allocate(std::size_t size, std::size_t align) {
-    Node *freelistHead = m_freelist.load(std::memory_order_relaxed);
+  void *allocate(std::size_t, std::size_t) {
+    Node *freelistHead = m_freelist.load(std::memory_order_acquire);
 
     while (freelistHead != nullptr) {
       Node *next = freelistHead->free.next;
       if (m_freelist.compare_exchange_weak(freelistHead, next,
                                            std::memory_order_acquire,
-                                           std::memory_order_relaxed)) {
+                                           std::memory_order_acquire)) {
         return reinterpret_cast<void *>(&freelistHead->value);
       }
     }
@@ -68,6 +68,8 @@ public:
     // grow and allocate at least one unique node, which is returned here.
     return reinterpret_cast<void *>(&allocateBlock()->value);
   }
+
+  void *allocate() { return allocate(block_size, block_align); }
 
   // generalized interface, but for pool allocation we already now the size.
   void deallocate(void *ptr, std::size_t size, std::size_t align) {
@@ -120,8 +122,19 @@ private:
     alignas(block_align) std::byte value[block_size];
   };
 
-  void release() {
-    // TODO probably not thread safe.
+  void release() noexcept {
+    Node *block = m_buffer.exchange(nullptr, std::memory_order_acquire);
+
+    m_freelist.store(nullptr, std::memory_order_relaxed);
+
+    while (block != nullptr) {
+      Node *next = block->block.next;
+      std::size_t count = block->block.blockSize;
+
+      upstream_traits::template deallocate<Node>(m_upstream, block, count);
+
+      block = next;
+    }
   }
 
   void pushBlock(Node *header) {
@@ -138,34 +151,32 @@ private:
     std::size_t nextBlockSize;
     Node *buffer = m_buffer.load(std::memory_order_relaxed);
     if (buffer == nullptr) {
-      // block size is +1 the capacity.
       nextBlockSize = 2;
     } else {
       nextBlockSize =
           (buffer->block.blockSize * GrowthFactor::num) / GrowthFactor::den;
     }
+    assert(nextBlockSize >= 2);
     Node *block =
         upstream_traits::template allocate<Node>(m_upstream, nextBlockSize);
     Node *header = block;
-
-    // Initialize the free list in the remaining nodes
     Node *unique = header + 1;
     Node *begin = header + 2;
     Node *end = header + nextBlockSize;
-    for (Node *current = begin; current < end - 1; ++current) {
-      current->free.next = current + 1;
+    if (begin < end) {
+      for (Node *current = begin; current + 1 < end; ++current) {
+        current->free.next = current + 1;
+      }
+      Node *last = end - 1;
+      Node *freelistHead = m_freelist.load(std::memory_order_relaxed);
+      do {
+        last->free.next = freelistHead;
+      } while (!m_freelist.compare_exchange_weak(freelistHead, begin,
+                                                 std::memory_order_release,
+                                                 std::memory_order_relaxed));
     }
-    (end - 1)->free.next = nullptr; // Last node in the free list
-
-    // lock free prepend new freelist to m_freelist.
-    Node *freelistHead = m_freelist.load();
-    do {
-      (end - 1)->free.next = freelistHead;
-    } while (!m_freelist.compare_exchange_weak(freelistHead, begin));
-
-    // lock free push of new block.
-    block->block.blockSize = nextBlockSize;
-    pushBlock(block);
+    header->block.blockSize = nextBlockSize;
+    pushBlock(header);
 
     return unique;
   }

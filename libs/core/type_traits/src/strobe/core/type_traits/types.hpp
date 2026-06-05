@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 
 namespace strobe {
 
@@ -329,5 +330,21 @@ inline constexpr bool types_subset_v =
 
 template <bool Condition, typename T>
 using types_if_t = std::conditional_t<Condition, Types<T>, Types<>>;
+
+namespace details {
+
+template <typename List> struct for_each_type_impl;
+
+template <typename... Ts> struct for_each_type_impl<Types<Ts...>> {
+  template <typename Fn> static void apply(Fn &&fn) noexcept {
+    (std::forward<Fn>(fn).template operator()<Ts>(), ...);
+  }
+};
+} // namespace details
+
+template <typename List, typename Fn> void for_each_type(Fn &&fn) noexcept {
+  details::for_each_type_impl<std::remove_cvref_t<List>>::apply(
+      std::forward<Fn>(fn));
+}
 
 } // namespace strobe

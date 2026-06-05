@@ -50,7 +50,8 @@ public:
     return *this;
   }
 
-  void *allocate(std::size_t size = BlockSize, std::size_t align = BlockAlign) {
+  void *allocate([[maybe_unused]] std::size_t size = BlockSize,
+                 [[maybe_unused]] std::size_t align = BlockAlign) {
     assert(size != 0);
     assert(size <= block_size);
     assert((BlockAlign % align) == 0);
@@ -61,8 +62,7 @@ public:
   }
 
   // generalized interface, but for pool allocation we already now the size.
-  void deallocate(void *ptr, std::size_t size = BlockSize,
-                  std::size_t align = BlockAlign) {
+  void deallocate(void *ptr, std::size_t size, std::size_t align) {
     assert(size <= block_size);
     // we can safely assume that all alignments are nice powers of 2.
     assert((BlockAlign % align) == 0);

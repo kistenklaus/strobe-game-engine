@@ -12,3 +12,4 @@ target_link_libraries(${STROBE_ECS_SUBSYS} PUBLIC ${STROBE_WINDOW_SUBSYS})
 
 add_subdirectory(test)
 add_subdirectory(bench)
+add_subdirectory(sandbox)

@@ -2,6 +2,7 @@
 
 #include "strobe/core/memory/AllocatorTraits.hpp"
 #include "strobe/core/memory/Mallocator.hpp"
+#include <fmt/printf.h>
 
 #include <algorithm>
 #include <cassert>
@@ -22,27 +23,25 @@ private:
   struct Chunk {
     Chunk *next = nullptr;
 
-    void *memory = nullptr;
-    std::size_t capacity = 0;
-    std::size_t alignment = 0;
+    std::size_t allocation_size = 0;
+    std::size_t allocation_alignment = 0;
 
     std::byte *current = nullptr;
     std::byte *end = nullptr;
   };
 
 public:
-  static constexpr std::size_t DEFAULT_INITIAL_CHUNK_SIZE = 4096;
-  static constexpr std::size_t DEFAULT_MAX_CHUNK_SIZE =
-      std::numeric_limits<std::size_t>::max() / 2;
+  static constexpr std::size_t DEFAULT_BOOTSTRAP_CHUNK_SIZE = 4096;
+  static constexpr std::size_t DEFAULT_NORMAL_CHUNK_SIZE = 4096;
 
   explicit MonotonicResource(
       const upstream_type &upstream,
-      std::size_t initial_chunk_size = DEFAULT_INITIAL_CHUNK_SIZE,
-      std::size_t max_chunk_size = DEFAULT_MAX_CHUNK_SIZE)
-      : m_upstream(upstream), m_next_chunk_size(initial_chunk_size),
-        m_max_chunk_size(max_chunk_size) {
-    assert(initial_chunk_size > 0);
-    assert(max_chunk_size >= initial_chunk_size);
+      std::size_t bootstrap_chunk_size = DEFAULT_BOOTSTRAP_CHUNK_SIZE,
+      std::size_t normal_chunk_size = DEFAULT_NORMAL_CHUNK_SIZE)
+      : m_upstream(upstream), m_bootstrap_chunk_size(bootstrap_chunk_size),
+        m_normal_chunk_size(normal_chunk_size) {
+    assert(bootstrap_chunk_size > 0);
+    assert(normal_chunk_size > 0);
   }
 
   MonotonicResource(const MonotonicResource &) = delete;
@@ -58,11 +57,23 @@ public:
     assert(alignment > 0);
     assert(is_power_of_two(alignment));
 
-    if (void *ptr = try_allocate_from_current(size, alignment)) {
-      return ptr;
+    if (m_current != nullptr) {
+      if (void *ptr = try_allocate_from_current(size, alignment)) {
+        return ptr;
+      }
+
+      // Current chunk is full for this request. Do not search old chunks.
+      // It remains linked in m_chunks for later release().
+      m_current = nullptr;
     }
 
-    allocate_chunk_for(size, alignment);
+    const std::size_t regular_capacity = next_regular_chunk_capacity();
+
+    if (size > regular_capacity) {
+      return allocate_dedicated(size, alignment);
+    }
+
+    allocate_regular_chunk(regular_capacity, alignment);
 
     void *ptr = try_allocate_from_current(size, alignment);
     assert(ptr != nullptr);
@@ -74,54 +85,50 @@ public:
     // Monotonic resource: individual frees are intentionally ignored.
   }
 
-  void reset() noexcept {
-    for (Chunk *chunk = m_chunks; chunk != nullptr; chunk = chunk->next) {
-      chunk->current = static_cast<std::byte *>(chunk->memory);
-    }
-  }
-
   void release() noexcept {
     Chunk *chunk = m_chunks;
 
     while (chunk != nullptr) {
       Chunk *next = chunk->next;
 
-      upstream_traits::deallocate(m_upstream, chunk->memory, chunk->capacity,
-                                  chunk->alignment);
+      const std::size_t allocation_size = chunk->allocation_size;
+      const std::size_t allocation_alignment = chunk->allocation_alignment;
 
       std::destroy_at(chunk);
 
-      upstream_traits::template deallocate<Chunk>(m_upstream, chunk);
+      upstream_traits::deallocate(m_upstream, static_cast<void *>(chunk),
+                                  allocation_size, allocation_alignment);
 
       chunk = next;
     }
 
     m_chunks = nullptr;
     m_current = nullptr;
-    m_total_allocated = 0;
+    m_bootstrap_pending = true;
   }
 
-  std::size_t total_allocated() const noexcept { return m_total_allocated; }
-
-  std::size_t next_chunk_size() const noexcept { return m_next_chunk_size; }
+  void finish_bootstrap_chunk() noexcept {
+    // Intentionally abandon the active chunk tail and force the next regular
+    // allocation to use normal_chunk_size instead of bootstrap_chunk_size.
+    m_current = nullptr;
+    m_bootstrap_pending = false;
+  }
 
 private:
   static constexpr bool is_power_of_two(std::size_t x) noexcept {
     return x != 0 && (x & (x - 1)) == 0;
   }
 
-  static std::uintptr_t align_up(std::uintptr_t value,
-                                 std::size_t alignment) noexcept {
+  static constexpr std::size_t align_up(std::size_t value,
+                                        std::size_t alignment) noexcept {
     assert(is_power_of_two(alignment));
-    return (value + alignment - 1) &
-           ~(static_cast<std::uintptr_t>(alignment) - 1);
+
+    return (value + alignment - 1) & ~(alignment - 1);
   }
 
   void *try_allocate_from_current(std::size_t size,
                                   std::size_t alignment) noexcept {
-    if (m_current == nullptr) {
-      return nullptr;
-    }
+    assert(m_current != nullptr);
 
     const std::uintptr_t raw =
         reinterpret_cast<std::uintptr_t>(m_current->current);
@@ -129,62 +136,128 @@ private:
     const std::uintptr_t aligned = align_up(raw, alignment);
 
     std::byte *const result = reinterpret_cast<std::byte *>(aligned);
-    std::byte *const next = result + size;
 
-    if (next > m_current->end) {
+    if (result > m_current->end) {
       return nullptr;
     }
 
-    m_current->current = next;
+    const std::size_t remaining =
+        static_cast<std::size_t>(m_current->end - result);
+
+    if (remaining < size) {
+      return nullptr;
+    }
+
+    m_current->current = result + size;
     return result;
   }
 
-  void allocate_chunk_for(std::size_t required_size,
-                          std::size_t required_alignment) {
-    const std::size_t chunk_size = std::max(required_size, m_next_chunk_size);
+  std::size_t next_regular_chunk_capacity() const noexcept {
+    return m_bootstrap_pending ? m_bootstrap_chunk_size : m_normal_chunk_size;
+  }
 
-    const std::size_t chunk_alignment =
+  void allocate_regular_chunk(std::size_t payload_capacity,
+                              std::size_t required_alignment) {
+    Chunk *chunk = allocate_chunk(payload_capacity, required_alignment);
+
+    link_chunk(chunk);
+    m_current = chunk;
+
+    m_bootstrap_pending = false;
+  }
+
+  void *allocate_dedicated(std::size_t size, std::size_t alignment) {
+    Chunk *chunk = allocate_chunk(size, alignment);
+
+    link_chunk(chunk);
+
+    void *ptr = allocate_from_chunk(chunk, size, alignment);
+    assert(ptr != nullptr);
+
+    // Dedicated chunks are not made active. The next small allocation creates
+    // or uses a regular bump chunk.
+    return ptr;
+  }
+
+  void *allocate_from_chunk(Chunk *chunk, std::size_t size,
+                            std::size_t alignment) noexcept {
+    assert(chunk != nullptr);
+
+    const std::uintptr_t raw = reinterpret_cast<std::uintptr_t>(chunk->current);
+
+    const std::uintptr_t aligned = align_up(raw, alignment);
+
+    std::byte *const result = reinterpret_cast<std::byte *>(aligned);
+
+    if (result > chunk->end) {
+      return nullptr;
+    }
+
+    const std::size_t remaining = static_cast<std::size_t>(chunk->end - result);
+
+    if (remaining < size) {
+      return nullptr;
+    }
+
+    chunk->current = result + size;
+    return result;
+  }
+
+  Chunk *allocate_chunk(std::size_t payload_capacity,
+                        std::size_t required_alignment) {
+    assert(payload_capacity > 0);
+    assert(required_alignment > 0);
+    assert(is_power_of_two(required_alignment));
+
+    const std::size_t payload_alignment =
         std::max(required_alignment, alignof(std::max_align_t));
 
-    void *memory =
-        upstream_traits::allocate(m_upstream, chunk_size, chunk_alignment);
+    const std::size_t allocation_alignment =
+        std::max(payload_alignment, alignof(Chunk));
 
-    Chunk *chunk = upstream_traits::template allocate<Chunk>(m_upstream);
+    static_assert(is_power_of_two(alignof(Chunk)));
+    assert(is_power_of_two(payload_alignment));
+    assert(is_power_of_two(allocation_alignment));
+
+    const std::size_t payload_offset =
+        align_up(sizeof(Chunk), payload_alignment);
+
+    if (payload_capacity >
+        std::numeric_limits<std::size_t>::max() - payload_offset) {
+      throw std::bad_alloc{};
+    }
+
+    const std::size_t allocation_size = payload_offset + payload_capacity;
+
+    void *memory = upstream_traits::allocate(m_upstream, allocation_size,
+                                             allocation_alignment);
+
+    Chunk *chunk = static_cast<Chunk *>(memory);
 
     try {
       std::construct_at(chunk);
     } catch (...) {
-      upstream_traits::deallocate(m_upstream, memory, chunk_size,
-                                  chunk_alignment);
-
-      upstream_traits::template deallocate<Chunk>(m_upstream, chunk);
+      upstream_traits::deallocate(m_upstream, memory, allocation_size,
+                                  allocation_alignment);
       throw;
     }
 
-    chunk->next = m_chunks;
-    chunk->memory = memory;
-    chunk->capacity = chunk_size;
-    chunk->alignment = chunk_alignment;
-    chunk->current = static_cast<std::byte *>(memory);
-    chunk->end = static_cast<std::byte *>(memory) + chunk_size;
+    std::byte *const bytes = static_cast<std::byte *>(memory);
+    std::byte *const payload_begin = bytes + payload_offset;
 
-    m_chunks = chunk;
-    m_current = chunk;
+    chunk->allocation_size = allocation_size;
+    chunk->allocation_alignment = allocation_alignment;
+    chunk->current = payload_begin;
+    chunk->end = payload_begin + payload_capacity;
 
-    m_total_allocated += chunk_size;
-
-    grow_next_chunk_size(chunk_size);
+    return chunk;
   }
 
-  void grow_next_chunk_size(std::size_t last_chunk_size) noexcept {
-    const std::size_t grown = last_chunk_size + last_chunk_size / 2;
+  void link_chunk(Chunk *chunk) noexcept {
+    assert(chunk != nullptr);
 
-    if (grown < last_chunk_size || grown > m_max_chunk_size) {
-      m_next_chunk_size = m_max_chunk_size;
-      return;
-    }
-
-    m_next_chunk_size = std::max(grown, m_next_chunk_size);
+    chunk->next = m_chunks;
+    m_chunks = chunk;
   }
 
 private:
@@ -193,10 +266,13 @@ private:
   Chunk *m_chunks = nullptr;
   Chunk *m_current = nullptr;
 
-  std::size_t m_next_chunk_size = DEFAULT_INITIAL_CHUNK_SIZE;
-  std::size_t m_max_chunk_size = DEFAULT_MAX_CHUNK_SIZE;
-  std::size_t m_total_allocated = 0;
+  std::size_t m_bootstrap_chunk_size = DEFAULT_BOOTSTRAP_CHUNK_SIZE;
+  std::size_t m_normal_chunk_size = DEFAULT_NORMAL_CHUNK_SIZE;
+
+  bool m_bootstrap_pending = true;
 };
+
+static_assert(Allocator<MonotonicResource<strobe::Mallocator>>);
 
 static_assert(Allocator<MonotonicResource<strobe::Mallocator>>);
 

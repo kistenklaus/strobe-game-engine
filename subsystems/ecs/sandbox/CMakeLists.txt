@@ -1,0 +1,12 @@
+set(STROBE_ECS_SANDBOX ${STROBE_ECS_SUBSYS}-sandbox)
+
+
+add_executable(${STROBE_ECS_SANDBOX} EXCLUDE_FROM_ALL
+  ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+)
+
+target_link_libraries(${STROBE_ECS_SANDBOX} PRIVATE ${STROBE_ECS_SUBSYS})
+target_include_directories(${STROBE_ECS_SANDBOX}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+
