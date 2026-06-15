@@ -18,20 +18,7 @@ inline ResourceRegistry::ResourceRegistry(Universe *universe,
 
 inline ResourceRegistry::~ResourceRegistry() noexcept {
   assert(m_cmdbuf.peek() == null_cmd_index);
-  for (uint32_t i = 0; i < m_resources.size(); ++i) {
-    auto *header = m_resources[i];
-    if (header != nullptr) {
-      location loc = header->require_location(&m_universe->scheduler);
-      m_universe->scheduler.submit(
-          op_scope(acq_rel(loc), acq_rel(get_registry_location())),
-          [rreg = this, id = resource_id{i}]() noexcept {
-            auto *header = rreg->m_resources[id.m_index];
-            if (header->ptr != nullptr) {
-              rreg->cmd_destroy(id);
-            }
-          });
-    }
-  }
+  destroy_all();
   drain_cmds(&m_universe->scheduler, &m_universe->sr_domain,
              op_scope(acq_rel(m_universe->sr_location)), &m_cmdbuf);
 
@@ -150,6 +137,24 @@ ResourceRegistry::get_resource_lifetime(resource_id id) noexcept {
 
 inline location ResourceRegistry::get_registry_location() const noexcept {
   return m_universe->sr_location;
+}
+
+void ResourceRegistry::destroy_all() noexcept {
+  assert(m_cmdbuf.peek() == null_cmd_index);
+  for (uint32_t i = 0; i < m_resources.size(); ++i) {
+    auto *header = m_resources[i];
+    if (header != nullptr) {
+      location loc = header->require_location(&m_universe->scheduler);
+      m_universe->scheduler.submit(
+          op_scope(acq_rel(loc), acq_rel(get_registry_location())),
+          [rreg = this, id = resource_id{i}]() noexcept {
+            auto *header = rreg->m_resources[id.m_index];
+            if (header->ptr != nullptr) {
+              rreg->cmd_destroy(id);
+            }
+          });
+    }
+  }
 }
 
 } // namespace strobe::ecs

@@ -6,6 +6,7 @@
 #include "strobe/ecs/allocator.hpp"
 #include "strobe/ecs/cmd/cmd_domain.hpp"
 #include "strobe/ecs/cmd/cmd_traits.hpp"
+#include "strobe/ecs/lifetime/lifetime_registry.hpp"
 #include "strobe/ecs/scheduler/op_scope.hpp"
 #include <atomic>
 #include <cassert>
@@ -186,10 +187,12 @@ public:
     cmd_disable(id);
   }
 
-  location get_registry_location() const noexcept { return m_location; }
+  location get_registry_location() const noexcept;
 
   // may only be called from the submitting thread!
   template <typename S> system_header *require_system_header() noexcept;
+
+  void destroy_all() noexcept;
 
 private:
   static uint32_t next_system_type_id() noexcept {
@@ -207,7 +210,7 @@ private:
 
 private:
   Universe *m_universe;
-  location m_location;
+  lifetime_id m_sreg_lifetime;
   Vector<system_header *, allocator> m_headers;
   block_allocator m_blockAlloc;
   system_cmdbuf m_cmdbuf;

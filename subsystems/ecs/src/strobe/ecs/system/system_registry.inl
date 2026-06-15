@@ -3,10 +3,8 @@
 #include "strobe/ecs/lifetime/lifetime_registry.hpp"
 #include "strobe/ecs/system/system_registry.hpp"
 
-#include "strobe/ecs/system/system_blocks.hpp"
 #include "strobe/ecs/system/system_traits.hpp"
 #include "strobe/ecs/universe.hpp"
-#include "gtest/gtest.h"
 #include <algorithm>
 #include <cassert>
 #include <memory>
@@ -15,9 +13,11 @@ namespace strobe::ecs {
 
 inline SystemRegistry::SystemRegistry(Universe *universe,
                                       const allocator &alloc) noexcept
-    : m_universe(universe), m_location(universe->scheduler.alloc()),
+    : m_universe(universe),
+      m_sreg_lifetime(universe->lreg.alloc([](auto &) noexcept {})),
       m_headers(alloc), m_blockAlloc(alloc), m_cmdbuf(universe, alloc) {
   m_headers.resize(64, nullptr);
+  universe->lreg.construct(universe, m_sreg_lifetime);
 }
 
 inline void
@@ -102,10 +102,10 @@ system_header *SystemRegistry::require_system_header() noexcept {
   using system_type = std::remove_cvref_t<S>;
   using system_traits = system_traits<system_type>;
   const system_id id{system_type_id<system_type>()};
-  const std::size_t ssize = m_headers.size();
+  const size_t ssize = m_headers.size();
   if (ssize <= id.m_index) {
-    const std::size_t new_size = std::max<std::size_t>(
-        static_cast<std::size_t>(id.m_index) + 1, ssize * 3 / 2 + 1);
+    const size_t new_size = std::max<size_t>(
+        static_cast<size_t>(id.m_index) + 1, ssize * 3 / 2 + 1);
     m_headers.resize(new_size, nullptr);
   }
   system_header *header = m_headers[id.m_index];
@@ -132,6 +132,8 @@ system_header *SystemRegistry::require_system_header() noexcept {
           lifetime_id dependency = get_object_lifetime<object>(universe);
           scope.require(dependency, lifetime_requirement::entry);
         });
+        scope.require(universe->sreg.m_sreg_lifetime,
+                      lifetime_requirement::persistent);
       });
   lifetime_id active_lifetime = m_universe->lreg.alloc(
       [universe = m_universe, ready_lifetime](Scope &scope) noexcept {
@@ -177,25 +179,12 @@ system_header *SystemRegistry::require_system_header() noexcept {
 
 inline SystemRegistry::~SystemRegistry() noexcept {
   assert(m_cmdbuf.peek() == null_cmd_index);
-  for (uint32_t i = 0; i < m_headers.size(); ++i) {
-    auto *header = m_headers[i];
-    if (header != nullptr) {
-      location loc = header->get_location();
-      m_universe->scheduler.submit(
-          op_scope(acq_rel(loc), acq_rel(m_location)),
-          [universe = m_universe, id = system_id{i}]() noexcept {
-            auto *header = universe->sreg.m_headers[id.m_index];
-            if (header != nullptr &&
-                universe->sreg.m_universe->lreg.is_constructed(
-                    header->get_ready_lifetime())) {
-              universe->sreg.cmd_destroy(id);
-            }
-          });
-    }
-  }
+  destroy_all();
+
   drain_cmds(&m_universe->scheduler, &m_universe->sr_domain,
              op_scope(acq_rel(m_universe->sr_location)), &m_cmdbuf,
              m_universe->rreg.cmds());
+
   for (uint32_t i = 0; i < m_headers.size(); ++i) {
     system_header *header = m_headers[i];
     if (header != nullptr) {
@@ -212,8 +201,30 @@ inline SystemRegistry::~SystemRegistry() noexcept {
       std::destroy_at(header);
     }
   }
+}
 
-  m_universe->scheduler.free(m_location);
+location SystemRegistry::get_registry_location() const noexcept {
+  return m_universe->sr_location;
+}
+
+void SystemRegistry::destroy_all() noexcept {
+  m_universe->lreg.destruct(m_universe, m_sreg_lifetime);
+  // for (uint32_t i = 0; i < m_headers.size(); ++i) {
+  //   auto *header = m_headers[i];
+  //   if (header != nullptr) {
+  //     location loc = header->get_location();
+  //     m_universe->scheduler.submit(
+  //         op_scope(acq_rel(loc), acq_rel(m_universe->sr_location)),
+  //         [universe = m_universe, id = system_id{i}]() noexcept {
+  //           auto *header = universe->sreg.m_headers[id.m_index];
+  //           if (header != nullptr &&
+  //               universe->sreg.m_universe->lreg.is_constructed(
+  //                   header->get_ready_lifetime())) {
+  //             universe->sreg.cmd_destroy(id);
+  //           }
+  //         });
+  //   }
+  // }
 }
 
 } // namespace strobe::ecs

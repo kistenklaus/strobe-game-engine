@@ -330,6 +330,8 @@ public:
 
   location get_registry_location() const noexcept;
 
+  void destroy_all() noexcept;
+
 private:
   static uint32_t next_resource_type_id() noexcept {
     static std::atomic<uint32_t> id_acc = 0;

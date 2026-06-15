@@ -266,8 +266,9 @@ private:
       return;
     }
     record->entered = true;
-    assert(record->hook != nullptr);
-    record->hook->enter(universe);
+    if (record->hook != nullptr) {
+      record->hook->enter(universe);
+    }
     notify_available(universe, record->dependent);
   }
 
@@ -278,8 +279,9 @@ private:
     force_exit_active_dependents(universe, record->dependent);
     record->entered = false;
     notify_unavailable(record->dependent);
-    assert(record->hook != nullptr);
-    record->hook->exit(universe);
+    if (record->hook != nullptr) {
+      record->hook->exit(universe);
+    }
   }
 
   void force_exit_active_dependents(Universe *universe,

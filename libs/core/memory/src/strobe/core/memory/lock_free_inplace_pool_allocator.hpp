@@ -47,13 +47,13 @@ public:
   operator=(LockFreeInplacePoolAllocator &&o) = delete;
 
   void *allocate() {
-    Node *freelistHead = m_freelist.load(std::memory_order_relaxed);
+    Node *freelistHead = m_freelist.load(std::memory_order_acquire);
 
     while (freelistHead != nullptr) {
       Node *next = freelistHead->free.next;
       if (m_freelist.compare_exchange_weak(freelistHead, next,
                                            std::memory_order_acquire,
-                                           std::memory_order_relaxed)) {
+                                           std::memory_order_acquire)) {
         return reinterpret_cast<void *>(&freelistHead->value);
       }
     }

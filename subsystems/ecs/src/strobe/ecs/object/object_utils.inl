@@ -6,6 +6,7 @@
 #include "strobe/ecs/resource/resource_registry.hpp"
 #include "strobe/ecs/resource_commands.hpp"
 #include "strobe/ecs/scheduler/location.hpp"
+#include "strobe/ecs/task_comands.hpp"
 #include "strobe/ecs/universe.hpp"
 #include <concepts>
 
@@ -21,7 +22,9 @@ template <object O> static O make_object(Universe *universe) {
     return object_type{reinterpret_cast<resource_type **>(ptr)};
   } else if constexpr (std::same_as<object_tag,
                                     strobe::ecs::resource_cmd_tag>) {
-    return object_type{universe};
+    return ResourceCommands{universe};
+  } else if constexpr (std::same_as<object_tag, task_cmd_tag>) {
+    return TaskCommands{&universe->treg};
   } else {
     static_assert(dependent_false_pack_v<object_type, object_tag>,
                   "make_object<O>: unsupported object tag");
@@ -37,6 +40,8 @@ template <object O> static location get_object_location(Universe *universe) {
     return universe->rreg.get_resource_location(id);
   } else if constexpr (std::same_as<object_tag, resource_cmd_tag>) {
     return universe->sr_location;
+  } else if constexpr (std::same_as<object_tag, task_cmd_tag>) {
+    return universe->t_location;
   } else {
     static_assert(dependent_false_pack_v<object_type, object_tag>,
                   "get_object_location<O>: unsupported object tag");

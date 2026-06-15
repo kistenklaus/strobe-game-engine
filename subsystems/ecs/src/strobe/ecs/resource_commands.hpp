@@ -33,7 +33,7 @@ struct is_resource_commands_object<
 
 } // namespace ecs
 
-struct ResourceCommands {
+class ResourceCommands {
 public:
   using object_tag = ecs::resource_cmd_tag;
   using memory_order = ecs::acq_rel_access;
