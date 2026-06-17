@@ -1,6 +1,9 @@
 #pragma once
 
+#include "strobe/core/type_traits/dependent_false.hpp"
+#include "strobe/core/type_traits/fixed_string.hpp"
 #include "strobe/core/type_traits/types.hpp"
+#include "strobe/core/type_traits/type_name.hpp"
 #include "strobe/ecs/system/system_sequence_traits.hpp"
 #include "strobe/ecs/system/system_setup_traits.hpp"
 #include "strobe/ecs/system/system_start_traits.hpp"
@@ -33,6 +36,70 @@ template <typename U>
 using has_update_system_function =
     std::bool_constant<system_update_exists_v<canonical_system_type_t<U>>>;
 
+template <std::size_t N>
+consteval void accept_fixed_string(const fixed_string<N> &) noexcept {}
+
+template <typename S>
+concept has_fixed_string_name = requires { accept_fixed_string(S::name); };
+
+template <typename T> struct is_fixed_string : std::false_type {};
+
+template <std::size_t N>
+struct is_fixed_string<fixed_string<N>> : std::true_type {};
+
+template <typename T>
+inline constexpr bool is_fixed_string_v =
+    is_fixed_string<std::remove_cvref_t<T>>::value;
+
+template <typename S>
+concept has_system_name = requires { S::name; };
+
+template <typename S>
+[[nodiscard]]
+consteval auto resolve_system_name() {
+  using declaration_type = system_declaration_type_t<S>;
+  if constexpr (!has_system_name<declaration_type>) {
+    return type_name<declaration_type>();
+  } else {
+    using raw_name_type = decltype(declaration_type::name);
+    using name_type = std::remove_cvref_t<raw_name_type>;
+    if constexpr (is_fixed_string_v<name_type>) {
+      if constexpr (declaration_type::name.empty()) {
+        return type_name<declaration_type>();
+      } else {
+        return declaration_type::name;
+      }
+    }
+    else if constexpr (std::is_array_v<raw_name_type> &&
+                       std::is_same_v<std::remove_cv_t<
+                                          std::remove_extent_t<raw_name_type>>,
+                                      char>) {
+      constexpr std::size_t storage_size = std::extent_v<raw_name_type>;
+      static_assert(storage_size > 0,
+                    "System::name must contain a null terminator");
+      static_assert(declaration_type::name[storage_size - 1] == '\0',
+                    "System::name must be null terminated");
+      if constexpr (storage_size == 1) {
+        return type_name<declaration_type>();
+      } else {
+        return fixed_string{declaration_type::name};
+      }
+    }
+    else if constexpr (std::is_same_v<name_type, std::string_view>) {
+      constexpr std::string_view name = declaration_type::name;
+      if constexpr (name.empty()) {
+        return type_name<declaration_type>();
+      } else {
+        return fixed_string_from_view<name.size()>(name);
+      }
+    }
+    else {
+      static_assert(dependent_false_v<declaration_type>,
+                    "System::name must be a fixed_string, "
+                    "std::string_view, or char array");
+    }
+  }
+}
 } // namespace details
 
 template <typename S> struct system_traits {
@@ -62,7 +129,9 @@ template <typename S> struct system_traits {
   using active_entry_only_requirements =
       types_subtract_t<active_requirements, active_persistent_requirements>;
 
-private:
+  inline static constexpr auto name =
+      details::resolve_system_name<system_type>();
+
 private:
   using raw_sequenced_before =
       typename details::declared_sequenced_before<declaration_type>::type;

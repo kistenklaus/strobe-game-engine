@@ -170,7 +170,8 @@ public:
       ConsumerNode *node = list;
       list = list->next;
       JobScoreboard *consumer = node->consumer;
-      assert(consumer != nullptr);
+      assert(consumer !=
+             nullptr); // TODO <- this failed once !! AHHH treiber fuckoff
       if (consumer->notifySourceReady()) {
         node->next = readyHead;
         readyHead = node;
@@ -195,10 +196,8 @@ private:
   }
 
 private:
-  alignas(memory::cache_line)
-      std::atomic<uint32_t> m_pending = 0;
-  alignas(memory::cache_line)
-      std::atomic<ConsumerNode *> m_consumers = nullptr;
+  alignas(memory::cache_line) std::atomic<uint32_t> m_pending = 0;
+  alignas(memory::cache_line) std::atomic<ConsumerNode *> m_consumers = nullptr;
 
   ConsumerNode *m_top = nullptr;
   ConsumerNode *m_nodes = nullptr;

@@ -7,12 +7,37 @@
 #include "strobe/ecs/system/system_start_traits.hpp"
 #include "strobe/ecs/system/system_stop_traits.hpp"
 #include "strobe/ecs/system/system_teardown_traits.hpp"
+#include "strobe/ecs/system/system_traits.hpp"
 #include "strobe/ecs/system/system_update_traits.hpp"
 #include "strobe/ecs/universe.hpp"
 #include <memory>
 #include <type_traits>
 
 namespace strobe::ecs {
+
+namespace details {
+
+template <typename S>
+inline constexpr auto system_setup_name =
+    system_traits<std::remove_cvref_t<S>>::name + fixed_string{"::setup"};
+
+template <typename S>
+inline constexpr auto system_start_name =
+    system_traits<std::remove_cvref_t<S>>::name + fixed_string{"::start"};
+
+template <typename S>
+inline constexpr auto system_update_name =
+    system_traits<std::remove_cvref_t<S>>::name + fixed_string{"::update"};
+
+template <typename S>
+inline constexpr auto system_stop_name =
+    system_traits<std::remove_cvref_t<S>>::name + fixed_string{"::stop"};
+
+template <typename S>
+inline constexpr auto system_teardown_name =
+    system_traits<std::remove_cvref_t<S>>::name + fixed_string{"::teardown"};
+
+} // namespace details
 
 template <typename S, bool Exists = system_setup_exists_v<S>>
 struct system_setup_block;
@@ -25,19 +50,23 @@ template <typename S> struct system_setup_block<S, false> {
 
 template <typename S>
 struct system_setup_block<S, true>
-    : sync_stateless_object_function<&std::remove_cvref_t<S>::setup> {
+    : sync_stateless_object_function<&std::remove_cvref_t<S>::setup,
+                                     details::system_setup_name<S>> {
   using system_type = std::remove_cvref_t<S>;
-  using base = sync_stateless_object_function<&system_type::setup>;
+  inline static constexpr auto name = details::system_setup_name<system_type>;
+  using base = sync_stateless_object_function<&system_type::setup, name>;
   explicit system_setup_block(location loc, Universe *universe) noexcept
       : base(loc, universe) {}
 };
 
 template <typename S>
 struct system_setup_block<stateful_system<S>, true>
-    : sync_stateful_object_function<&std::remove_cvref_t<S>::setup> {
+    : sync_stateful_object_function<&std::remove_cvref_t<S>::setup,
+                                    details::system_setup_name<S>> {
   using state_type = std::remove_cvref_t<S>;
   using system_type = stateful_system<state_type>;
-  using base = sync_stateful_object_function<&state_type::setup>;
+  inline static constexpr auto name = details::system_setup_name<system_type>;
+  using base = sync_stateful_object_function<&state_type::setup, name>;
   explicit system_setup_block(location loc, Universe *universe) noexcept
       : base(loc, universe) {}
 };
@@ -53,19 +82,23 @@ template <typename S> struct system_start_block<S, false> {
 
 template <typename S>
 struct system_start_block<S, true>
-    : sync_stateless_object_function<&std::remove_cvref_t<S>::start> {
+    : sync_stateless_object_function<&std::remove_cvref_t<S>::start,
+                                     details::system_start_name<S>> {
   using system_type = std::remove_cvref_t<S>;
-  using base = sync_stateless_object_function<&system_type::start>;
+  inline static constexpr auto name = details::system_start_name<system_type>;
+  using base = sync_stateless_object_function<&system_type::start, name>;
   explicit system_start_block(location loc, Universe *regs) noexcept
       : base(loc, regs) {}
 };
 
 template <typename S>
 struct system_start_block<stateful_system<S>, true>
-    : sync_stateful_object_function<&std::remove_cvref_t<S>::start> {
+    : sync_stateful_object_function<&std::remove_cvref_t<S>::start,
+                                    details::system_start_name<S>> {
   using state_type = std::remove_cvref_t<S>;
   using system_type = stateful_system<state_type>;
-  using base = sync_stateful_object_function<&state_type::start>;
+  inline static constexpr auto name = details::system_start_name<system_type>;
+  using base = sync_stateful_object_function<&state_type::start, name>;
   explicit system_start_block(location loc, Universe *universe) noexcept
       : base(loc, universe) {}
 };
@@ -81,19 +114,23 @@ template <typename S> struct system_update_block<S, false> {
 
 template <typename S>
 struct system_update_block<S, true>
-    : sync_stateless_object_function<&std::remove_cvref_t<S>::update> {
+    : sync_stateless_object_function<&std::remove_cvref_t<S>::update,
+                                     details::system_update_name<S>> {
   using system_type = std::remove_cvref_t<S>;
-  using base = sync_stateless_object_function<&system_type::update>;
+  inline static constexpr auto name = details::system_update_name<system_type>;
+  using base = sync_stateless_object_function<&system_type::update, name>;
   explicit system_update_block(location loc, Universe *regs) noexcept
       : base(loc, regs) {}
 };
 
 template <typename S>
 struct system_update_block<stateful_system<S>, true>
-    : sync_stateful_object_function<&std::remove_cvref_t<S>::update> {
+    : sync_stateful_object_function<&std::remove_cvref_t<S>::update,
+                                    details::system_update_name<S>> {
   using state_type = std::remove_cvref_t<S>;
   using system_type = stateful_system<state_type>;
-  using base = sync_stateful_object_function<&state_type::update>;
+  inline static constexpr auto name = details::system_update_name<system_type>;
+  using base = sync_stateful_object_function<&state_type::update, name>;
   explicit system_update_block(location loc, Universe *universe) noexcept
       : base(loc, universe) {}
 };
@@ -109,19 +146,23 @@ template <typename S> struct system_stop_block<S, false> {
 
 template <typename S>
 struct system_stop_block<S, true>
-    : sync_stateless_object_function<&std::remove_cvref_t<S>::stop> {
+    : sync_stateless_object_function<&std::remove_cvref_t<S>::stop,
+                                     details::system_stop_name<S>> {
   using system_type = std::remove_cvref_t<S>;
-  using base = sync_stateless_object_function<&system_type::stop>;
+  inline static constexpr auto name = details::system_stop_name<system_type>;
+  using base = sync_stateless_object_function<&system_type::stop, name>;
   explicit system_stop_block(location loc, Universe *regs) noexcept
       : base(loc, regs) {}
 };
 
 template <typename S>
 struct system_stop_block<stateful_system<S>, true>
-    : sync_stateful_object_function<&std::remove_cvref_t<S>::stop> {
+    : sync_stateful_object_function<&std::remove_cvref_t<S>::stop,
+                                    details::system_stop_name<S>> {
   using state_type = std::remove_cvref_t<S>;
   using system_type = stateful_system<state_type>;
-  using base = sync_stateful_object_function<&state_type::stop>;
+  inline static constexpr auto name = details::system_stop_name<system_type>;
+  using base = sync_stateful_object_function<&state_type::stop, name>;
   explicit system_stop_block(location loc, Universe *universe) noexcept
       : base(loc, universe) {}
 };
@@ -137,19 +178,25 @@ template <typename S> struct system_teardown_block<S, false> {
 
 template <typename S>
 struct system_teardown_block<S, true>
-    : sync_stateless_object_function<&std::remove_cvref_t<S>::teardown> {
+    : sync_stateless_object_function<&std::remove_cvref_t<S>::teardown,
+                                     details::system_teardown_name<S>> {
   using system_type = std::remove_cvref_t<S>;
-  using base = sync_stateless_object_function<&system_type::teardown>;
+  inline static constexpr auto name =
+      details::system_teardown_name<system_type>;
+  using base = sync_stateless_object_function<&system_type::teardown, name>;
   explicit system_teardown_block(location loc, Universe *regs) noexcept
       : base(loc, regs) {}
 };
 
 template <typename S>
 struct system_teardown_block<stateful_system<S>, true>
-    : sync_stateful_object_function<&std::remove_cvref_t<S>::teardown> {
+    : sync_stateful_object_function<&std::remove_cvref_t<S>::teardown,
+                                    details::system_teardown_name<S>> {
   using state_type = std::remove_cvref_t<S>;
   using system_type = stateful_system<state_type>;
-  using base = sync_stateful_object_function<&state_type::teardown>;
+  inline static constexpr auto name =
+      details::system_teardown_name<system_type>;
+  using base = sync_stateful_object_function<&state_type::teardown, name>;
   explicit system_teardown_block(location loc, Universe *universe) noexcept
       : base(loc, universe) {}
 };

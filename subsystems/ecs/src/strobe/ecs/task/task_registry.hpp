@@ -3,6 +3,7 @@
 #include "strobe/core/containers/vector.hpp"
 #include "strobe/core/memory/AllocatorTraits.hpp"
 #include "strobe/core/memory/monotonic_resource.hpp"
+#include "strobe/core/type_traits/type_name.hpp"
 #include "strobe/ecs/object/object_function.hpp"
 #include "strobe/ecs/task/task_traits.hpp"
 #include <algorithm>
@@ -52,28 +53,7 @@ public:
     m_last.store(nullptr, std::memory_order_relaxed);
   }
 
-  template <task_fn Fn> void cmd_submit() noexcept {
-    using traits = task_traits<Fn>;
-    using task_type = typename task_traits<Fn>::task_type;
-    constexpr task_curry fn = [](TaskRegistry *treg) noexcept {
-      task_header *header = treg->require_task_header<task_type>();
-      // TODO: check somehow that all traits::lifetime_arguments
-      // are constructed otherwise drop and and warn.
-      header->submit(treg->scheduler_ptr());
-    };
-    chunk *current = m_last.load(std::memory_order_acquire);
-    const std::uint32_t index =
-        current->count.fetch_add(1, std::memory_order_relaxed);
-    if (index < chunk_size) {
-      current->tasks[index] = fn;
-      return;
-    }
-    chunk *next = m_chunkPool.acquire();
-    next->tasks[0] = fn;
-    next->count.store(1, std::memory_order_relaxed);
-    chunk *previous = m_last.exchange(next, std::memory_order_acq_rel);
-    previous->next.store(next, std::memory_order_release);
-  }
+  template <task_fn Fn> void cmd_submit() noexcept;
 
   void drain_cmds() noexcept {
     Scheduler *scheduler = scheduler_ptr();
@@ -208,7 +188,7 @@ private:
 
     using task_type = typename task_traits<Fn>::task_type;
     static constexpr auto call_operator = &task_type::operator();
-    using function = stateless_object_function<call_operator>;
+    using function = stateless_object_function<call_operator, type_name<Fn>()>;
     void submit(Scheduler *scheduler) noexcept override {
       m_func.submit(scheduler);
     }

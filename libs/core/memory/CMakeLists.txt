@@ -6,8 +6,15 @@ add_library(${STROBE_CORE_MEMORY_LIB} EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/memory/PageAllocator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/memory/pages.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/memory/static_test.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/memory/new_instrument.cpp
 )
 
 target_include_directories(${STROBE_CORE_MEMORY_LIB} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_link_libraries(${STROBE_CORE_MEMORY_LIB}
+  PUBLIC
+    strobe::tracy
+    ${STROBE_CORE_TYPE_TRAITS_LIB}
+)
 
 add_subdirectory(test)

@@ -10,3 +10,5 @@ include(cmake/dependencies/fmt.cmake)
 
 include(cmake/dependencies/googletest.cmake)
 include(cmake/dependencies/googlebench.cmake)
+
+include(cmake/dependencies/tracy.cmake)

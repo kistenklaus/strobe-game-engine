@@ -275,7 +275,12 @@ public:
   template <typename ScopeFn, job_fn Fn>
     requires(std::is_nothrow_invocable_v<ScopeFn &&, MemoryScope &>)
   void submit(ScopeFn &&scopeFn, Fn &&fn) noexcept {
-    job_id job = m_scheduler.acquire();
+    ZoneScopedN("sequencer::submit");
+    job_id job;
+    {
+      ZoneScopedN("sequencer::acquire-submit-job");
+      job = m_scheduler.acquire();
+    }
     assert(job.m_index < schedule::SLOT_COUNT);
     if (m_slotGeneration[job.m_index] != job.m_gen) {
       assert(m_reuseEpoch != std::numeric_limits<uint64_t>::max());
@@ -284,7 +289,10 @@ public:
       m_slotReuseEpoch[job.m_index] = m_reuseEpoch;
     }
     MemoryScope scope{this, job};
-    std::forward<ScopeFn>(scopeFn)(scope);
+    {
+      ZoneScopedN("sequencer::build-job-scope");
+      std::forward<ScopeFn>(scopeFn)(scope);
+    }
     scope.m_dependencies.reset(job.m_index);
     scope.m_dependencies.for_each_set_bit([&](std::size_t index) noexcept {
       assert(index < schedule::SLOT_COUNT);
@@ -305,36 +313,44 @@ public:
   template <typename ScopeFn>
     requires(std::is_nothrow_invocable_v<ScopeFn &&, FenceScope &>)
   void fence(ScopeFn &&scopeFn) noexcept {
+    ZoneScopedN("sequencer::fence");
     FenceScope scope{this};
-    std::forward<ScopeFn>(scopeFn)(scope);
+    {
+      ZoneScopedN("sequencer::build-fence-scope");
+      std::forward<ScopeFn>(scopeFn)(scope);
+    }
     if (scope.m_dependencies.none()) {
       return;
     }
-    std::array<uint32_t, schedule::SLOT_COUNT> dependencyGeneration{};
-    scope.m_dependencies.for_each_set_bit([&](std::size_t index) noexcept {
-      dependencyGeneration[index] = m_slotGeneration[index];
-    });
-    job_id job = m_scheduler.acquire();
+    job_id job;
+    {
+      ZoneScopedN("sequencer::acquire-fence-job");
+      job = m_scheduler.acquire();
+    }
     assert(job.m_index < schedule::SLOT_COUNT);
     if (m_slotGeneration[job.m_index] != job.m_gen) {
       assert(m_reuseEpoch != std::numeric_limits<uint64_t>::max());
-
       m_slotGeneration[job.m_index] = job.m_gen;
-
       ++m_reuseEpoch;
-
       m_slotReuseEpoch[job.m_index] = m_reuseEpoch;
     }
+    scope.m_dependencies.reset(job.m_index);
     scope.m_dependencies.for_each_set_bit([&](std::size_t index) noexcept {
       assert(index < schedule::SLOT_COUNT);
       job_id dependency;
       dependency.m_index = static_cast<uint32_t>(index);
-      dependency.m_gen = dependencyGeneration[index];
+      dependency.m_gen = m_slotGeneration[index];
       m_scheduler.addDependency(job, dependency);
     });
     std::binary_semaphore signal{0};
-    m_scheduler.submit(job, [&signal]() noexcept { signal.release(); });
-    signal.acquire();
+    m_scheduler.submit(job, [&signal]() noexcept {
+      ZoneScopedN("sequencer::fence-job");
+      signal.release();
+    });
+    {
+      ZoneScopedN("sequencer::wait-on-fence");
+      signal.acquire();
+    }
   }
 
   inline void request_stop() noexcept { m_scheduler.request_stop(); }

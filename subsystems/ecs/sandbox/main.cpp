@@ -1,11 +1,17 @@
+#include "strobe/core/memory/named_allocator.hpp"
+#include "strobe/core/type_traits/fixed_string.hpp"
 #include "strobe/core/type_traits/types.hpp"
 #include "strobe/ecs/allocator.hpp"
 #include "strobe/ecs/ecs.hpp"
 #include "strobe/ecs/resource_commands.hpp"
+#include "strobe/ecs/system/system_traits.hpp"
 #include "strobe/ecs/universe.hpp"
+#include "tracy/Tracy.hpp"
 #include <chrono>
+#include <common/TracySystem.hpp>
 #include <fmt/printf.h>
 #include <fmt/std.h>
+#include <thread>
 
 using namespace strobe;
 
@@ -27,50 +33,62 @@ struct Bar {
   }
 };
 
-struct SystemB {
+// struct SystemB {
+//
+//   int y;
+//   SystemB() : y(42) { fmt::println("SystemB constructed"); }
+//   ~SystemB() { fmt::println("SystemB destructed"); }
+//
+//   void setup(ResourceCommands rcmds, Resource<const Foo>) noexcept {
+//     fmt::println("B setup");
+//     rcmds.enable<SystemB>();
+//     rcmds.create<Bar>();
+//   }
+//
+//   void start(Resource<const Bar>, Resource<const Foo>) noexcept {
+//     fmt::println("B start");
+//   }
+//
+//   void update(Resource<const Foo>) noexcept { fmt::println("B update"); }
+//
+//   void stop(Resource<const Bar>, Resource<const Foo>) noexcept {
+//     fmt::println("B stop");
+//   }
+//
+//   void teardown([[maybe_unused]] ResourceCommands rcmds) noexcept {
+//     fmt::println("B teardown");
+//     rcmds.destroy<Bar>();
+//   }
+// };
 
-  int y;
-  SystemB() : y(42) { fmt::println("SystemB constructed"); }
-  ~SystemB() { fmt::println("SystemB destructed"); }
-
-  void setup(ResourceCommands rcmds, Resource<const Foo>) noexcept {
-    fmt::println("B setup");
-    rcmds.enable<SystemB>();
-  }
-
-  void start(Resource<const Bar>, Resource<const Foo>) noexcept {
-    fmt::println("B start");
-  }
-
-  void update(Resource<const Foo>) noexcept { fmt::println("B update"); }
-
-  void stop(Resource<const Bar>, Resource<const Foo>) noexcept {
-    fmt::println("B stop");
-  }
-
-  void teardown([[maybe_unused]] ResourceCommands rcmds) noexcept {
-    fmt::println("B teardown");
-    // rcmds.destroy<Bar>();
-  }
+struct MiniSystem {
+  void setup() noexcept {}
+  void teardown() noexcept {}
 };
 
 struct SystemA {
 
-  using sequenced_after = Types<SystemB>;
+  // using sequenced_after = Types<SystemB>;
 
   void setup(ResourceCommands rcmds,
              [[maybe_unused]] Resource<const Foo> foo) const noexcept {
     fmt::println("A setup");
     rcmds.enable<SystemA>();
-    rcmds.create<SystemB>();
+    // rcmds.create<SystemB>();
     // rcmds.create<Bar>();
   }
 
   void start(Resource<const Foo>) noexcept { fmt::println("A start"); }
 
-  void update([[maybe_unused]] Resource<const Foo> foo) noexcept {
+  void update([[maybe_unused]] Resource<const Foo> foo, ResourceCommands rcmds,
+              TaskCommands tcmds) noexcept {
+    rcmds.create<MiniSystem>();
+    rcmds.destroy<MiniSystem>();
+    rcmds.create<Bar>();
+    rcmds.destroy<Bar>();
+
+    tcmds.submit([]() noexcept {});
     // bar->y += 1;
-    fmt::println("A update");
   }
 
   void stop(Resource<const Foo>) noexcept { fmt::println("A stop"); }
@@ -78,20 +96,27 @@ struct SystemA {
   void teardown([[maybe_unused]] ResourceCommands rcmds,
                 [[maybe_unused]] Resource<const Foo> foo) noexcept {
     fmt::println("A teardown");
-    rcmds.destroy<SystemB>();
+    // rcmds.destroy<SystemB>();
     // rcmds.destroy<Bar>();
   }
 };
 
-int main() {
+// tracy playground
 
-  strobe::ECS ecs{[](ResourceCommands rcmds, TaskCommands tcmds) noexcept {
-    fmt::println("HI");
-    tcmds.submit(
-        [](TaskCommands tcmds, Resource<Foo> foo) noexcept { 
-        fmt::println("Second HI"); 
-        });
-    rcmds.create<SystemA>();
-    rcmds.enable<SystemA>();
-  }};
+int main() {
+  while (!TracyIsConnected) {
+    std::this_thread::yield();
+  }
+  fmt::println("connected");
+
+  ECS ecs{[](ResourceCommands rcmds) noexcept {
+            fmt::println("Hello");
+            rcmds.create<Foo>(1);
+            rcmds.create<SystemA>();
+          },
+          2};
+
+  // std::this_thread::sleep_for(std::chrono::duration<float>(1));
+  // ecs.stop();
+  ecs.join();
 }

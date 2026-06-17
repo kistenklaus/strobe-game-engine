@@ -245,6 +245,7 @@ public:
   }
 
   job_id acquire() noexcept {
+    ZoneScopedN("job_scheduler::acquire");
     m_freeSlotCount.acquire();
 
     JobSlot *slot = m_freeSlots.load(std::memory_order_acquire);
@@ -284,6 +285,7 @@ public:
   }
 
   void addDependency(job_id id, job_id dependency) noexcept {
+    ZoneScopedN("job_scheduler::add-dependency");
     assert(id.m_index < SLOT_COUNT);
     assert(dependency.m_index < SLOT_COUNT);
 
@@ -299,6 +301,7 @@ public:
   }
 
   template <job_fn Fn> void submit(job_id id, Fn &&fn) noexcept {
+    ZoneScopedN("job_scheduler::submit");
     assert(id.m_index < SLOT_COUNT);
 
     JobSlot *slot = m_slots + id.m_index;

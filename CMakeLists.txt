@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 project(strobe LANGUAGES CXX)
 
 option(STROBE_BUILD_SANDBOXES ON)
+option(STROBE_TRACY OFF)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)

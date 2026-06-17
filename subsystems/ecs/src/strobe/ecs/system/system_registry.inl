@@ -1,8 +1,8 @@
 #pragma once
+#include "strobe/core/type_traits/type_name.hpp"
 #include "strobe/ecs/cmd/drain_cmds.hpp"
 #include "strobe/ecs/lifetime/lifetime_registry.hpp"
 #include "strobe/ecs/system/system_registry.hpp"
-
 #include "strobe/ecs/system/system_traits.hpp"
 #include "strobe/ecs/universe.hpp"
 #include <algorithm>
@@ -24,6 +24,7 @@ inline void
 SystemRegistry::system_cmd::operator()(Universe *universe) noexcept {
   switch (m_tag) {
   case SYSTEM_CMD_CREATE_TAG: {
+    ZoneScopedN("sreg::create_cmd");
     SystemRegistry *sreg = &universe->sreg;
     size_t ssize = sreg->m_headers.size();
     if (sreg->m_headers.size() <= m_id.m_index) {
@@ -39,6 +40,7 @@ SystemRegistry::system_cmd::operator()(Universe *universe) noexcept {
     break;
   }
   case SYSTEM_CMD_DESTROY_TAG: {
+    ZoneScopedN("sreg::destroy_cmd");
     SystemRegistry *sreg = &universe->sreg;
     assert(m_id.m_index < sreg->m_headers.size());
     system_header *header = sreg->m_headers[m_id.m_index];
@@ -50,6 +52,7 @@ SystemRegistry::system_cmd::operator()(Universe *universe) noexcept {
     break;
   }
   case SYSTEM_CMD_ENABLE_TAG: {
+    ZoneScopedN("sreg::enable_cmd");
     SystemRegistry *sreg = &universe->sreg;
     assert(m_id.m_index < sreg->m_headers.size());
     system_header *header = sreg->m_headers[m_id.m_index];
@@ -58,6 +61,7 @@ SystemRegistry::system_cmd::operator()(Universe *universe) noexcept {
     break;
   }
   case SYSTEM_CMD_DISABLE_TAG: {
+    ZoneScopedN("sreg::disable_cmd");
     SystemRegistry *sreg = &universe->sreg;
     assert(m_id.m_index < sreg->m_headers.size());
     system_header *header = sreg->m_headers[m_id.m_index];
@@ -76,6 +80,7 @@ inline SystemRegistry::system_cmdbuf::system_cmdbuf(
 }
 
 inline void SystemRegistry::system_cmdbuf::step() noexcept {
+  ZoneScopedN("sreg::cmdbuf::step");
   system_cmd *cmd = m_head->next.load(std::memory_order_acquire);
   assert(cmd != nullptr);
   (*cmd)(m_universe);
@@ -88,6 +93,9 @@ inline void SystemRegistry::system_cmdbuf::step() noexcept {
 }
 
 template <typename S> system_id SystemRegistry::cmd_create() {
+  static constexpr auto debug_name =
+      fixed_string{"sreg::cmd_create<"} + type_name<S>() + fixed_string{">"};
+  ZoneScopedN(debug_name.data());
   using system_type = std::remove_cvref_t<S>;
   const system_id id{system_type_id<system_type>()};
   m_cmdbuf.emplace(SYSTEM_CMD_CREATE_TAG, id, //
@@ -113,6 +121,10 @@ system_header *SystemRegistry::require_system_header() noexcept {
   if (header != nullptr) {
     return header;
   }
+
+  static constexpr auto debug_name =
+      fixed_string{"sreg::register_system<"} + type_name<S>() + fixed_string{">"};
+  ZoneScopedN(debug_name.data());
 
   using system_block = system_block<system_type>;
   system_block *block = static_cast<system_block *>(
@@ -203,28 +215,12 @@ inline SystemRegistry::~SystemRegistry() noexcept {
   }
 }
 
-location SystemRegistry::get_registry_location() const noexcept {
+inline location SystemRegistry::get_registry_location() const noexcept {
   return m_universe->sr_location;
 }
 
-void SystemRegistry::destroy_all() noexcept {
+inline void SystemRegistry::destroy_all() noexcept {
   m_universe->lreg.destruct(m_universe, m_sreg_lifetime);
-  // for (uint32_t i = 0; i < m_headers.size(); ++i) {
-  //   auto *header = m_headers[i];
-  //   if (header != nullptr) {
-  //     location loc = header->get_location();
-  //     m_universe->scheduler.submit(
-  //         op_scope(acq_rel(loc), acq_rel(m_universe->sr_location)),
-  //         [universe = m_universe, id = system_id{i}]() noexcept {
-  //           auto *header = universe->sreg.m_headers[id.m_index];
-  //           if (header != nullptr &&
-  //               universe->sreg.m_universe->lreg.is_constructed(
-  //                   header->get_ready_lifetime())) {
-  //             universe->sreg.cmd_destroy(id);
-  //           }
-  //         });
-  //   }
-  // }
 }
 
 } // namespace strobe::ecs

@@ -4,6 +4,8 @@
 #include "strobe/core/memory/monotonic_pool_allocator.hpp"
 #include "strobe/core/memory/monotonic_resource.hpp"
 #include "strobe/core/memory/sync_monotonic_pool_allocator.hpp"
+#include "strobe/core/type_traits/fixed_string.hpp"
+#include "strobe/core/type_traits/type_name.hpp"
 #include "strobe/ecs/allocator.hpp"
 #include "strobe/ecs/cmd/cmd_domain.hpp"
 #include "strobe/ecs/cmd/cmd_traits.hpp"
@@ -118,9 +120,7 @@ private:
       return m_lifetime != null_lifetime_id;
     }
 
-    bool has_location() const noexcept {
-      return m_location != null_location;
-    }
+    bool has_location() const noexcept { return m_location != null_location; }
 
     virtual size_t resource_size() const noexcept = 0;
     virtual size_t resource_alignment() const noexcept = 0;
@@ -128,6 +128,7 @@ private:
     void *ptr = nullptr;
 
     void *pop_storage(resource_allocator *alloc) noexcept {
+      ZoneScopedN("rreg::pop-resource-storage");
       void *head = m_freelist.load(std::memory_order_acquire);
       while (head != nullptr) {
         void *next = *static_cast<void **>(head);
@@ -137,8 +138,10 @@ private:
           return head;
         }
       }
-
-      return alloc->allocate(resource_size(), resource_alignment());
+      {
+        ZoneScopedN("rreg::allocate-resource-storage");
+        return alloc->allocate(resource_size(), resource_alignment());
+      }
     }
 
     void push_storage(void *storage) noexcept {
@@ -268,6 +271,10 @@ public:
   // May be called from a scheduled thread.
   template <typename R, typename... Args>
   resource_id cmd_emplace(Args &&...args) noexcept {
+    static constexpr auto debug_name =
+        fixed_string{"rreg::cmd_emplace<"} + type_name<R>() + fixed_string{">"};
+    ZoneScopedN(debug_name.data());
+
     using resource_type = std::remove_cvref_t<R>;
 
     // TODO: make SPSC lockfree from a freelist.
@@ -275,20 +282,31 @@ public:
     const resource_id id = get_resource_id<resource_type>();
     resource_header *header = m_resources[id.m_index];
     assert(header != nullptr);
+
     resource_type *ptr =
         static_cast<resource_type *>(header->pop_storage(&m_resourceAlloc));
-    std::construct_at<resource_type, Args...>(ptr, std::forward<Args>(args)...);
+    {
+      static constexpr auto debug_name =
+          fixed_string{"rreg::construct<"} + type_name<R>() + fixed_string{">"};
+      ZoneScopedN(debug_name.data());
+      std::construct_at<resource_type, Args...>(ptr,
+                                                std::forward<Args>(args)...);
+    }
     m_cmdbuf.emplace(RESOURCE_CMD_CREATE_TAG, header, ptr);
     return id;
   }
 
   void cmd_destroy(resource_id id) {
+    ZoneScopedN("rreg::cmd_destroy");
     resource_header *header = m_resources[id.m_index];
     assert(header != nullptr);
     m_cmdbuf.emplace(RESOURCE_CMD_DESTROY_TAG, header, nullptr);
   }
 
   template <typename R> void cmd_destroy() {
+    static constexpr auto debug_name =
+        fixed_string{"rreg::cmd_destroy<"} + type_name<R>() + fixed_string{">"};
+    ZoneScopedN(debug_name.data());
     using resource_type = std::remove_cvref_t<R>;
     const resource_id id = get_resource_id<resource_type>();
     return cmd_destroy(id);
@@ -307,6 +325,9 @@ public:
     if (m_resources[id.m_index] != nullptr) {
       return id;
     }
+    static constexpr auto debug_name =
+        fixed_string{"rreg::register_resource_type<"} + type_name<R>() +
+        fixed_string{">"};
     using resource_block = resource_block<resource_type>;
     static_assert(sizeof(resource_block) == sizeof(resource_header));
     static_assert(alignof(resource_block) <= alignof(resource_header));

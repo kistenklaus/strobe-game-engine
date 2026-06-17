@@ -3,6 +3,8 @@
 #include "strobe/core/containers/vector.hpp"
 #include "strobe/core/memory/monotonic_resource.hpp"
 #include "strobe/core/memory/sync_monotonic_pool_allocator.hpp"
+#include "strobe/core/type_traits/fixed_string.hpp"
+#include "strobe/core/type_traits/type_name.hpp"
 #include "strobe/ecs/allocator.hpp"
 #include "strobe/ecs/cmd/cmd_domain.hpp"
 #include "strobe/ecs/cmd/cmd_traits.hpp"
@@ -14,6 +16,7 @@
 #include <fmt/format.h>
 #include <limits>
 #include <memory>
+#include <tracy/Tracy.hpp>
 #include <type_traits>
 
 namespace strobe::ecs {
@@ -121,6 +124,7 @@ public:
     }
 
     template <typename... Args> void emplace(Args &&...args) {
+      ZoneScopedN("sreg::cmdbuf::emplace");
       cmd_index index = m_domain->next();
       assert(index != null_cmd_index);
       auto *cmd = static_cast<system_cmd *>(m_cmdPool.allocate());
@@ -159,29 +163,41 @@ public:
   template <typename S> system_id cmd_create();
 
   void cmd_destroy(system_id id) noexcept {
+    ZoneScopedN("sreg::cmd_destroy");
     m_cmdbuf.emplace(SYSTEM_CMD_DESTROY_TAG, id, nullptr);
   }
   template <typename S> void cmd_destroy() noexcept {
+    static constexpr auto debug_name = fixed_string{"sreg::cmd_destroy<"} +
+                                       type_name<S>() + fixed_string{">"};
+    ZoneScopedN(debug_name.data());
     using system_type = std::remove_cvref_t<S>;
     system_id id{system_type_id<system_type>()};
     cmd_destroy(id);
   }
 
   void cmd_enable(system_id id) noexcept {
+    ZoneScopedN("sreg::cmd_enable");
     m_cmdbuf.emplace(SYSTEM_CMD_ENABLE_TAG, id, nullptr);
   }
 
   template <typename S> void cmd_enable() noexcept {
+    static constexpr auto debug_name = fixed_string{"sreg::cmd_enable<"} +
+                                       type_name<S>() + fixed_string{">"};
+    ZoneScopedN(debug_name.data());
     using system_type = std::remove_cvref_t<S>;
     system_id id{system_type_id<system_type>()};
     cmd_enable(id);
   }
 
   void cmd_disable(system_id id) noexcept {
+    ZoneScopedN("sreg::cmd_disable");
     m_cmdbuf.emplace(SYSTEM_CMD_DISABLE_TAG, id, nullptr);
   }
 
   template <typename S> void cmd_disable() noexcept {
+    static constexpr auto debug_name = fixed_string{"sreg::cmd_disable<"} +
+                                       type_name<S>() + fixed_string{">"};
+    ZoneScopedN(debug_name.data());
     using system_type = std::remove_cvref_t<S>;
     system_id id{system_type_id<system_type>()};
     cmd_disable(id);

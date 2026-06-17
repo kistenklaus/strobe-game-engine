@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <tracy/Tracy.hpp>
 #include <type_traits>
 #include <utility>
 
@@ -181,6 +182,7 @@ public:
   template <typename DepScopeFn>
     requires(std::is_nothrow_invocable_v<DepScopeFn, DependencyScope &>)
   lifetime_id alloc(DepScopeFn &&fn) noexcept {
+    ZoneScopedN("lreg::alloc");
     Record *record = static_cast<Record *>(m_recordPool.allocate());
     std::construct_at(record);
     record->hook = nullptr;
@@ -196,11 +198,13 @@ public:
   }
 
   void install(lifetime_id id, lifetime_hook *hook) {
+    ZoneScopedN("lreg::install");
     Record *record = static_cast<Record *>(id.m_ptr);
     record->hook = hook;
   }
 
   void free(lifetime_id id) noexcept {
+    ZoneScopedN("lreg::free");
     Record *record = static_cast<Record *>(id.m_ptr);
     assert(record != nullptr);
     assert(!record->freed);
@@ -215,6 +219,7 @@ public:
   }
 
   void construct(Universe *universe, lifetime_id id) noexcept {
+    ZoneScopedN("lreg::construct");
     Record *record = static_cast<Record *>(id.m_ptr);
     assert(record != nullptr);
     assert(!record->freed);
@@ -225,6 +230,7 @@ public:
   }
 
   void destruct(Universe *universe, lifetime_id id) noexcept {
+    ZoneScopedN("lreg::destruct");
     Record *record = static_cast<Record *>(id.m_ptr);
     assert(record != nullptr);
     assert(!record->freed);
@@ -254,6 +260,7 @@ public:
 
 private:
   void try_enter(Universe *universe, Record *record) noexcept {
+    ZoneScopedN("lreg::try_enter");
     assert(record != nullptr);
     assert(!record->freed);
     if (!record->requested) {
@@ -273,6 +280,7 @@ private:
   }
 
   void exit_entered(Universe *universe, Record *record) noexcept {
+    ZoneScopedN("lreg::exit_entered");
     assert(record != nullptr);
     assert(!record->freed);
     assert(record->entered);

@@ -5,10 +5,12 @@
 #include "strobe/ecs/scheduler/config.hpp"
 #include "strobe/ecs/scheduler/cpu_relax.hpp"
 #include "strobe/ecs/scheduler/worker_queue.hpp"
+#include "tracy/Tracy.hpp"
 
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <common/TracySystem.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -172,6 +174,7 @@ public: // public functions
 
 private:
   void exec_job(JobFn *job, Context *ctx) noexcept {
+    ZoneScopedN("worker-job");
     assert(job != nullptr);
     assert(ctx != nullptr);
 
@@ -209,6 +212,16 @@ private:
   }
 
   void worker_main(allocator alloc, uint32_t workerId) noexcept {
+
+    char debug_name[24]{};
+    const auto result =
+        fmt::format_to_n(debug_name, std::size(debug_name) - 1,
+                         FMT_STRING("strobe-ecs-worker{}"), workerId);
+    assert(result.size < std::size(debug_name));
+    *result.out = '\n';
+
+    tracy::SetThreadNameWithHint(debug_name, 1);
+
     assert(workerId < m_workerCount);
     WorkerRecord &self = m_workers[workerId];
     Context context{this, alloc, &self};

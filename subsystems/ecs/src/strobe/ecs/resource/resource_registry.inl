@@ -46,8 +46,15 @@ inline ResourceRegistry::~ResourceRegistry() noexcept {
 
 template <typename R>
 void ResourceRegistry::resource_block<R>::exit(Universe *universe) noexcept {
+  static constexpr auto debug_name = fixed_string{"rreg::resource<"} +
+                                     type_name<R>() + fixed_string{">::exit"};
+  ZoneScopedN(debug_name.data());
   universe->scheduler.submit(
       op_scope(acq_rel(this->get_location())), [header = this]() noexcept {
+        static constexpr auto debug_name = fixed_string{"rreg::destruct<"} +
+                                           type_name<R>() + fixed_string{">"};
+        ZoneScopedN(debug_name.data());
+
         void *ptr = header->ptr;
         assert(ptr != nullptr);
 
@@ -64,22 +71,26 @@ ResourceRegistry::resource_cmd::operator()(Universe *universe) noexcept {
   const lifetime_id lifetime = m_header->require_lifetime(&universe->lreg);
   switch (m_tag) {
   case RESOURCE_CMD_CREATE_TAG: {
+    ZoneScopedN("rreg::create_cmd");
     assert(m_ptr != nullptr);
-    universe->scheduler.submit(
-        op_scope(acq_rel(loc)),
-        [header = m_header, ptr = m_ptr]() noexcept { header->ptr = ptr; });
+    universe->scheduler.submit(op_scope(acq_rel(loc)),
+                               [header = m_header, ptr = m_ptr]() noexcept {
+                                 ZoneScopedN("rreg::publish-resource-storage");
+                                 header->ptr = ptr;
+                               });
     universe->lreg.construct(universe, lifetime);
     break;
   }
   case RESOURCE_CMD_DESTROY_TAG:
+    ZoneScopedN("rreg::destroy_cmd");
     // destruct will call resource_block::exit
     universe->lreg.destruct(universe, lifetime);
     universe->scheduler.submit(
         op_scope(acq_rel(universe->sr_location), acq_rel(loc)),
         [header = m_header]() noexcept {
+          ZoneScopedN("rreg::free-resource-storage");
           void *ptr = header->ptr;
           assert(ptr != nullptr);
-          // TODO make SPSC lockfree
           header->push_storage(ptr);
           header->ptr = nullptr;
         });
@@ -97,6 +108,7 @@ inline ResourceRegistry::resource_cmdbuf::~resource_cmdbuf() noexcept {
 
 template <typename... Args>
 void ResourceRegistry::resource_cmdbuf::emplace(Args &&...args) noexcept {
+  ZoneScopedN("rreg::cmdbuf::emplace");
   cmd_index index = m_domain->next();
   assert(index != null_cmd_index);
   auto *cmd =
@@ -108,6 +120,7 @@ void ResourceRegistry::resource_cmdbuf::emplace(Args &&...args) noexcept {
 }
 
 inline void ResourceRegistry::resource_cmdbuf::step() noexcept {
+  ZoneScopedN("rreg::cmdbuf::step");
   resource_cmd *cmd = m_head->next.load(std::memory_order_acquire);
   assert(cmd != nullptr);
   (*cmd)(m_universe);
@@ -139,7 +152,7 @@ inline location ResourceRegistry::get_registry_location() const noexcept {
   return m_universe->sr_location;
 }
 
-void ResourceRegistry::destroy_all() noexcept {
+inline void ResourceRegistry::destroy_all() noexcept {
   assert(m_cmdbuf.peek() == null_cmd_index);
   for (uint32_t i = 0; i < m_resources.size(); ++i) {
     auto *header = m_resources[i];
