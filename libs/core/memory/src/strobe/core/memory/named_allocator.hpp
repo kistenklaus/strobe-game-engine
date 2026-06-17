@@ -14,7 +14,7 @@ public:
   using allocator_traits = AllocatorTraits<allocator>;
   static constexpr auto name = Name;
 
-  explicit NamedAllocator(const allocator &alloc = {}) : m_upstream(alloc) {}
+  NamedAllocator(const allocator &alloc = {}) : m_upstream(alloc) {}
 
   void *allocate(size_t size, size_t alignment) {
     void *ptr = allocator_traits::allocate(m_upstream, size, alignment);

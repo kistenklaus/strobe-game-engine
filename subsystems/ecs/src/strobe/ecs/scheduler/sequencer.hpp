@@ -175,7 +175,9 @@ public:
 
   private:
     explicit FenceScope(Sequencer *sequencer) noexcept
-        : m_sequencer(sequencer) {}
+        : m_sequencer(sequencer) {
+      assert(m_sequencer != nullptr);
+    }
 
     Sequencer *m_sequencer;
     slot_bitset m_dependencies;

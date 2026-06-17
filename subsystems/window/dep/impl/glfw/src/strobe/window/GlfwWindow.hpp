@@ -278,8 +278,8 @@ public:
 private:
   static void release(GlfwWindow *window) {
     if (window->m_referenceCounter.dec()) {
-      // might still work, because we do reference counting to some extend, 
-      // but should still not happen would indicate unclean design at least 
+      // might still work, because we do reference counting to some extend,
+      // but should still not happen would indicate unclean design at least
       // somewhere. Where listeners are not properly destroyed / unregisted.
       assert(window->m_referenceCounter.isZero());
       assert(window->m_mouseButtonEventDispatcher.empty());

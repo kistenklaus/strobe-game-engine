@@ -26,6 +26,7 @@ public:
     m_sequencer =
         strobe::ecs::scheduler::allocator_traits::template allocate<Sequencer>(
             m_alloc);
+    assert(m_sequencer != nullptr);
     std::construct_at(m_sequencer, &m_alloc, threadCount);
   }
   Scheduler(const Scheduler &) = delete;

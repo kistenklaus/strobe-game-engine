@@ -196,10 +196,7 @@ private:
   };
 
 private:
-  static uint32_t next_task_type_id() noexcept {
-    static std::atomic<uint32_t> id_acc = 0;
-    return id_acc.fetch_add(1, std::memory_order_relaxed);
-  }
+  static uint32_t next_task_type_id() noexcept;
 
   // thread-safe!
   template <task_fn Fn>

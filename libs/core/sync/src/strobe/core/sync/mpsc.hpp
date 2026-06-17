@@ -70,7 +70,7 @@ public:
           std::byte *raw = reinterpret_cast<std::byte *>(self);
           A *allocPtr = reinterpret_cast<A *>(raw + offset);
           A alloc = *allocPtr; // copy allocator out of control buffer.
-          std::destroy_at(&controlBlock);
+          std::destroy_at(controlBlock);
           std::destroy_at(allocPtr);
           ATraits::deallocate(alloc, self, byteSize,
                               alignof(ChannelStateControlBlock<T>));

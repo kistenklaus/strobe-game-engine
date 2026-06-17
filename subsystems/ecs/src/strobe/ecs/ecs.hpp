@@ -1,7 +1,5 @@
 #pragma once
 #include "strobe/ecs/allocator.hpp"
-#include "strobe/ecs/cmd/drain_cmds.hpp"
-#include "strobe/ecs/scheduler/op_scope.hpp"
 #include "strobe/ecs/task/task_traits.hpp"
 #include "strobe/ecs/universe.hpp"
 #include <algorithm>
@@ -26,12 +24,11 @@ public:
   ECS &operator=(const ECS &) = delete;
   ECS(ECS &&) = delete;
   ECS &operator=(ECS &&) = delete;
+  ~ECS() { stop(); }
 
   void stop() noexcept { m_submissionThread.request_stop(); }
 
-  void join() noexcept {
-    m_submissionThread.join();
-  }
+  void join() noexcept { m_submissionThread.join(); }
 
 private:
   void main_thread(std::stop_token stop_token);
