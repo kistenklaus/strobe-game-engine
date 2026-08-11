@@ -1,0 +1,398 @@
+#pragma once
+
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
+
+namespace strobe::gpu::vulkan {
+
+struct DeviceFeatures {
+  // VK_API_VERSION_1_0
+  VkBool32 robustBufferAccess;
+  VkBool32 fullDrawIndexUint32;
+  VkBool32 imageCubeArray;
+  VkBool32 independentBlend;
+  VkBool32 geometryShader;
+  VkBool32 tessellationShader;
+  VkBool32 sampleRateShading;
+  VkBool32 dualSrcBlend;
+  VkBool32 logicOp;
+  VkBool32 multiDrawIndirect;
+  VkBool32 drawIndirectFirstInstance;
+  VkBool32 depthClamp;
+  VkBool32 depthBiasClamp;
+  VkBool32 fillModeNonSolid;
+  VkBool32 depthBounds;
+  VkBool32 wideLines;
+  VkBool32 largePoints;
+  VkBool32 alphaToOne;
+  VkBool32 multiViewport;
+  VkBool32 samplerAnisotropy;
+  VkBool32 textureCompressionETC2;
+  VkBool32 textureCompressionASTC_LDR;
+  VkBool32 textureCompressionBC;
+  VkBool32 occlusionQueryPrecise;
+  VkBool32 pipelineStatisticsQuery;
+  VkBool32 vertexPipelineStoresAndAtomics;
+  VkBool32 fragmentStoresAndAtomics;
+  VkBool32 shaderTessellationAndGeometryPointSize;
+  VkBool32 shaderImageGatherExtended;
+  VkBool32 shaderStorageImageExtendedFormats;
+  VkBool32 shaderStorageImageMultisample;
+  VkBool32 shaderStorageImageReadWithoutFormat;
+  VkBool32 shaderStorageImageWriteWithoutFormat;
+  VkBool32 shaderUniformBufferArrayDynamicIndexing;
+  VkBool32 shaderSampledImageArrayDynamicIndexing;
+  VkBool32 shaderStorageBufferArrayDynamicIndexing;
+  VkBool32 shaderStorageImageArrayDynamicIndexing;
+  VkBool32 shaderClipDistance;
+  VkBool32 shaderCullDistance;
+  VkBool32 shaderFloat64;
+  VkBool32 shaderInt64;
+  VkBool32 shaderInt16;
+  VkBool32 shaderResourceResidency;
+  VkBool32 shaderResourceMinLod;
+  VkBool32 sparseBinding;
+  VkBool32 sparseResidencyBuffer;
+  VkBool32 sparseResidencyImage2D;
+  VkBool32 sparseResidencyImage3D;
+  VkBool32 sparseResidency2Samples;
+  VkBool32 sparseResidency4Samples;
+  VkBool32 sparseResidency8Samples;
+  VkBool32 sparseResidency16Samples;
+  VkBool32 sparseResidencyAliased;
+  VkBool32 variableMultisampleRate;
+  VkBool32 inheritedQueries;
+  // VK_API_VERSION_1_1
+  VkBool32 storageBuffer16BitAccess;
+  VkBool32 uniformAndStorageBuffer16BitAccess;
+  VkBool32 storagePushConstant16;
+  VkBool32 storageInputOutput16;
+  VkBool32 multiview;
+  VkBool32 multiviewGeometryShader;
+  VkBool32 multiviewTessellationShader;
+  VkBool32 variablePointersStorageBuffer;
+  VkBool32 variablePointers;
+  VkBool32 protectedMemory;
+  VkBool32 samplerYcbcrConversion;
+  VkBool32 shaderDrawParameters;
+  // VK_API_VERSION_1_2
+  VkBool32 samplerMirrorClampToEdge;
+  VkBool32 drawIndirectCount;
+  VkBool32 storageBuffer8BitAccess;
+  VkBool32 uniformAndStorageBuffer8BitAccess;
+  VkBool32 storagePushConstant8;
+  VkBool32 shaderBufferInt64Atomics;
+  VkBool32 shaderSharedInt64Atomics;
+  VkBool32 shaderFloat16;
+  VkBool32 shaderInt8;
+  VkBool32 descriptorIndexing;
+  VkBool32 shaderInputAttachmentArrayDynamicIndexing;
+  VkBool32 shaderUniformTexelBufferArrayDynamicIndexing;
+  VkBool32 shaderStorageTexelBufferArrayDynamicIndexing;
+  VkBool32 shaderUniformBufferArrayNonUniformIndexing;
+  VkBool32 shaderSampledImageArrayNonUniformIndexing;
+  VkBool32 shaderStorageBufferArrayNonUniformIndexing;
+  VkBool32 shaderStorageImageArrayNonUniformIndexing;
+  VkBool32 shaderInputAttachmentArrayNonUniformIndexing;
+  VkBool32 shaderUniformTexelBufferArrayNonUniformIndexing;
+  VkBool32 shaderStorageTexelBufferArrayNonUniformIndexing;
+  VkBool32 descriptorBindingUniformBufferUpdateAfterBind;
+  VkBool32 descriptorBindingSampledImageUpdateAfterBind;
+  VkBool32 descriptorBindingStorageImageUpdateAfterBind;
+  VkBool32 descriptorBindingStorageBufferUpdateAfterBind;
+  VkBool32 descriptorBindingUniformTexelBufferUpdateAfterBind;
+  VkBool32 descriptorBindingStorageTexelBufferUpdateAfterBind;
+  VkBool32 descriptorBindingUpdateUnusedWhilePending;
+  VkBool32 descriptorBindingPartiallyBound;
+  VkBool32 descriptorBindingVariableDescriptorCount;
+  VkBool32 runtimeDescriptorArray;
+  VkBool32 samplerFilterMinmax;
+  VkBool32 scalarBlockLayout;
+  VkBool32 imagelessFramebuffer;
+  VkBool32 uniformBufferStandardLayout;
+  VkBool32 shaderSubgroupExtendedTypes;
+  VkBool32 separateDepthStencilLayouts;
+  VkBool32 hostQueryReset;
+  VkBool32 timelineSemaphore;
+  VkBool32 bufferDeviceAddress;
+  VkBool32 bufferDeviceAddressCaptureReplay;
+  VkBool32 bufferDeviceAddressMultiDevice;
+  VkBool32 vulkanMemoryModel;
+  VkBool32 vulkanMemoryModelDeviceScope;
+  VkBool32 vulkanMemoryModelAvailabilityVisibilityChains;
+  VkBool32 shaderOutputViewportIndex;
+  VkBool32 shaderOutputLayer;
+  VkBool32 subgroupBroadcastDynamicId;
+  // VK_API_VERSION_1_3
+  VkBool32 robustImageAccess;
+  VkBool32 inlineUniformBlock;
+  VkBool32 descriptorBindingInlineUniformBlockUpdateAfterBind;
+  VkBool32 pipelineCreationCacheControl;
+  VkBool32 privateData;
+  VkBool32 shaderDemoteToHelperInvocation;
+  VkBool32 shaderTerminateInvocation;
+  VkBool32 subgroupSizeControl;
+  VkBool32 computeFullSubgroups;
+  VkBool32 synchronization2;
+  VkBool32 textureCompressionASTC_HDR;
+  VkBool32 shaderZeroInitializeWorkgroupMemory;
+  VkBool32 dynamicRendering;
+  VkBool32 shaderIntegerDotProduct;
+  VkBool32 maintenance4;
+  // VK_API_VERSION_1_4
+  VkBool32 globalPriorityQuery;
+  VkBool32 shaderSubgroupRotate;
+  VkBool32 shaderSubgroupRotateClustered;
+  VkBool32 shaderFloatControls2;
+  VkBool32 shaderExpectAssume;
+  VkBool32 rectangularLines;
+  VkBool32 bresenhamLines;
+  VkBool32 smoothLines;
+  VkBool32 stippledRectangularLines;
+  VkBool32 stippledBresenhamLines;
+  VkBool32 stippledSmoothLines;
+  VkBool32 vertexAttributeInstanceRateDivisor;
+  VkBool32 vertexAttributeInstanceRateZeroDivisor;
+  VkBool32 indexTypeUint8;
+  VkBool32 dynamicRenderingLocalRead;
+  VkBool32 maintenance5;
+  VkBool32 maintenance6;
+  VkBool32 pipelineProtectedAccess;
+  VkBool32 pipelineRobustness;
+  VkBool32 hostImageCopy;
+  VkBool32 pushDescriptor;
+};
+
+inline DeviceFeatures query_device_features(VkPhysicalDevice physicalDevice,
+                                            uint32_t apiVersion) noexcept {
+
+  void *pNext = nullptr;
+
+  VkPhysicalDeviceVulkan11Features vulkan11{};
+  vulkan11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+  if (apiVersion >= VK_API_VERSION_1_1) {
+    vulkan11.pNext = pNext;
+    pNext = &vulkan11;
+  }
+
+  VkPhysicalDeviceVulkan12Features vulkan12{};
+  vulkan12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+  if (apiVersion >= VK_API_VERSION_1_2) {
+    vulkan12.pNext = pNext;
+    pNext = &vulkan12;
+  }
+
+  VkPhysicalDeviceVulkan13Features vulkan13{};
+  vulkan13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+  if (apiVersion >= VK_API_VERSION_1_3) {
+    vulkan13.pNext = pNext;
+    pNext = &vulkan13;
+  }
+
+  VkPhysicalDeviceVulkan14Features vulkan14{};
+  vulkan14.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES;
+  if (apiVersion >= VK_API_VERSION_1_4) {
+    vulkan14.pNext = pNext;
+    pNext = &vulkan14;
+  }
+
+  VkPhysicalDeviceFeatures2 features2{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+      .pNext = pNext,
+      .features = {},
+  };
+  vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
+
+  return DeviceFeatures{
+      .robustBufferAccess = features2.features.robustBufferAccess,
+      .fullDrawIndexUint32 = features2.features.fullDrawIndexUint32,
+      .imageCubeArray = features2.features.imageCubeArray,
+      .independentBlend = features2.features.independentBlend,
+      .geometryShader = features2.features.geometryShader,
+      .tessellationShader = features2.features.tessellationShader,
+      .sampleRateShading = features2.features.sampleRateShading,
+      .dualSrcBlend = features2.features.dualSrcBlend,
+      .logicOp = features2.features.logicOp,
+      .multiDrawIndirect = features2.features.multiDrawIndirect,
+      .drawIndirectFirstInstance = features2.features.drawIndirectFirstInstance,
+      .depthClamp = features2.features.depthClamp,
+      .depthBiasClamp = features2.features.depthBiasClamp,
+      .fillModeNonSolid = features2.features.fillModeNonSolid,
+      .depthBounds = features2.features.depthBounds,
+      .wideLines = features2.features.wideLines,
+      .largePoints = features2.features.largePoints,
+      .alphaToOne = features2.features.alphaToOne,
+      .multiViewport = features2.features.multiViewport,
+      .samplerAnisotropy = features2.features.samplerAnisotropy,
+      .textureCompressionETC2 = features2.features.textureCompressionETC2,
+      .textureCompressionASTC_LDR =
+          features2.features.textureCompressionASTC_LDR,
+      .textureCompressionBC = features2.features.textureCompressionBC,
+      .occlusionQueryPrecise = features2.features.occlusionQueryPrecise,
+      .pipelineStatisticsQuery = features2.features.pipelineStatisticsQuery,
+      .vertexPipelineStoresAndAtomics =
+          features2.features.vertexPipelineStoresAndAtomics,
+      .fragmentStoresAndAtomics = features2.features.fragmentStoresAndAtomics,
+      .shaderTessellationAndGeometryPointSize =
+          features2.features.shaderTessellationAndGeometryPointSize,
+      .shaderImageGatherExtended = features2.features.shaderImageGatherExtended,
+      .shaderStorageImageExtendedFormats =
+          features2.features.shaderStorageImageExtendedFormats,
+      .shaderStorageImageMultisample =
+          features2.features.shaderStorageImageMultisample,
+      .shaderStorageImageReadWithoutFormat =
+          features2.features.shaderStorageImageReadWithoutFormat,
+      .shaderStorageImageWriteWithoutFormat =
+          features2.features.shaderStorageImageWriteWithoutFormat,
+      .shaderUniformBufferArrayDynamicIndexing =
+          features2.features.shaderUniformBufferArrayDynamicIndexing,
+      .shaderSampledImageArrayDynamicIndexing =
+          features2.features.shaderSampledImageArrayDynamicIndexing,
+      .shaderStorageBufferArrayDynamicIndexing =
+          features2.features.shaderStorageBufferArrayDynamicIndexing,
+      .shaderStorageImageArrayDynamicIndexing =
+          features2.features.shaderStorageImageArrayDynamicIndexing,
+      .shaderClipDistance = features2.features.shaderClipDistance,
+      .shaderCullDistance = features2.features.shaderCullDistance,
+      .shaderFloat64 = features2.features.shaderFloat64,
+      .shaderInt64 = features2.features.shaderInt64,
+      .shaderInt16 = features2.features.shaderInt16,
+      .shaderResourceResidency = features2.features.shaderResourceResidency,
+      .shaderResourceMinLod = features2.features.shaderResourceMinLod,
+      .sparseBinding = features2.features.sparseBinding,
+      .sparseResidencyBuffer = features2.features.sparseResidencyBuffer,
+      .sparseResidencyImage2D = features2.features.sparseResidencyImage2D,
+      .sparseResidencyImage3D = features2.features.sparseResidencyImage3D,
+      .sparseResidency2Samples = features2.features.sparseResidency2Samples,
+      .sparseResidency4Samples = features2.features.sparseResidency4Samples,
+      .sparseResidency8Samples = features2.features.sparseResidency8Samples,
+      .sparseResidency16Samples = features2.features.sparseResidency16Samples,
+      .sparseResidencyAliased = features2.features.sparseResidencyAliased,
+      .variableMultisampleRate = features2.features.variableMultisampleRate,
+      .inheritedQueries = features2.features.inheritedQueries,
+      .storageBuffer16BitAccess = vulkan11.storageBuffer16BitAccess,
+      .uniformAndStorageBuffer16BitAccess =
+          vulkan11.uniformAndStorageBuffer16BitAccess,
+      .storagePushConstant16 = vulkan11.storagePushConstant16,
+      .storageInputOutput16 = vulkan11.storageInputOutput16,
+      .multiview = vulkan11.multiview,
+      .multiviewGeometryShader = vulkan11.multiviewGeometryShader,
+      .multiviewTessellationShader = vulkan11.multiviewTessellationShader,
+      .variablePointersStorageBuffer = vulkan11.variablePointersStorageBuffer,
+      .variablePointers = vulkan11.variablePointers,
+      .protectedMemory = vulkan11.protectedMemory,
+      .samplerYcbcrConversion = vulkan11.samplerYcbcrConversion,
+      .shaderDrawParameters = vulkan11.shaderDrawParameters,
+      .samplerMirrorClampToEdge = vulkan12.samplerMirrorClampToEdge,
+      .drawIndirectCount = vulkan12.drawIndirectCount,
+      .storageBuffer8BitAccess = vulkan12.storageBuffer8BitAccess,
+      .uniformAndStorageBuffer8BitAccess =
+          vulkan12.uniformAndStorageBuffer8BitAccess,
+      .storagePushConstant8 = vulkan12.storagePushConstant8,
+      .shaderBufferInt64Atomics = vulkan12.shaderBufferInt64Atomics,
+      .shaderSharedInt64Atomics = vulkan12.shaderSharedInt64Atomics,
+      .shaderFloat16 = vulkan12.shaderFloat16,
+      .shaderInt8 = vulkan12.shaderInt8,
+      .descriptorIndexing = vulkan12.descriptorIndexing,
+      .shaderInputAttachmentArrayDynamicIndexing =
+          vulkan12.shaderInputAttachmentArrayDynamicIndexing,
+      .shaderUniformTexelBufferArrayDynamicIndexing =
+          vulkan12.shaderUniformTexelBufferArrayDynamicIndexing,
+      .shaderStorageTexelBufferArrayDynamicIndexing =
+          vulkan12.shaderStorageTexelBufferArrayDynamicIndexing,
+      .shaderUniformBufferArrayNonUniformIndexing =
+          vulkan12.shaderUniformBufferArrayNonUniformIndexing,
+      .shaderSampledImageArrayNonUniformIndexing =
+          vulkan12.shaderSampledImageArrayNonUniformIndexing,
+      .shaderStorageBufferArrayNonUniformIndexing =
+          vulkan12.shaderStorageBufferArrayNonUniformIndexing,
+      .shaderStorageImageArrayNonUniformIndexing =
+          vulkan12.shaderStorageImageArrayNonUniformIndexing,
+      .shaderInputAttachmentArrayNonUniformIndexing =
+          vulkan12.shaderInputAttachmentArrayNonUniformIndexing,
+      .shaderUniformTexelBufferArrayNonUniformIndexing =
+          vulkan12.shaderUniformTexelBufferArrayNonUniformIndexing,
+      .shaderStorageTexelBufferArrayNonUniformIndexing =
+          vulkan12.shaderStorageTexelBufferArrayNonUniformIndexing,
+      .descriptorBindingUniformBufferUpdateAfterBind =
+          vulkan12.descriptorBindingUniformBufferUpdateAfterBind,
+      .descriptorBindingSampledImageUpdateAfterBind =
+          vulkan12.descriptorBindingSampledImageUpdateAfterBind,
+      .descriptorBindingStorageImageUpdateAfterBind =
+          vulkan12.descriptorBindingStorageImageUpdateAfterBind,
+      .descriptorBindingStorageBufferUpdateAfterBind =
+          vulkan12.descriptorBindingStorageBufferUpdateAfterBind,
+      .descriptorBindingUniformTexelBufferUpdateAfterBind =
+          vulkan12.descriptorBindingUniformTexelBufferUpdateAfterBind,
+      .descriptorBindingStorageTexelBufferUpdateAfterBind =
+          vulkan12.descriptorBindingStorageTexelBufferUpdateAfterBind,
+      .descriptorBindingUpdateUnusedWhilePending =
+          vulkan12.descriptorBindingUpdateUnusedWhilePending,
+      .descriptorBindingPartiallyBound =
+          vulkan12.descriptorBindingPartiallyBound,
+      .descriptorBindingVariableDescriptorCount =
+          vulkan12.descriptorBindingVariableDescriptorCount,
+      .runtimeDescriptorArray = vulkan12.runtimeDescriptorArray,
+      .samplerFilterMinmax = vulkan12.samplerFilterMinmax,
+      .scalarBlockLayout = vulkan12.scalarBlockLayout,
+      .imagelessFramebuffer = vulkan12.imagelessFramebuffer,
+      .uniformBufferStandardLayout = vulkan12.uniformBufferStandardLayout,
+      .shaderSubgroupExtendedTypes = vulkan12.shaderSubgroupExtendedTypes,
+      .separateDepthStencilLayouts = vulkan12.separateDepthStencilLayouts,
+      .hostQueryReset = vulkan12.hostQueryReset,
+      .timelineSemaphore = vulkan12.timelineSemaphore,
+      .bufferDeviceAddress = vulkan12.bufferDeviceAddress,
+      .bufferDeviceAddressCaptureReplay =
+          vulkan12.bufferDeviceAddressCaptureReplay,
+      .bufferDeviceAddressMultiDevice = vulkan12.bufferDeviceAddressMultiDevice,
+      .vulkanMemoryModel = vulkan12.vulkanMemoryModel,
+      .vulkanMemoryModelDeviceScope = vulkan12.vulkanMemoryModelDeviceScope,
+      .vulkanMemoryModelAvailabilityVisibilityChains =
+          vulkan12.vulkanMemoryModelAvailabilityVisibilityChains,
+      .shaderOutputViewportIndex = vulkan12.shaderOutputViewportIndex,
+      .shaderOutputLayer = vulkan12.shaderOutputLayer,
+      .subgroupBroadcastDynamicId = vulkan12.subgroupBroadcastDynamicId,
+      .robustImageAccess = vulkan13.robustImageAccess,
+      .inlineUniformBlock = vulkan13.inlineUniformBlock,
+      .descriptorBindingInlineUniformBlockUpdateAfterBind =
+          vulkan13.descriptorBindingInlineUniformBlockUpdateAfterBind,
+      .pipelineCreationCacheControl = vulkan13.pipelineCreationCacheControl,
+      .privateData = vulkan13.privateData,
+      .shaderDemoteToHelperInvocation = vulkan13.shaderDemoteToHelperInvocation,
+      .shaderTerminateInvocation = vulkan13.shaderTerminateInvocation,
+      .subgroupSizeControl = vulkan13.subgroupSizeControl,
+      .computeFullSubgroups = vulkan13.computeFullSubgroups,
+      .synchronization2 = vulkan13.synchronization2,
+      .textureCompressionASTC_HDR = vulkan13.textureCompressionASTC_HDR,
+      .shaderZeroInitializeWorkgroupMemory =
+          vulkan13.shaderZeroInitializeWorkgroupMemory,
+      .dynamicRendering = vulkan13.dynamicRendering,
+      .shaderIntegerDotProduct = vulkan13.shaderIntegerDotProduct,
+      .maintenance4 = vulkan13.maintenance4,
+      .globalPriorityQuery = vulkan14.globalPriorityQuery,
+      .shaderSubgroupRotate = vulkan14.shaderSubgroupRotate,
+      .shaderSubgroupRotateClustered = vulkan14.shaderSubgroupRotateClustered,
+      .shaderFloatControls2 = vulkan14.shaderFloatControls2,
+      .shaderExpectAssume = vulkan14.shaderExpectAssume,
+      .rectangularLines = vulkan14.rectangularLines,
+      .bresenhamLines = vulkan14.bresenhamLines,
+      .smoothLines = vulkan14.smoothLines,
+      .stippledRectangularLines = vulkan14.stippledRectangularLines,
+      .stippledBresenhamLines = vulkan14.stippledBresenhamLines,
+      .stippledSmoothLines = vulkan14.stippledSmoothLines,
+      .vertexAttributeInstanceRateDivisor =
+          vulkan14.vertexAttributeInstanceRateDivisor,
+      .vertexAttributeInstanceRateZeroDivisor =
+          vulkan14.vertexAttributeInstanceRateZeroDivisor,
+      .indexTypeUint8 = vulkan14.indexTypeUint8,
+      .dynamicRenderingLocalRead = vulkan14.dynamicRenderingLocalRead,
+      .maintenance5 = vulkan14.maintenance5,
+      .maintenance6 = vulkan14.maintenance6,
+      .pipelineProtectedAccess = vulkan14.pipelineProtectedAccess,
+      .pipelineRobustness = vulkan14.pipelineRobustness,
+      .hostImageCopy = vulkan14.hostImageCopy,
+      .pushDescriptor = vulkan14.pushDescriptor,
+  };
+}
+
+} // namespace strobe::gpu::vulkan

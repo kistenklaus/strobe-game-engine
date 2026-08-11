@@ -145,8 +145,13 @@ public:
     return current;
   }
 
+  GLFWwindow* ptr() noexcept {
+    return m_window;
+  }
+
 private:
   static void close_callback(GLFWwindow *window) {
+    fmt::println("close callback");
     auto win = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
     win->m_state.should_close.store(true, std::memory_order_relaxed);
   }
@@ -168,6 +173,7 @@ private:
         uvec2(static_cast<unsigned int>(w), static_cast<unsigned int>(h)),
         std::memory_order_relaxed);
   }
+
 
 private:
   details::SyncWindowState m_state;

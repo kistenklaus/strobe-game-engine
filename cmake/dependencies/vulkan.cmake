@@ -10,15 +10,3 @@ else()
   log_error("❌ Vulkan not available!")
 endif()
 
-
-
-target_include_directories(${EXECUTABLE}
-  PUBLIC
-    ${Vulkan_INCLUDE_DIRS}
-)
-target_link_libraries(${EXECUTABLE} PRIVATE Vulkan::Vulkan)
-
-target_compile_definitions(${PROJECT_NAME}
-  PUBLIC
-    GLFW_INCLUDE_VULKAN
-)

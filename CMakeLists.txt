@@ -27,15 +27,11 @@ include(cmake/dependencies.cmake)
 include(cmake/configuration.cmake)
 include(cmake/testing.cmake)
 
-
-# Subsystem configuration
-select_strobe_window_api()
-set_strobe_asset_manifest("assets.toml")
-
-
 add_subdirectory(libs/core)
 
 add_subdirectory(subsystems/platform)
+add_subdirectory(libs/gpu)
+
 add_subdirectory(subsystems/window)
 add_subdirectory(subsystems/input)
 add_subdirectory(subsystems/ecs)

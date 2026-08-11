@@ -9,7 +9,7 @@
 ######################################################################
 
 cloc . \
-  --exclude-dir=cmake,build,cmake-build-debug,deprecated,logs,.idea,.git\
+  --exclude-dir=cmake,build,cmake-build-debug,cmake-build-release,deprecated,logs,.idea,.git,.github,.cache,third_party\
   --exclude-list-file=loc.sh
 
 

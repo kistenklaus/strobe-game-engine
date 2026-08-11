@@ -84,7 +84,7 @@ namespace strobe {
 
         // Copy semantics
         static inline A select_on_container_copy_construction(const A &a) {
-            if (requires { a.select_on_container_copy_construction(); }) {
+            if constexpr (requires { a.select_on_container_copy_construction(); }) {
                 return a.select_on_container_copy_construction();
             } else {
                 return a;

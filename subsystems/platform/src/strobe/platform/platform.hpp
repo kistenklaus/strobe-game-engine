@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
+#include <fmt/printf.h>
 
 #include <array>
 #include <atomic>
@@ -191,7 +192,11 @@ private:
       std::counting_semaphore<static_cast<std::ptrdiff_t>(job_capacity)>;
 
 public:
-  static void native_main() noexcept { instance().native_main_impl(); }
+  static void start() noexcept {
+    instance().m_thread =
+        std::thread([]() { Platform::instance().native_main_impl(); });
+  }
+  // static void native_main() noexcept { instance().native_main_impl(); }
   static void stop() noexcept { instance().stop_impl(); }
 
   template <typename Fn>
@@ -227,6 +232,7 @@ private:
   }
 
   void native_main_impl() noexcept {
+    fmt::println("Platform started");
     if (glfwInit() != GLFW_TRUE) {
       return;
     }
@@ -251,9 +257,12 @@ private:
   }
 
   void stop_impl() noexcept {
-    std::lock_guard lock{m_submissionMutex};
-    m_stopSource.request_stop();
-    glfwPostEmptyEvent();
+    {
+      std::lock_guard lock{m_submissionMutex};
+      m_stopSource.request_stop();
+      glfwPostEmptyEvent();
+    }
+    m_thread.join();
   }
 
   template <typename Fn>
@@ -310,6 +319,8 @@ private:
       request->completed.notify_one();
     }
   }
+
+  std::thread m_thread;
 
   std::stop_source m_stopSource;
 

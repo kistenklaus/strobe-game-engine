@@ -1,0 +1,27 @@
+#include "strobe/gpu/vulkan/binary_semaphore.hpp"
+
+namespace strobe::gpu::vulkan {
+
+BinarySemaphore create_binary_semaphore(Context *context,
+                                        const SemaphoreInfo &info) {
+  assert(context != nullptr);
+  VkSemaphoreCreateInfo createInfo{
+      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = info.flags,
+  };
+  BinarySemaphore sem;
+  VkResult result = vkCreateSemaphore(context->device(), &createInfo,
+                                      context->driver_alloc(), &sem.handle);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create semaphore");
+  }
+  return sem;
+}
+void destroy_binary_semaphore(Context *context, BinarySemaphore sem) noexcept {
+  assert(context != nullptr);
+  assert(sem);
+  vkDestroySemaphore(context->device(), sem.handle, context->driver_alloc());
+}
+
+} // namespace strobe::gpu::vulkan

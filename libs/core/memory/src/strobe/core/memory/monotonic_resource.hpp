@@ -33,7 +33,7 @@ public:
   static constexpr std::size_t DEFAULT_NORMAL_CHUNK_SIZE = 4096;
 
   explicit MonotonicResource(
-      const upstream_type &upstream,
+      const upstream_type &upstream = {},
       std::size_t bootstrap_chunk_size = DEFAULT_BOOTSTRAP_CHUNK_SIZE,
       std::size_t normal_chunk_size = DEFAULT_NORMAL_CHUNK_SIZE)
       : m_upstream(upstream), m_bootstrap_chunk_size(bootstrap_chunk_size),

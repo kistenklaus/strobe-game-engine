@@ -10,11 +10,10 @@
 #include <type_traits>
 namespace strobe {
 
-template <typename T, Allocator A = strobe::Mallocator>
-class Vector {
+template <typename T, Allocator A = strobe::Mallocator> class Vector {
   using ATraits = AllocatorTraits<A>;
 
- public:
+public:
   // NOTE: Required for the competition!
   using value_type = T;
   using allocator_type = A;
@@ -80,18 +79,19 @@ class Vector {
         std::uninitialized_copy(std::ranges::begin(rg), std::ranges::end(rg),
                                 m_buffer);
     } else {
-      for (const T &v : rg) push_back(v);
+      for (const T &v : rg)
+        push_back(v);
     }
   }
 
   ~Vector() { reset(); }
 
   Vector(const Vector &o)
-      : m_capacity(o.m_size),
-        m_size(o.m_size),
+      : m_capacity(o.m_size), m_size(o.m_size),
         m_allocator(
             ATraits::select_on_container_copy_construction(o.m_allocator)) {
     m_buffer = ATraits::template allocate<T>(m_allocator, m_size);
+    assert(m_buffer != nullptr);
     if (std::is_trivially_copyable_v<T>) {
       std::memcpy(m_buffer, o.m_buffer, sizeof(T) * m_size);
     } else {
@@ -139,7 +139,8 @@ class Vector {
         m_allocator(std::move(o.m_allocator)) {}
 
   Vector &operator=(Vector &&o) noexcept {
-    if (this == &o) return *this;
+    if (this == &o)
+      return *this;
 
     const bool equalAllocator =
         strobe::alloc_equals(m_allocator, o.m_allocator);
@@ -202,8 +203,7 @@ class Vector {
     m_size++;
   }
 
-  template <typename... Args>
-  T &emplace_back(Args &&...args) {
+  template <typename... Args> T &emplace_back(Args &&...args) {
     if (m_size == m_capacity) {
       grow(m_capacity == 0 ? 1 : m_capacity * 2);
     }
@@ -283,6 +283,81 @@ class Vector {
     m_size = newSize;
   }
 
+  template <std::ranges::sized_range R>
+    requires std::same_as<std::ranges::range_value_t<R>, value_type>
+  void assign(const R &range) {
+    const size_type n = static_cast<size_type>(std::ranges::size(range));
+
+    if (n > m_capacity) {
+      reset();
+
+      m_buffer = ATraits::template allocate<T>(m_allocator, n);
+      assert(n == 0 || m_buffer != nullptr);
+      m_capacity = n;
+
+      if constexpr (std::ranges::contiguous_range<R> &&
+                    std::is_trivially_copyable_v<T>) {
+        std::memcpy(m_buffer, std::ranges::data(range), n * sizeof(T));
+      } else {
+        std::uninitialized_copy(std::ranges::begin(range),
+                                std::ranges::end(range), m_buffer);
+      }
+
+      m_size = n;
+      return;
+    }
+
+    auto first = std::ranges::begin(range);
+
+    if constexpr (std::ranges::contiguous_range<R> &&
+                  std::is_trivially_copyable_v<T>) {
+      std::memcpy(m_buffer, std::ranges::data(range), n * sizeof(T));
+      m_size = n;
+    } else {
+      const size_type assigned = std::min(m_size, n);
+
+      auto middle = first;
+      std::ranges::advance(middle, assigned);
+
+      std::copy(first, middle, m_buffer);
+
+      if (n < m_size) {
+        std::destroy(m_buffer + n, m_buffer + m_size);
+      } else if (n > m_size) {
+        std::uninitialized_copy(middle, std::ranges::end(range),
+                                m_buffer + m_size);
+      }
+
+      m_size = n;
+    }
+  }
+
+  template <std::input_iterator It, std::sentinel_for<It> Sent>
+    requires std::same_as<std::iter_value_t<It>, value_type>
+  void assign(It first, Sent last) {
+    clear();
+
+    if constexpr (std::forward_iterator<It>) {
+      const size_type n =
+          static_cast<size_type>(std::ranges::distance(first, last));
+
+      reserve(n);
+
+      if constexpr (std::contiguous_iterator<It> && std::same_as<It, Sent> &&
+                    std::is_trivially_copyable_v<T>) {
+        std::memcpy(m_buffer, std::to_address(first), n * sizeof(T));
+      } else {
+        std::uninitialized_copy(first, last, m_buffer);
+      }
+
+      m_size = n;
+    } else {
+      for (; first != last; ++first) {
+        push_back(*first);
+      }
+    }
+  }
+
   T &back() {
     assert(m_size != 0);
     return m_buffer[m_size - 1];
@@ -300,12 +375,8 @@ class Vector {
     assert(m_size != 0);
     return m_buffer[0];
   }
-  const T* data() const {
-    return m_buffer;
-  }
-  T* data() {
-    return m_buffer;
-  }
+  const T *data() const { return m_buffer; }
+  T *data() { return m_buffer; }
 
   // ==================== Special Algorithms ========================
   iterator insert(const_iterator pos, const T &value) {
@@ -326,13 +397,13 @@ class Vector {
       m_capacity = newCapacity;
       if (old != nullptr) {
         destructive_move_construct_from_helper(
-            m_buffer, old, index);  // copy first index elements (does not
-                                    // include the element at index itself)
+            m_buffer, old, index); // copy first index elements (does not
+                                   // include the element at index itself)
         new (m_buffer + index) T(value);
         std::size_t remaining = m_size - index;
         destructive_move_construct_from_helper(
             m_buffer + index + 1, old + index,
-            remaining);  // copy remaining elements after the index
+            remaining); // copy remaining elements after the index
         ATraits::template deallocate<T>(m_allocator, old, oldCapacity);
       }
     } else {
@@ -354,8 +425,7 @@ class Vector {
   }
 
   // ========================= Range insertion ==================
-  template <std::ranges::range R>
-  void append(const R &range) {
+  template <std::ranges::range R> void append(const R &range) {
     size_type rangeSize = std::ranges::size(range);
     if (rangeSize == 0) {
       return;
@@ -382,7 +452,8 @@ class Vector {
   template <std::ranges::range R>
   iterator insert(const_iterator pos, const R &range) {
     const size_type n = std::ranges::size(range);
-    if (n == 0) return const_cast<iterator>(pos);
+    if (n == 0)
+      return const_cast<iterator>(pos);
 
     if (pos == cend()) {
       append(range);
@@ -525,7 +596,7 @@ class Vector {
     return begin() <= toCheck && toCheck <= end();
   }
 
- private:
+private:
   void grow(size_type newCapacity) {
     assert(newCapacity > m_capacity);
     T *old = m_buffer;
@@ -639,4 +710,4 @@ class Vector {
   [[no_unique_address]] A m_allocator;
 };
 
-}  // namespace strobe
+} // namespace strobe
