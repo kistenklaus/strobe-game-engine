@@ -9,6 +9,7 @@
 #include "strobe/gpu/vulkan/context/select_queues.hpp"
 #include "strobe/gpu/vulkan/queue_type.hpp"
 
+#include <stdexcept>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
@@ -62,6 +63,14 @@ public:
   }
 
   VmaAllocator vma() const noexcept { return m_vma; }
+
+  void wait_idle() const {
+    VkResult result = vkDeviceWaitIdle(m_device);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error(
+          "Failed to wait for device idle : device timed out.");
+    }
+  }
 
 private:
   [[no_unique_address]] allocator m_alloc;

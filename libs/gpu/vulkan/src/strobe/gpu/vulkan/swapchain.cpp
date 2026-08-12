@@ -1,6 +1,5 @@
 #include "strobe/gpu/vulkan/swapchain.hpp"
 
-#include <algorithm>
 #include <cstring>
 #include <fmt/format.h>
 #include <stdexcept>
@@ -16,20 +15,10 @@ Swapchain create_swapchain(Context *context, const SwapchainInfo &info) {
 
   using scratch_allocator =
       InplaceMonotonicResource<strobe::Mallocator, SCRATCH_SIZE>;
-  using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
 
   scratch_allocator scratch{};
 
-  Vector<uint32_t, scratch_allocator_ref> queueFamilies{&scratch};
-  queueFamilies.reserve(info.queues.size());
-
-  for (const Queue &queue : info.queues) {
-    if (std::ranges::find(queueFamilies, queue.family) == queueFamilies.end()) {
-      queueFamilies.emplace_back(queue.family);
-    }
-  }
-
-  const VkSharingMode sharingMode = queueFamilies.size() > 1
+  const VkSharingMode sharingMode = info.queueFamilyIndicies.size() > 1
                                         ? VK_SHARING_MODE_CONCURRENT
                                         : VK_SHARING_MODE_EXCLUSIVE;
 
@@ -50,10 +39,10 @@ Swapchain create_swapchain(Context *context, const SwapchainInfo &info) {
       .imageUsage = info.usage,
       .imageSharingMode = sharingMode,
       .queueFamilyIndexCount = sharingMode == VK_SHARING_MODE_CONCURRENT
-                                   ? static_cast<uint32_t>(queueFamilies.size())
+                                   ? static_cast<uint32_t>(info.queueFamilyIndicies.size())
                                    : 0,
       .pQueueFamilyIndices = sharingMode == VK_SHARING_MODE_CONCURRENT
-                                 ? queueFamilies.data()
+                                 ? info.queueFamilyIndicies.data()
                                  : nullptr,
       .preTransform = info.preTransform,
       .compositeAlpha = info.compositeAlpha,

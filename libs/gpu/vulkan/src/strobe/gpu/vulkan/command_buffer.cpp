@@ -1,5 +1,6 @@
 #include "strobe/gpu/vulkan/command_buffer.hpp"
 #include <stdexcept>
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu::vulkan {
 
@@ -39,11 +40,13 @@ void reset_command_buffer(CommandBuffer cmd) {
 }
 
 void begin_command_buffer(CommandBuffer cmd) {
+  VkCommandBufferInheritanceInfo inheritance{};
+  inheritance.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
   VkCommandBufferBeginInfo beginInfo{
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
       .pNext = nullptr,
       .flags = 0,
-      .pInheritanceInfo = nullptr,
+      .pInheritanceInfo = &inheritance,
   };
   VkResult result = vkBeginCommandBuffer(cmd.handle, &beginInfo);
   if (result != VK_SUCCESS) {

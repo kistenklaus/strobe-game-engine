@@ -44,8 +44,9 @@ Image create_image(Context *context, const ImageInfo &info) {
 void destroy_image(Context *context, Image image) noexcept {
   assert(context != nullptr);
   assert(image);
-  assert(image.allocation != VK_NULL_HANDLE);
-  vmaDestroyImage(context->vma(), image.handle, image.allocation);
+  if (image.allocation != VK_NULL_HANDLE) { // externally owned!
+    vmaDestroyImage(context->vma(), image.handle, image.allocation);
+  }
 }
 
 void *map_image(Context *context, Image image) {

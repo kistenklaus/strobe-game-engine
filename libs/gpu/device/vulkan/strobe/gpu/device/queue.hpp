@@ -1,24 +1,25 @@
 #pragma once
 
-#include "strobe/gpu/device/queue_flags.hpp"
-
 namespace strobe::gpu {
 
 class Queue {
-  friend class DeviceImpl;
+  friend class Device;
 
 public:
-  Queue(const Queue &);
+  Queue() : m_handle(nullptr) {}
+  Queue(const Queue &) noexcept;
   Queue(Queue &&) noexcept;
-  Queue &operator=(const Queue &);
+  Queue &operator=(const Queue &) noexcept;
   Queue &operator=(Queue &&) noexcept;
   ~Queue() noexcept;
 
   void submit(/* ... */);
   void present(/* ... */);
 
+  explicit operator bool() const { return m_handle != nullptr; }
+
 private:
-  explicit Queue(void *ptr) : m_handle(ptr) {}
+  explicit Queue(void *handle) : m_handle(handle) {}
   void *m_handle;
 };
 

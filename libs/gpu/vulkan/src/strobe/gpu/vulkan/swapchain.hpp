@@ -37,7 +37,7 @@ struct SwapchainInfo {
 
   VkImageUsageFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-  span<const Queue> queues = {};
+  span<const uint32_t> queueFamilyIndicies = {};
 
   VkSurfaceTransformFlagBitsKHR preTransform =
       VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;

@@ -27,6 +27,7 @@ struct ContextCreateInfo {
 
   feature swapchain = disable;
   feature timeline_semaphore = disable;
+  // sync2 is always required
 
   uint32_t queue_count = 0;
   const QueueDescription *pQueues;

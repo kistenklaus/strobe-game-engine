@@ -18,8 +18,7 @@ Surface create_surface(Context *context, GLFWwindow *window);
 void destroy_surface(Context *context, Surface surface);
 
 // ===== capability queries =====
-
-template <Allocator Alloc = strobe::Mallocator> struct SurfaceCapabilities {
+struct SurfaceCapabilities {
   uint32_t minImageCount;
   uint32_t maxImageCount;
   VkExtent2D currentExtent;
@@ -30,82 +29,96 @@ template <Allocator Alloc = strobe::Mallocator> struct SurfaceCapabilities {
   VkSurfaceTransformFlagBitsKHR currentTransform;
   VkCompositeAlphaFlagsKHR supportedCompositeAlpha;
   VkImageUsageFlags supportedUsageFlags;
-
-  Vector<VkSurfaceFormatKHR, Alloc> formats{};
-  Vector<VkPresentModeKHR, Alloc> presentModes{};
 };
 
+SurfaceCapabilities query_surface_capabilities(Context *context,
+                                               Surface surface);
+
 template <Allocator Alloc = strobe::Mallocator>
-SurfaceCapabilities<Alloc> get_surface_capabilities(Context *context,
-                                                    VkSurfaceKHR surface,
-                                                    const Alloc &alloc = {}) {
+Vector<VkSurfaceFormatKHR, Alloc>
+query_surface_formats(Context *context, Surface surface,
+                      const Alloc &alloc = {}) {
   assert(context != nullptr);
   assert(surface != VK_NULL_HANDLE);
-  SurfaceCapabilities<Alloc> cap{
-      .formats = Vector<VkSurfaceFormatKHR, Alloc>{alloc},
-      .presentModes = Vector<VkPresentModeKHR, Alloc>{alloc},
-  };
-  {
-    VkSurfaceCapabilitiesKHR native{};
-    const VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-        context->physicalDevice(), surface, &native);
-    if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to query surface capabilities");
-    }
-    cap.minImageCount = native.minImageCount;
-    cap.maxImageCount = native.maxImageCount;
-    cap.currentExtent = native.currentExtent;
-    cap.minImageExtent = native.minImageExtent;
-    cap.maxImageExtent = native.maxImageExtent;
-    cap.maxImageArrayLayers = native.maxImageArrayLayers;
-    cap.supportedTransforms = native.supportedTransforms;
-    cap.currentTransform = native.currentTransform;
-    cap.supportedCompositeAlpha = native.supportedCompositeAlpha;
-    cap.supportedUsageFlags = native.supportedUsageFlags;
+
+  uint32_t count = 0;
+
+  VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(
+      context->physicalDevice(), surface.handle, &count, nullptr);
+
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("Failed to query surface format count");
   }
+
+  Vector<VkSurfaceFormatKHR, Alloc> formats{alloc};
+
   while (true) {
-    uint32_t count = 0;
-    VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        context->physicalDevice(), surface, &count, nullptr);
-    if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to query surface format count");
-    }
-    cap.formats.resize(count);
-    if (count == 0) {
-      break;
-    }
+    formats.resize(count);
+
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        context->physicalDevice(), surface, &count, cap.formats.data());
+        context->physicalDevice(), surface.handle, &count, formats.data());
+
     if (result == VK_SUCCESS) {
-      cap.formats.resize(count);
-      break;
+      formats.resize(count);
+      return formats;
     }
+
     if (result != VK_INCOMPLETE) {
       throw std::runtime_error("Failed to query surface formats");
     }
-  }
-  while (true) {
-    uint32_t count = 0;
-    VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(
-        context->physicalDevice(), surface, &count, nullptr);
+
+    // The number of formats changed between the two calls.
+    // Query the new count and retry.
+    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
+        context->physicalDevice(), surface.handle, &count, nullptr);
+
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to query present mode count");
+      throw std::runtime_error("Failed to query surface format count");
     }
-    cap.presentModes.resize(count);
-    if (count == 0) {
-      break;
-    }
+  }
+}
+
+template <Allocator Alloc = strobe::Mallocator>
+Vector<VkPresentModeKHR, Alloc> query_present_modes(Context *context,
+                                                    Surface surface,
+                                                    const Alloc &alloc = {}) {
+  assert(context != nullptr);
+  assert(surface != VK_NULL_HANDLE);
+
+  uint32_t count = 0;
+
+  VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+      context->physicalDevice(), surface.handle, &count, nullptr);
+
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("Failed to query present mode count");
+  }
+
+  Vector<VkPresentModeKHR, Alloc> modes{alloc};
+
+  while (true) {
+    modes.resize(count);
+
     result = vkGetPhysicalDeviceSurfacePresentModesKHR(
-        context->physicalDevice(), surface, &count, cap.presentModes.data());
+        context->physicalDevice(), surface.handle, &count, modes.data());
+
     if (result == VK_SUCCESS) {
-      cap.presentModes.resize(count);
-      break;
+      modes.resize(count);
+      return modes;
     }
+
     if (result != VK_INCOMPLETE) {
       throw std::runtime_error("Failed to query present modes");
     }
+
+    // Count changed between calls. Query it again and retry.
+    result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+        context->physicalDevice(), surface.handle, &count, nullptr);
+
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to query present mode count");
+    }
   }
-  return cap;
 }
 
 } // namespace strobe::gpu::vulkan
