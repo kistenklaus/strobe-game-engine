@@ -5,7 +5,6 @@
 #include "strobe/gpu/device/image_flags.hpp"
 #include "strobe/gpu/device/image_type.hpp"
 #include "strobe/gpu/device/image_usage.hpp"
-#include "strobe/gpu/device/image_view.hpp"
 #include "strobe/gpu/device/memory_usage.hpp"
 #include "strobe/gpu/device/sample_count.hpp"
 
@@ -28,6 +27,8 @@ class Image {
   friend class Device;
   friend struct ImageViewImpl;
   friend struct SwapchainImpl;
+  friend struct SwapchainGenerationImpl;
+  friend class CommandBuffer;
 public:
   Image() noexcept : m_handle(nullptr) {}
   Image(const Image &) noexcept;
@@ -43,8 +44,6 @@ public:
   uint32_t mip_levels() const noexcept;
   uint32_t arrayLayers() const noexcept;
   SampleCount samples() const noexcept;
-
-  ImageView create_view(const ImageViewCreateInfo &createInfo = {});
 
 private:
   Image(void *handle) noexcept : m_handle(handle) {}

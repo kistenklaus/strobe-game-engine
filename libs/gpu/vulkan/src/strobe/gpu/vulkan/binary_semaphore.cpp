@@ -11,16 +11,20 @@ BinarySemaphore create_binary_semaphore(Context *context,
       .flags = info.flags,
   };
   BinarySemaphore sem;
-  VkResult result = vkCreateSemaphore(context->device(), &createInfo,
-                                      context->driver_alloc(), &sem.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create semaphore");
+  {
+    ZoneScopedN("vkCreateSemaphore")
+    VkResult result = vkCreateSemaphore(context->device(), &createInfo,
+                                        context->driver_alloc(), &sem.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create semaphore");
+    }
   }
   return sem;
 }
 void destroy_binary_semaphore(Context *context, BinarySemaphore sem) noexcept {
   assert(context != nullptr);
   assert(sem);
+  ZoneScopedN("vkDestroySemaphore");
   vkDestroySemaphore(context->device(), sem.handle, context->driver_alloc());
 }
 

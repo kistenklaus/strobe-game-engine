@@ -231,12 +231,10 @@ double score_queue_descriptions(span<const QueueFamilyProperties> families,
 }
 
 [[nodiscard]]
-double get_device_score(VkInstance instance,
-                        VkPhysicalDevice device, const ContextCreateInfo *info,
-                        uint32_t apiVersion) {
+double get_device_score(VkInstance instance, VkPhysicalDevice device,
+                        const ContextCreateInfo *info, uint32_t apiVersion) {
   using scratch_allocator =
       InplaceMonotonicResource<strobe::Mallocator, 1 << 14>;
-
   using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
 
   scratch_allocator scratch{};
@@ -266,17 +264,36 @@ double get_device_score(VkInstance instance,
   const bool swapchainSupported = supports_extension(
       deviceInfo.supported_extensions, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-  if (info != nullptr && info->swapchain == required && !swapchainSupported) {
-    return unsuitable;
-  }
+  const bool swapchainMaintenance1Supported =
+      supports_extension(deviceInfo.supported_extensions,
+                         VK_KHR_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME);
 
   /*
    * Device-feature requirements.
    */
   const bool timelineSemaphoreSupported = deviceInfo.features.timelineSemaphore;
 
-  if (info != nullptr && info->timeline_semaphore == required &&
-      !timelineSemaphoreSupported) {
+  const bool swapchainMaintenance1FeatureSupported =
+      deviceInfo.features.swapchainMaintenance1;
+
+  if (info != nullptr) {
+    if (info->swapchain == required) {
+      if (!swapchainSupported) {
+        return unsuitable;
+      }
+      if (!swapchainMaintenance1Supported) {
+        return unsuitable;
+      }
+      if (!swapchainMaintenance1FeatureSupported) {
+        return unsuitable;
+      }
+    }
+
+    if (info->timeline_semaphore == required && !timelineSemaphoreSupported) {
+      return unsuitable;
+    }
+  }
+  if (!deviceInfo.features.shaderObjects) {
     return unsuitable;
   }
 
@@ -329,7 +346,8 @@ double get_device_score(VkInstance instance,
    * Explicitly requested optional functionality carries more weight than
    * arbitrary generally useful device features.
    */
-  if (info != nullptr && info->swapchain == optional && swapchainSupported) {
+  if (info != nullptr && info->swapchain == optional && swapchainSupported &&
+      swapchainMaintenance1Supported && swapchainMaintenance1FeatureSupported) {
     score += 100.0;
   }
 
@@ -342,15 +360,10 @@ double get_device_score(VkInstance instance,
    * Generic device-quality heuristics.
    */
   score += deviceInfo.features.samplerAnisotropy ? 25.0 : 0.0;
-
   score += deviceInfo.features.multiDrawIndirect ? 25.0 : 0.0;
-
   score += deviceInfo.features.drawIndirectFirstInstance ? 25.0 : 0.0;
-
   score += deviceInfo.features.shaderInt64 ? 10.0 : 0.0;
-
   score += deviceInfo.features.fragmentStoresAndAtomics ? 10.0 : 0.0;
-
   score += deviceInfo.features.vertexPipelineStoresAndAtomics ? 10.0 : 0.0;
 
   return score;
@@ -403,8 +416,8 @@ VkPhysicalDevice select_physical_device(VkInstance instance,
   double best_score = -std::numeric_limits<double>::infinity();
 
   for (const auto &device : devices) {
-    const double score = details::get_device_score(instance, device,
-                                                   info, props->api_version);
+    const double score =
+        details::get_device_score(instance, device, info, props->api_version);
 
     if (score > best_score) {
       best_score = score;

@@ -232,7 +232,6 @@ private:
   }
 
   void native_main_impl() noexcept {
-    fmt::println("Platform started");
     if (glfwInit() != GLFW_TRUE) {
       return;
     }

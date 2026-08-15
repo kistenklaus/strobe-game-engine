@@ -2,7 +2,10 @@
 
 #include "strobe/core/containers/small_vector.hpp"
 #include "strobe/core/containers/span.hpp"
+#include "strobe/gpu/device/binary_semaphore_impl.hpp"
+#include "strobe/gpu/device/context.hpp"
 #include "strobe/gpu/device/device.hpp"
+#include "strobe/gpu/device/fence_impl.hpp"
 #include "strobe/gpu/device/format_utilts.hpp"
 #include "strobe/gpu/device/handle.hpp"
 #include "strobe/gpu/device/image_impl.hpp"
@@ -10,6 +13,9 @@
 #include "strobe/gpu/device/surface_impl.hpp"
 #include "strobe/gpu/device/swapchain_generation.hpp"
 #include "strobe/gpu/device/swapchain_generation_impl.hpp"
+#include "strobe/gpu/vulkan/binary_semaphore.hpp"
+#include "strobe/gpu/vulkan/debug_name.hpp"
+#include "strobe/gpu/vulkan/fence.hpp"
 #include "strobe/gpu/vulkan/swapchain.hpp"
 #include <vulkan/vulkan_core.h>
 
@@ -17,14 +23,15 @@ namespace strobe::gpu {
 
 struct SwapchainImpl {
 
-  SwapchainImpl(Device device, Surface surface, uint32_t minImageCount,
+  SwapchainImpl(Context context, Surface surface, uint32_t minImageCount,
                 VkSurfaceFormatKHR format, VkPresentModeKHR presentMode,
                 VkImageUsageFlags imageUsage, span<uint32_t> queueFamilyIndices,
                 uvec2 extent, bool clipped)
-      : device(std::move(device)), surface(std::move(surface)),
-        minImageCount(minImageCount), format(format), presentMode(presentMode),
+      : context(std::move(context)), surface(std::move(surface)),
+        imageCount(minImageCount), format(format), presentMode(presentMode),
         image_usage(imageUsage), queueFamilyIndicies(queueFamilyIndices),
         clipped(clipped), desired_extent(extent), generation{} {}
+
   SwapchainImpl(const SwapchainImpl &) = delete;
   SwapchainImpl(SwapchainImpl &&) = delete;
   SwapchainImpl &operator=(const SwapchainImpl &) = delete;
@@ -32,12 +39,13 @@ struct SwapchainImpl {
   ~SwapchainImpl() noexcept = default;
 
   void recreate() {
+    ZoneScopedN("swapchain-recreate");
     // create new swapchain
-    auto *deviceImpl = void_handle_ptr<DeviceImpl>(device.m_handle);
+    // auto *deviceImpl = void_handle_ptr<DeviceImpl>(device.m_handle);
     auto *surfaceImpl = void_handle_ptr<SurfaceImpl>(surface.m_handle);
 
-    const auto capabilities = vulkan::query_surface_capabilities(
-        &deviceImpl->context, surfaceImpl->surface);
+    const auto capabilities =
+        vulkan::query_surface_capabilities(context.get(), surfaceImpl->surface);
 
     uvec2 extent;
     if (capabilities.currentExtent.width != UINT32_MAX) {
@@ -73,14 +81,13 @@ struct SwapchainImpl {
           void_handle_ptr<SwapchainGenerationImpl>(generation.m_handle);
       // wait for old swapchain to be truely gone!
       oldSwapchain = oldGeneration->swapchain;
-      deviceImpl->context.wait_idle();
     }
 
     const vulkan::Swapchain nativeSwapchain = vulkan::create_swapchain(
-        &deviceImpl->context,
+        context.get(),
         vulkan::SwapchainInfo{
             .surface = surfaceImpl->surface,
-            .minImageCount = minImageCount,
+            .minImageCount = imageCount,
             .format = format,
             .extent = extent,
             .usage = image_usage,
@@ -92,40 +99,51 @@ struct SwapchainImpl {
             .oldSwapchain = oldSwapchain,
         });
     uint32_t count =
-        vulkan::get_swapchain_images(&deviceImpl->context, nativeSwapchain);
-    SmallVector<vulkan::Image, 4> nativeImages{count};
-    vulkan::get_swapchain_images(&deviceImpl->context, nativeSwapchain,
-                                 nativeImages);
+        vulkan::get_swapchain_images(context.get(), nativeSwapchain);
+    SmallVector<vulkan::Image, 8> nativeImages{count};
+    vulkan::get_swapchain_images(context.get(), nativeSwapchain, nativeImages);
 
-    SmallVector<Image, 4> images;
-    SmallVector<ImageView, 4> views;
-    images.reserve(nativeImages.size());
-    views.reserve(nativeImages.size());
+    SmallVector<SwapchainImageState, 4> images{nativeImages.size()};
+    for (uint32_t i = 0; i < images.size(); ++i) {
 
-    for (vulkan::Image nativeImage : nativeImages) {
-      Image image = Image{make_void_handle<ImageImpl>(
-          device, nativeImage, ImageType::image_2d,
+      images[i].image = Image{make_void_handle<ImageImpl>(
+          context, nativeImages[i], ImageType::image_2d,
           from_vk_format(format.format), uvec3{extent.x(), extent.y(), 1}, 1, 1,
           SampleCount::x1)};
 
-      ImageView view = image.create_view();
+      vulkan::BinarySemaphore sem =
+          vulkan::create_binary_semaphore(context.get());
+      vulkan::set_debug_name(context.get(), sem, "swapchain-present-ready");
+      images[i].presentReady =
+          BinarySemaphore{make_void_handle<BinarySemaphoreImpl>(context, sem)};
 
-      images.push_back(std::move(image));
-      views.push_back(std::move(view));
+      vulkan::Fence fence = vulkan::create_fence(
+          context.get(), {.flags = VK_FENCE_CREATE_SIGNALED_BIT});
+      images[i].fence = Fence{make_void_handle<FenceImpl>(context, fence)};
+      images[i].pending = false;
     }
 
     SwapchainGeneration newGeneration{make_void_handle<SwapchainGenerationImpl>(
-        surface, nativeSwapchain, images, views, extent,
+        surface, nativeSwapchain, std::move(images), extent,
         from_vk_format(format.format))};
+
+    auto *genImpl =
+        void_handle_ptr<SwapchainGenerationImpl>(newGeneration.m_handle);
+    for (auto &state : genImpl->images) {
+      auto *semImpl =
+          void_handle_ptr<BinarySemaphoreImpl>(state.presentReady.m_handle);
+      assert(semImpl->swapchainGeneration == nullptr);
+      semImpl->swapchainGeneration = genImpl;
+    }
 
     generation = std::move(newGeneration);
   }
 
-  const Device device;
+  const Context context;
   const Surface surface;
   // recreate info
   // - static
-  const uint32_t minImageCount;
+  const uint32_t imageCount;
   const VkSurfaceFormatKHR format;
   const VkPresentModeKHR presentMode;
   const VkImageUsageFlags image_usage;

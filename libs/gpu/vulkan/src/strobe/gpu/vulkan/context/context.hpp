@@ -7,6 +7,7 @@
 #include "strobe/gpu/vulkan/context/create_info.hpp"
 #include "strobe/gpu/vulkan/context/driver_alloc.hpp"
 #include "strobe/gpu/vulkan/context/select_queues.hpp"
+#include "strobe/gpu/vulkan/context/shader_obj.hpp"
 #include "strobe/gpu/vulkan/queue_type.hpp"
 
 #include <stdexcept>
@@ -64,6 +65,10 @@ public:
 
   VmaAllocator vma() const noexcept { return m_vma; }
 
+  const PNF_ShaderObjectFunctions* shaderObjFunc() const noexcept{
+    return &m_shaderObjFuncs;
+  }
+
   void wait_idle() const {
     VkResult result = vkDeviceWaitIdle(m_device);
     if (result != VK_SUCCESS) {
@@ -88,6 +93,8 @@ private:
   VkDevice m_device;
   Vector<VkQueue, allocator_ref> m_queues;
   VmaAllocator m_vma;
+
+  PNF_ShaderObjectFunctions m_shaderObjFuncs;
 };
 
 } // namespace strobe::gpu::vulkan

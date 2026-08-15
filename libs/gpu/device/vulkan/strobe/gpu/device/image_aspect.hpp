@@ -4,7 +4,6 @@
 namespace strobe::gpu {
 
 enum class ImageAspect : uint8_t {
-  automatic,
   color,
   depth,
   stencil,

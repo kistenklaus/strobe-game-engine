@@ -12,10 +12,13 @@ Fence create_fence(Context *context, const FenceInfo &info) {
       .flags = info.flags,
   };
   Fence fence;
-  VkResult result = vkCreateFence(context->device(), &createInfo,
-                                  context->driver_alloc(), &fence.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create fence");
+  {
+    ZoneScopedN("vkCreateFence");
+    VkResult result = vkCreateFence(context->device(), &createInfo,
+                                    context->driver_alloc(), &fence.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create fence");
+    }
   }
   return fence;
 }
@@ -23,14 +26,18 @@ Fence create_fence(Context *context, const FenceInfo &info) {
 void destroy_fence(Context *context, Fence fence) noexcept {
   assert(context != nullptr);
   assert(fence);
-  vkDestroyFence(context->device(), fence.handle, context->driver_alloc());
+  {
+    ZoneScopedN("vkDestroyFence");
+    vkDestroyFence(context->device(), fence.handle, context->driver_alloc());
+  }
 }
 
 bool wait_for_fence(Context *context, Fence fence, uint64_t timeout) {
   assert(timeout != 0);
+
+  ZoneScopedN("vkWaitForFences");
   VkResult result =
       vkWaitForFences(context->device(), 1, &fence.handle, true, timeout);
-
   if (result == VK_TIMEOUT) {
     return false;
   }
@@ -41,6 +48,7 @@ bool wait_for_fence(Context *context, Fence fence, uint64_t timeout) {
 }
 
 void reset_fence(Context *context, Fence fence) {
+  ZoneScopedN("vkResetFences");
   VkResult result = vkResetFences(context->device(), 1, &fence.handle);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("Failed to reset fence");
@@ -51,6 +59,7 @@ bool is_fence_signaled(Context *context, Fence fence) {
   assert(context != nullptr);
   assert(fence);
 
+  ZoneScopedN("vkGetFenceStatus");
   VkResult result = vkGetFenceStatus(context->device(), fence.handle);
 
   if (result == VK_SUCCESS) {

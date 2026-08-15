@@ -38,9 +38,10 @@ Swapchain create_swapchain(Context *context, const SwapchainInfo &info) {
       .imageArrayLayers = 1,
       .imageUsage = info.usage,
       .imageSharingMode = sharingMode,
-      .queueFamilyIndexCount = sharingMode == VK_SHARING_MODE_CONCURRENT
-                                   ? static_cast<uint32_t>(info.queueFamilyIndicies.size())
-                                   : 0,
+      .queueFamilyIndexCount =
+          sharingMode == VK_SHARING_MODE_CONCURRENT
+              ? static_cast<uint32_t>(info.queueFamilyIndicies.size())
+              : 0,
       .pQueueFamilyIndices = sharingMode == VK_SHARING_MODE_CONCURRENT
                                  ? info.queueFamilyIndicies.data()
                                  : nullptr,
@@ -53,12 +54,14 @@ Swapchain create_swapchain(Context *context, const SwapchainInfo &info) {
 
   Swapchain swapchain{};
 
-  const VkResult result =
-      vkCreateSwapchainKHR(context->device(), &createInfo,
-                           context->driver_alloc(), &swapchain.handle);
-
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create swapchain");
+  {
+    ZoneScopedN("vkCreateSwapchainKHR");
+    const VkResult result =
+        vkCreateSwapchainKHR(context->device(), &createInfo,
+                             context->driver_alloc(), &swapchain.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create swapchain");
+    }
   }
 
   return swapchain;
@@ -68,6 +71,7 @@ void destroy_swapchain(Context *context, Swapchain swapchain) noexcept {
   assert(context != nullptr);
   assert(context->properties().swapchain);
   assert(swapchain);
+  ZoneScopedN("vkDestroySwapchainKHR");
   vkDestroySwapchainKHR(context->device(), swapchain.handle,
                         context->driver_alloc());
 }
@@ -80,6 +84,7 @@ uint32_t get_swapchain_images(Context *context, Swapchain swapchain,
 
   uint32_t count = 0;
   {
+    ZoneScopedN("vkGetSwapchainImagesKHR");
     VkResult result = vkGetSwapchainImagesKHR(
         context->device(), swapchain.handle, &count, nullptr);
     if (result != VK_SUCCESS) {
@@ -97,6 +102,7 @@ uint32_t get_swapchain_images(Context *context, Swapchain swapchain,
 
   Vector<VkImage, scratch_allocator_ref> native{count, &scratch};
   {
+    ZoneScopedN("vkGetSwapchainImagesKHR");
     VkResult result = vkGetSwapchainImagesKHR(
         context->device(), swapchain.handle, &count, native.data());
     if (result != VK_SUCCESS) {
@@ -127,8 +133,13 @@ acquire_next_swapchain_image(Context *context, Swapchain swapchain,
   };
 
   uint32_t imageIndex = 0;
-  VkResult result =
-      vkAcquireNextImage2KHR(context->device(), &acquireInfo, &imageIndex);
+
+  VkResult result;
+  {
+    ZoneScopedN("vkAcquireNextImage2KHR");
+    result =
+        vkAcquireNextImage2KHR(context->device(), &acquireInfo, &imageIndex);
+  }
   if (result == VK_SUCCESS) {
     return SwapchainAcquireResult{
         .status = SwapchainAcquireStatus::success,

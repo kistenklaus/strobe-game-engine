@@ -3,6 +3,8 @@
 #include "strobe/gpu/vulkan/buffer.hpp"
 #include "strobe/gpu/vulkan/command_buffer.hpp"
 #include "strobe/gpu/vulkan/image.hpp"
+#include "strobe/core/containers/span.hpp"
+
 namespace strobe::gpu::vulkan {
 
 struct MemoryBarrier {

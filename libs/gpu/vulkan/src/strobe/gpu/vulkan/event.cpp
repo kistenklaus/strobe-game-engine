@@ -13,10 +13,13 @@ Event create_event(Context *context, const EventInfo &info) {
       .flags = info.flags,
   };
   Event event{};
-  const VkResult result = vkCreateEvent(context->device(), &createInfo,
-                                        context->driver_alloc(), &event.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error{"Failed to create Vulkan event"};
+  {
+    ZoneScopedN("vkCreateEvent");
+    const VkResult result = vkCreateEvent(
+        context->device(), &createInfo, context->driver_alloc(), &event.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error{"Failed to create Vulkan event"};
+    }
   }
   return event;
 }
@@ -24,12 +27,16 @@ Event create_event(Context *context, const EventInfo &info) {
 void destroy_event(Context *context, Event event) noexcept {
   assert(context != nullptr);
   assert(event);
-  vkDestroyEvent(context->device(), event.handle, context->driver_alloc());
+  {
+    ZoneScopedN("vkDestroyEvent");
+    vkDestroyEvent(context->device(), event.handle, context->driver_alloc());
+  }
 }
 
 bool is_event_signaled(Context *context, Event event) noexcept {
   assert(context != nullptr);
   assert(event);
+  ZoneScopedN("vkGetEventStatus");
   const VkResult result = vkGetEventStatus(context->device(), event.handle);
   assert(result == VK_EVENT_SET || result == VK_EVENT_RESET);
   return result == VK_EVENT_SET;
@@ -38,18 +45,24 @@ bool is_event_signaled(Context *context, Event event) noexcept {
 void set_event(Context *context, Event event) {
   assert(context != nullptr);
   assert(event);
-  const VkResult result = vkSetEvent(context->device(), event.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error{"Failed to set Vulkan event"};
+  {
+    ZoneScopedN("vkSetEvent");
+    const VkResult result = vkSetEvent(context->device(), event.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error{"Failed to set Vulkan event"};
+    }
   }
 }
 
 void reset_event(Context *context, Event event) {
   assert(context != nullptr);
   assert(event);
-  const VkResult result = vkResetEvent(context->device(), event.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error{"Failed to reset Vulkan event"};
+  {
+    ZoneScopedN("vkResetEvent");
+    const VkResult result = vkResetEvent(context->device(), event.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error{"Failed to reset Vulkan event"};
+    }
   }
 }
 

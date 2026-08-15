@@ -101,7 +101,7 @@ public:
     system_curry m_curry;
   };
   using cmd_allocator =
-      LockFreeMonotonicPoolResource<sizeof(system_cmd), alignof(system_cmd),
+      MPSCMonotonicPoolResource<sizeof(system_cmd), alignof(system_cmd),
                                     allocator>;
 
   struct system_cmdbuf {

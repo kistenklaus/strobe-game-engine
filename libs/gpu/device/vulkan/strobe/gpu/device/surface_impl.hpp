@@ -1,22 +1,18 @@
 #pragma once
 
+#include "strobe/gpu/device/context.hpp"
 #include "strobe/gpu/device/device.hpp"
-#include "strobe/gpu/device/device_impl.hpp"
-#include "strobe/gpu/device/handle.hpp"
 #include "strobe/gpu/vulkan/surface.hpp"
 namespace strobe::gpu {
 
 struct SurfaceImpl {
 
-  SurfaceImpl(Device device, vulkan::Surface surface) noexcept
-      : device(std::move(device)), surface(surface) {}
+  SurfaceImpl(Context context, vulkan::Surface surface) noexcept
+      : context(std::move(context)), surface(surface) {}
 
-  ~SurfaceImpl() noexcept {
-    auto *device_impl = void_handle_ptr<DeviceImpl>(device.m_handle);
-    vulkan::destroy_surface(&device_impl->context, surface);
-  }
+  ~SurfaceImpl() noexcept { vulkan::destroy_surface(context.get(), surface); }
 
-  Device device;
+  Context context;
   vulkan::Surface surface;
 };
 

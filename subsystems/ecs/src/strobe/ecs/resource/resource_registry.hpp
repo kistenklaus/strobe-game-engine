@@ -221,7 +221,7 @@ public:
     void *m_ptr;
   };
   using cmd_allocator =
-      LockFreeMonotonicPoolResource<sizeof(resource_cmd), alignof(resource_cmd),
+      MPSCMonotonicPoolResource<sizeof(resource_cmd), alignof(resource_cmd),
                                     allocator>;
 
   struct resource_cmdbuf {

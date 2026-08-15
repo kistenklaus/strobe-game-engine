@@ -1,5 +1,8 @@
 
 #include "strobe/core/lina/vec.hpp"
+#include "strobe/gpu/device/device.hpp"
+#include "strobe/gpu/device/image_memory_barrier.hpp"
+#include "strobe/gpu/device/queue_flags.hpp"
 #include "strobe/gpu/vulkan/binary_semaphore.hpp"
 #include "strobe/gpu/vulkan/cmd/barrier.hpp"
 #include "strobe/gpu/vulkan/command_buffer.hpp"
@@ -15,15 +18,89 @@
 #include "strobe/window/window_impl.hpp"
 #include <GLFW/glfw3.h>
 #include <chrono>
-#include <exception>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-int main() {
+using namespace strobe;
+using namespace strobe::window;
+using namespace strobe::gpu;
 
-  using namespace strobe;
-  using namespace strobe::window;
-  using namespace strobe::gpu;
+int main() {
+#ifdef NDEBUG
+  fmt::println("waiting for tracy");
+  while (!TracyIsConnected) {
+    std::this_thread::yield();
+  }
+  fmt::println("tracy connected");
+#endif
+  Platform::start();
+  {
+    WindowImpl window{uvec2{800, 600}, "strobe"};
+
+    Device device{{
+        .debug_utils = false,
+    }};
+
+    Swapchain swapchain = device.create_swapchain(
+        window.ptr(), {.extent = window.framebuffer_size()});
+
+    Queue queue = device.get_queue(QueueFlags::graphics | QueueFlags::transfer |
+                                   QueueFlags::present);
+
+    CommandPool cmdPool = device.create_cmd_pool(queue);
+    struct Frame {
+      BinarySemaphore imageAvailable;
+      Fence fence;
+    };
+    static constexpr uint32_t FramesInFlight = 2;
+    Vector<Frame> frames{FramesInFlight};
+
+    for (uint32_t i = 0; i < frames.size(); ++i) {
+      frames[i] = {
+          .imageAvailable = device.create_binary_semaphore(),
+          .fence = device.create_fence(true),
+      };
+      frames[i].imageAvailable.set_name("imageAvailable");
+    }
+
+    uint32_t frameIndex = 0;
+
+    window.show();
+    while (!window.should_close()) {
+      window.poll();
+
+      Frame &frame = frames[frameIndex];
+      frame.fence.wait_and_reset();
+
+      SwapchainImage swapchainImage = swapchain.acquire(frame.imageAvailable);
+
+      CommandBuffer cmd = cmdPool.alloc();
+      cmd.begin();
+      cmd.end();
+
+      BinarySemaphoreSubmitInfo wait{
+          .semaphore = frame.imageAvailable,
+      };
+      BinarySemaphoreSubmitInfo signal{
+          .semaphore = swapchainImage.presentReady(),
+      };
+      queue.submit({
+          .cmds = {&cmd, 1},
+          .wait = {&wait, 1},
+          .signal = {&signal, 1},
+          .fence = frame.fence,
+      });
+
+      queue.present(std::move(swapchainImage));
+      frameIndex = (frameIndex + 1) % frames.size();
+      FrameMark;
+    }
+  }
+  Platform::stop();
+  return 0;
+}
+
+int main2() {
 
   Platform::start();
   {
@@ -57,16 +134,17 @@ int main() {
     };
 
     vulkan::Swapchain swapchain = vulkan::create_swapchain(
-        &context, vulkan::SwapchainInfo{
-                      .surface = surface,
-                      .minImageCount = 3,
-                      .format = swapchainFormat,
-                      .extent = window.size(),
-                      .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                               VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                      .queues = span<const vulkan::Queue>{&queue, 1},
-                      .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
-                  });
+        &context,
+        vulkan::SwapchainInfo{
+            .surface = surface,
+            .minImageCount = 3,
+            .format = swapchainFormat,
+            .extent = window.size(),
+            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                     VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            .queueFamilyIndicies = span<const uint32_t>{&queue.family, 1},
+            .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
+        });
 
     Vector<vulkan::Image> swapchainImages;
     swapchainImages.resize(
@@ -254,4 +332,5 @@ int main() {
     vulkan::destroy_surface(&context, surface);
   }
   Platform::stop();
+  return 0;
 }

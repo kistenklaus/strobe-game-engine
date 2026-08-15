@@ -31,12 +31,15 @@ Image create_image(Context *context, const ImageInfo &info) {
       .initialLayout = info.initial_layout,
   };
   Image image{};
-  const VkResult result =
-      vmaCreateImage(context->vma(), &imageInfo,
-                     details::get_allocation_create_info(info.memory_usage),
-                     &image.handle, &image.allocation, nullptr);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error{"Failed to create Vulkan image"};
+  {
+    ZoneScopedN("vmaCreateImage");
+    const VkResult result =
+        vmaCreateImage(context->vma(), &imageInfo,
+                       details::get_allocation_create_info(info.memory_usage),
+                       &image.handle, &image.allocation, nullptr);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error{"Failed to create Vulkan image"};
+    }
   }
   return image;
 }
@@ -45,6 +48,7 @@ void destroy_image(Context *context, Image image) noexcept {
   assert(context != nullptr);
   assert(image);
   if (image.allocation != VK_NULL_HANDLE) { // externally owned!
+    ZoneScopedN("vmaDestroyImage");
     vmaDestroyImage(context->vma(), image.handle, image.allocation);
   }
 }
@@ -54,9 +58,13 @@ void *map_image(Context *context, Image image) {
   assert(image);
   assert(image.allocation != VK_NULL_HANDLE);
   void *data = nullptr;
-  const VkResult result = vmaMapMemory(context->vma(), image.allocation, &data);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error{"Failed to map Vulkan image"};
+  {
+    ZoneScopedN("vmaMapMemory");
+    const VkResult result =
+        vmaMapMemory(context->vma(), image.allocation, &data);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error{"Failed to map Vulkan image"};
+    }
   }
   return data;
 }
@@ -65,7 +73,10 @@ void unmap_image(Context *context, Image image) noexcept {
   assert(context != nullptr);
   assert(image);
   assert(image.allocation != VK_NULL_HANDLE);
-  vmaUnmapMemory(context->vma(), image.allocation);
+  {
+    ZoneScopedN("vmaUnmapMemory");
+    vmaUnmapMemory(context->vma(), image.allocation);
+  }
 }
 
 void flush_image(Context *context, Image image, VkDeviceSize offset,
@@ -73,10 +84,13 @@ void flush_image(Context *context, Image image, VkDeviceSize offset,
   assert(context != nullptr);
   assert(image);
   assert(image.allocation != VK_NULL_HANDLE);
-  const VkResult result =
-      vmaFlushAllocation(context->vma(), image.allocation, offset, size);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error{"Failed to flush Vulkan image allocation"};
+  {
+    ZoneScopedN("vmaFlushAllocation");
+    const VkResult result =
+        vmaFlushAllocation(context->vma(), image.allocation, offset, size);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error{"Failed to flush Vulkan image allocation"};
+    }
   }
 }
 
@@ -85,10 +99,13 @@ void invalidate_image(Context *context, Image image, VkDeviceSize offset,
   assert(context != nullptr);
   assert(image);
   assert(image.allocation != VK_NULL_HANDLE);
-  const VkResult result =
-      vmaInvalidateAllocation(context->vma(), image.allocation, offset, size);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error{"Failed to invalidate Vulkan image allocation"};
+  {
+    ZoneScopedN("vmaInvalidateAllocation");
+    const VkResult result =
+        vmaInvalidateAllocation(context->vma(), image.allocation, offset, size);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error{"Failed to invalidate Vulkan image allocation"};
+    }
   }
 }
 
@@ -98,7 +115,10 @@ void *get_persistently_mapped_image_ptr(Context *context,
   assert(image);
   assert(image.allocation != VK_NULL_HANDLE);
   VmaAllocationInfo allocationInfo{};
-  vmaGetAllocationInfo(context->vma(), image.allocation, &allocationInfo);
+  {
+    ZoneScopedN("vmaGetAllocationInfo");
+    vmaGetAllocationInfo(context->vma(), image.allocation, &allocationInfo);
+  }
   assert(allocationInfo.pMappedData != nullptr);
   return allocationInfo.pMappedData;
 }
@@ -110,8 +130,11 @@ get_image_subresource_layout(Context *context, Image image,
   assert(context != nullptr);
   assert(image);
   VkSubresourceLayout layout{};
-  vkGetImageSubresourceLayout(context->device(), image.handle, &subresource,
-                              &layout);
+  {
+    ZoneScopedN("vkGetImageSubresourceLayout");
+    vkGetImageSubresourceLayout(context->device(), image.handle, &subresource,
+                                &layout);
+  }
   return layout;
 }
 

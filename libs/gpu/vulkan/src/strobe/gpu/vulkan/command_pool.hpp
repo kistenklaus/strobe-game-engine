@@ -23,6 +23,7 @@ struct CommandPoolInfo {
 CommandPool create_command_pool(Context *context,
                                 const CommandPoolInfo &info = {});
 
+
 void destroy_command_pool(Context *context, CommandPool cmdpool) noexcept;
 
 void reset_command_pool(Context *context, CommandPool cmdpool,

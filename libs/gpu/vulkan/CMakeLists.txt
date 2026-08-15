@@ -23,6 +23,7 @@ add_library(${STROBE_GPU_VULKAN_LIB} EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/buffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/command_buffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/command_pool.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/debug_name.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/descriptor_pool.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/descriptor_set.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/descriptor_set_layout.cpp
@@ -35,6 +36,7 @@ add_library(${STROBE_GPU_VULKAN_LIB} EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/queue.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/sampler.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/shader_module.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/shader_object.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/surface.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/swapchain.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/timeline_semaphore.cpp

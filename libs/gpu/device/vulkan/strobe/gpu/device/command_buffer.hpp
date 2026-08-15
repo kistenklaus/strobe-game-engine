@@ -1,11 +1,14 @@
 #pragma once
 
+#include "strobe/gpu/device/barrier.hpp"
+
 namespace strobe::gpu {
 
 class CommandBuffer {
   friend struct CommandPoolImpl;
   friend class CommandPool;
   friend struct SwapchainImpl;
+  friend class Queue;
 
 public:
   CommandBuffer() noexcept : m_handle(nullptr) {}
@@ -19,8 +22,8 @@ public:
   void begin();
   // pool must be externally synchronized
   void end();
-  // pool must be externally synchronized
-  void reset();
+
+  void barrier(const Barrier &barrier);
 
 private:
   CommandBuffer(void *handle) noexcept : m_handle(handle) {}

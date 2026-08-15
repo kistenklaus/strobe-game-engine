@@ -15,10 +15,13 @@ CommandBuffer alloc_command_buffer(Context *context,
   };
 
   CommandBuffer cmd;
-  VkResult result =
-      vkAllocateCommandBuffers(context->device(), &allocInfo, &cmd.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate command buffer");
+  {
+    ZoneScopedN("vkAllocateCommandBuffers");
+    VkResult result =
+        vkAllocateCommandBuffers(context->device(), &allocInfo, &cmd.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to allocate command buffer");
+    }
   }
   return cmd;
 }
@@ -28,14 +31,18 @@ void free_command_buffer(Context *context, CommandPool pool,
   assert(context != nullptr);
   assert(pool);
   assert(cmd);
+  ZoneScopedN("vkFreeCommandBuffers");
   vkFreeCommandBuffers(context->device(), pool.handle, 1, &cmd.handle);
 }
 
 void reset_command_buffer(CommandBuffer cmd) {
   assert(cmd);
-  VkResult result = vkResetCommandBuffer(cmd.handle, 0);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to reset command buffer");
+  {
+    ZoneScopedN("vkResetCommandBuffer");
+    VkResult result = vkResetCommandBuffer(cmd.handle, 0);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to reset command buffer");
+    }
   }
 }
 
@@ -48,16 +55,22 @@ void begin_command_buffer(CommandBuffer cmd) {
       .flags = 0,
       .pInheritanceInfo = &inheritance,
   };
-  VkResult result = vkBeginCommandBuffer(cmd.handle, &beginInfo);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to begin command buffer");
+  {
+    ZoneScopedN("vkBeginCommandBuffer");
+    VkResult result = vkBeginCommandBuffer(cmd.handle, &beginInfo);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to begin command buffer");
+    }
   }
 }
 
 void end_command_buffer(CommandBuffer cmd) {
-  VkResult result = vkEndCommandBuffer(cmd.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to end command buffer");
+  {
+    ZoneScopedN("vkEndCommandBuffer");
+    VkResult result = vkEndCommandBuffer(cmd.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to end command buffer");
+    }
   }
 }
 

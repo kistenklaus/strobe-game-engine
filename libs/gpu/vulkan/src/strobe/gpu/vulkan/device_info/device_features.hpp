@@ -1,9 +1,23 @@
 #pragma once
 
+#include "strobe/core/containers/span.hpp"
+#include "strobe/core/memory/monotonic_resource.hpp"
+#include "strobe/gpu/vulkan/allocator.hpp"
+#include "strobe/gpu/vulkan/device_info/device_extensions.hpp"
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu::vulkan {
+
+template <typename Alloc>
+static bool supports_extension(span<const DeviceExtension<Alloc>> extensions,
+                               const char *required) noexcept {
+  return std::ranges::any_of(
+      extensions, [required](const DeviceExtension<Alloc> &extension) noexcept {
+        return std::string_view{extension.name.c_str()} ==
+               std::string_view{required};
+      });
+}
 
 struct DeviceFeatures {
   // VK_API_VERSION_1_0
@@ -161,10 +175,15 @@ struct DeviceFeatures {
   VkBool32 pipelineRobustness;
   VkBool32 hostImageCopy;
   VkBool32 pushDescriptor;
+
+  VkBool32 swapchainMaintenance1;
+  VkBool32 shaderObjects;
 };
 
-inline DeviceFeatures query_device_features(VkPhysicalDevice physicalDevice,
-                                            uint32_t apiVersion) noexcept {
+template <typename Alloc>
+inline DeviceFeatures query_device_features(
+    VkPhysicalDevice physicalDevice, uint32_t apiVersion,
+    span<DeviceExtension<Alloc>> supportedExtensions) noexcept {
 
   void *pNext = nullptr;
 
@@ -196,11 +215,36 @@ inline DeviceFeatures query_device_features(VkPhysicalDevice physicalDevice,
     pNext = &vulkan14;
   }
 
+  const bool swapchainMain1Ext = supports_extension<Alloc>(
+      supportedExtensions, VK_KHR_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME);
+  VkPhysicalDeviceSwapchainMaintenance1FeaturesKHR swapchainMaintenance1{
+      .sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_KHR,
+      .pNext = pNext,
+      .swapchainMaintenance1 = VK_FALSE,
+  };
+  if (swapchainMain1Ext) {
+    pNext = &swapchainMaintenance1;
+  }
+
+  const bool shaderObjExt = supports_extension<Alloc>(
+      supportedExtensions, VK_EXT_SHADER_OBJECT_EXTENSION_NAME);
+
+  VkPhysicalDeviceShaderObjectFeaturesEXT shaderObjectFeatures{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_FEATURES_EXT,
+      .pNext = pNext,
+      .shaderObject = VK_FALSE,
+  };
+  if (shaderObjExt) {
+    pNext = &shaderObjectFeatures;
+  }
+
   VkPhysicalDeviceFeatures2 features2{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
       .pNext = pNext,
       .features = {},
   };
+
   vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
 
   return DeviceFeatures{
@@ -392,6 +436,8 @@ inline DeviceFeatures query_device_features(VkPhysicalDevice physicalDevice,
       .pipelineRobustness = vulkan14.pipelineRobustness,
       .hostImageCopy = vulkan14.hostImageCopy,
       .pushDescriptor = vulkan14.pushDescriptor,
+      .swapchainMaintenance1 = swapchainMaintenance1.swapchainMaintenance1,
+      .shaderObjects = shaderObjectFeatures.shaderObject,
   };
 }
 

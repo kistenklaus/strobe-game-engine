@@ -1,5 +1,6 @@
 #pragma once
 #include "strobe/core/memory/concurrent_monotonic_pool.hpp"
+#include <fmt/printf.h>
 #include <optional>
 
 namespace strobe {

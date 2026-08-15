@@ -39,12 +39,16 @@ Vector<VkSurfaceFormatKHR, Alloc>
 query_surface_formats(Context *context, Surface surface,
                       const Alloc &alloc = {}) {
   assert(context != nullptr);
-  assert(surface != VK_NULL_HANDLE);
+  assert(surface);
 
   uint32_t count = 0;
 
-  VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-      context->physicalDevice(), surface.handle, &count, nullptr);
+  VkResult result;
+  {
+    ZoneScopedN("vkGetPhysicalDeviceSurfaceFormatsKHR");
+    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
+        context->physicalDevice(), surface.handle, &count, nullptr);
+  }
 
   if (result != VK_SUCCESS) {
     throw std::runtime_error("Failed to query surface format count");
@@ -55,8 +59,11 @@ query_surface_formats(Context *context, Surface surface,
   while (true) {
     formats.resize(count);
 
-    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        context->physicalDevice(), surface.handle, &count, formats.data());
+    {
+      ZoneScopedN("vkGetPhysicalDeviceSurfaceFormatsKHR");
+      result = vkGetPhysicalDeviceSurfaceFormatsKHR(
+          context->physicalDevice(), surface.handle, &count, formats.data());
+    }
 
     if (result == VK_SUCCESS) {
       formats.resize(count);
@@ -69,8 +76,11 @@ query_surface_formats(Context *context, Surface surface,
 
     // The number of formats changed between the two calls.
     // Query the new count and retry.
-    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        context->physicalDevice(), surface.handle, &count, nullptr);
+    {
+      ZoneScopedN("vkGetPhysicalDeviceSurfaceFormatsKHR");
+      result = vkGetPhysicalDeviceSurfaceFormatsKHR(
+          context->physicalDevice(), surface.handle, &count, nullptr);
+    }
 
     if (result != VK_SUCCESS) {
       throw std::runtime_error("Failed to query surface format count");
@@ -83,13 +93,16 @@ Vector<VkPresentModeKHR, Alloc> query_present_modes(Context *context,
                                                     Surface surface,
                                                     const Alloc &alloc = {}) {
   assert(context != nullptr);
-  assert(surface != VK_NULL_HANDLE);
+  assert(surface);
 
   uint32_t count = 0;
 
-  VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(
-      context->physicalDevice(), surface.handle, &count, nullptr);
-
+  VkResult result;
+  {
+    ZoneScopedN("vkGetPhysicalDeviceSurfacePresentModesKHR");
+    result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+        context->physicalDevice(), surface.handle, &count, nullptr);
+  }
   if (result != VK_SUCCESS) {
     throw std::runtime_error("Failed to query present mode count");
   }
@@ -99,8 +112,11 @@ Vector<VkPresentModeKHR, Alloc> query_present_modes(Context *context,
   while (true) {
     modes.resize(count);
 
-    result = vkGetPhysicalDeviceSurfacePresentModesKHR(
-        context->physicalDevice(), surface.handle, &count, modes.data());
+    {
+      ZoneScopedN("vkGetPhysicalDeviceSurfacePresentModesKHR");
+      result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+          context->physicalDevice(), surface.handle, &count, modes.data());
+    }
 
     if (result == VK_SUCCESS) {
       modes.resize(count);
@@ -112,8 +128,11 @@ Vector<VkPresentModeKHR, Alloc> query_present_modes(Context *context,
     }
 
     // Count changed between calls. Query it again and retry.
-    result = vkGetPhysicalDeviceSurfacePresentModesKHR(
-        context->physicalDevice(), surface.handle, &count, nullptr);
+    {
+      ZoneScopedN("vkGetPhysicalDeviceSurfacePresentModesKHR");
+      result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+          context->physicalDevice(), surface.handle, &count, nullptr);
+    }
 
     if (result != VK_SUCCESS) {
       throw std::runtime_error("Failed to query present mode count");

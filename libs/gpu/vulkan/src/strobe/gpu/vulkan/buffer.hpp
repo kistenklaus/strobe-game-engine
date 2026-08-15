@@ -19,7 +19,7 @@ struct Buffer {
 
 struct BufferInfo {
   VkDeviceSize size = 0;
-  VkBufferUsageFlags usage = 0;
+  VkBufferUsageFlags2 usage = 0;
   MemoryUsage memory_usage = MemoryUsage::automatic;
 };
 

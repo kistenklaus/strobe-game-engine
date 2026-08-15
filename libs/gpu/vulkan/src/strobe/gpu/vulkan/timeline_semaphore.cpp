@@ -3,8 +3,8 @@
 
 namespace strobe::gpu::vulkan {
 
-TimelineSemaphore create_semaphore(Context *context,
-                                   const TimelineSemaphoreInfo &info) {
+TimelineSemaphore create_timeline_semaphore(Context *context,
+                                            const TimelineSemaphoreInfo &info) {
   assert(context != nullptr);
   assert(context->properties().timeline_semaphore);
 
@@ -22,10 +22,13 @@ TimelineSemaphore create_semaphore(Context *context,
       .flags = info.flags,
   };
   TimelineSemaphore sem;
-  VkResult result = vkCreateSemaphore(context->device(), &createInfo,
-                                      context->driver_alloc(), &sem.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create timeline semaphore");
+  {
+    ZoneScopedN("vkCreateSemaphore");
+    VkResult result = vkCreateSemaphore(context->device(), &createInfo,
+                                        context->driver_alloc(), &sem.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create timeline semaphore");
+    }
   }
   return sem;
 }
@@ -34,6 +37,7 @@ void destroy_timeline_semaphore(Context *context, TimelineSemaphore sem) {
   assert(context != nullptr);
   assert(context->properties().timeline_semaphore);
   assert(sem);
+  ZoneScopedN("vkDestroySemaphore");
   vkDestroySemaphore(context->device(), sem.handle, context->driver_alloc());
 }
 
@@ -43,10 +47,14 @@ uint64_t get_timeline_semaphore_value(Context *context, TimelineSemaphore sem) {
   assert(sem);
 
   uint64_t value = 0;
-  VkResult result =
-      vkGetSemaphoreCounterValue(context->device(), sem.handle, &value);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to get timeline semaphore counter value");
+  {
+    ZoneScopedN("vkGetSemaphoreCounterValue");
+    VkResult result =
+        vkGetSemaphoreCounterValue(context->device(), sem.handle, &value);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error(
+          "Failed to get timeline semaphore counter value");
+    }
   }
   return value;
 }
@@ -62,9 +70,12 @@ void signal_timeline_semaphore(Context *context, TimelineSemaphore sem,
       .semaphore = sem.handle,
       .value = value,
   };
-  VkResult result = vkSignalSemaphore(context->device(), &signalInfo);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to signal timeline semaphore");
+  {
+    ZoneScopedN("vkSignalSemaphore");
+    VkResult result = vkSignalSemaphore(context->device(), &signalInfo);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to signal timeline semaphore");
+    }
   }
 }
 
@@ -79,7 +90,11 @@ bool wait_for_timeline_semaphore(Context *context, TimelineSemaphore sem,
       .pValues = &value,
   };
 
-  VkResult result = vkWaitSemaphores(context->device(), &waitInfo, timeout);
+  VkResult result;
+  {
+    ZoneScopedN("vkWaitSemaphores");
+    result = vkWaitSemaphores(context->device(), &waitInfo, timeout);
+  }
   if (result == VK_TIMEOUT) {
     return false;
   }

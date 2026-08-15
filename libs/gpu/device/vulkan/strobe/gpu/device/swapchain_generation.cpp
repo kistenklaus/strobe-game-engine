@@ -41,4 +41,15 @@ SwapchainGeneration::~SwapchainGeneration() noexcept {
   unpin_void_handle<SwapchainGenerationImpl>(m_handle);
 }
 
+const Image &SwapchainGeneration::image(uint32_t index) const noexcept {
+  auto *impl = void_handle_ptr<SwapchainGenerationImpl>(m_handle);
+  return impl->images[index].image;
+}
+
+const BinarySemaphore &
+SwapchainGeneration::presentReady(uint32_t index) const noexcept {
+  auto *impl = void_handle_ptr<SwapchainGenerationImpl>(m_handle);
+  return impl->images[index].presentReady;
+}
+
 } // namespace strobe::gpu

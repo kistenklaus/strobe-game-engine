@@ -37,7 +37,6 @@ class WindowImpl {
 private:
 public:
   WindowImpl(uvec2 size, const char *name) {
-    fmt::println("window-impl constructor");
     m_window = Platform::run([&, this]() -> GLFWwindow * {
       glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
       glfwWindowHint(GLFW_RESIZABLE, m_resizable ? GLFW_TRUE : GLFW_FALSE);
@@ -74,7 +73,6 @@ public:
     poll();
   }
   ~WindowImpl() noexcept {
-    fmt::println("window-impl destructor");
     Platform::run([window = m_window]() { glfwDestroyWindow(window); });
   }
 
@@ -151,7 +149,6 @@ public:
 
 private:
   static void close_callback(GLFWwindow *window) {
-    fmt::println("close callback");
     auto win = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
     win->m_state.should_close.store(true, std::memory_order_relaxed);
   }

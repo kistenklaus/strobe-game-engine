@@ -72,4 +72,20 @@ create_debug_utils_messenger(VkInstance instance, ContextProperties *props,
   }
 }
 
+VkResult vk_set_debug_utils_object_name(
+    VkDevice device,
+    const VkDebugUtilsObjectNameInfoEXT *name_info) noexcept {
+  const auto function =
+      reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
+          vkGetDeviceProcAddr(
+              device,
+              "vkSetDebugUtilsObjectNameEXT"));
+
+  if (function == nullptr) {
+    return VK_ERROR_EXTENSION_NOT_PRESENT;
+  }
+
+  return function(device, name_info);
+}
+
 } // namespace strobe::gpu::vulkan

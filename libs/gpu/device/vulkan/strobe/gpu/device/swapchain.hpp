@@ -1,8 +1,10 @@
 #pragma once
 
+#include "strobe/core/containers/span.hpp"
 #include "strobe/core/lina/vec.hpp"
+#include "strobe/gpu/device/binary_semaphore.hpp"
+#include "strobe/gpu/device/fence.hpp"
 #include "strobe/gpu/device/image_usage.hpp"
-#include "strobe/gpu/device/image_view.hpp"
 #include "strobe/gpu/device/swapchain_image.hpp"
 #include <cstdint>
 #include <limits>
@@ -13,12 +15,6 @@ struct SwapchainCreateInfo {
   ImageUsage imageUsage = ImageUsage::color_attachment;
   bool vsync = false;
   bool clipped = true;
-};
-
-struct SwapchainAcquireInfo {
-  uint64_t timeout = std::numeric_limits<uint64_t>::max();
-  // TODO: signal semaphore
-  // TODO: fence
 };
 
 class Swapchain {
@@ -36,7 +32,9 @@ public:
 
   // thread-safe!
   void resize(uvec2 extent) noexcept;
-  SwapchainImage acquire(const SwapchainAcquireInfo &info = {});
+  SwapchainImage
+  acquire(BinarySemaphore signal, Fence fence = {},
+          uint64_t timeout = std::numeric_limits<uint64_t>::max());
 
 private:
   explicit Swapchain(void *handle) noexcept : m_handle(handle) {}

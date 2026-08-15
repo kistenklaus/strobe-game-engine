@@ -29,4 +29,7 @@ VkDebugUtilsMessengerEXT create_debug_utils_messenger(VkInstance instance,
                                                       ContextProperties *props,
                                                       DriverAlloc *alloc);
 
+VkResult vk_set_debug_utils_object_name(
+    VkDevice device, const VkDebugUtilsObjectNameInfoEXT *name_info) noexcept;
+
 } // namespace strobe::gpu::vulkan

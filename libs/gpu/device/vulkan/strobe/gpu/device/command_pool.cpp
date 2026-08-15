@@ -2,10 +2,7 @@
 #include "strobe/gpu/device/command_buffer.hpp"
 #include "strobe/gpu/device/command_buffer_impl.hpp"
 #include "strobe/gpu/device/command_pool_impl.hpp"
-#include "strobe/gpu/device/device_impl.hpp"
 #include "strobe/gpu/device/handle.hpp"
-#include "strobe/gpu/vulkan/command_buffer.hpp"
-#include "strobe/gpu/vulkan/command_pool.hpp"
 
 namespace strobe::gpu {
 
@@ -44,28 +41,14 @@ CommandPool::~CommandPool() noexcept {
 }
 
 CommandBuffer CommandPool::alloc(bool primary) {
+  ZoneScopedN("CommandPool::alloc");
+  assert(m_handle);
   auto *impl = void_handle_ptr<CommandPoolImpl>(m_handle);
-
-  vulkan::CommandBuffer cmd = impl->alloc_cached(primary);
-  if (cmd) {
-    vulkan::reset_command_buffer(cmd);
-  } else {
-    auto *device_impl = void_handle_ptr<DeviceImpl>(impl->device.m_handle);
-    cmd = vulkan::alloc_command_buffer(
-        &device_impl->context,
-        {.pool = impl->pool,
-         .level = primary ? VK_COMMAND_BUFFER_LEVEL_PRIMARY
-                          : VK_COMMAND_BUFFER_LEVEL_SECONDARY});
-  }
-  assert(cmd);
-  return CommandBuffer{
-      make_void_handle<CommandBufferImpl>(*this, cmd, primary)};
-}
-
-void CommandPool::reset() {
-  auto *impl = void_handle_ptr<CommandPoolImpl>(m_handle);
-  auto *device_impl = void_handle_ptr<DeviceImpl>(impl->device.m_handle);
-  vulkan::reset_command_pool(&device_impl->context, impl->pool);
+  auto [nativePool, cmd] = impl->alloc(primary);
+  return alloc_void_handle<CommandBufferImpl,
+                           strobe::gpu::cmd_buf_handle_allocator_ref>(
+      impl->get_handle_allocator(), *this, nativePool, cmd,
+      impl->get_state_allocator());
 }
 
 } // namespace strobe::gpu

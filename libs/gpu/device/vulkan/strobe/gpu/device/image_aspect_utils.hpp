@@ -19,9 +19,6 @@ static inline VkImageAspectFlags to_vk_image_aspect(ImageAspect aspect) {
 
   case ImageAspect::depth_stencil:
     return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-
-  case ImageAspect::automatic:
-    break;
   }
 
   std::unreachable();

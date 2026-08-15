@@ -12,6 +12,7 @@ public:
   static constexpr bool is_always_equals = true;
 
   void *allocate(std::size_t size, std::size_t align) noexcept {
+    ZoneScopedN("Mallocator::allocate");
     align = std::max(align, alignof(std::max_align_t));
     size = (size + align - 1) & ~(align - 1);
 #ifdef _MSC_VER
@@ -24,11 +25,12 @@ public:
   }
 
   void deallocate(void *ptr, std::size_t, std::size_t) noexcept {
-    TracyFree(ptr);
     deallocate(ptr);
   }
 
   void deallocate(void *ptr) {
+    ZoneScopedN("Mallocator::deallocate");
+    TracyFree(ptr);
 #ifdef _MSC_VER
     _aligned_free(ptr);
 #else
@@ -36,7 +38,5 @@ public:
 #endif
   }
 };
-
-
 
 } // namespace strobe

@@ -10,10 +10,13 @@ Surface create_surface(Context *context, GLFWwindow *window) {
   assert(window != nullptr);
 
   Surface surface;
-  VkResult result = glfwCreateWindowSurface(context->instance(), window,
-                                            context->driver_alloc(), &surface.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create glfw window surface");
+  {
+    ZoneScopedN("glfwCreateWindowSurface");
+    VkResult result = glfwCreateWindowSurface(
+        context->instance(), window, context->driver_alloc(), &surface.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create glfw window surface");
+    }
   }
   return surface;
 }
@@ -21,22 +24,27 @@ Surface create_surface(Context *context, GLFWwindow *window) {
 void destroy_surface(Context *context, Surface surface) {
   assert(context->instance());
   assert(surface);
-  vkDestroySurfaceKHR(context->instance(), surface.handle,
-                      context->driver_alloc());
+  {
+    ZoneScopedN("vkDestroySurfaceKHR");
+    vkDestroySurfaceKHR(context->instance(), surface.handle,
+                        context->driver_alloc());
+  }
 }
 SurfaceCapabilities query_surface_capabilities(Context *context,
-                                             Surface surface) {
+                                               Surface surface) {
 
   assert(context != nullptr);
-  assert(surface != VK_NULL_HANDLE);
+  assert(surface);
 
   VkSurfaceCapabilitiesKHR caps{};
 
-  const VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-      context->physicalDevice(), surface.handle, &caps);
-
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to query Vulkan surface capabilities");
+  {
+    ZoneScopedN("vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+    const VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+        context->physicalDevice(), surface.handle, &caps);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to query Vulkan surface capabilities");
+    }
   }
 
   return SurfaceCapabilities{

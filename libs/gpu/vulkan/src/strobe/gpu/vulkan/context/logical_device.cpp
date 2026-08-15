@@ -1,5 +1,6 @@
 #include "strobe/gpu/vulkan/context/logical_device.hpp"
 #include "strobe/gpu/vulkan/context/create_info.hpp"
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu::vulkan {
 
@@ -63,6 +64,19 @@ create_logical_device(VkPhysicalDevice physicalDevice,
     pNext = &vulkan14;
   }
 
+  VkPhysicalDeviceSwapchainMaintenance1FeaturesKHR swapchainMaintenance1{
+      .sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_KHR,
+      .pNext = nullptr,
+      .swapchainMaintenance1 = VK_FALSE,
+  };
+
+  VkPhysicalDeviceShaderObjectFeaturesEXT shaderObjectFeatures{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_FEATURES_EXT,
+      .pNext = nullptr,
+      .shaderObject = VK_TRUE,
+  };
+
   Vector<const char *, scratch_allocator_ref> extensions{&scratch};
 
   if (info->swapchain != disable && !properties->surface) {
@@ -70,25 +84,61 @@ create_logical_device(VkPhysicalDevice physicalDevice,
         "Vulkan swapchain support requires enabled surface support"};
   }
   if (info->swapchain != disable) {
-    const bool supported = details::supports_extension(
+    const bool swapchainSupported = details::supports_extension(
         deviceInfo->supported_extensions, "VK_KHR_swapchain");
+    const bool maintenance1ExtensionSupported = details::supports_extension(
+        deviceInfo->supported_extensions,
+        VK_KHR_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME);
+
+    const bool maintenance1FeatureSupported =
+        deviceInfo->features.swapchainMaintenance1;
+    const bool supported = swapchainSupported &&
+                           maintenance1ExtensionSupported &&
+                           maintenance1FeatureSupported;
+
     if (supported) {
       extensions.emplace_back("VK_KHR_swapchain");
+      extensions.emplace_back("VK_KHR_swapchain_maintenance1");
+      swapchainMaintenance1.swapchainMaintenance1 = VK_TRUE;
       properties->swapchain = true;
+      swapchainMaintenance1.pNext = pNext;
+      pNext = &swapchainMaintenance1;
     } else if (info->swapchain == required) {
-      throw std::runtime_error{"Required Vulkan device extension "
-                               "VK_KHR_swapchain is not supported"};
+      if (!swapchainSupported) {
+        throw std::runtime_error{"Required Vulkan device extension "
+                                 "VK_KHR_swapchain is not supported"};
+      }
+
+      if (!maintenance1ExtensionSupported) {
+        throw std::runtime_error{
+            "Required Vulkan device extension "
+            "VK_KHR_swapchain_maintenance1 is not supported"};
+      }
+
+      if (!maintenance1FeatureSupported) {
+        throw std::runtime_error{"Required Vulkan feature "
+                                 "swapchainMaintenance1 is not supported"};
+      }
     }
   }
 
   if (info->timeline_semaphore != disable &&
       deviceInfo->features.timelineSemaphore) {
+    properties->timeline_semaphore = true;
     vulkan12.timelineSemaphore = true;
     extensions.emplace_back("VK_KHR_timeline_semaphore");
   }
 
   if (deviceInfo->features.synchronization2) {
+    properties->synchronization2 = true;
     vulkan13.synchronization2 = true;
+  }
+
+  if (info->shaderObjects != disable && deviceInfo->features.shaderObjects) {
+    properties->shaderObjects = true;
+    shaderObjectFeatures.pNext = pNext;
+    pNext = &shaderObjectFeatures;
+    extensions.emplace_back(VK_EXT_SHADER_OBJECT_EXTENSION_NAME);
   }
 
   Vector<QueueFamilyPlan, scratch_allocator_ref> queueFamilyPlans{&scratch};

@@ -1,29 +1,29 @@
 #pragma once
 
+#include "strobe/gpu/device/command_buffer_state.hpp"
 #include "strobe/gpu/device/command_pool.hpp"
-#include "strobe/gpu/device/command_pool_impl.hpp"
+#include "strobe/gpu/device/native_command_pool.hpp"
 #include "strobe/gpu/vulkan/command_buffer.hpp"
+
 namespace strobe::gpu {
 
 struct CommandBufferImpl {
 
-  CommandBufferImpl(CommandPool pool, vulkan::CommandBuffer cmd, bool primary) noexcept
-      : pool(std::move(pool)), cmd(cmd), primary(primary) {}
+  CommandBufferImpl(CommandPool pool, NativeCommandPool *nativePool,
+                    vulkan::CommandBuffer cmd,
+                    const cmd_buf_state_allocator_ref &alloc) noexcept
+      : pool(std::move(pool)), nativePool(nativePool), cmd(cmd), state{alloc} {}
 
   CommandBufferImpl(const CommandBufferImpl &) = delete;
   CommandBufferImpl(CommandBufferImpl &&) = delete;
   CommandBufferImpl &operator=(const CommandBufferImpl &) = delete;
   CommandBufferImpl &operator=(CommandBufferImpl &&) = delete;
-  ~CommandBufferImpl() noexcept {
-    assert(cmd);
-    assert(pool);
-    auto* pool_impl = void_handle_ptr<CommandPoolImpl>(pool.m_handle);
-    pool_impl->recycle(cmd, primary);
-  }
+  ~CommandBufferImpl() noexcept;
 
-  const CommandPool pool; // holds reference
-  const vulkan::CommandBuffer cmd;
-  const bool primary;
+  CommandPool pool;
+  NativeCommandPool *nativePool;
+  vulkan::CommandBuffer cmd;
+  CommandBufferState state;
 };
 
 } // namespace strobe::gpu

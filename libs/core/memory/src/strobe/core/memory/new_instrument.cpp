@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <tracy/Tracy.hpp>
 
 #include <algorithm>
@@ -12,7 +13,7 @@ namespace {
 [[nodiscard]]
 void *traced_allocate(std::size_t size) {
   size = std::max<std::size_t>(size, 1);
-
+  ZoneScopedN("new");
   while (true) {
     if (void *ptr = std::malloc(size)) {
       TracySecureAlloc(ptr, size);
@@ -36,6 +37,7 @@ void *traced_allocate_aligned(std::size_t size, std::size_t alignment) {
 
   alignment = std::max(alignment, sizeof(void *));
 
+  ZoneScopedN("new (aligned)");
   while (true) {
     void *ptr = nullptr;
 
@@ -56,6 +58,8 @@ void *traced_allocate_aligned(std::size_t size, std::size_t alignment) {
 }
 
 void traced_deallocate(void *ptr) noexcept {
+  ZoneScopedN("delete"); 
+
   if (ptr == nullptr) {
     return;
   }

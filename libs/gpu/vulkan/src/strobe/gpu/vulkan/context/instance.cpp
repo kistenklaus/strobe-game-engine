@@ -1,4 +1,7 @@
 #include "strobe/gpu/vulkan/context/instance.hpp"
+#include "strobe/core/containers/vector.hpp"
+#include "strobe/core/memory/AllocatorReference.hpp"
+#include "strobe/core/memory/inplace_monotonic_resource.hpp"
 
 namespace strobe::gpu::vulkan {
 
@@ -136,27 +139,44 @@ VkInstance create_instance(const ContextCreateInfo *info,
   }
   if (info->surface != disable) {
     std::uint32_t count = 0;
-    const char **required_extensions =
-        glfwGetRequiredInstanceExtensions(&count);
-    if (required_extensions == nullptr) {
+    const char **requiredExtensions = glfwGetRequiredInstanceExtensions(&count);
+    if (requiredExtensions == nullptr) {
       if (info->surface == required) {
         throw std::runtime_error{
             "GLFW could not provide Vulkan surface extensions"};
       }
     } else {
       bool supported = true;
+      // Platform-specific surface extensions required by GLFW.
       for (std::uint32_t i = 0; i < count; ++i) {
         if (!details::check_instance_extension_support(
-                supported_extensions, required_extensions[i], info->surface)) {
+                supported_extensions, requiredExtensions[i], info->surface)) {
           supported = false;
           break;
         }
       }
+      // Required for VK_KHR_surface_maintenance1.
+      if (supported && !details::check_instance_extension_support(
+                           supported_extensions,
+                           VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
+                           info->surface)) {
+        supported = false;
+      }
+      if (supported &&
+          !details::check_instance_extension_support(
+              supported_extensions, VK_KHR_SURFACE_MAINTENANCE_1_EXTENSION_NAME,
+              info->surface)) {
+        supported = false;
+      }
       if (supported) {
         props->surface = true;
         for (std::uint32_t i = 0; i < count; ++i) {
-          extensions.emplace_back(required_extensions[i]);
+          extensions.emplace_back(requiredExtensions[i]);
         }
+        extensions.emplace_back(
+            VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+
+        extensions.emplace_back(VK_KHR_SURFACE_MAINTENANCE_1_EXTENSION_NAME);
       }
     }
   }

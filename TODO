@@ -1,3 +1,30 @@
 
-gpu::vulkan
-Surface <- as a handle type! SurfaceCapabilities as a wrapper for format, present mode and VkSurfaceCapabilitiesKHR
+
+Remove ImageLayouts
+  - transition to present is still required but we can try to hide it completely, if we know that the image will be in a general layout
+    => still requires us to figure out some synchronization but the idea sounds good.
+  - refactor image / buffer barriers => global barriers may just be more efficient!
+
+Shaders (seperate between Vertex and Fragment Shaders on a type system!, internally may map onto the same ShaderImpl)
+
+Dynamic Rendering (add to the command buffers. Types should be the same as for pipeline creation, even if that introduces unused members!)
+
+Consider making Platform a globally ref counted thread!
+
+=> Triangle!!!
+
+Milestones:
+VertexBuffer:
+  - command buffer copy / staging commands
+  - How do we want to handle staging! (command buffer arena ???)
+    => The dream would be cmd.alloc_tmp() -> DeviceAddress or something like that.
+    => Maybe a cmd_upload would be nice to upload a buffer to a buffer even if it's device local!
+IndexBuffer:
+
+ShaderPrograms 
+  - linking shader objects
+
+DescriptorHeap: 
+  - really really big one we have to think about a lot!!
+  - expect many refactors!!! We will not get it right the first time.
+

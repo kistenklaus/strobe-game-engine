@@ -94,18 +94,23 @@ void queue_submit(Queue queue, const SubmitInfo &info) {
           static_cast<uint32_t>(signalSemSubmitInfos.size()),
       .pSignalSemaphoreInfos = signalSemSubmitInfos.data(),
   };
-
-  VkResult result =
-      vkQueueSubmit2(queue.handle, 1, &submitInfo, info.fence.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to submit to queue");
+  {
+    ZoneScopedN("vkQueueSubmit2");
+    VkResult result =
+        vkQueueSubmit2(queue.handle, 1, &submitInfo, info.fence.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to submit to queue");
+    }
   }
 }
 void wait_queue_idle(Queue queue) {
   assert(queue);
-  VkResult result = vkQueueWaitIdle(queue.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Wait to wait for queue idle");
+  {
+    ZoneScopedN("vkQueueWaitIdle");
+    VkResult result = vkQueueWaitIdle(queue.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Wait to wait for queue idle");
+    }
   }
 }
 PresentStatus queue_present(Queue queue, Swapchain swapchain,
@@ -135,7 +140,11 @@ PresentStatus queue_present(Queue queue, Swapchain swapchain,
       .pImageIndices = &imageIndex,
       .pResults = nullptr,
   };
-  VkResult result = vkQueuePresentKHR(queue.handle, &presentInfo);
+  VkResult result;
+  {
+    ZoneScopedN("vkQueuePresentKHR");
+    result = vkQueuePresentKHR(queue.handle, &presentInfo);
+  }
   if (result == VK_SUCCESS) {
     return PresentStatus::success;
   } else if (result == VK_SUBOPTIMAL_KHR) {

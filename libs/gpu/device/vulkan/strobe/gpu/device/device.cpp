@@ -1,7 +1,12 @@
 #include "strobe/gpu/device/device.hpp"
 #include "strobe/core/containers/small_vector.hpp"
+#include "strobe/gpu/device/binary_semaphore_impl.hpp"
+#include "strobe/gpu/device/buffer_impl.hpp"
+#include "strobe/gpu/device/buffer_usage_utils.hpp"
 #include "strobe/gpu/device/command_pool_impl.hpp"
 #include "strobe/gpu/device/device_impl.hpp"
+#include "strobe/gpu/device/fence.hpp"
+#include "strobe/gpu/device/fence_impl.hpp"
 #include "strobe/gpu/device/format_utilts.hpp"
 #include "strobe/gpu/device/handle.hpp"
 #include "strobe/gpu/device/image_flags_utils.hpp"
@@ -13,9 +18,13 @@
 #include "strobe/gpu/device/sample_count_utils.hpp"
 #include "strobe/gpu/device/surface_impl.hpp"
 #include "strobe/gpu/device/swapchain_impl.hpp"
+#include "strobe/gpu/device/timeline_semaphore_impl.hpp"
+#include "strobe/gpu/vulkan/buffer.hpp"
 #include "strobe/gpu/vulkan/command_pool.hpp"
+#include "strobe/gpu/vulkan/fence.hpp"
 #include "strobe/gpu/vulkan/image.hpp"
 #include "strobe/gpu/vulkan/surface.hpp"
+#include "strobe/gpu/vulkan/timeline_semaphore.hpp"
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu {
@@ -56,7 +65,8 @@ Device &Device::operator=(Device &&o) noexcept {
 
 Device::~Device() noexcept { unpin_void_handle<DeviceImpl>(m_handle); }
 
-Queue Device::create_queue(QueueFlags flags) {
+Queue Device::get_queue(QueueFlags flags) {
+  ZoneScopedN("Device::get_queue");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   const bool exclusive = (flags & QueueFlags::exclusive) != 0;
   VkQueueFlags required = 0;
@@ -104,14 +114,24 @@ Queue Device::create_queue(QueueFlags flags) {
     };
   }
 
-  std::sort(candidates.begin(), candidates.begin() + candidateCount,
-            [](const Candidate &a, const Candidate &b) {
-              if (a.extraCapabilities != b.extraCapabilities) {
-                return a.extraCapabilities < b.extraCapabilities;
-              }
+  const auto less = [](const Candidate &a, const Candidate &b) {
+    if (a.extraCapabilities != b.extraCapabilities) {
+      return a.extraCapabilities < b.extraCapabilities;
+    }
+    return a.users < b.users;
+  };
 
-              return a.users < b.users;
-            });
+  // NATIVE_QUEUE_COUNT is tiny, so insertion sort avoids std::sort's
+  // unnecessary machinery (and the GCC -Warray-bounds false positive).
+  for (uint32_t i = 1; i < candidateCount; ++i) {
+    Candidate candidate = candidates[i];
+    uint32_t j = i;
+    while (j > 0 && less(candidate, candidates[j - 1])) {
+      candidates[j] = candidates[j - 1];
+      --j;
+    }
+    candidates[j] = candidate;
+  }
 
   // The state may have changed since ranking, so acquisition itself
   // must still be atomic. If the preferred queue is no longer available,
@@ -123,27 +143,28 @@ Queue Device::create_queue(QueueFlags flags) {
     }
     return Queue{make_void_handle<QueueImpl>(*this, &native, flags)};
   }
+
   return {};
 }
 
 Swapchain Device::create_swapchain(GLFWwindow *window,
                                    const SwapchainCreateInfo &createInfo) {
-
+  ZoneScopedN("Device::create_swapchain");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
-  vulkan::Surface surface = vulkan::create_surface(&impl->context, window);
-  Surface surface_handle{make_void_handle<SurfaceImpl>(*this, surface)};
+  vulkan::Surface surface = vulkan::create_surface(impl->context.get(), window);
+  Surface surface_handle{make_void_handle<SurfaceImpl>(impl->context, surface)};
 
   const vulkan::SurfaceCapabilities capabilities =
-      vulkan::query_surface_capabilities(&impl->context, surface);
+      vulkan::query_surface_capabilities(impl->context.get(), surface);
 
   uint32_t minImageCount = capabilities.minImageCount + 1;
   if (capabilities.maxImageCount != 0) {
     minImageCount = std::min(minImageCount, capabilities.maxImageCount);
   }
 
-  auto formats = vulkan::query_surface_formats(&impl->context, surface);
+  auto formats = vulkan::query_surface_formats(impl->context.get(), surface);
   if (formats.empty()) {
-    vulkan::destroy_surface(&impl->context, surface);
+    vulkan::destroy_surface(impl->context.get(), surface);
     throw std::runtime_error("Surface exposes no supported formats");
   }
   VkSurfaceFormatKHR format = formats[0];
@@ -165,7 +186,8 @@ Swapchain Device::create_swapchain(GLFWwindow *window,
     }
   }
 
-  auto present_modes = vulkan::query_present_modes(&impl->context, surface);
+  auto present_modes =
+      vulkan::query_present_modes(impl->context.get(), surface);
   VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
   if (!createInfo.vsync) {
     if (std::find(present_modes.begin(), present_modes.end(),
@@ -180,7 +202,7 @@ Swapchain Device::create_swapchain(GLFWwindow *window,
 
   const VkImageUsageFlags imageUsage = to_vk_image_usage(createInfo.imageUsage);
   if ((capabilities.supportedUsageFlags & imageUsage) != imageUsage) {
-    vulkan::destroy_surface(&impl->context, surface);
+    vulkan::destroy_surface(impl->context.get(), surface);
     throw std::runtime_error(
         "Requested swapchain image usage is not supported");
   }
@@ -207,7 +229,7 @@ Swapchain Device::create_swapchain(GLFWwindow *window,
     }
   }
   if (queueFamilyIndicies.empty()) {
-    vulkan::destroy_surface(&impl->context, surface);
+    vulkan::destroy_surface(impl->context.get(), surface);
     throw std::runtime_error("Device has no presentation queue family");
   }
 
@@ -224,22 +246,21 @@ Swapchain Device::create_swapchain(GLFWwindow *window,
                             capabilities.maxImageExtent.height);
   }
   return Swapchain{make_void_handle<SwapchainImpl>(
-      *this, std::move(surface_handle), minImageCount, format, presentMode, imageUsage,
-      span<uint32_t>{queueFamilyIndicies}, extent, createInfo.clipped)};
+      impl->context, std::move(surface_handle), minImageCount, format,
+      presentMode, imageUsage, span<uint32_t>{queueFamilyIndicies}, extent,
+      createInfo.clipped)};
 }
 
 CommandPool Device::create_cmd_pool(const Queue &queue) {
+  ZoneScopedN("Device::create_cmd_pool");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   auto *queue_impl = void_handle_ptr<QueueImpl>(queue.m_handle);
-  vulkan::CommandPool pool = vulkan::create_command_pool(
-      &impl->context,
-      {.queue = queue_impl->native->queue,
-       .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT});
 
-  return CommandPool{make_void_handle<CommandPoolImpl>(*this, pool)};
+  return CommandPool{make_void_handle<CommandPoolImpl>(impl->context, queue_impl->native->queue)};
 }
 
 Image Device::create_image(const ImageCreateInfo &createInfo) {
+  ZoneScopedN("Device::create_image");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
 
   vulkan::ImageInfo info{
@@ -261,11 +282,56 @@ Image Device::create_image(const ImageCreateInfo &createInfo) {
       .initial_layout = VK_IMAGE_LAYOUT_UNDEFINED,
       .memory_usage = to_vulkan_memory_usage(createInfo.memoryUsage),
   };
-  vulkan::Image image = vulkan::create_image(&impl->context, info);
+  vulkan::Image image = vulkan::create_image(impl->context.get(), info);
 
   return Image{make_void_handle<ImageImpl>(
-      *this, image, createInfo.type, createInfo.format, createInfo.extent,
-      createInfo.mip_levels, createInfo.arrayLayers, createInfo.samples)};
+      impl->context, image, createInfo.type, createInfo.format,
+      createInfo.extent, createInfo.mip_levels, createInfo.arrayLayers,
+      createInfo.samples)};
+}
+BinarySemaphore Device::create_binary_semaphore() {
+  ZoneScopedN("Device::create_binary_semaphore");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  vulkan::BinarySemaphore sem =
+      vulkan::create_binary_semaphore(impl->context.get());
+  return BinarySemaphore{
+      make_void_handle<BinarySemaphoreImpl>(impl->context, sem)};
+}
+
+TimelineSemaphore Device::create_timeline_semaphore(uint64_t initalValue) {
+  ZoneScopedN("Device::create_timeline_semaphore");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  vulkan::TimelineSemaphore sem = vulkan::create_timeline_semaphore(
+      impl->context.get(), {.initalValue = initalValue});
+  return TimelineSemaphore{
+      make_void_handle<TimelineSemaphoreImpl>(impl->context, sem)};
+}
+
+Fence Device::create_fence(bool signaled) {
+  ZoneScopedN("Device::create_fence");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  vulkan::Fence fence = vulkan::create_fence(
+      impl->context.get(),
+      {.flags = signaled ? static_cast<VkFenceCreateFlags>(
+                               VK_FENCE_CREATE_SIGNALED_BIT)
+                         : VkFenceCreateFlags{0}});
+  return Fence{make_void_handle<FenceImpl>(impl->context, fence)};
+}
+
+Buffer Device::create_buffer(const BufferCreateInfo &info) {
+  ZoneScopedN("Device::create_buffer");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  vulkan::Buffer buffer = vulkan::create_buffer(
+      impl->context.get(),
+      vulkan::BufferInfo{
+          .size = info.size,
+          .usage = to_vk_buffer_usage(info.usage),
+          .memory_usage = to_vulkan_memory_usage(info.memory_usage),
+      });
+  VkDeviceAddress address =
+      vulkan::get_buffer_device_address(impl->context.get(), buffer);
+  return Buffer{
+      make_void_handle<BufferImpl>(impl->context, buffer, info.size, address)};
 }
 
 const DeviceInfo &Device::info() const noexcept {

@@ -13,10 +13,14 @@ CommandPool create_command_pool(Context *context, const CommandPoolInfo &info) {
       .queueFamilyIndex = info.queue.family,
   };
   CommandPool cmdpool;
-  VkResult result = vkCreateCommandPool(
-      context->device(), &createInfo, context->driver_alloc(), &cmdpool.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create command buffer");
+  {
+    ZoneScopedN("vkCreateCommandPool");
+    VkResult result =
+        vkCreateCommandPool(context->device(), &createInfo,
+                            context->driver_alloc(), &cmdpool.handle);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create command buffer");
+    }
   }
   return cmdpool;
 }
@@ -24,17 +28,24 @@ CommandPool create_command_pool(Context *context, const CommandPoolInfo &info) {
 void destroy_command_pool(Context *context, CommandPool cmdpool) noexcept {
   assert(context);
   assert(cmdpool);
-  vkDestroyCommandPool(context->device(), cmdpool.handle,
-                       context->driver_alloc());
+  {
+    ZoneScopedN("vkDestroyCommandPool");
+    vkDestroyCommandPool(context->device(), cmdpool.handle,
+                         context->driver_alloc());
+  }
 }
 
 void reset_command_pool(Context *context, CommandPool cmdpool,
                         VkCommandPoolResetFlags flags) {
   assert(context != nullptr);
   assert(cmdpool);
-  VkResult result = vkResetCommandPool(context->device(), cmdpool.handle, flags);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to reset command pool");
+  {
+    ZoneScopedN("vkResetCommandPool");
+    VkResult result =
+        vkResetCommandPool(context->device(), cmdpool.handle, flags);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to reset command pool");
+    }
   }
 }
 

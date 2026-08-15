@@ -8,7 +8,9 @@ add_executable(strobe-device-sandbox
 target_link_libraries(strobe-device-sandbox
   PRIVATE 
     strobe-gpu-vulkan
+    strobe-gpu-device
     strobe-platform
     strobe-window
+    strobe::tracy
 )
 

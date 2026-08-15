@@ -1,6 +1,7 @@
 #pragma once
 
-#include "strobe/gpu/device/swapchain_generation.hpp"
+#include "strobe/gpu/device/binary_semaphore.hpp"
+#include "strobe/gpu/device/image.hpp"
 #include <cstdint>
 #include <limits>
 #include <utility>
@@ -13,17 +14,23 @@ class SwapchainImage {
 
 public:
   SwapchainImage()
-      : m_generation(), m_index(std::numeric_limits<uint32_t>::max()) {}
+      : m_handle(nullptr), m_index(std::numeric_limits<uint32_t>::max()) {}
 
-  explicit operator bool() const noexcept {
-    return static_cast<bool>(m_generation);
-  }
+  SwapchainImage(const SwapchainImage &) noexcept;
+  SwapchainImage(SwapchainImage &&) noexcept;
+  SwapchainImage &operator=(const SwapchainImage &) noexcept;
+  SwapchainImage &operator=(SwapchainImage &&) noexcept;
+  ~SwapchainImage() noexcept;
+  explicit operator bool() const noexcept { return m_handle != nullptr; }
+
+  const Image &image() const noexcept;
+  const BinarySemaphore &presentReady() const noexcept;
 
 private:
-  explicit SwapchainImage(SwapchainGeneration gen, uint32_t index)
-      : m_generation(std::move(gen)), m_index(index) {}
+  explicit SwapchainImage(void *handle, uint32_t index)
+      : m_handle(std::move(handle)), m_index(index) {}
 
-  SwapchainGeneration m_generation;
+  void *m_handle;
   uint32_t m_index;
 };
 
