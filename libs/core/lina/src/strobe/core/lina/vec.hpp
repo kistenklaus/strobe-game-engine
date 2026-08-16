@@ -4,7 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <iostream>
-#include <tuple>  // For std::get
+#include <tuple> // For std::get
 #include <type_traits>
 
 namespace strobe {
@@ -36,109 +36,109 @@ struct vec {
       : data{x, y, z, w} {}
 
   // Array subscript access
-  constexpr T& operator[](std::size_t index) noexcept { return data[index]; }
+  constexpr T &operator[](std::size_t index) noexcept { return data[index]; }
 
-  constexpr const T& operator[](std::size_t index) const noexcept {
+  constexpr const T &operator[](std::size_t index) const noexcept {
     return data[index];
   }
 
   // Named component access for x, y, z, w (getter functions)
-  constexpr T& x() noexcept
+  constexpr T &x() noexcept
     requires(N >= 1)
   {
     return data[0];
   }
-  constexpr const T& x() const noexcept
+  constexpr const T &x() const noexcept
     requires(N >= 1)
   {
     return data[0];
   }
 
-  constexpr T& y() noexcept
+  constexpr T &y() noexcept
     requires(N >= 2)
   {
     return data[1];
   }
-  constexpr const T& y() const noexcept
+  constexpr const T &y() const noexcept
     requires(N >= 2)
   {
     return data[1];
   }
 
-  constexpr T& z() noexcept
+  constexpr T &z() noexcept
     requires(N >= 3)
   {
     return data[2];
   }
-  constexpr const T& z() const noexcept
+  constexpr const T &z() const noexcept
     requires(N >= 3)
   {
     return data[2];
   }
 
-  constexpr T& w() noexcept
+  constexpr T &w() noexcept
     requires(N >= 4)
   {
     return data[3];
   }
-  constexpr const T& w() const noexcept
+  constexpr const T &w() const noexcept
     requires(N >= 4)
   {
     return data[3];
   }
 
   // Alternative names for color access
-  constexpr T& r() noexcept
+  constexpr T &r() noexcept
     requires(N >= 1)
   {
     return data[0];
   }
-  constexpr const T& r() const noexcept
+  constexpr const T &r() const noexcept
     requires(N >= 1)
   {
     return data[0];
   }
 
-  constexpr T& g() noexcept
+  constexpr T &g() noexcept
     requires(N >= 2)
   {
     return data[1];
   }
-  constexpr const T& g() const noexcept
+  constexpr const T &g() const noexcept
     requires(N >= 2)
   {
     return data[1];
   }
 
-  constexpr T& b() noexcept
+  constexpr T &b() noexcept
     requires(N >= 3)
   {
     return data[2];
   }
-  constexpr const T& b() const noexcept
+  constexpr const T &b() const noexcept
     requires(N >= 3)
   {
     return data[2];
   }
 
-  constexpr T& a() noexcept
+  constexpr T &a() noexcept
     requires(N >= 4)
   {
     return data[3];
   }
-  constexpr const T& a() const noexcept
+  constexpr const T &a() const noexcept
     requires(N >= 4)
   {
     return data[3];
   }
 
-  bool operator==(const vec& o) {
+  bool operator==(const vec &o) const noexcept {
     return std::ranges::equal(this->data, o.data);
   }
-  bool operator!=(const vec& o) { return !(*this == o); }
+  bool operator!=(const vec &o) const noexcept { return !(*this == o); }
 };
 
-}  // namespace details
+} // namespace details
 
 using vec2 = details::vec<2, float>;
 using vec3 = details::vec<3, float>;
@@ -152,7 +152,11 @@ using uvec2 = details::vec<2, unsigned int>;
 using uvec3 = details::vec<3, unsigned int>;
 using uvec4 = details::vec<4, unsigned int>;
 
-}  // namespace strobe
+using ivec2 = details::vec<2, int>;
+using ivec3 = details::vec<3, int>;
+using ivec4 = details::vec<4, int>;
+
+} // namespace strobe
 
 // Specialize std::tuple_size and std::tuple_element for std::get support
 namespace std {
@@ -167,20 +171,20 @@ struct tuple_element<Index, strobe::details::vec<N, T>> {
 
 // Overload std::get for vec
 template <std::size_t Index, std::size_t N, typename T>
-constexpr T& get(strobe::details::vec<N, T>& v) noexcept {
+constexpr T &get(strobe::details::vec<N, T> &v) noexcept {
   static_assert(Index < N, "Index out of range for vec");
   return v.data[Index];
 }
 
 template <std::size_t Index, std::size_t N, typename T>
-constexpr const T& get(const strobe::details::vec<N, T>& v) noexcept {
+constexpr const T &get(const strobe::details::vec<N, T> &v) noexcept {
   static_assert(Index < N, "Index out of range for vec");
   return v.data[Index];
 }
 
 template <std::size_t Index, std::size_t N, typename T>
-constexpr T&& get(strobe::details::vec<N, T>&& v) noexcept {
+constexpr T &&get(strobe::details::vec<N, T> &&v) noexcept {
   static_assert(Index < N, "Index out of range for vec");
   return std::move(v.data[Index]);
 }
-}  // namespace std
+} // namespace std

@@ -24,6 +24,7 @@ public:
   explicit operator bool() const noexcept { return m_handle != nullptr; }
 
   const Image &image() const noexcept;
+  const ImageView &view() const noexcept;
   const BinarySemaphore &presentReady() const noexcept;
 
 private:

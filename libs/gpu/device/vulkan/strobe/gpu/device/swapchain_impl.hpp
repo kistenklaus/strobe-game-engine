@@ -111,6 +111,8 @@ struct SwapchainImpl {
           from_vk_format(format.format), uvec3{extent.x(), extent.y(), 1}, 1, 1,
           SampleCount::x1)};
 
+      images[i].view = images[i].image.create_view(ImageViewType::image_2d, ImageAspect::color);
+
       vulkan::BinarySemaphore sem =
           vulkan::create_binary_semaphore(context.get());
       vulkan::set_debug_name(context.get(), sem, "swapchain-present-ready");

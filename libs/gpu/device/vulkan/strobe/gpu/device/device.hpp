@@ -6,11 +6,13 @@
 #include "strobe/gpu/device/device_create_info.hpp"
 #include "strobe/gpu/device/device_info.hpp"
 #include "strobe/gpu/device/fence.hpp"
+#include "strobe/gpu/device/fragment_shader.hpp"
 #include "strobe/gpu/device/image.hpp"
 #include "strobe/gpu/device/queue.hpp"
 #include "strobe/gpu/device/queue_flags.hpp"
 #include "strobe/gpu/device/swapchain.hpp"
 #include "strobe/gpu/device/timeline_semaphore.hpp"
+#include "strobe/gpu/device/vertex_shader.hpp"
 #include <GLFW/glfw3.h>
 
 namespace strobe::gpu {
@@ -47,8 +49,9 @@ public:
   BinarySemaphore create_binary_semaphore();
   TimelineSemaphore create_timeline_semaphore(uint64_t initalValue = 0);
   Fence create_fence(bool signaled);
-
   Buffer create_buffer(const BufferCreateInfo &info);
+  VertexShader create_vertex_shader(const VertexShaderCreateInfo &info);
+  FragmentShader create_fragment_shader(const FragmentShaderCreateInfo &info);
 
   const DeviceInfo &info() const noexcept;
 

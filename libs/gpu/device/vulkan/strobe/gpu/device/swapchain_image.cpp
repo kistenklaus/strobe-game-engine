@@ -47,6 +47,12 @@ const Image &SwapchainImage::image() const noexcept {
   auto *impl = void_handle_ptr<SwapchainGenerationImpl>(m_handle);
   return impl->images[m_index].image;
 }
+
+const ImageView &SwapchainImage::view() const noexcept {
+  auto *impl = void_handle_ptr<SwapchainGenerationImpl>(m_handle);
+  return impl->images[m_index].view;
+}
+
 const BinarySemaphore &SwapchainImage::presentReady() const noexcept {
   auto *impl = void_handle_ptr<SwapchainGenerationImpl>(m_handle);
   return impl->images[m_index].presentReady;

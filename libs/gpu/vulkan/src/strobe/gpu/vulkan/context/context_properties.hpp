@@ -13,6 +13,7 @@ struct ContextProperties {
 
   uint32_t timeline_semaphore : 1 = false;
   uint32_t synchronization2 : 1 = false;
+  uint32_t dynamicRendering : 1 = false;
   uint32_t shaderObjects : 1 = false;
 
   uint32_t subgroup_control : 1 = false;

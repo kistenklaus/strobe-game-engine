@@ -11,14 +11,16 @@ set(VK_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/command_buffer_impl.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/device.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/fence.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/fragment_shader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/image.cpp
-  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/image_view.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/image_view.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/queue.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/surface.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/swapchain.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/swapchain_generation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/swapchain_image.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/timeline_semaphore.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/vertex_shader.cpp
 )
 set(VK_INCLUDE
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan

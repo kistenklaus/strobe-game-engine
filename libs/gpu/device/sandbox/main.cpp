@@ -1,6 +1,8 @@
 
+#include "io.hpp"
 #include "strobe/core/lina/vec.hpp"
 #include "strobe/gpu/device/device.hpp"
+#include "strobe/gpu/device/fragment_shader.hpp"
 #include "strobe/gpu/device/image_memory_barrier.hpp"
 #include "strobe/gpu/device/queue_flags.hpp"
 #include "strobe/gpu/vulkan/binary_semaphore.hpp"
@@ -38,7 +40,9 @@ int main() {
     WindowImpl window{uvec2{800, 600}, "strobe"};
 
     Device device{{
-        .debug_utils = false,
+#ifndef NDEBUG
+        .debug_utils = true,
+#endif
     }};
 
     Swapchain swapchain = device.create_swapchain(
@@ -63,8 +67,18 @@ int main() {
       frames[i].imageAvailable.set_name("imageAvailable");
     }
 
-    uint32_t frameIndex = 0;
+    const auto vertexSpv = utility::read_spirv("./vertex.spv");
+    const auto fragmentSpv = utility::read_spirv("./fragment.spv");
 
+    VertexShader vertex = device.create_vertex_shader({
+        .spirv = vertexSpv,
+        .nextStage = ShaderStage::fragment,
+    });
+    FragmentShader fragment = device.create_fragment_shader({
+        .spirv = fragmentSpv,
+    });
+
+    uint32_t frameIndex = 0;
     window.show();
     while (!window.should_close()) {
       window.poll();
@@ -76,6 +90,30 @@ int main() {
 
       CommandBuffer cmd = cmdPool.alloc();
       cmd.begin();
+
+      Attachment colorAttachment{
+          .view = swapchainImage.view(),
+      };
+      cmd.begin_rendering({
+          .colorAttachments = {&colorAttachment, 1},
+
+      });
+
+      uvec3 swapchainExtent = swapchainImage.image().extent();
+      cmd.set_viewport({
+          .width = static_cast<float>(swapchainExtent.x()),
+          .height = static_cast<float>(swapchainExtent.y()),
+      });
+      cmd.set_scissor({
+          .extent = {swapchainExtent.x(), swapchainExtent.y()},
+      });
+
+      cmd.bind_shader(vertex);
+      cmd.bind_shader(fragment);
+      cmd.draw(3);
+
+      cmd.end_rendering();
+
       cmd.end();
 
       BinarySemaphoreSubmitInfo wait{

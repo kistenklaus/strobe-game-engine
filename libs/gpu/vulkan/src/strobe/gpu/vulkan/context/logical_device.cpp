@@ -133,6 +133,10 @@ create_logical_device(VkPhysicalDevice physicalDevice,
     properties->synchronization2 = true;
     vulkan13.synchronization2 = true;
   }
+  if (deviceInfo->features.dynamicRendering) {
+    properties->dynamicRendering = true;
+    vulkan13.dynamicRendering = true;
+  }
 
   if (info->shaderObjects != disable && deviceInfo->features.shaderObjects) {
     properties->shaderObjects = true;

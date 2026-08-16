@@ -16,6 +16,7 @@ namespace strobe::gpu {
 
 struct SwapchainImageState {
   Image image;
+  ImageView view;
   BinarySemaphore presentReady;
   Fence fence;
   bool pending = false;

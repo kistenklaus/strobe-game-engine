@@ -16,13 +16,15 @@
 #include "strobe/gpu/device/memory_usage_utils.hpp"
 #include "strobe/gpu/device/queue_impl.hpp"
 #include "strobe/gpu/device/sample_count_utils.hpp"
+#include "strobe/gpu/device/shader_object_impl.hpp"
+#include "strobe/gpu/device/shader_stage_utils.hpp"
 #include "strobe/gpu/device/surface_impl.hpp"
 #include "strobe/gpu/device/swapchain_impl.hpp"
 #include "strobe/gpu/device/timeline_semaphore_impl.hpp"
 #include "strobe/gpu/vulkan/buffer.hpp"
-#include "strobe/gpu/vulkan/command_pool.hpp"
 #include "strobe/gpu/vulkan/fence.hpp"
 #include "strobe/gpu/vulkan/image.hpp"
+#include "strobe/gpu/vulkan/shader_object.hpp"
 #include "strobe/gpu/vulkan/surface.hpp"
 #include "strobe/gpu/vulkan/timeline_semaphore.hpp"
 #include <vulkan/vulkan_core.h>
@@ -256,7 +258,8 @@ CommandPool Device::create_cmd_pool(const Queue &queue) {
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   auto *queue_impl = void_handle_ptr<QueueImpl>(queue.m_handle);
 
-  return CommandPool{make_void_handle<CommandPoolImpl>(impl->context, queue_impl->native->queue)};
+  return CommandPool{make_void_handle<CommandPoolImpl>(
+      impl->context, queue_impl->native->queue)};
 }
 
 Image Device::create_image(const ImageCreateInfo &createInfo) {
@@ -332,6 +335,56 @@ Buffer Device::create_buffer(const BufferCreateInfo &info) {
       vulkan::get_buffer_device_address(impl->context.get(), buffer);
   return Buffer{
       make_void_handle<BufferImpl>(impl->context, buffer, info.size, address)};
+}
+
+VertexShader Device::create_vertex_shader(const VertexShaderCreateInfo &info) {
+  ZoneScopedN("Device::create_vertex_shader");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+
+  SmallVector<VkPushConstantRange> pcRange{};
+  for (uint32_t i = 0; i < info.pushConstantRange.size(); ++i) {
+    const auto &range = info.pushConstantRange[i];
+    pcRange.push_back({
+        .stageFlags = to_vk_shader_stage(range.stage),
+        .offset = range.offset,
+        .size = range.size,
+    });
+  }
+  vulkan::ShaderObject so = vulkan::create_shader_object(
+      impl->context.get(), vulkan::ShaderObjectCreateInfo{
+                               .stage = VK_SHADER_STAGE_VERTEX_BIT,
+                               .flags = 0,
+                               .nextStage = to_vk_shader_stage(info.nextStage),
+                               .spirv = info.spirv,
+                               .pushConstantRange = pcRange,
+                               .specInfo = nullptr,
+                           });
+  return VertexShader{make_void_handle<ShaderObjectImpl>(impl->context, so)};
+}
+
+FragmentShader
+Device::create_fragment_shader(const FragmentShaderCreateInfo &info) {
+  ZoneScopedN("Device::create_fragment_shader");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+
+  SmallVector<VkPushConstantRange> pcRange{};
+  for (uint32_t i = 0; i < info.pushConstantRange.size(); ++i) {
+    const auto &range = info.pushConstantRange[i];
+    pcRange.push_back({
+        .stageFlags = to_vk_shader_stage(range.stage),
+        .offset = range.offset,
+        .size = range.size,
+    });
+  }
+  vulkan::ShaderObject so = vulkan::create_shader_object(
+      impl->context.get(), vulkan::ShaderObjectCreateInfo{
+                               .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+                               .flags = 0,
+                               .spirv = info.spirv,
+                               .pushConstantRange = pcRange,
+                               .specInfo = nullptr,
+                           });
+  return FragmentShader{make_void_handle<ShaderObjectImpl>(impl->context, so)};
 }
 
 const DeviceInfo &Device::info() const noexcept {

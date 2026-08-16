@@ -6,7 +6,7 @@ namespace strobe::gpu {
 
 struct CommandBufferState {
   using allocator = cmd_buf_state_allocator_ref;
-  CommandBufferState(const allocator &alloc) noexcept {}
+  CommandBufferState([[maybe_unused]] const allocator &alloc) noexcept {}
 
   // TODO: bound resource refs. (must be default initalizable)
 };

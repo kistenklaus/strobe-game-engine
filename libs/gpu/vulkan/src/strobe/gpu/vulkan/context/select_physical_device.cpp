@@ -297,6 +297,10 @@ double get_device_score(VkInstance instance, VkPhysicalDevice device,
     return unsuitable;
   }
 
+  if (!deviceInfo.features.dynamicRendering) {
+    return unsuitable;
+  }
+
   double score = device_type_score(deviceInfo.properties.deviceType);
 
   /*

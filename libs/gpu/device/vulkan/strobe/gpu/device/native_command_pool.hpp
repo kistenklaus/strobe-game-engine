@@ -57,10 +57,10 @@ struct NativeCommandPool {
 private:
   void bulk_alloc(vulkan::Context *context) {
     assert(m_allocated <= (CAPACITY / 2));
-    static constexpr size_t MAX_ALLOC_COUNT = CAPACITY / 2;
 
     const uint32_t new_allocated = m_allocated != 0 ? (2 * m_allocated) : 1;
     const uint32_t alloc_count = new_allocated - m_allocated;
+    [[maybe_unused]] static constexpr size_t MAX_ALLOC_COUNT = CAPACITY / 2;
     assert(alloc_count <= MAX_ALLOC_COUNT);
 
     VkCommandBufferAllocateInfo allocInfo{
@@ -72,10 +72,13 @@ private:
         .commandBufferCount = alloc_count,
     };
 
-    VkResult result = vkAllocateCommandBuffers(context->device(), &allocInfo,
-                                               m_cmds.data() + m_allocated);
-    if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to allocate command buffers");
+    {
+      ZoneScopedN("vkAllocateCommandBuffers");
+      VkResult result = vkAllocateCommandBuffers(context->device(), &allocInfo,
+                                                 m_cmds.data() + m_allocated);
+      if (result != VK_SUCCESS) {
+        throw std::runtime_error("Failed to allocate command buffers");
+      }
     }
     m_allocated = new_allocated;
   }
