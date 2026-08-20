@@ -29,6 +29,9 @@ struct ContextCreateInfo {
   feature timeline_semaphore = disable;
 
   feature shaderObjects = required;
+  feature hostQueryReset = required;
+  feature calibratedTimestamps = required;
+  feature bufferDeviceAddress = required;
   // sync2 is always required
 
   uint32_t queue_count = 0;

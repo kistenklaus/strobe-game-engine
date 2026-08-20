@@ -1,25 +1,34 @@
 #pragma once
 
 #include "strobe/core/containers/small_vector.hpp"
+#include "strobe/gpu/device/access_utils.hpp"
 #include "strobe/gpu/device/always_inline.hpp"
 #include "strobe/gpu/device/attachment_load_op_utils.hpp"
 #include "strobe/gpu/device/attachment_store_op_utils.hpp"
 #include "strobe/gpu/device/blend_factor_utils.hpp"
 #include "strobe/gpu/device/blend_op_utils.hpp"
+#include "strobe/gpu/device/buffer.hpp"
+#include "strobe/gpu/device/buffer_handle_alloc.hpp"
+#include "strobe/gpu/device/buffer_impl.hpp"
 #include "strobe/gpu/device/clear_value_utils.hpp"
 #include "strobe/gpu/device/color_component.hpp"
 #include "strobe/gpu/device/color_component_utils.hpp"
 #include "strobe/gpu/device/command_buffer.hpp"
 #include "strobe/gpu/device/command_buffer_rendering_state.hpp"
 #include "strobe/gpu/device/command_buffer_state.hpp"
+#include "strobe/gpu/device/command_buffer_type.hpp"
 #include "strobe/gpu/device/command_pool.hpp"
 #include "strobe/gpu/device/compare_op_utils.hpp"
+#include "strobe/gpu/device/context.hpp"
 #include "strobe/gpu/device/cull_mode_utils.hpp"
 #include "strobe/gpu/device/format_utilts.hpp"
 #include "strobe/gpu/device/front_face_utils.hpp"
+#include "strobe/gpu/device/handle.hpp"
 #include "strobe/gpu/device/image_view_impl.hpp"
 #include "strobe/gpu/device/logic_op_utils.hpp"
+#include "strobe/gpu/device/memory_barrier.hpp"
 #include "strobe/gpu/device/native_command_pool.hpp"
+#include "strobe/gpu/device/pipeline_stage_utils.hpp"
 #include "strobe/gpu/device/polygon_mode_utils.hpp"
 #include "strobe/gpu/device/primitive_topology.hpp"
 #include "strobe/gpu/device/primitive_topology_utils.hpp"
@@ -30,18 +39,19 @@
 #include "strobe/gpu/device/stencil_op_utils.hpp"
 #include "strobe/gpu/device/vertex_input_rate_utils.hpp"
 #include "strobe/gpu/vulkan/command_buffer.hpp"
-#include "strobe/gpu/vulkan/context/shader_obj.hpp"
+#include "strobe/gpu/vulkan/context/pnf.hpp"
 #include "strobe/gpu/vulkan/shader_object.hpp"
 #include <limits>
 #include <type_traits>
 #include <utility>
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu {
 
 struct CommandBufferImpl {
 
   CommandBufferImpl(CommandPool pool, NativeCommandPool *nativePool,
-                    vulkan::CommandBuffer cmd,
+                    vulkan::CommandBuffer cmd, CommandBufferFlags flags,
                     const cmd_buf_state_allocator_ref &alloc) noexcept;
 
   CommandBufferImpl(const CommandBufferImpl &) = delete;
@@ -55,12 +65,41 @@ struct CommandBufferImpl {
   vulkan::CommandBuffer cmd;
   CommandBufferState state;
 
-  const vulkan::PNF_ShaderObjectFunctions *pnf_shaderObject;
+  const CommandBufferFlags flags;
+  const vulkan::PNF_Functions *pnf_shaderObject;
 
   uint32_t renderingColorAttachmentCount = std::numeric_limits<uint32_t>::max();
   CommandBufferRenderingState uninitialized = CommandBufferRenderingState::all;
   CommandBufferRenderingState required =
       CommandBufferRenderingState::graphics_pipeline_requirements;
+
+  TracyVkCtx tracyCtx() const noexcept;
+
+  STROBE_ALWAYS_INLINE void memory_barrier(const MemoryBarrier &barrier) {
+    VkMemoryBarrier2 memoryBarrier{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
+        .pNext = nullptr,
+        .srcStageMask = to_vk_pipeline_stage(barrier.srcStage),
+        .srcAccessMask = to_vk_access(barrier.srcAccess),
+        .dstStageMask = to_vk_pipeline_stage(barrier.dstStage),
+        .dstAccessMask = to_vk_access(barrier.dstAccess),
+    };
+    VkDependencyInfo dependencyInfo{
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .pNext = nullptr,
+        .dependencyFlags = 0,
+        .memoryBarrierCount = 1,
+        .pMemoryBarriers = &memoryBarrier,
+        .bufferMemoryBarrierCount = 0,
+        .pBufferMemoryBarriers = nullptr,
+        .imageMemoryBarrierCount = 0,
+        .pImageMemoryBarriers = nullptr,
+    };
+    {
+      ZoneScopedN("vkCmdPipelineBarrier2");
+      vkCmdPipelineBarrier2(cmd.handle, &dependencyInfo);
+    }
+  }
 
   STROBE_ALWAYS_INLINE void
   begin_rendering(const RenderingInfo &info) noexcept {
@@ -533,7 +572,7 @@ struct CommandBufferImpl {
                                             patchControlPoints);
   }
 
-  STROBE_ALWAYS_INLINE void bind_shader(VertexShader shader) noexcept {
+  STROBE_ALWAYS_INLINE void bind_shader(const VertexShader &shader) noexcept {
     vulkan::ShaderObject so =
         void_handle_ptr<ShaderObjectImpl>(shader.m_handle)->shader;
     const VkShaderStageFlagBits stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -542,7 +581,7 @@ struct CommandBufferImpl {
                                 &so.handle);
   }
 
-  STROBE_ALWAYS_INLINE void bind_shader(FragmentShader shader) noexcept {
+  STROBE_ALWAYS_INLINE void bind_shader(const FragmentShader &shader) noexcept {
     vulkan::ShaderObject so =
         void_handle_ptr<ShaderObjectImpl>(shader.m_handle)->shader;
     const VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -611,6 +650,32 @@ struct CommandBufferImpl {
 
     vulkan::vk_cmd_bind_shaders(pnf_shaderObject, cmd.handle, stageCount,
                                 vkStages, nullptr);
+  }
+
+  STROBE_ALWAYS_INLINE void bind_vertex_buffer(const Buffer &buffer,
+                                               VkDeviceSize offset) {
+    auto *buffer_impl = void_handle_ptr<BufferImpl, buffer_handle_alloc_ref>(buffer.m_handle);
+    {
+      ZoneScopedN("vkCmdBindVertexBuffers");
+      vkCmdBindVertexBuffers(cmd.handle, 0, 1, &buffer_impl->buffer.handle,
+                             &offset);
+    }
+  }
+
+  STROBE_ALWAYS_INLINE void copy_buffer(const Buffer &dst, const Buffer &src) {
+    auto *dst_impl = void_handle_ptr<BufferImpl, buffer_handle_alloc_ref>(dst.m_handle);
+    auto *src_impl = void_handle_ptr<BufferImpl, buffer_handle_alloc_ref>(src.m_handle);
+    assert(dst.size() == src.size());
+    VkBufferCopy copy{
+        .srcOffset = 0,
+        .dstOffset = 0,
+        .size = dst.size(),
+    };
+    {
+      ZoneScopedN("vkCmdCopyBuffer");
+      vkCmdCopyBuffer(cmd.handle, src_impl->buffer.handle,
+                      dst_impl->buffer.handle, 1, &copy);
+    }
   }
 
   STROBE_ALWAYS_INLINE void draw(uint32_t vertexCount, uint32_t instanceCount,

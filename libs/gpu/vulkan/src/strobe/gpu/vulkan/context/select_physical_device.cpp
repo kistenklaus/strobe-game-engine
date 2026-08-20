@@ -4,6 +4,7 @@
 #include "strobe/core/memory/Mallocator.hpp"
 #include "strobe/core/memory/inplace_monotonic_resource.hpp"
 #include "strobe/gpu/vulkan/context/context_properties.hpp"
+#include "strobe/gpu/vulkan/context/create_info.hpp"
 #include "strobe/gpu/vulkan/device_info/device_extensions.hpp"
 #include "strobe/gpu/vulkan/device_info/device_features.hpp"
 #include "strobe/gpu/vulkan/device_info/device_info.hpp"
@@ -301,6 +302,19 @@ double get_device_score(VkInstance instance, VkPhysicalDevice device,
     return unsuitable;
   }
 
+  if (info->hostQueryReset == required && !deviceInfo.features.hostQueryReset) {
+    return unsuitable;
+  }
+
+  if (info->calibratedTimestamps == required && !deviceInfo.features.calibratedTimestamps) {
+    return unsuitable;
+  }
+
+  if (info->bufferDeviceAddress == required && !deviceInfo.features.bufferDeviceAddress) {
+    return unsuitable;
+  }
+
+
   double score = device_type_score(deviceInfo.properties.deviceType);
 
   /*
@@ -327,6 +341,7 @@ double get_device_score(VkInstance instance, VkPhysicalDevice device,
     if (!std::isfinite(queueScore)) {
       return unsuitable;
     }
+
 
     score += queueScore;
   }

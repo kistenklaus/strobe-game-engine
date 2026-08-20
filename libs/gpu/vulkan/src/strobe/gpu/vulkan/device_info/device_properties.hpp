@@ -1,7 +1,9 @@
 #pragma once
 
+#include "strobe/core/containers/small_vector.hpp"
 #include "strobe/core/containers/string.hpp"
 #include "strobe/core/memory/Mallocator.hpp"
+#include "strobe/gpu/vulkan/device_info/device_features.hpp"
 #include <vulkan/vulkan.h>
 
 namespace strobe::gpu::vulkan {
@@ -141,11 +143,13 @@ template <Allocator Alloc = strobe::Mallocator> struct DeviceProperties {
   uint32_t driverVersion;
   std::array<uint8_t, VK_UUID_SIZE> pipelineCacheUUID;
   DeviceLimits limits;
+  SmallVector<VkTimeDomainKHR, 4> calibratableTimeDomains;
 };
 
 template <Allocator Alloc = strobe::Mallocator>
 static DeviceProperties<Alloc>
-query_device_properties(VkPhysicalDevice physicalDevice,
+query_device_properties(VkInstance instance, VkPhysicalDevice physicalDevice,
+                        const DeviceFeatures *features,
                         const Alloc &alloc = {}) noexcept {
   VkPhysicalDeviceProperties2 props{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
@@ -153,6 +157,31 @@ query_device_properties(VkPhysicalDevice physicalDevice,
       .properties = {},
   };
   vkGetPhysicalDeviceProperties2(physicalDevice, &props);
+
+  SmallVector<VkTimeDomainKHR, 4> timeDomains;
+  if (features->calibratedTimestamps) {
+    const auto pfn_query_time_domains =
+        reinterpret_cast<PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsKHR>(
+            vkGetInstanceProcAddr(
+                instance, "vkGetPhysicalDeviceCalibrateableTimeDomainsKHR"));
+    assert(pfn_query_time_domains != nullptr);
+    VkResult result;
+    do {
+      uint32_t count = 0;
+      result = pfn_query_time_domains(physicalDevice, &count, nullptr);
+      assert(result == VK_SUCCESS);
+      timeDomains.resize(count);
+      if (count == 0) {
+        break;
+      }
+      result =
+          pfn_query_time_domains(physicalDevice, &count, timeDomains.data());
+      if (result == VK_SUCCESS) {
+        timeDomains.resize(count);
+      }
+    } while (result == VK_INCOMPLETE);
+    assert(result == VK_SUCCESS);
+  }
 
   return DeviceProperties<Alloc>{
       .apiVersion = props.properties.apiVersion,
@@ -392,6 +421,7 @@ query_device_properties(VkPhysicalDevice physicalDevice,
               .nonCoherentAtomSize =
                   props.properties.limits.nonCoherentAtomSize,
           },
+      .calibratableTimeDomains = timeDomains,
   }; // namespace strobe::gpu::vulkan
 }
 

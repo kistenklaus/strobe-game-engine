@@ -8,7 +8,7 @@
 #include "strobe/gpu/vulkan/context/logical_device.hpp"
 #include "strobe/gpu/vulkan/context/select_physical_device.hpp"
 #include "strobe/gpu/vulkan/context/select_queues.hpp"
-#include "strobe/gpu/vulkan/context/shader_obj.hpp"
+#include "strobe/gpu/vulkan/context/pnf.hpp"
 #include "strobe/gpu/vulkan/context/vma.hpp"
 #include <GLFW/glfw3.h>
 #include <fmt/format.h>
@@ -30,12 +30,8 @@ Context::Context(const ContextCreateInfo &info, const allocator &alloc) noexcept
                                      &m_driverAlloc)),
       m_queues(get_queues(m_device, m_queueLocations, &m_alloc)),
       m_vma(create_vma(m_instance, m_physicalDevice, m_device,
-                       m_props.api_version, &m_driverAlloc)) {
-
-    if (m_props.shaderObjects) {
-      m_shaderObjFuncs = load_shader_object_functions(m_device);
-    }
-  }
+                       m_props.api_version, &m_driverAlloc)),
+      m_pnf(load_pnf_functions(m_instance, m_device, m_props)) {}
 
 Context::~Context() noexcept {
 

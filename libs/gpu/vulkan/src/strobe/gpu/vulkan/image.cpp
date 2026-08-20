@@ -35,7 +35,7 @@ Image create_image(Context *context, const ImageInfo &info) {
     ZoneScopedN("vmaCreateImage");
     const VkResult result =
         vmaCreateImage(context->vma(), &imageInfo,
-                       details::get_allocation_create_info(info.memory_usage),
+                       details::get_auto_allocation_create_info(info.memory_usage),
                        &image.handle, &image.allocation, nullptr);
     if (result != VK_SUCCESS) {
       throw std::runtime_error{"Failed to create Vulkan image"};

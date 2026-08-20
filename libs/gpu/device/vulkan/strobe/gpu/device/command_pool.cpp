@@ -1,6 +1,7 @@
 #include "strobe/gpu/device/command_pool.hpp"
 #include "strobe/gpu/device/command_buffer.hpp"
 #include "strobe/gpu/device/command_buffer_impl.hpp"
+#include "strobe/gpu/device/command_buffer_type.hpp"
 #include "strobe/gpu/device/command_pool_impl.hpp"
 #include "strobe/gpu/device/handle.hpp"
 
@@ -40,14 +41,16 @@ CommandPool::~CommandPool() noexcept {
   unpin_void_handle<CommandPoolImpl>(m_handle);
 }
 
-CommandBuffer CommandPool::alloc(bool primary) {
+CommandBuffer CommandPool::alloc(CommandBufferFlags flags) {
   ZoneScopedN("CommandPool::alloc");
   assert(m_handle);
   auto *impl = void_handle_ptr<CommandPoolImpl>(m_handle);
-  auto [nativePool, cmd] = impl->alloc(primary);
+  auto [nativePool, cmd] =
+      impl->alloc((flags & CommandBufferFlags::secondary) == 0);
+
   return alloc_void_handle<CommandBufferImpl,
                            strobe::gpu::cmd_buf_handle_allocator_ref>(
-      impl->get_handle_allocator(), *this, nativePool, cmd,
+      impl->get_handle_allocator(), *this, nativePool, cmd, flags,
       impl->get_state_allocator());
 }
 

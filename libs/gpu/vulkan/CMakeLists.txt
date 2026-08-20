@@ -31,6 +31,7 @@ add_library(${STROBE_GPU_VULKAN_LIB} EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/fence.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/image.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/image_view.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/memory.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/memory_usage.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/query_pool.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/gpu/vulkan/queue.cpp

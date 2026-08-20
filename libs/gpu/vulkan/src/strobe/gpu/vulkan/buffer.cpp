@@ -1,6 +1,8 @@
 #include "strobe/gpu/vulkan/buffer.hpp"
+#include "strobe/gpu/vulkan/memory.hpp"
 
 #include <stdexcept>
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu::vulkan {
 
@@ -20,10 +22,7 @@ Buffer create_buffer(Context *context, const BufferInfo &info) {
       .pNext = &usageInfo,
       .flags = 0,
       .size = info.size,
-
-      // Ignored because VkBufferUsageFlags2CreateInfo is in pNext.
       .usage = 0,
-
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
       .queueFamilyIndexCount = 0,
       .pQueueFamilyIndices = nullptr,
@@ -31,15 +30,13 @@ Buffer create_buffer(Context *context, const BufferInfo &info) {
 
   Buffer buffer{
       .handle = VK_NULL_HANDLE,
-      .allocation = VK_NULL_HANDLE,
   };
 
   {
-    ZoneScopedN("vmaCreateBuffer");
+    ZoneScopedN("vkCreateBuffer");
     const VkResult result =
-        vmaCreateBuffer(context->vma(), &bufferInfo,
-                        details::get_allocation_create_info(info.memory_usage),
-                        &buffer.handle, &buffer.allocation, nullptr);
+        vkCreateBuffer(context->device(), &bufferInfo, context->driver_alloc(),
+                       &buffer.handle);
 
     if (result != VK_SUCCESS) {
       throw std::runtime_error{"Failed to create Vulkan buffer"};
@@ -52,85 +49,68 @@ Buffer create_buffer(Context *context, const BufferInfo &info) {
 void destroy_buffer(Context *context, Buffer buffer) noexcept {
   assert(context != nullptr);
   assert(buffer);
-  ZoneScopedN("vmaDestroyBuffer")
-      vmaDestroyBuffer(context->vma(), buffer.handle, buffer.allocation);
-}
-void *map_buffer(Context *context, Buffer buffer) {
-  assert(context != nullptr);
-  assert(buffer);
-  assert(buffer.allocation != VK_NULL_HANDLE);
-  void *data;
-  {
-    ZoneScopedN("vmaMapMemory");
-    VkResult result = vmaMapMemory(context->vma(), buffer.allocation, &data);
-    if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to map buffer");
-    }
-  }
-  return data;
-}
-void unmap_buffer(Context *context, Buffer buffer) noexcept {
-  assert(context != nullptr);
-  assert(buffer);
-  assert(buffer.allocation != VK_NULL_HANDLE);
-  ZoneScopedN("vmaUnmapMemory");
-  vmaUnmapMemory(context->vma(), buffer.allocation);
+  ZoneScopedN("vkDestroyBuffer");
+  vkDestroyBuffer(context->device(), buffer.handle, context->driver_alloc());
 }
 
-void flush_buffer(Context *context, Buffer buffer, size_t offset, size_t size) {
-  assert(context != nullptr);
-  assert(buffer);
-  assert(buffer.allocation != VK_NULL_HANDLE);
-  {
-    ZoneScopedN("vmaFlushAllocation");
-    VkResult result =
-        vmaFlushAllocation(context->vma(), buffer.allocation, offset, size);
-    if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to flush buffer range");
-    }
-  }
-}
-void invalidate_buffer(Context *context, Buffer buffer, size_t offset,
-                       size_t size) {
-  assert(context != nullptr);
-  assert(buffer);
-  assert(buffer.allocation != VK_NULL_HANDLE);
-  {
-    ZoneScopedN("vmaInvalidateAllocation");
-    VkResult result = vmaInvalidateAllocation(context->vma(), buffer.allocation,
-                                              offset, size);
-    if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to invalidate buffer range");
-    }
-  }
-}
-void *get_persistantly_mapped_buffer_ptr(Context *context,
-                                         Buffer buffer) noexcept {
-  assert(context != nullptr);
-  assert(buffer);
-  assert(buffer.allocation != VK_NULL_HANDLE);
-  VmaAllocationInfo allocInfo{};
-  {
-    ZoneScopedN("vmaGetAllocationInfo");
-    vmaGetAllocationInfo(context->vma(), buffer.allocation, &allocInfo);
-  }
-  assert(allocInfo.pMappedData != nullptr);
-  return allocInfo.pMappedData;
-}
-VkDeviceAddress get_buffer_device_address(Context *context,
-                                          Buffer buffer) noexcept {
-  assert(context != nullptr);
-  assert(context->properties().deviceAddress);
-  assert(buffer);
+MemoryRequirements get_buffer_memory_requirements(Context *context,
+                                                  Buffer buffer) {
+  VkBufferMemoryRequirementsInfo2 info{
+      .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2,
+      .pNext = nullptr,
+      .buffer = buffer.handle,
+  };
+  VkMemoryDedicatedRequirements dedicatedReq{
+      .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS,
+      .pNext = nullptr,
+      .prefersDedicatedAllocation = false,
+      .requiresDedicatedAllocation = false,
+  };
 
-  const VkBufferDeviceAddressInfo info{
+  VkMemoryRequirements2 req2{
+      .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+      .pNext = &dedicatedReq,
+      .memoryRequirements = {},
+  };
+  {
+    ZoneScopedN("vkGetBufferMemoryRequirements2");
+    vkGetBufferMemoryRequirements2(context->device(), &info, &req2);
+  }
+
+  return MemoryRequirements{
+      .size = req2.memoryRequirements.size,
+      .alignment = req2.memoryRequirements.alignment,
+      .memoryTypeBits = req2.memoryRequirements.memoryTypeBits,
+      .prefersDedicated =
+          static_cast<bool>(dedicatedReq.prefersDedicatedAllocation),
+      .requiresDedicated =
+          static_cast<bool>(dedicatedReq.requiresDedicatedAllocation),
+  };
+}
+
+VkDeviceAddress get_buffer_device_address(Context *context, Buffer buffer) {
+  VkBufferDeviceAddressInfo info{
       .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
       .pNext = nullptr,
       .buffer = buffer.handle,
   };
-
   ZoneScopedN("vkGetBufferDeviceAddress");
   return vkGetBufferDeviceAddress(context->device(), &info);
+}
+
+void bind_buffer_memory(Context *context, const Memory &memory, Buffer buffer,
+                        VkDeviceSize offset) {
+  assert(context != nullptr);
+  assert(memory);
+  assert(buffer);
+  {
+    ZoneScopedN("vmaBindBufferMemory2");
+    VkResult result = vmaBindBufferMemory2(context->vma(), memory.handle,
+                                           offset, buffer.handle, nullptr);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("Failed to bind buffer memory");
+    }
+  }
 }
 
 } // namespace strobe::gpu::vulkan

@@ -2,6 +2,7 @@
 
 #include "strobe/gpu/device/buffer_usage.hpp"
 #include "strobe/gpu/device/memory_usage.hpp"
+#include <cassert>
 #include <cstdint>
 namespace strobe::gpu {
 
@@ -14,6 +15,8 @@ struct BufferCreateInfo {
 class Buffer {
   friend class Device;
   friend class CommandBuffer;
+  friend class MemoryPool;
+  friend struct CommandBufferImpl;
 
 public:
   Buffer() noexcept : m_handle(nullptr) {}
@@ -25,8 +28,14 @@ public:
 
   uint64_t size() const noexcept;
 
+  void commit();
+
+  void *ptr();
+
 private:
-  Buffer(void *handle) noexcept : m_handle(handle) {}
+  Buffer(void *handle) noexcept : m_handle(handle) {
+    assert(handle);
+  }
   void *m_handle;
 };
 } // namespace strobe::gpu

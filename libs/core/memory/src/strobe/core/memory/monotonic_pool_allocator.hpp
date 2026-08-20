@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include <ratio>
+#include <tracy/Tracy.hpp>
 
 #include "strobe/core/memory/AllocatorTraits.hpp"
 
@@ -56,7 +57,7 @@ public:
     assert(size <= block_size);
     assert((BlockAlign % align) == 0);
     if (m_freelist == nullptr) {
-      grow();
+      allocate_block();
     }
     return popFreelist();
   }
@@ -127,7 +128,8 @@ private:
     m_freelist = node;
   }
 
-  void grow() {
+  void allocate_block() {
+    ZoneScopedN("MonotonicPoolResource::allocate_block");
     std::size_t nextBlockSize;
     if (m_buffer == nullptr) {
       // block size is +1 the capacity.

@@ -12,7 +12,6 @@ namespace details {
 using cmd_buf_handle_alloc_layout =
     AllocatorReference<MPSCMonotonicPoolResource<
         sizeof(void *), alignof(void *), strobe::gpu::allocator_ref>>;
-}
 
 static constexpr std::size_t cmd_buf_handle_size =
     sizeof(handle_control_block<CommandBufferImpl,
@@ -21,8 +20,10 @@ static constexpr std::size_t cmd_buf_handle_align =
     alignof(handle_control_block<CommandBufferImpl,
                                  details::cmd_buf_handle_alloc_layout>);
 
+}
+
 using cmd_buf_handle_allocator =
-    MPSCMonotonicPoolResource<cmd_buf_handle_size, cmd_buf_handle_align,
+    MPSCMonotonicPoolResource<details::cmd_buf_handle_size, details::cmd_buf_handle_align,
                               strobe::gpu::allocator_ref>;
 
 using cmd_buf_handle_allocator_ref =
@@ -36,10 +37,10 @@ static_assert(alignof(details::cmd_buf_handle_alloc_layout) ==
 
 static_assert(sizeof(handle_control_block<CommandBufferImpl,
                                           cmd_buf_handle_allocator_ref>) ==
-              cmd_buf_handle_size);
+              details::cmd_buf_handle_size);
 
 static_assert(alignof(handle_control_block<CommandBufferImpl,
                                            cmd_buf_handle_allocator_ref>) ==
-              cmd_buf_handle_align);
+              details::cmd_buf_handle_align);
 
 } // namespace strobe::gpu

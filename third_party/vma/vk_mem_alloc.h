@@ -628,7 +628,7 @@ typedef enum VmaAllocationCreateFlagBits
     It is useful when you want to bind yourself to do some more advanced binding, e.g. using some extensions.
     The flag is meaningful only with functions that bind by default: vmaCreateBuffer(), vmaCreateImage().
     Otherwise it is ignored.
-
+k
     If you want to make sure the new buffer/image is not tied to the new memory allocation
     through `VkMemoryDedicatedAllocateInfoKHR` structure in case the allocation ends up in its own memory block,
     use also flag #VMA_ALLOCATION_CREATE_CAN_ALIAS_BIT.

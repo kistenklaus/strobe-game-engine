@@ -2,11 +2,18 @@
 
 #include "strobe/gpu/device/handle.hpp"
 #include "strobe/gpu/vulkan/context/context.hpp"
+//
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
+//
+#include <tracy/TracyVulkan.hpp>
+
 namespace strobe::gpu {
 
 struct Context {
   Context(const vulkan::ContextCreateInfo &createInfo)
-      : m_handle(make_handle<vulkan::Context>(createInfo)) {}
+      : m_handle(make_handle<Internal>(createInfo)) {}
+
   Context(const Context &o) noexcept : m_handle(o.m_handle) {
     if (m_handle != nullptr) {
       pin_handle(m_handle);
@@ -35,11 +42,26 @@ struct Context {
   }
   ~Context() { unpin_handle(m_handle); }
 
-  vulkan::Context *get() { return handle_ptr(m_handle); }
-  vulkan::Context *get() const { return handle_ptr(m_handle); }
+  vulkan::Context *get() { return &handle_ptr(m_handle)->context; }
+  vulkan::Context *get() const { return &handle_ptr(m_handle)->context; }
+
+  TracyVkCtx tracyCtx() const { return handle_ptr(m_handle)->tracyCtx; }
 
 private:
-  handle<vulkan::Context> m_handle;
+  struct Impl;
+  struct Internal {
+    Internal(const vulkan::ContextCreateInfo &info) : context(info) {
+      assert(context.properties().calibratedTimestamps);
+      tracyCtx = TracyVkContextHostCalibrated(
+          context.physicalDevice(), context.device(), vkResetQueryPool,
+          context.pnf()->getPhysicalDeviceCalibrateableTimeDomains,
+          context.pnf()->getCalibratedTimestamps);
+    }
+    ~Internal() noexcept { TracyVkDestroy(tracyCtx); }
+    vulkan::Context context;
+    TracyVkCtx tracyCtx;
+  };
+  handle<Internal> m_handle;
 };
 
 } // namespace strobe::gpu

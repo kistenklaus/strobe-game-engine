@@ -8,8 +8,8 @@
 #include "strobe/gpu/vulkan/context/create_info.hpp"
 #include "strobe/gpu/vulkan/debug_name.hpp"
 #include "strobe/gpu/vulkan/timeline_semaphore.hpp"
-#include <common/TracySystem.hpp>
 #include <limits>
+#include <tracy/TracyVulkan.hpp>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu {
@@ -24,7 +24,7 @@ static const std::array<vulkan::QueueDescription, 4> NATIVE_QUEUE_DESC{
     // Presentation queue.
     vulkan::QueueDescription{
         .present = vulkan::feature::required,
-        .available = vulkan::feature::required,
+        .available = vulkan::feature::optional,
     },
 
     // Prefer a genuinely transfer-only queue.
@@ -48,8 +48,8 @@ struct DeviceImpl {
       : context(vulkan::ContextCreateInfo{
             .debug_utils = createInfo.debug_utils ? vulkan::feature::required
                                                   : vulkan::feature::disable,
-            .surface = vulkan::feature::required,
-            .swapchain = vulkan::feature::required,
+            .surface = createInfo.swapchain ? vulkan::feature::required : vulkan::feature::optional,
+            .swapchain = createInfo.swapchain ? vulkan::feature::required : vulkan::feature::optional,
             .timeline_semaphore = vulkan::feature::required,
             .queue_count = NATIVE_QUEUE_COUNT,
             .pQueues = NATIVE_QUEUE_DESC.data()}) {
@@ -119,6 +119,7 @@ struct DeviceImpl {
           }};
 
       while (!st.stop_requested()) {
+        ZoneScopedN("GC-cycle");
         VkSemaphoreWaitInfo waitInfo{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
             .pNext = nullptr,
@@ -159,7 +160,7 @@ struct DeviceImpl {
           if (completed > completedValues[i]) {
             completedValues[i] = completed;
 
-            nativeQueues[i].collect_submissions(completed);
+            nativeQueues[i].collect(completed);
 
             // Wait until this queue makes further progress.
             waitValues[i] = completed + 1;
@@ -168,6 +169,10 @@ struct DeviceImpl {
 
         if (result != VK_SUCCESS) {
           break;
+        }
+        {
+          ZoneScopedN("TracyVkCollectHost");
+          TracyVkCollectHost(context.tracyCtx());
         }
       }
     }

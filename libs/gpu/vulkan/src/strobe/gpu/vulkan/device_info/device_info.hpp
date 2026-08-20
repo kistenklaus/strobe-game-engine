@@ -19,8 +19,8 @@ private:
 
 public:
   Vector<DeviceExtension<allocator_ref>, allocator_ref> supported_extensions;
-  DeviceProperties<allocator_ref> properties;
   DeviceFeatures features;
+  DeviceProperties<allocator_ref> properties;
   MemoryProperties<allocator_ref> memory_properties;
   Vector<QueueFamilyProperties, allocator_ref> queue_family_properties;
 
@@ -35,10 +35,10 @@ private:
       : m_allocator{alloc}, //
         supported_extensions(query_device_extensions<allocator_ref>(
             physicalDevice, &m_allocator)),
-        properties(query_device_properties<allocator_ref>(
-            physicalDevice, allocator_ref(&m_allocator))),
         features(query_device_features<allocator_ref>(
             physicalDevice, apiVersion, supported_extensions)),
+        properties(query_device_properties<allocator_ref>(
+            instance, physicalDevice, &features, allocator_ref(&m_allocator))),
         memory_properties(query_memory_properties<allocator_ref>(physicalDevice,
                                                                  &m_allocator)),
         queue_family_properties(query_queue_family_properties<allocator_ref>(

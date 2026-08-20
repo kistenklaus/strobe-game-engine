@@ -1,5 +1,5 @@
 #include "strobe/gpu/vulkan/shader_object.hpp"
-#include "strobe/gpu/vulkan/context/shader_obj.hpp"
+#include "strobe/gpu/vulkan/context/pnf.hpp"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -30,7 +30,7 @@ ShaderObject create_shader_object(Context *context,
   {
     ZoneScopedN("vkCreateShadersEXT");
     VkResult result =
-        vk_create_shaders(context->shaderObjFunc(), context->device(), 1,
+        vk_create_shaders(context->pnf(), context->device(), 1,
                           &createInfo, context->driver_alloc(), &obj.handle);
     if (result != VK_SUCCESS) {
       throw std::runtime_error("Failed to create shader object");
@@ -42,7 +42,7 @@ ShaderObject create_shader_object(Context *context,
 void destroy_shader_object(Context *context, ShaderObject shader) noexcept {
   assert(shader);
   ZoneScopedN("vkDestroyShaderEXT");
-  vk_destroy_shader(context->shaderObjFunc(), context->device(), shader.handle);
+  vk_destroy_shader(context->pnf(), context->device(), shader.handle);
 }
 
 } // namespace strobe::gpu::vulkan

@@ -79,11 +79,11 @@ create_logical_device(VkPhysicalDevice physicalDevice,
 
   Vector<const char *, scratch_allocator_ref> extensions{&scratch};
 
-  if (info->swapchain != disable && !properties->surface) {
+  if (info->swapchain == required && !properties->surface) {
     throw std::runtime_error{
         "Vulkan swapchain support requires enabled surface support"};
   }
-  if (info->swapchain != disable) {
+  if (info->swapchain == required || (info->swapchain == optional && properties->surface)) {
     const bool swapchainSupported = details::supports_extension(
         deviceInfo->supported_extensions, "VK_KHR_swapchain");
     const bool maintenance1ExtensionSupported = details::supports_extension(
@@ -143,6 +143,22 @@ create_logical_device(VkPhysicalDevice physicalDevice,
     shaderObjectFeatures.pNext = pNext;
     pNext = &shaderObjectFeatures;
     extensions.emplace_back(VK_EXT_SHADER_OBJECT_EXTENSION_NAME);
+  }
+
+  if (info->hostQueryReset != disable && deviceInfo->features.hostQueryReset) {
+    properties->hostQueryReset = true;
+    vulkan12.hostQueryReset = VK_TRUE;
+  }
+  if (info->calibratedTimestamps != disable &&
+      deviceInfo->features.calibratedTimestamps) {
+    properties->calibratedTimestamps = true;
+    extensions.emplace_back(VK_KHR_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
+  }
+
+  if (info->bufferDeviceAddress != disable && 
+      deviceInfo->features.bufferDeviceAddress) {
+    properties->bufferDeviceAddress = true;
+    vulkan12.bufferDeviceAddress = VK_TRUE;
   }
 
   Vector<QueueFamilyPlan, scratch_allocator_ref> queueFamilyPlans{&scratch};

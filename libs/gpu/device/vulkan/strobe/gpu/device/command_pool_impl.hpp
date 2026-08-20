@@ -28,7 +28,7 @@ struct CommandPoolImpl {
 
   CommandPoolImpl(Context context, vulkan::Queue queue)
       : context(std::move(context)), queue(queue), m_alloc{},
-        m_stateAlloc(allocator_ref{&m_alloc}) {}
+        m_stateAlloc(&m_alloc), m_handleAlloc(&m_alloc) {}
 
   CommandPoolImpl(const CommandPoolImpl &) = delete;
   CommandPoolImpl(CommandPoolImpl &&) = delete;

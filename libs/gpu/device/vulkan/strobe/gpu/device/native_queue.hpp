@@ -137,7 +137,8 @@ struct NativeQueue {
     submissionTail = node;
   }
 
-  void collect_submissions(uint64_t completed) noexcept {
+  void collect(uint64_t completed) noexcept {
+    ZoneScopedN("NativeQueue::collect");
     DequeNode *retiredHead = nullptr;
     DequeNode *retiredTail = nullptr;
     {

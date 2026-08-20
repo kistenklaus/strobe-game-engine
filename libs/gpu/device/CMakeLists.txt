@@ -9,11 +9,16 @@ set(VK_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/command_pool.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/command_buffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/command_buffer_impl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/context.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/device.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/fence.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/fragment_shader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/image.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/image_view.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/memory_allocation.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/memory_allocation_impl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/memory_lifetime_allocator.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/memory_pool.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/queue.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/surface.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/swapchain.cpp

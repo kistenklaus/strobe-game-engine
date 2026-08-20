@@ -16,6 +16,10 @@ struct ContextProperties {
   uint32_t dynamicRendering : 1 = false;
   uint32_t shaderObjects : 1 = false;
 
+  uint32_t hostQueryReset : 1 = false;
+  uint32_t calibratedTimestamps : 1 = false;
+  uint32_t bufferDeviceAddress : 1 = false;
+
   uint32_t subgroup_control : 1 = false;
 
   uint32_t deviceAddress : 1 = false;

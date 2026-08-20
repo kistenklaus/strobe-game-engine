@@ -2,12 +2,14 @@
 
 #include "strobe/gpu/device/barrier.hpp"
 #include "strobe/gpu/device/blend_equation.hpp"
+#include "strobe/gpu/device/buffer.hpp"
 #include "strobe/gpu/device/color_component.hpp"
 #include "strobe/gpu/device/compare_op.hpp"
 #include "strobe/gpu/device/cull_mode.hpp"
 #include "strobe/gpu/device/fragment_shader.hpp"
 #include "strobe/gpu/device/front_face.hpp"
 #include "strobe/gpu/device/logic_op.hpp"
+#include "strobe/gpu/device/memory_barrier.hpp"
 #include "strobe/gpu/device/polygon_mode.hpp"
 #include "strobe/gpu/device/primitive_topology.hpp"
 #include "strobe/gpu/device/rect.hpp"
@@ -43,7 +45,7 @@ public:
   // pool must be externally synchronized
   void end();
 
-  void barrier(const Barrier &barrier);
+  void memory_barrier(const MemoryBarrier &barrier);
 
   // ============= rendering ===============
   void begin_rendering(const RenderingInfo &info) noexcept;
@@ -126,6 +128,8 @@ public:
   void bind_shader(FragmentShader shader) noexcept;
   // TODO:
   void unbind_shaders(ShaderStage stage) noexcept;
+  void bind_vertex_buffer(Buffer buffer, uint64_t offset = 0) noexcept;
+  void copy_buffer(Buffer dst, Buffer src) noexcept;
 
   // ====== draw-calls ==========
   void draw(uint32_t vertexCount, uint32_t instanceCount = 1,

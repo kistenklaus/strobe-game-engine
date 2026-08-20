@@ -1,15 +1,16 @@
 #pragma once
 
 #include "strobe/gpu/vulkan/context/context.hpp"
-#include "strobe/gpu/vulkan/memory_usage.hpp"
+#include "strobe/gpu/vulkan/memory_requirements.hpp"
 
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu::vulkan {
+// fwd
+struct Memory;
 
 struct Buffer {
   VkBuffer handle = VK_NULL_HANDLE;
-  VmaAllocation allocation = VK_NULL_HANDLE;
 
   [[nodiscard]]
   explicit operator bool() const noexcept {
@@ -20,20 +21,18 @@ struct Buffer {
 struct BufferInfo {
   VkDeviceSize size = 0;
   VkBufferUsageFlags2 usage = 0;
-  MemoryUsage memory_usage = MemoryUsage::automatic;
 };
 
 Buffer create_buffer(Context *context, const BufferInfo &info);
+
 void destroy_buffer(Context *context, Buffer buffer) noexcept;
-void *map_buffer(Context *context, Buffer buffer);
-void unmap_buffer(Context *context, Buffer buffer) noexcept;
-void flush_buffer(Context *context, Buffer buffer, size_t offset = 0,
-                  size_t size = VK_WHOLE_SIZE);
-void invalidate_buffer(Context *context, Buffer buffer, size_t offset = 0,
-                       size_t size = VK_WHOLE_SIZE);
-void *get_persistantly_mapped_buffer_ptr(Context *context,
-                                         Buffer buffer) noexcept;
-VkDeviceAddress get_buffer_device_address(Context *context,
-                                          Buffer buffer) noexcept;
+
+MemoryRequirements get_buffer_memory_requirements(Context *context,
+                                                  Buffer buffer);
+
+VkDeviceAddress get_buffer_device_address(Context *context, Buffer buffer);
+
+void bind_buffer_memory(Context *context, const Memory &memory, Buffer buffer,
+                        VkDeviceSize offset);
 
 } // namespace strobe::gpu::vulkan

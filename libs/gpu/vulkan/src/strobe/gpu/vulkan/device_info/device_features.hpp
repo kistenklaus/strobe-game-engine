@@ -178,6 +178,8 @@ struct DeviceFeatures {
 
   VkBool32 swapchainMaintenance1;
   VkBool32 shaderObjects;
+
+  VkBool32 calibratedTimestamps;
 };
 
 template <typename Alloc>
@@ -237,6 +239,11 @@ inline DeviceFeatures query_device_features(
   };
   if (shaderObjExt) {
     pNext = &shaderObjectFeatures;
+  }
+
+  const bool calibratedTimestampsExt = supports_extension<Alloc>(
+      supportedExtensions, VK_KHR_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
+  if (calibratedTimestampsExt) {
   }
 
   VkPhysicalDeviceFeatures2 features2{
@@ -438,6 +445,7 @@ inline DeviceFeatures query_device_features(
       .pushDescriptor = vulkan14.pushDescriptor,
       .swapchainMaintenance1 = swapchainMaintenance1.swapchainMaintenance1,
       .shaderObjects = shaderObjectFeatures.shaderObject,
+      .calibratedTimestamps = calibratedTimestampsExt,
   };
 }
 

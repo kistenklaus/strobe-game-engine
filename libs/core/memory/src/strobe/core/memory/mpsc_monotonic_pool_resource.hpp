@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstddef>
 #include <ratio>
+#include <tracy/Tracy.hpp>
 #include <utility>
 
 namespace strobe {
@@ -191,6 +192,7 @@ private:
   // `unique` is returned directly to the caller while the remaining nodes
   // are appended to the allocator-local freelist.
   Node *allocate_block() {
+    ZoneScopedN("MPSCMonotonicPoolResource::allocate_block");
     std::size_t next_block_size;
 
     if (m_buffer == nullptr) {

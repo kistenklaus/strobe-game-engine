@@ -73,7 +73,7 @@ VmaAllocator create_vma(VkInstance instance, VkPhysicalDevice physicalDevice,
   vulkanFunctions.vkGetDeviceProcAddr   = vkGetDeviceProcAddr;
 
   VmaAllocatorCreateInfo create_info{
-      .flags = 0,
+      .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT | VMA_ALLOCATOR_CREATE_KHR_MAINTENANCE5_BIT,
       .physicalDevice = physicalDevice,
       .device = device,
       .preferredLargeHeapBlockSize = 0,

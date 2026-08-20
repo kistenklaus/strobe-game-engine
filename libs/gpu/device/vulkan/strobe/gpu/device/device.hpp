@@ -8,6 +8,7 @@
 #include "strobe/gpu/device/fence.hpp"
 #include "strobe/gpu/device/fragment_shader.hpp"
 #include "strobe/gpu/device/image.hpp"
+#include "strobe/gpu/device/memory_pool.hpp"
 #include "strobe/gpu/device/queue.hpp"
 #include "strobe/gpu/device/queue_flags.hpp"
 #include "strobe/gpu/device/swapchain.hpp"
@@ -49,9 +50,12 @@ public:
   BinarySemaphore create_binary_semaphore();
   TimelineSemaphore create_timeline_semaphore(uint64_t initalValue = 0);
   Fence create_fence(bool signaled);
-  Buffer create_buffer(const BufferCreateInfo &info);
   VertexShader create_vertex_shader(const VertexShaderCreateInfo &info);
   FragmentShader create_fragment_shader(const FragmentShaderCreateInfo &info);
+
+  MemoryPool create_memory_pool();
+  // NOTE: we may later add this back in (backed by a internal memory pool or something)
+  // Buffer create_buffer(const BufferCreateInfo &info);
 
   const DeviceInfo &info() const noexcept;
 

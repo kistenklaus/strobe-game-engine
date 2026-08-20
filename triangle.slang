@@ -1,14 +1,19 @@
+struct VertexInput
+{
+    float2 position : POSITION;
+};
+
+struct VertexOutput
+{
+    float4 position : SV_Position;
+};
 
 [shader("vertex")]
-float4 vertexMain(uint vertexID : SV_VulkanVertexID) : SV_Position
+VertexOutput vertexMain(VertexInput input)
 {
-  float2 positions[3] = {
-      float2(-0.5, -0.5),
-      float2( 0.5, -0.5),
-      float2( 0.0,  0.5)
-  };
-
-  return float4(positions[vertexID], 0.0, 1.0);
+    VertexOutput output;
+    output.position = float4(input.position, 0.0, 1.0);
+    return output;
 }
 
 [shader("fragment")]

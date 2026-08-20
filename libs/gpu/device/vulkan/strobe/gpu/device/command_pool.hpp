@@ -1,6 +1,7 @@
 #pragma once
 
 #include "strobe/gpu/device/command_buffer.hpp"
+#include "strobe/gpu/device/command_buffer_type.hpp"
 
 namespace strobe::gpu {
 
@@ -20,7 +21,7 @@ public:
   ~CommandPool() noexcept;
   explicit operator bool() const noexcept { return m_handle != nullptr; }
 
-  CommandBuffer alloc(bool primary = true);
+  CommandBuffer alloc(CommandBufferFlags flags = CommandBufferFlags::none);
 
 private:
   CommandPool(void *handle) : m_handle(handle) {};

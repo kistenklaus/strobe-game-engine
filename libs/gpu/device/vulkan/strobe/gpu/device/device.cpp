@@ -13,6 +13,7 @@
 #include "strobe/gpu/device/image_impl.hpp"
 #include "strobe/gpu/device/image_type_utils.hpp"
 #include "strobe/gpu/device/image_usage_utils.hpp"
+#include "strobe/gpu/device/memory_pool_impl.hpp"
 #include "strobe/gpu/device/memory_usage_utils.hpp"
 #include "strobe/gpu/device/queue_impl.hpp"
 #include "strobe/gpu/device/sample_count_utils.hpp"
@@ -321,22 +322,6 @@ Fence Device::create_fence(bool signaled) {
   return Fence{make_void_handle<FenceImpl>(impl->context, fence)};
 }
 
-Buffer Device::create_buffer(const BufferCreateInfo &info) {
-  ZoneScopedN("Device::create_buffer");
-  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
-  vulkan::Buffer buffer = vulkan::create_buffer(
-      impl->context.get(),
-      vulkan::BufferInfo{
-          .size = info.size,
-          .usage = to_vk_buffer_usage(info.usage),
-          .memory_usage = to_vulkan_memory_usage(info.memory_usage),
-      });
-  VkDeviceAddress address =
-      vulkan::get_buffer_device_address(impl->context.get(), buffer);
-  return Buffer{
-      make_void_handle<BufferImpl>(impl->context, buffer, info.size, address)};
-}
-
 VertexShader Device::create_vertex_shader(const VertexShaderCreateInfo &info) {
   ZoneScopedN("Device::create_vertex_shader");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
@@ -385,6 +370,12 @@ Device::create_fragment_shader(const FragmentShaderCreateInfo &info) {
                                .specInfo = nullptr,
                            });
   return FragmentShader{make_void_handle<ShaderObjectImpl>(impl->context, so)};
+}
+
+MemoryPool Device::create_memory_pool() {
+  ZoneScopedN("Device::create_memory_pool");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  return MemoryPool{make_void_handle<MemoryPoolImpl>(impl->context)};
 }
 
 const DeviceInfo &Device::info() const noexcept {
