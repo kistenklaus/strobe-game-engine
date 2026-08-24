@@ -1,8 +1,6 @@
 #pragma once
 
 #include "strobe/core/containers/span.hpp"
-#include "strobe/core/memory/monotonic_resource.hpp"
-#include "strobe/gpu/vulkan/allocator.hpp"
 #include "strobe/gpu/vulkan/device_info/device_extensions.hpp"
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
@@ -180,6 +178,26 @@ struct DeviceFeatures {
   VkBool32 shaderObjects;
 
   VkBool32 calibratedTimestamps;
+
+  // raytracing pipeline
+  VkBool32 rayTracingPipeline;
+  VkBool32 rayTracingPipelineShaderGroupHandleCaptureReplay;
+  VkBool32 rayTracingPipelineShaderGroupHandleCaptureReplayMixed;
+  VkBool32 rayTracingPipelineTraceRaysIndirect;
+  VkBool32 rayTraversalPrimitiveCulling;
+  // VK_KHR_ray_tracing_maintenance1
+  VkBool32 rayTracingMaintenance1;
+  VkBool32 rayTracingPipelineTraceRaysIndirect2;
+  // VK_KHR_ray_query
+  VkBool32 rayQuery;
+
+  // acceleration structure
+  VkBool32 accelerationStructure;
+  VkBool32 accelerationStructureCaptureReplay;
+  VkBool32 accelerationStructureIndirectBuild;
+  VkBool32 descriptorBindingAccelerationStructureUpdateAfterBind;
+
+  VkBool32 deferredHostOperations;
 };
 
 template <typename Alloc>
@@ -222,10 +240,11 @@ inline DeviceFeatures query_device_features(
   VkPhysicalDeviceSwapchainMaintenance1FeaturesKHR swapchainMaintenance1{
       .sType =
           VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_KHR,
-      .pNext = pNext,
+      .pNext = nullptr,
       .swapchainMaintenance1 = VK_FALSE,
   };
   if (swapchainMain1Ext) {
+    swapchainMaintenance1.pNext = pNext;
     pNext = &swapchainMaintenance1;
   }
 
@@ -234,16 +253,78 @@ inline DeviceFeatures query_device_features(
 
   VkPhysicalDeviceShaderObjectFeaturesEXT shaderObjectFeatures{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_FEATURES_EXT,
-      .pNext = pNext,
+      .pNext = nullptr,
       .shaderObject = VK_FALSE,
   };
   if (shaderObjExt) {
+    shaderObjectFeatures.pNext = pNext;
     pNext = &shaderObjectFeatures;
   }
 
   const bool calibratedTimestampsExt = supports_extension<Alloc>(
       supportedExtensions, VK_KHR_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
-  if (calibratedTimestampsExt) {
+
+  const bool raytracingPipelineExt = supports_extension<Alloc>(
+      supportedExtensions, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+
+  VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracingPipelineFeatures{
+      .sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
+      .pNext = nullptr,
+      .rayTracingPipeline = VK_FALSE,
+      .rayTracingPipelineShaderGroupHandleCaptureReplay = false,
+      .rayTracingPipelineShaderGroupHandleCaptureReplayMixed = VK_FALSE,
+      .rayTracingPipelineTraceRaysIndirect = VK_FALSE,
+      .rayTraversalPrimitiveCulling = VK_FALSE,
+  };
+  if (raytracingPipelineExt) {
+    raytracingPipelineFeatures.pNext = pNext;
+    pNext = &raytracingPipelineFeatures;
+  }
+
+  const bool raytracingMaintenance1Ext = supports_extension<Alloc>(
+      supportedExtensions, VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME);
+
+  VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR raytracingMain1{
+      .sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MAINTENANCE_1_FEATURES_KHR,
+      .pNext = nullptr,
+      .rayTracingMaintenance1 = VK_FALSE,
+      .rayTracingPipelineTraceRaysIndirect2 = VK_FALSE,
+  };
+  if (raytracingMaintenance1Ext) {
+    raytracingMain1.pNext = pNext;
+    pNext = &raytracingMain1;
+  }
+
+  const bool accelerationStructureExt = supports_extension<Alloc>(
+      supportedExtensions, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+  VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures{
+      .sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+      .pNext = nullptr,
+      .accelerationStructure = VK_FALSE,
+      .accelerationStructureCaptureReplay = VK_FALSE,
+      .accelerationStructureIndirectBuild = VK_FALSE,
+      .accelerationStructureHostCommands = VK_FALSE,
+      .descriptorBindingAccelerationStructureUpdateAfterBind = VK_FALSE,
+  };
+  if (accelerationStructureExt) {
+    accelerationStructureFeatures.pNext = pNext;
+    pNext = &accelerationStructureFeatures;
+  }
+
+  const bool rayQueryExt = supports_extension<Alloc>(
+      supportedExtensions, VK_KHR_RAY_QUERY_EXTENSION_NAME);
+
+  VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
+      .pNext = nullptr,
+      .rayQuery = VK_FALSE,
+  };
+  if (rayQueryExt) {
+    rayQueryFeatures.pNext = pNext;
+    pNext = &rayQueryFeatures;
   }
 
   VkPhysicalDeviceFeatures2 features2{
@@ -251,6 +332,9 @@ inline DeviceFeatures query_device_features(
       .pNext = pNext,
       .features = {},
   };
+
+  const bool deferredHostOperationsExt = supports_extension<Alloc>(
+      supportedExtensions, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
 
   vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
 
@@ -446,6 +530,33 @@ inline DeviceFeatures query_device_features(
       .swapchainMaintenance1 = swapchainMaintenance1.swapchainMaintenance1,
       .shaderObjects = shaderObjectFeatures.shaderObject,
       .calibratedTimestamps = calibratedTimestampsExt,
+
+      .rayTracingPipeline = raytracingPipelineFeatures.rayTracingPipeline,
+      .rayTracingPipelineShaderGroupHandleCaptureReplay =
+          raytracingPipelineFeatures
+              .rayTracingPipelineShaderGroupHandleCaptureReplay,
+      .rayTracingPipelineShaderGroupHandleCaptureReplayMixed =
+          raytracingPipelineFeatures
+              .rayTracingPipelineShaderGroupHandleCaptureReplayMixed,
+      .rayTracingPipelineTraceRaysIndirect =
+          raytracingPipelineFeatures.rayTracingPipelineTraceRaysIndirect,
+      .rayTraversalPrimitiveCulling =
+          raytracingPipelineFeatures.rayTraversalPrimitiveCulling,
+      .rayTracingMaintenance1 = raytracingMain1.rayTracingMaintenance1,
+      .rayTracingPipelineTraceRaysIndirect2 =
+          raytracingMain1.rayTracingPipelineTraceRaysIndirect2,
+      .rayQuery = rayQueryFeatures.rayQuery,
+
+      .accelerationStructure =
+          accelerationStructureFeatures.accelerationStructure,
+      .accelerationStructureCaptureReplay =
+          accelerationStructureFeatures.accelerationStructureCaptureReplay,
+      .accelerationStructureIndirectBuild =
+          accelerationStructureFeatures.accelerationStructureIndirectBuild,
+      .descriptorBindingAccelerationStructureUpdateAfterBind =
+          accelerationStructureFeatures
+              .descriptorBindingAccelerationStructureUpdateAfterBind,
+      .deferredHostOperations = deferredHostOperationsExt,
   };
 }
 

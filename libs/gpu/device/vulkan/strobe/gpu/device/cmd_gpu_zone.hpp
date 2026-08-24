@@ -1,11 +1,14 @@
 #pragma once
 
+#ifdef TRACY_ENABLE
 #include "strobe/gpu/device/context.hpp"
-
+#include <client/TracyProfiler.hpp>
 #include <memory>
+#endif
 
 namespace strobe::gpu {
 
+#ifdef TRACY_ENABLE
 class CmdGpuZone {
 public:
   CmdGpuZone(TracyVkCtx context,
@@ -34,5 +37,6 @@ private:
     tracy::VkCtxScope zone;
   } m_storage;
 };
+#endif
 
 } // namespace strobe::gpu

@@ -1,6 +1,7 @@
 #include "strobe/gpu/vulkan/debug_name.hpp"
 
 #include "strobe/gpu/vulkan/context/debug_utils.hpp"
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu::vulkan {
 
@@ -91,6 +92,19 @@ void set_debug_name(Context *context, vulkan::Fence fence, const char *name) {
   };
 
   (void)vk_set_debug_utils_object_name(context->device(), &name_info);
+}
+
+void set_debug_name(Context *context, vulkan::ShaderObject shader, const char *name) {
+  const VkDebugUtilsObjectNameInfoEXT name_info{
+      .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+      .pNext = nullptr,
+      .objectType = VK_OBJECT_TYPE_SHADER_EXT,
+      .objectHandle = reinterpret_cast<uint64_t>(shader.handle),
+      .pObjectName = name,
+  };
+
+  (void)vk_set_debug_utils_object_name(context->device(), &name_info);
+
 }
 
 } // namespace strobe::gpu::vulkan

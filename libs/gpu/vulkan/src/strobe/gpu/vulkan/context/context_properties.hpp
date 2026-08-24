@@ -23,6 +23,12 @@ struct ContextProperties {
   uint32_t subgroup_control : 1 = false;
 
   uint32_t deviceAddress : 1 = false;
+
+  uint32_t deferredHostOperations : 1 = false;
+  uint32_t accelerationStructure : 1 = false;
+  uint32_t raytracingPipeline : 1 = false;
+  uint32_t raytracingPipelineMain1 : 1 = false;
+  uint32_t rayQuery : 1 = false;
 };
 
 } // namespace strobe::gpu::vulkan

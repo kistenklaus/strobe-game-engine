@@ -6,8 +6,8 @@ namespace strobe::gpu {
 
 struct MemoryBinding {
 
-  MemoryBinding(vulkan::Memory memory, VkDeviceSize offset) noexcept
-      : memory(memory), offset(offset) {}
+  MemoryBinding(vulkan::Memory memory, VkDeviceSize offset, VkDeviceSize size) noexcept
+      : memory(memory), offset(offset), size(size) {}
 
   explicit operator bool() const noexcept {
     return static_cast<bool>(
@@ -16,6 +16,7 @@ struct MemoryBinding {
 
   vulkan::Memory memory{};
   VkDeviceSize offset;
+  VkDeviceSize size;
 };
 
 } // namespace strobe::gpu

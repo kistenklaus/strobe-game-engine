@@ -19,6 +19,20 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(tracy)
+
+if (TARGET TracyClient)
+  target_compile_options(
+    TracyClient
+    PRIVATE
+      "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-w>"
+      "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/W0>"
+  )
+
+  set_property(
+    TARGET TracyClient
+    PROPERTY COMPILE_WARNING_AS_ERROR OFF
+  )
+endif()
 # expose as strobe::tracy
 
 add_library(strobe_tracy INTERFACE)
@@ -35,6 +49,11 @@ if (STROBE_TRACY)
       strobe_tracy
       INTERFACE
           "$<$<AND:$<PLATFORM_ID:Linux>,$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>>:-g;-fno-omit-frame-pointer>"
+  )
+  target_compile_definitions(
+    strobe_tracy
+    INTERFACE
+      "$<$<BOOL:${STROBE_TRACY}>:STROBE_TRACY=1>"
   )
   target_link_options(
       strobe_tracy

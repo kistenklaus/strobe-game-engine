@@ -8,6 +8,7 @@
 #include "strobe/gpu/device/fence_impl.hpp"
 #include "strobe/gpu/device/format_utilts.hpp"
 #include "strobe/gpu/device/handle.hpp"
+#include "strobe/gpu/device/image_handle_alloc.hpp"
 #include "strobe/gpu/device/image_impl.hpp"
 #include "strobe/gpu/device/surface.hpp"
 #include "strobe/gpu/device/surface_impl.hpp"
@@ -27,10 +28,11 @@ struct SwapchainImpl {
                 VkSurfaceFormatKHR format, VkPresentModeKHR presentMode,
                 VkImageUsageFlags imageUsage, span<uint32_t> queueFamilyIndices,
                 uvec2 extent, bool clipped)
-      : context(std::move(context)), surface(std::move(surface)),
-        imageCount(minImageCount), format(format), presentMode(presentMode),
-        image_usage(imageUsage), queueFamilyIndicies(queueFamilyIndices),
-        clipped(clipped), desired_extent(extent), generation{} {}
+      : context(std::move(context)), surface(std::move(surface)), m_alloc{},
+        m_imageHandleAlloc{std::in_place, &m_alloc}, imageCount(minImageCount),
+        format(format), presentMode(presentMode), image_usage(imageUsage),
+        queueFamilyIndicies(queueFamilyIndices), clipped(clipped),
+        desired_extent(extent), generation{} {}
 
   SwapchainImpl(const SwapchainImpl &) = delete;
   SwapchainImpl(SwapchainImpl &&) = delete;
@@ -106,12 +108,15 @@ struct SwapchainImpl {
     SmallVector<SwapchainImageState, 4> images{nativeImages.size()};
     for (uint32_t i = 0; i < images.size(); ++i) {
 
-      images[i].image = Image{make_void_handle<ImageImpl>(
-          context, nativeImages[i], ImageType::image_2d,
-          from_vk_format(format.format), uvec3{extent.x(), extent.y(), 1}, 1, 1,
-          SampleCount::x1)};
+      images[i].image =
+          Image{alloc_void_handle<ImageImpl, image_handle_alloc_ref>(
+              image_handle_alloc_ref{&m_imageHandleAlloc}, context,
+              MemoryAllocation{}, nativeImages[i], ImageType::image_2d,
+              from_vk_format(format.format), uvec3{extent.x(), extent.y(), 1},
+              1, 1, SampleCount::x1)};
 
-      images[i].view = images[i].image.create_view(ImageViewType::image_2d, ImageAspect::color);
+      images[i].view = images[i].image.create_view(ImageViewType::image_2d,
+                                                   ImageAspect::color);
 
       vulkan::BinarySemaphore sem =
           vulkan::create_binary_semaphore(context.get());
@@ -143,6 +148,8 @@ struct SwapchainImpl {
 
   const Context context;
   const Surface surface;
+  strobe::gpu::allocator m_alloc;
+  image_handle_alloc m_imageHandleAlloc;
   // recreate info
   // - static
   const uint32_t imageCount;

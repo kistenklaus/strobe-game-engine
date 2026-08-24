@@ -47,6 +47,7 @@ void Swapchain::resize(uvec2 extent) noexcept {
   auto *impl = void_handle_ptr<SwapchainImpl>(m_handle);
   impl->desired_extent.store(extent, std::memory_order_relaxed);
 }
+
 SwapchainImage Swapchain::acquire(BinarySemaphore signalSemaphore, Fence fence,
                                   uint64_t timeout) {
   ZoneScopedN("Swapchain::acquire");

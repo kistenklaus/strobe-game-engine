@@ -61,3 +61,16 @@ endif()
 if (INSTRUMENT_VMA)
   target_compile_definitions(${STROBE_GPU_VULKAN_LIB} PUBLIC STROBE_INSTRUMENT_VMA)
 endif()
+
+
+if(STROBE_WARNINGS_AS_ERRORS)
+  target_compile_options(${STROBE_GPU_VULKAN_LIB} PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
+    $<$<CXX_COMPILER_ID:MSVC>:/WX>
+  )
+endif()
+
+
+if (STROBE_SAN)
+  target_link_libraries(${STROBE_GPU_VULKAN_LIB} PRIVATE strobe_sanitizers)
+endif()

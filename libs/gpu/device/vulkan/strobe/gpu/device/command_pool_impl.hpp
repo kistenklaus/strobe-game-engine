@@ -7,11 +7,16 @@
 #include "strobe/gpu/device/command_buffer_state_alloctor.hpp"
 #include "strobe/gpu/device/context.hpp"
 #include "strobe/gpu/device/native_command_pool.hpp"
+#include "strobe/gpu/vulkan/buffer.hpp"
 #include "strobe/gpu/vulkan/command_pool.hpp"
+#include "strobe/gpu/vulkan/memory.hpp"
 
 #include <atomic>
 #include <cassert>
+#include <chrono>
+#include <memory>
 #include <utility>
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu {
 
@@ -38,6 +43,7 @@ struct CommandPoolImpl {
   ~CommandPoolImpl() noexcept {
     destroy_pool_set(m_primary);
     destroy_pool_set(m_secondary);
+    destroy_staging();
   }
 
   std::pair<NativeCommandPool *, vulkan::CommandBuffer> alloc(bool primary) {
@@ -104,7 +110,7 @@ private:
   [[no_unique_address]] state_allocator m_stateAlloc;
   [[no_unique_address]] handle_allocator m_handleAlloc;
 
-private:
+private: // CommandBuffer MPSC
   struct CmdPoolNode : NativeCommandPool {
     CmdPoolNode(vulkan::CommandPool cmdPool, bool primary)
         : NativeCommandPool{cmdPool, primary} {}
@@ -144,6 +150,131 @@ private:
 private:
   CmdPoolSet m_primary{};
   CmdPoolSet m_secondary{};
+
+public: // StagingBuffer MPSC
+  static constexpr std::array<VkDeviceSize, 5> STAGING_CLASSES{
+      1 << 14, // 16KiB
+      1 << 16, // 64KiB
+      1 << 18, // 256KiB
+      1 << 20, // 1MiB
+      1 << 22, // 4MiB
+               // larger (is not held persistantly)
+  };
+
+  // single consumer
+  StagingBuffer *alloc_staging(VkDeviceSize minSize) {
+    ZoneScopedN("pool/alloc-staging");
+    size_t classIndex = STAGING_CLASSES.size();
+    STROBE_UNROLL(STAGING_CLASSES.size())
+    for (size_t i = 0; i < STAGING_CLASSES.size(); ++i) {
+      if (minSize <= STAGING_CLASSES[i]) {
+        classIndex = i;
+        break;
+      }
+    }
+    // Oversized allocations are never cached.
+    if (classIndex == STAGING_CLASSES.size()) {
+      return create_staging_buffer(minSize);
+    }
+    // Fast path
+    if (StagingBuffer *buffer = m_readyStaging[classIndex]) {
+      m_readyStaging[classIndex] = buffer->next;
+      buffer->next = nullptr;
+      return buffer;
+    }
+    // Pull m_returnedStaging
+    StagingBuffer *returned =
+        m_returnedStaging.exchange(nullptr, std::memory_order_acquire);
+    while (returned != nullptr) {
+      StagingBuffer *next = returned->next;
+      returned->next = nullptr;
+      size_t returnedClass = STAGING_CLASSES.size();
+      STROBE_UNROLL(STAGING_CLASSES.size())
+      for (size_t i = 0; i < STAGING_CLASSES.size(); ++i) {
+        if (returned->size <= STAGING_CLASSES[i]) {
+          returnedClass = i;
+          break;
+        }
+      }
+      if (returnedClass == STAGING_CLASSES.size()) {
+        // Oversized staging buffers are not retained.
+        destroy_staging_buffer(returned);
+      } else {
+        returned->next = m_readyStaging[returnedClass];
+        m_readyStaging[returnedClass] = returned;
+      }
+      returned = next;
+    }
+
+    // Something of the requested class may have been returned.
+    if (StagingBuffer *buffer = m_readyStaging[classIndex]) {
+      m_readyStaging[classIndex] = buffer->next;
+      buffer->next = nullptr;
+      return buffer;
+    }
+    return create_staging_buffer(STAGING_CLASSES[classIndex]);
+  }
+
+  // multiple producer
+  void recycle_staging(StagingBuffer *begin, StagingBuffer *end) noexcept {
+    if (begin == nullptr) {
+      assert(end == nullptr);
+      return;
+    }
+    assert(end != nullptr);
+    StagingBuffer *head = m_returnedStaging.load(std::memory_order_relaxed);
+    do {
+      end->next = head;
+    } while (!m_returnedStaging.compare_exchange_weak(
+        head, begin, std::memory_order_release, std::memory_order_relaxed));
+  }
+
+private:
+  StagingBuffer *create_staging_buffer(VkDeviceSize size) {
+    auto [memory, buffer, _] = vulkan::allocate_buffer(
+        context.get(),
+        {.size = size, .usage = VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT},
+        vulkan::MemoryUsage::mapped_write_sequential);
+    ZoneScopedN("pool/create-staging-buffer");
+    vulkan::bind_buffer_memory(context.get(), memory, buffer, 0);
+    void *mapped = vulkan::map_memory(context.get(), memory);
+    assert(mapped);
+    auto *stage = allocator_traits::template allocate<StagingBuffer>(m_alloc);
+    std::construct_at(stage, buffer, memory, size, mapped);
+    return stage;
+  }
+
+  void destroy_staging_buffer(StagingBuffer *buffer) {
+    vulkan::unmap_memory(context.get(), buffer->memory);
+    vulkan::free_allocated_buffer(context.get(), buffer->memory,
+                                  buffer->buffer);
+    allocator_traits::template deallocate<StagingBuffer>(m_alloc, buffer);
+  }
+
+  void destroy_staging_list(StagingBuffer *buffer) noexcept {
+    while (buffer != nullptr) {
+      StagingBuffer *next = buffer->next;
+      destroy_staging_buffer(buffer);
+      buffer = next;
+    }
+  }
+
+  // destructor helpers.
+  void destroy_staging() noexcept {
+    StagingBuffer *returned =
+        m_returnedStaging.exchange(nullptr, std::memory_order_relaxed);
+
+    for (StagingBuffer *&ready : m_readyStaging) {
+      destroy_staging_list(ready);
+      ready = nullptr;
+    }
+
+    destroy_staging_list(returned);
+  }
+
+private:
+  std::array<StagingBuffer *, STAGING_CLASSES.size()> m_readyStaging{};
+  std::atomic<StagingBuffer *> m_returnedStaging{nullptr};
 };
 
 } // namespace strobe::gpu

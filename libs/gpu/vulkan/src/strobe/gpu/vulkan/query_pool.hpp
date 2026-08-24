@@ -20,11 +20,8 @@ struct QueryPool {
 
 struct QueryPoolInfo {
   VkQueryPoolCreateFlags flags = 0;
-
   VkQueryType type = VK_QUERY_TYPE_TIMESTAMP;
-
   uint32_t count = 0;
-
   VkQueryPipelineStatisticFlags pipeline_statistics = 0;
 };
 

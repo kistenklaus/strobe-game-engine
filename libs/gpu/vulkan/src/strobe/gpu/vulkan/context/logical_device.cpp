@@ -1,5 +1,6 @@
 #include "strobe/gpu/vulkan/context/logical_device.hpp"
 #include "strobe/gpu/vulkan/context/create_info.hpp"
+#include <iterator>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu::vulkan {
@@ -77,13 +78,58 @@ create_logical_device(VkPhysicalDevice physicalDevice,
       .shaderObject = VK_TRUE,
   };
 
+  VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracingPipelineFeatures{
+      .sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
+      .pNext = pNext,
+      .rayTracingPipeline = deviceInfo->features.rayTracingPipeline,
+      .rayTracingPipelineShaderGroupHandleCaptureReplay =
+          deviceInfo->features.rayTracingPipelineShaderGroupHandleCaptureReplay,
+      .rayTracingPipelineShaderGroupHandleCaptureReplayMixed =
+          deviceInfo->features
+              .rayTracingPipelineShaderGroupHandleCaptureReplayMixed,
+      .rayTracingPipelineTraceRaysIndirect =
+          deviceInfo->features.rayTracingPipelineTraceRaysIndirect,
+      .rayTraversalPrimitiveCulling =
+          deviceInfo->features.rayTraversalPrimitiveCulling,
+  };
+  VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR raytracingMain1{
+      .sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MAINTENANCE_1_FEATURES_KHR,
+      .pNext = nullptr,
+      .rayTracingMaintenance1 = deviceInfo->features.rayTracingMaintenance1,
+      .rayTracingPipelineTraceRaysIndirect2 =
+          deviceInfo->features.rayTracingPipelineTraceRaysIndirect2,
+  };
+
+  VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures{
+      .sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+      .pNext = nullptr,
+      .accelerationStructure = deviceInfo->features.accelerationStructure,
+      .accelerationStructureCaptureReplay = VK_FALSE,
+      .accelerationStructureIndirectBuild =
+          deviceInfo->features.accelerationStructureIndirectBuild,
+      .accelerationStructureHostCommands = VK_FALSE,
+      .descriptorBindingAccelerationStructureUpdateAfterBind =
+          deviceInfo->features
+              .descriptorBindingAccelerationStructureUpdateAfterBind,
+  };
+
+  VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
+      .pNext = nullptr,
+      .rayQuery = deviceInfo->features.rayQuery,
+  };
+
   Vector<const char *, scratch_allocator_ref> extensions{&scratch};
 
   if (info->swapchain == required && !properties->surface) {
     throw std::runtime_error{
         "Vulkan swapchain support requires enabled surface support"};
   }
-  if (info->swapchain == required || (info->swapchain == optional && properties->surface)) {
+  if (info->swapchain == required ||
+      (info->swapchain == optional && properties->surface)) {
     const bool swapchainSupported = details::supports_extension(
         deviceInfo->supported_extensions, "VK_KHR_swapchain");
     const bool maintenance1ExtensionSupported = details::supports_extension(
@@ -155,10 +201,46 @@ create_logical_device(VkPhysicalDevice physicalDevice,
     extensions.emplace_back(VK_KHR_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
   }
 
-  if (info->bufferDeviceAddress != disable && 
+  if (info->bufferDeviceAddress != disable &&
       deviceInfo->features.bufferDeviceAddress) {
     properties->bufferDeviceAddress = true;
     vulkan12.bufferDeviceAddress = VK_TRUE;
+  }
+
+  if (info->deferredHostOperations != disable &&
+      deviceInfo->features.deferredHostOperations) {
+    properties->deferredHostOperations = true;
+    extensions.emplace_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+  }
+
+  if (info->accelerationStructure != disable &&
+      deviceInfo->features.accelerationStructure) {
+    properties->accelerationStructure = true;
+    accelerationStructureFeatures.pNext = pNext;
+    pNext = &accelerationStructureFeatures;
+    extensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+  }
+
+  if (info->raytracingPipeline != disable &&
+      deviceInfo->features.rayTracingPipeline) {
+    properties->raytracingPipeline = true;
+    raytracingPipelineFeatures.pNext = pNext;
+    pNext = &raytracingPipelineFeatures;
+    extensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+
+    if (deviceInfo->features.rayTracingMaintenance1) {
+      properties->raytracingPipelineMain1 = true;
+      raytracingMain1.pNext = pNext;
+      pNext = &raytracingMain1;
+      extensions.emplace_back(VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME);
+    }
+  }
+
+  if (info->rayQuery != disable && deviceInfo->features.rayQuery) {
+    properties->rayQuery = true;
+    rayQueryFeatures.pNext = pNext;
+    pNext = &rayQueryFeatures;
+    extensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
   }
 
   Vector<QueueFamilyPlan, scratch_allocator_ref> queueFamilyPlans{&scratch};
@@ -235,7 +317,8 @@ create_logical_device(VkPhysicalDevice physicalDevice,
                                          driverAlloc->callbacks(), &device);
 
   if (result != VK_SUCCESS) {
-    throw std::runtime_error{"Failed to create logical device"};
+    throw std::runtime_error{fmt::format("Failed to create logical device : {}",
+                                         static_cast<int>(result))};
   }
 
   return device;

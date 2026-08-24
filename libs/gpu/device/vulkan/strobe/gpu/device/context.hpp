@@ -1,6 +1,7 @@
 #pragma once
 
 #include "strobe/gpu/device/handle.hpp"
+#include "strobe/gpu/device/profiler.hpp"
 #include "strobe/gpu/vulkan/context/context.hpp"
 //
 #include <vulkan/vulkan.h>
@@ -45,21 +46,18 @@ struct Context {
   vulkan::Context *get() { return &handle_ptr(m_handle)->context; }
   vulkan::Context *get() const { return &handle_ptr(m_handle)->context; }
 
-  TracyVkCtx tracyCtx() const { return handle_ptr(m_handle)->tracyCtx; }
+  profiler::Context *profiler() const noexcept {
+    return &handle_ptr(m_handle)->profiler;
+  }
 
 private:
   struct Impl;
   struct Internal {
-    Internal(const vulkan::ContextCreateInfo &info) : context(info) {
-      assert(context.properties().calibratedTimestamps);
-      tracyCtx = TracyVkContextHostCalibrated(
-          context.physicalDevice(), context.device(), vkResetQueryPool,
-          context.pnf()->getPhysicalDeviceCalibrateableTimeDomains,
-          context.pnf()->getCalibratedTimestamps);
-    }
-    ~Internal() noexcept { TracyVkDestroy(tracyCtx); }
+    Internal(const vulkan::ContextCreateInfo &info)
+        : context(info), profiler(&context) {}
+    ~Internal() noexcept {}
     vulkan::Context context;
-    TracyVkCtx tracyCtx;
+    profiler::Context profiler;
   };
   handle<Internal> m_handle;
 };

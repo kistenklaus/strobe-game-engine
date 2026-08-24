@@ -1,10 +1,13 @@
 #pragma once
 
-#include "strobe/gpu/device/barrier.hpp"
+#include "strobe/gpu/device/access_scope.hpp"
+#include "strobe/gpu/device/always_inline.hpp"
+#include "strobe/gpu/device/blas.hpp"
 #include "strobe/gpu/device/blend_equation.hpp"
 #include "strobe/gpu/device/buffer.hpp"
 #include "strobe/gpu/device/color_component.hpp"
 #include "strobe/gpu/device/compare_op.hpp"
+#include "strobe/gpu/device/compute_shader.hpp"
 #include "strobe/gpu/device/cull_mode.hpp"
 #include "strobe/gpu/device/fragment_shader.hpp"
 #include "strobe/gpu/device/front_face.hpp"
@@ -46,6 +49,7 @@ public:
   void end();
 
   void memory_barrier(const MemoryBarrier &barrier);
+  void memory_barrier(AccessScope src, AccessScope dst);
 
   // ============= rendering ===============
   void begin_rendering(const RenderingInfo &info) noexcept;
@@ -123,13 +127,26 @@ public:
     set_scissors({&scissor, 1});
   }
 
+  void bind_vertex_buffer(const Buffer &buffer, uint64_t offset = 0) noexcept;
+
   // ====== ShaderObjects =======
-  void bind_shader(VertexShader shader) noexcept;
-  void bind_shader(FragmentShader shader) noexcept;
-  // TODO:
+  void bind_shader(const VertexShader &shader) noexcept;
+  void bind_shader(const FragmentShader &shader) noexcept;
+  void bind_shader(const ComputeShader &shader) noexcept;
   void unbind_shaders(ShaderStage stage) noexcept;
-  void bind_vertex_buffer(Buffer buffer, uint64_t offset = 0) noexcept;
-  void copy_buffer(Buffer dst, Buffer src) noexcept;
+
+  // ====== transfers ===========
+
+  void copy_buffer(const Buffer &dst, const Buffer &src) noexcept;
+
+  void update(const Buffer &dst, const void *src, uint64_t size,
+              uint64_t dstOffset = 0);
+
+  template <typename T>
+  STROBE_ALWAYS_INLINE void update(const Buffer &dst, span<const T> src,
+                                   uint64_t dstOffset = 0) {
+    update(dst, src.data(), src.size_bytes(), dstOffset);
+  }
 
   // ====== draw-calls ==========
   void draw(uint32_t vertexCount, uint32_t instanceCount = 1,
@@ -137,6 +154,9 @@ public:
   void draw_indexed(uint32_t indexCount, uint32_t instanceCount = 1,
                     uint32_t firstIndex = 0, int32_t vertexOffset = 0,
                     uint32_t firstInstance = 0) noexcept;
+
+  // ===== acceleration structure =======
+  void build(const Blas &blas, span<const BuildRangeInfo> ranges);
 
 private:
   CommandBuffer(void *handle) noexcept : m_handle(handle) {}

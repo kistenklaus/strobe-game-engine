@@ -20,6 +20,12 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+option(STROBE_WARNINGS_AS_ERRORS
+       "Treat Strobe warnings as errors"
+       OFF)
+
+option(STROBE_SAN "Enable sanitizers in debug builds" ON)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(cmake/colorful.cmake)
 include(cmake/flags.cmake)

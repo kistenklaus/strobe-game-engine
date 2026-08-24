@@ -5,9 +5,12 @@
 #include "strobe/gpu/device/always_inline.hpp"
 #include "strobe/gpu/device/attachment_load_op_utils.hpp"
 #include "strobe/gpu/device/attachment_store_op_utils.hpp"
+#include "strobe/gpu/device/blas.hpp"
+#include "strobe/gpu/device/blas_impl.hpp"
 #include "strobe/gpu/device/blend_factor_utils.hpp"
 #include "strobe/gpu/device/blend_op_utils.hpp"
 #include "strobe/gpu/device/buffer.hpp"
+#include "strobe/gpu/device/buffer_binding.hpp"
 #include "strobe/gpu/device/buffer_handle_alloc.hpp"
 #include "strobe/gpu/device/buffer_impl.hpp"
 #include "strobe/gpu/device/clear_value_utils.hpp"
@@ -35,12 +38,14 @@
 #include "strobe/gpu/device/resolve_mode_utils.hpp"
 #include "strobe/gpu/device/sample_count_utils.hpp"
 #include "strobe/gpu/device/shader_object_impl.hpp"
+#include "strobe/gpu/device/staging_bump_allocator.hpp"
 #include "strobe/gpu/device/stencil_face_utils.hpp"
 #include "strobe/gpu/device/stencil_op_utils.hpp"
 #include "strobe/gpu/device/vertex_input_rate_utils.hpp"
 #include "strobe/gpu/vulkan/command_buffer.hpp"
 #include "strobe/gpu/vulkan/context/pnf.hpp"
 #include "strobe/gpu/vulkan/shader_object.hpp"
+#include <cstdio>
 #include <limits>
 #include <type_traits>
 #include <utility>
@@ -66,15 +71,26 @@ struct CommandBufferImpl {
   CommandBufferState state;
 
   const CommandBufferFlags flags;
-  const vulkan::PNF_Functions *pnf_shaderObject;
+  const vulkan::PNF_Functions *pnf;
 
+  // profiling
+  [[maybe_unused]] profiler::CommandBufferScope m_profilerScope;
+
+  // dynamic rendering state
   uint32_t renderingColorAttachmentCount = std::numeric_limits<uint32_t>::max();
   CommandBufferRenderingState uninitialized = CommandBufferRenderingState::all;
   CommandBufferRenderingState required =
       CommandBufferRenderingState::graphics_pipeline_requirements;
 
-  TracyVkCtx tracyCtx() const noexcept;
 
+  // staging
+  BufferBinding alloc_staging(VkDeviceSize size, uint16_t alignment);
+
+  StagingBumpAllocator m_stageAllocator{};
+  StagingBuffer *m_stageRecycleListHead = nullptr;
+  StagingBuffer *m_stageRecycleListTail = nullptr;
+
+  // recording helpers
   STROBE_ALWAYS_INLINE void memory_barrier(const MemoryBarrier &barrier) {
     VkMemoryBarrier2 memoryBarrier{
         .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
@@ -226,10 +242,10 @@ struct CommandBufferImpl {
     SmallVector<VkViewport, 2> views{viewports.size()};
     for (uint32_t i = 0; i < viewports.size(); ++i) {
       views[i] = VkViewport{
-          .x = viewports[i].x,
-          .y = viewports[i].y,
-          .width = viewports[i].width,
-          .height = viewports[i].height,
+          .x = viewports[i].position.x(),
+          .y = viewports[i].position.y(),
+          .width = viewports[i].extent.x(),
+          .height = viewports[i].extent.y(),
           .minDepth = viewports[i].minDepth,
           .maxDepth = viewports[i].maxDepth,
       };
@@ -401,6 +417,7 @@ struct CommandBufferImpl {
                       depthBiasSlope);
   }
 
+
   STROBE_ALWAYS_INLINE void
   set_vertex_input(span<const VertexBinding> bindings,
                    span<const VertexAttribute> attributes) noexcept {
@@ -441,9 +458,8 @@ struct CommandBufferImpl {
     }
     ZoneScopedN("vkCmdSetVertexInput");
     vulkan::vk_cmd_set_vertex_input(
-        pnf_shaderObject, cmd.handle, bindingDescriptions.size(),
-        bindingDescriptions.data(), attributeDescriptions.size(),
-        attributeDescriptions.data());
+        pnf, cmd.handle, bindingDescriptions.size(), bindingDescriptions.data(),
+        attributeDescriptions.size(), attributeDescriptions.data());
   }
   STROBE_ALWAYS_INLINE void
   set_rasterization_samples(SampleCount rasterizationSamples) noexcept {
@@ -451,8 +467,7 @@ struct CommandBufferImpl {
     const VkSampleCountFlagBits samples =
         to_vk_sample_count(rasterizationSamples);
     ZoneScopedN("vkCmdSetRasterizationSamples");
-    vulkan::vk_cmd_set_rasterization_samples(pnf_shaderObject, cmd.handle,
-                                             samples);
+    vulkan::vk_cmd_set_rasterization_samples(pnf, cmd.handle, samples);
   }
 
   STROBE_ALWAYS_INLINE void set_sample_mask(SampleCount samples,
@@ -464,15 +479,14 @@ struct CommandBufferImpl {
         static_cast<uint32_t>(mask >> 32),
     };
     ZoneScopedN("vkCmdSetSampleMask");
-    vulkan::vk_cmd_set_sample_mask(pnf_shaderObject, cmd.handle, sampleCount,
-                                   masks);
+    vulkan::vk_cmd_set_sample_mask(pnf, cmd.handle, sampleCount, masks);
   }
 
   STROBE_ALWAYS_INLINE void
   set_alpha_to_coverage_enable(bool alphaToCoverageEnable) noexcept {
     uninitialized &= ~CommandBufferRenderingState::alpha_to_coverage_enable;
     ZoneScopedN("vkCmdSetAlphaToCoverageEnable");
-    vulkan::vk_cmd_set_alpha_to_coverage_enable(pnf_shaderObject, cmd.handle,
+    vulkan::vk_cmd_set_alpha_to_coverage_enable(pnf, cmd.handle,
                                                 alphaToCoverageEnable);
   }
 
@@ -480,28 +494,26 @@ struct CommandBufferImpl {
     uninitialized &= ~CommandBufferRenderingState::polygon_mode;
     const VkPolygonMode mode = to_vk_polygon_mode(polygonMode);
     ZoneScopedN("vkCmdSetPolygonMode");
-    vulkan::vk_cmd_set_polygon_mode(pnf_shaderObject, cmd.handle, mode);
+    vulkan::vk_cmd_set_polygon_mode(pnf, cmd.handle, mode);
   }
 
   STROBE_ALWAYS_INLINE void
   set_depth_clamp_enable(bool depthClampEnable) noexcept {
     uninitialized &= ~CommandBufferRenderingState::depth_clamp_enable;
     ZoneScopedN("vkCmdSetDepthClampEnable");
-    vulkan::vk_cmd_set_depth_clamp_enable(pnf_shaderObject, cmd.handle,
-                                          depthClampEnable);
+    vulkan::vk_cmd_set_depth_clamp_enable(pnf, cmd.handle, depthClampEnable);
   }
 
   STROBE_ALWAYS_INLINE void set_logic_op_enable(bool logicOpEnable) noexcept {
     uninitialized &= ~CommandBufferRenderingState::logic_op_enable;
     ZoneScopedN("vkCmdSetLogicOpEnable");
-    vulkan::vk_cmd_set_logic_op_enable(pnf_shaderObject, cmd.handle,
-                                       logicOpEnable);
+    vulkan::vk_cmd_set_logic_op_enable(pnf, cmd.handle, logicOpEnable);
   }
 
   STROBE_ALWAYS_INLINE void set_logic_op(LogicOp logicOp) noexcept {
     VkLogicOp op = to_vk_logic_op(logicOp);
     ZoneScopedN("vkCmdSetLogicOp");
-    vulkan::vk_cmd_set_logic_op(pnf_shaderObject, cmd.handle, op);
+    vulkan::vk_cmd_set_logic_op(pnf, cmd.handle, op);
   }
 
   STROBE_ALWAYS_INLINE void set_color_blend_enable(uint32_t firstAttachment,
@@ -515,8 +527,8 @@ struct CommandBufferImpl {
     }
 
     ZoneScopedN("vkCmdSetColorBlendEnable");
-    vulkan::vk_cmd_set_color_blend_enable(
-        pnf_shaderObject, cmd.handle, firstAttachment, attachmentCount, enable);
+    vulkan::vk_cmd_set_color_blend_enable(pnf, cmd.handle, firstAttachment,
+                                          attachmentCount, enable);
   }
 
   STROBE_ALWAYS_INLINE void set_color_blend_equation(
@@ -536,9 +548,8 @@ struct CommandBufferImpl {
       };
     }
     ZoneScopedN("vkCmdSetColorBlendEquation");
-    vulkan::vk_cmd_set_color_blend_equation(pnf_shaderObject, cmd.handle,
-                                            firstAttachment, equations.size(),
-                                            equations.data());
+    vulkan::vk_cmd_set_color_blend_equation(pnf, cmd.handle, firstAttachment,
+                                            equations.size(), equations.data());
   }
 
   STROBE_ALWAYS_INLINE void
@@ -552,9 +563,8 @@ struct CommandBufferImpl {
     }
 
     ZoneScopedN("vkCmdSetColorWriteMask");
-    vulkan::vk_cmd_set_color_write_mask(pnf_shaderObject, cmd.handle,
-                                        firstAttachment, masks.size(),
-                                        masks.data());
+    vulkan::vk_cmd_set_color_write_mask(pnf, cmd.handle, firstAttachment,
+                                        masks.size(), masks.data());
   }
 
   STROBE_ALWAYS_INLINE void
@@ -562,32 +572,20 @@ struct CommandBufferImpl {
     uninitialized &= ~CommandBufferRenderingState::alpha_to_one_enable;
     ZoneScopedN("vkCmdSetAlphaToOneEnable");
     vulkan::vk_cmd_set_alpha_to_one_enable(
-        pnf_shaderObject, cmd.handle, static_cast<VkBool32>(alphaToOneEnable));
+        pnf, cmd.handle, static_cast<VkBool32>(alphaToOneEnable));
   }
 
   STROBE_ALWAYS_INLINE void
   set_patch_control_points(uint32_t patchControlPoints) noexcept {
     ZoneScopedN("vkCmdSetPatchControlPoints");
-    vulkan::vk_cmd_set_patch_control_points(pnf_shaderObject, cmd.handle,
+    vulkan::vk_cmd_set_patch_control_points(pnf, cmd.handle,
                                             patchControlPoints);
   }
 
-  STROBE_ALWAYS_INLINE void bind_shader(const VertexShader &shader) noexcept {
-    vulkan::ShaderObject so =
-        void_handle_ptr<ShaderObjectImpl>(shader.m_handle)->shader;
-    const VkShaderStageFlagBits stage = VK_SHADER_STAGE_VERTEX_BIT;
+  STROBE_ALWAYS_INLINE void bind_shader(vulkan::ShaderObject shader,
+                                        VkShaderStageFlagBits stage) noexcept {
     ZoneScopedN("vkCmdBindShaders");
-    vulkan::vk_cmd_bind_shaders(pnf_shaderObject, cmd.handle, 1, &stage,
-                                &so.handle);
-  }
-
-  STROBE_ALWAYS_INLINE void bind_shader(const FragmentShader &shader) noexcept {
-    vulkan::ShaderObject so =
-        void_handle_ptr<ShaderObjectImpl>(shader.m_handle)->shader;
-    const VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    ZoneScopedN("vkCmdBindShaders");
-    vulkan::vk_cmd_bind_shaders(pnf_shaderObject, cmd.handle, 1, &stage,
-                                &so.handle);
+    vulkan::vk_cmd_bind_shaders(pnf, cmd.handle, 1, &stage, &shader.handle);
   }
 
   STROBE_ALWAYS_INLINE void unbind_shaders(ShaderStage stages) noexcept {
@@ -648,13 +646,13 @@ struct CommandBufferImpl {
       return;
     }
 
-    vulkan::vk_cmd_bind_shaders(pnf_shaderObject, cmd.handle, stageCount,
-                                vkStages, nullptr);
+    vulkan::vk_cmd_bind_shaders(pnf, cmd.handle, stageCount, vkStages, nullptr);
   }
 
   STROBE_ALWAYS_INLINE void bind_vertex_buffer(const Buffer &buffer,
                                                VkDeviceSize offset) {
-    auto *buffer_impl = void_handle_ptr<BufferImpl, buffer_handle_alloc_ref>(buffer.m_handle);
+    auto *buffer_impl =
+        void_handle_ptr<BufferImpl, buffer_handle_alloc_ref>(buffer.m_handle);
     {
       ZoneScopedN("vkCmdBindVertexBuffers");
       vkCmdBindVertexBuffers(cmd.handle, 0, 1, &buffer_impl->buffer.handle,
@@ -663,8 +661,10 @@ struct CommandBufferImpl {
   }
 
   STROBE_ALWAYS_INLINE void copy_buffer(const Buffer &dst, const Buffer &src) {
-    auto *dst_impl = void_handle_ptr<BufferImpl, buffer_handle_alloc_ref>(dst.m_handle);
-    auto *src_impl = void_handle_ptr<BufferImpl, buffer_handle_alloc_ref>(src.m_handle);
+    auto *dst_impl =
+        void_handle_ptr<BufferImpl, buffer_handle_alloc_ref>(dst.m_handle);
+    auto *src_impl =
+        void_handle_ptr<BufferImpl, buffer_handle_alloc_ref>(src.m_handle);
     assert(dst.size() == src.size());
     VkBufferCopy copy{
         .srcOffset = 0,
@@ -676,6 +676,33 @@ struct CommandBufferImpl {
       vkCmdCopyBuffer(cmd.handle, src_impl->buffer.handle,
                       dst_impl->buffer.handle, 1, &copy);
     }
+  }
+
+  STROBE_ALWAYS_INLINE void copy_buffer(vulkan::Buffer dst, vulkan::Buffer src,
+                                        VkDeviceSize srcOffset,
+                                        VkDeviceSize dstOffset,
+                                        VkDeviceSize size) {
+    assert(dst);
+    assert(src);
+    VkBufferCopy copy{
+        .srcOffset = srcOffset,
+        .dstOffset = dstOffset,
+        .size = size,
+    };
+    {
+      ZoneScopedN("vkCmdCopyBuffer");
+      vkCmdCopyBuffer(cmd.handle, src.handle, dst.handle, 1, &copy);
+    }
+  }
+
+  STROBE_ALWAYS_INLINE void update_buffer(vulkan::Buffer dst,
+                                          VkDeviceSize dstOffset,
+                                          VkDeviceSize dataSize,
+                                          const void *pData) {
+    assert(dst);
+    assert(pData);
+    ZoneScopedN("vkCmdUpdateBuffer");
+    vkCmdUpdateBuffer(cmd.handle, dst.handle, dstOffset, dataSize, pData);
   }
 
   STROBE_ALWAYS_INLINE void draw(uint32_t vertexCount, uint32_t instanceCount,
@@ -693,6 +720,52 @@ struct CommandBufferImpl {
     vkCmdDrawIndexed(cmd.handle, indexCount, instanceCount, firstIndex,
                      vertexOffset, firstInstance);
   };
+
+  STROBE_ALWAYS_INLINE void
+  build_acceleration_structure(const Blas &blas,
+                               span<const BuildRangeInfo> &ranges,
+                               VkDeviceSize scratch) {
+    auto *blas_impl = void_handle_ptr<BlasImpl>(blas.m_handle);
+    assert(blas_impl->accelerationStructure);
+
+    assert(ranges.size() == blas_impl->geometries.size());
+
+    SmallVector<VkAccelerationStructureBuildRangeInfoKHR> buildRanges{
+        ranges.size()};
+    for (uint32_t i = 0; i < ranges.size(); ++i) {
+      buildRanges[i] = VkAccelerationStructureBuildRangeInfoKHR{
+          .primitiveCount = ranges[i].primitiveCount,
+          .primitiveOffset = ranges[i].primitiveOffset,
+          .firstVertex = ranges[i].firstVertex,
+          .transformOffset = ranges[i].transformOffset,
+      };
+    }
+
+    VkAccelerationStructureBuildGeometryInfoKHR info{
+        .sType =
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+        .pNext = nullptr,
+        .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+        .flags = blas_impl->buildFlags,
+        .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+        .srcAccelerationStructure = VK_NULL_HANDLE,
+        .dstAccelerationStructure = blas_impl->accelerationStructure.handle,
+        .geometryCount = static_cast<uint32_t>(blas_impl->geometries.size()),
+        .pGeometries = blas_impl->geometries.data(),
+        .ppGeometries = nullptr,
+        .scratchData =
+            VkDeviceOrHostAddressKHR{
+                .deviceAddress = scratch,
+            },
+    };
+
+    const VkAccelerationStructureBuildRangeInfoKHR *pRanges =
+        buildRanges.data();
+
+    ZoneScopedN("vkCmdBuildAccelerationStructures");
+    vulkan::vk_cmd_build_acceleration_structures(pnf, cmd.handle, 1, &info,
+                                                 &pRanges);
+  }
 
   void
   set_default_rendering_state(CommandBufferRenderingState states) noexcept {

@@ -17,12 +17,14 @@ struct BufferImpl {
   BufferImpl(BufferImpl &&) = delete;
   BufferImpl &operator=(const BufferImpl &) = delete;
   BufferImpl &operator=(BufferImpl &&) = delete;
-  ~BufferImpl() noexcept { vulkan::destroy_buffer(context.get(), buffer); }
+  ~BufferImpl() noexcept {
+    vulkan::destroy_buffer(context.get(), buffer); 
+  }
 
   const Context context;
   const MemoryAllocation allocation;
   const vulkan::Buffer buffer;
   const VkDeviceSize size;
-  const VkDeviceAddress address;
+  VkDeviceAddress address;
 };
 } // namespace strobe::gpu

@@ -23,16 +23,21 @@ struct QueueDescription {
 
 struct ContextCreateInfo {
   feature debug_utils = disable;
-  feature surface = disable;
+  feature surface = required;
 
-  feature swapchain = disable;
-  feature timeline_semaphore = disable;
+  feature swapchain = required;
+  feature timeline_semaphore = required;
 
   feature shaderObjects = required;
   feature hostQueryReset = required;
   feature calibratedTimestamps = required;
   feature bufferDeviceAddress = required;
   // sync2 is always required
+
+  feature raytracingPipeline = required;
+  feature accelerationStructure = required;
+  feature deferredHostOperations = required;
+  feature rayQuery = required;
 
   uint32_t queue_count = 0;
   const QueueDescription *pQueues;

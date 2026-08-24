@@ -1,30 +1,43 @@
 #include "strobe/gpu/device/command_buffer.hpp"
 #include "strobe/core/containers/vector.hpp"
-#include "strobe/gpu/device/cmd_gpu_zone.hpp"
+#include "strobe/core/type_traits/member_function_traits.hpp"
+#include "strobe/gpu/device/blas_impl.hpp"
+#include "strobe/gpu/device/buffer_binding.hpp"
+#include "strobe/gpu/device/buffer_handle_alloc.hpp"
 #include "strobe/gpu/device/command_buffer_handle_alloc.hpp"
 #include "strobe/gpu/device/command_buffer_impl.hpp"
 #include "strobe/gpu/device/command_buffer_rendering_state.hpp"
 #include "strobe/gpu/device/command_buffer_type.hpp"
 #include "strobe/gpu/device/handle.hpp"
+#include "strobe/gpu/device/memory_allocation_handle_alloc.hpp"
+#include "strobe/gpu/device/memory_allocation_impl.hpp"
+#include "strobe/gpu/device/memory_pool_impl.hpp"
 #include "strobe/gpu/vulkan/command_buffer.hpp"
+#include "strobe/gpu/vulkan/context/pnf.hpp"
 #include <fmt/format.h>
 #include <tracy/Tracy.hpp>
 #include <tracy/TracyVulkan.hpp>
 #include <vulkan/vulkan_core.h>
 
+#ifdef STROBE_TRACY
+#include "strobe/gpu/device/profiler.hpp"
+#endif
+
 namespace strobe::gpu {
 
+#ifdef STROBE_TRACY
 #define CmdZoneScopedN(impl, name)                                             \
   ZoneScopedN(name);                                                           \
-                                                                               \
   static constexpr tracy::SourceLocationData TracyConcat(                      \
       strobeGpuSourceLocation, TracyLine){                                     \
       name, TracyFunction, TracyFile, static_cast<uint32_t>(TracyLine), 0};    \
-                                                                               \
-  strobe::gpu::CmdGpuZone TracyConcat(strobeGpuZone, TracyLine){               \
-      (impl) -> tracyCtx(), &TracyConcat(strobeGpuSourceLocation, TracyLine),  \
-      (impl)->cmd.handle,                                                      \
+  strobe::gpu::profiler::CmdScope TracyConcat(strobeGpuZone, TracyLine){       \
+      &(impl) -> m_profilerScope,                                              \
+      &TracyConcat(strobeGpuSourceLocation, TracyLine), (impl)->cmd,           \
       ((impl)->flags & strobe::gpu::CommandBufferFlags::reusable) == 0}
+#else
+#define CmdZoneScopedN(impl, name)
+#endif
 
 namespace {
 
@@ -103,6 +116,15 @@ void CommandBuffer::memory_barrier(const MemoryBarrier &barrier) {
   ZoneScopedN("CommandBuffer::memory_barrier");
   auto *impl = void_handle_ptr<CommandBufferImpl, handle_alloc>(m_handle);
   impl->memory_barrier(barrier);
+}
+
+void CommandBuffer::memory_barrier(AccessScope src, AccessScope dst) {
+  memory_barrier(MemoryBarrier{
+      .srcStage = src.stage,
+      .srcAccess = src.access,
+      .dstStage = dst.stage,
+      .dstAccess = dst.access,
+  });
 }
 
 void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
@@ -367,20 +389,34 @@ void CommandBuffer::set_patch_control_points(
   impl->set_patch_control_points(patchControlPoints);
 }
 
-void CommandBuffer::bind_shader(VertexShader shader) noexcept {
+void CommandBuffer::bind_shader(const VertexShader &shader) noexcept {
   ZoneScopedN("CommandBuffer::bind_shader(VertexShader)");
+  assert(shader);
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
   impl->required |= CommandBufferRenderingState::vertex_shader_requirements;
-  impl->bind_shader(shader);
-  impl->state.boundVertexShaders.emplace_back(std::move(shader));
+  impl->bind_shader(void_handle_ptr<ShaderObjectImpl>(shader.m_handle)->shader,
+                    VK_SHADER_STAGE_VERTEX_BIT);
+  impl->state.retain(shader);
 }
 
-void CommandBuffer::bind_shader(FragmentShader shader) noexcept {
+void CommandBuffer::bind_shader(const FragmentShader &shader) noexcept {
   ZoneScopedN("CommandBuffer::bind_shader(FragmentShader)");
+  assert(shader);
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
   impl->required |= CommandBufferRenderingState::fragment_shader_requirements;
-  impl->bind_shader(shader);
-  impl->state.boundFragmentShaders.emplace_back(std::move(shader));
+  impl->bind_shader(void_handle_ptr<ShaderObjectImpl>(shader.m_handle)->shader,
+                    VK_SHADER_STAGE_FRAGMENT_BIT);
+  impl->state.retain(shader);
+}
+
+void CommandBuffer::bind_shader(const ComputeShader &shader) noexcept {
+  ZoneScopedN("CommandBuffer::bind_shader(ComputeShader)");
+  assert(shader);
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  impl->required |= CommandBufferRenderingState::fragment_shader_requirements;
+  impl->bind_shader(void_handle_ptr<ShaderObjectImpl>(shader.m_handle)->shader,
+                    VK_SHADER_STAGE_COMPUTE_BIT);
+  impl->state.retain(shader);
 }
 
 void CommandBuffer::unbind_shaders(ShaderStage stages) noexcept {
@@ -397,27 +433,74 @@ void CommandBuffer::unbind_shaders(ShaderStage stages) noexcept {
   impl->unbind_shaders(stages);
 }
 
-void CommandBuffer::bind_vertex_buffer(Buffer buffer,
+void CommandBuffer::bind_vertex_buffer(const Buffer &buffer,
                                        uint64_t offset) noexcept {
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
   CmdZoneScopedN(impl, "CommandBuffer::bind_vertex_buffer");
   buffer.commit();
   impl->bind_vertex_buffer(buffer, offset);
+  impl->state.retain(buffer);
 }
 
-void CommandBuffer::copy_buffer(Buffer dst, Buffer src) noexcept {
+void CommandBuffer::copy_buffer(const Buffer &dst, const Buffer &src) noexcept {
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
   CmdZoneScopedN(impl, "CommandBuffer::copy(Buffer)");
   dst.commit();
   src.commit();
   impl->copy_buffer(dst, src);
+  impl->state.retain(dst);
+  impl->state.retain(src);
 }
+
+void CommandBuffer::update(const Buffer &dst, const void *src, uint64_t size,
+                           uint64_t dstOffset) {
+  assert(m_handle);
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  CmdZoneScopedN(impl, "CommandBuffer::upload(Buffer)");
+  if (size == 0) {
+    return;
+  }
+  assert(src);
+  assert(dst);
+  dst.commit(); // materialize & bind
+  auto *dst_impl =
+      void_handle_ptr<BufferImpl, buffer_handle_alloc_ref>(dst.m_handle);
+  assert(dstOffset <= dst_impl->size);
+  assert(size <= dst_impl->size - dstOffset);
+  auto *mem_impl = void_handle_ptr<MemoryAllocationImpl,
+                                   memory_allocation_handle_allocator_ref>(
+      dst_impl->allocation.m_handle);
+  if (mem_impl->memoryUsage == MemoryUsage::mapped ||
+      mem_impl->memoryUsage == MemoryUsage::mapped_write_sequential ||
+      mem_impl->memoryUsage == MemoryUsage::mapped_incoherent) {
+    std::memcpy(static_cast<std::byte *>(dst.ptr()) + dstOffset, src, size);
+    if (mem_impl->memoryUsage == MemoryUsage::mapped_incoherent) {
+      mem_impl->flush();
+    }
+  } else {
+    constexpr size_t MAX_CMD_UPDATE = 128;
+    if (size <= MAX_CMD_UPDATE) { // only for really really small updates
+      impl->update_buffer(dst_impl->buffer, dstOffset, size, src);
+    } else {
+      BufferBinding stage = impl->alloc_staging(size, 1);
+      assert(stage.mapped);
+      std::memcpy(stage.mapped, src, size);
+      impl->copy_buffer(dst_impl->buffer, stage.buffer, stage.offset, dstOffset,
+                        size);
+    }
+  }
+};
 
 void CommandBuffer::draw(uint32_t vertexCount, uint32_t instanceCount,
                          uint32_t firstVertex,
                          uint32_t firstInstance) noexcept {
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
   CmdZoneScopedN(impl, "CommandBuffer::draw");
+  //
+  // static constexpr tracy::SourceLocationData sloc{
+  //     "CommandBuffer::draw", TracyFunction, TracyFile,
+  //     static_cast<uint32_t>(TracyLine), 0};
+  // profiler::CmdScope scope{&impl->m_profilerScope, &sloc, impl->cmd, true};
 
   if (auto missing = impl->required & impl->uninitialized; missing != 0) {
     impl->set_default_rendering_state(missing);
@@ -435,6 +518,48 @@ void CommandBuffer::draw_indexed(uint32_t indexCount, uint32_t instanceCount,
   }
   impl->draw_indexed(indexCount, instanceCount, firstIndex, vertexOffset,
                      firstInstance);
-};
+}
+
+void CommandBuffer::build(const Blas &blas, span<const BuildRangeInfo> ranges) {
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  CmdZoneScopedN(impl, "CommandBuffer::build(Blas)");
+  assert(impl);
+  auto *blas_impl = void_handle_ptr<BlasImpl>(blas.m_handle);
+  assert(blas_impl);
+  auto *storage_impl = void_handle_ptr<BufferImpl, buffer_handle_alloc_ref>(
+      blas_impl->buffer.m_handle);
+  assert(storage_impl);
+  auto *mem_impl = void_handle_ptr<MemoryAllocationImpl,
+                                   memory_allocation_handle_allocator_ref>(
+      storage_impl->allocation.m_handle);
+  assert(mem_impl);
+  auto *pool_impl = void_handle_ptr<MemoryPoolImpl>(mem_impl->pool.m_handle);
+  assert(pool_impl);
+  VkDeviceAddress scratchAddress;
+
+  if (!pool_impl->accelerationStructureScratch ||
+      blas_impl->buildScratchSize >=
+          pool_impl->accelerationStructureScratch.size()) {
+    Buffer scratchBuffer = mem_impl->pool.create_buffer({
+        .size = blas_impl->buildScratchSize,
+        .bufferUsage =
+            BufferUsage::storage | BufferUsage::shader_device_address,
+        .memoryUsage = MemoryUsage::automatic,
+    });
+    scratchBuffer.commit();
+    scratchAddress =
+        void_handle_ptr<BufferImpl>(scratchBuffer.m_handle)->address;
+    impl->state.retain(scratchBuffer);
+  } else {
+    Buffer scratchBuffer = pool_impl->accelerationStructureScratch;
+    scratchBuffer.commit();
+    scratchAddress =
+        void_handle_ptr<BufferImpl>(scratchBuffer.m_handle)->address;
+    impl->state.retain(scratchBuffer);
+  }
+  assert(blas);
+  impl->build_acceleration_structure(blas, ranges, scratchAddress);
+  impl->state.retain(blas);
+}
 
 } // namespace strobe::gpu

@@ -1,5 +1,6 @@
 #include "strobe/gpu/vulkan/context/vma.hpp"
 #include <atomic>
+#include <stdexcept>
 #include <vk_mem_alloc.h>
 
 namespace strobe::gpu::vulkan {

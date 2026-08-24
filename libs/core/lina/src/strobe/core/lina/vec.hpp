@@ -35,6 +35,14 @@ struct vec {
     requires(N >= 4)
       : data{x, y, z, w} {}
 
+  template <typename U>
+    requires(std::is_floating_point_v<T> && std::is_integral_v<U>)
+  constexpr vec(const vec<N, U> &other) noexcept {
+    for (std::size_t i = 0; i < N; ++i) {
+      data[i] = static_cast<T>(other[i]);
+    }
+  }
+
   // Array subscript access
   constexpr T &operator[](std::size_t index) noexcept { return data[index]; }
 
@@ -70,6 +78,7 @@ struct vec {
   {
     return data[2];
   }
+
   constexpr const T &z() const noexcept
     requires(N >= 3)
   {
@@ -130,6 +139,145 @@ struct vec {
     requires(N >= 4)
   {
     return data[3];
+  }
+
+  // Coordinate swizzles: two components.
+  constexpr vec<2, T> xy() const noexcept
+    requires(N >= 2)
+  {
+    return {data[0], data[1]};
+  }
+
+  constexpr vec<2, T> xz() const noexcept
+    requires(N >= 3)
+  {
+    return {data[0], data[2]};
+  }
+
+  constexpr vec<2, T> xw() const noexcept
+    requires(N >= 4)
+  {
+    return {data[0], data[3]};
+  }
+
+  constexpr vec<2, T> yz() const noexcept
+    requires(N >= 3)
+  {
+    return {data[1], data[2]};
+  }
+
+  constexpr vec<2, T> yw() const noexcept
+    requires(N >= 4)
+  {
+    return {data[1], data[3]};
+  }
+
+  constexpr vec<2, T> zw() const noexcept
+    requires(N >= 4)
+  {
+    return {data[2], data[3]};
+  }
+
+  // Coordinate swizzles: three and four components.
+
+  constexpr vec<3, T> xyz() const noexcept
+    requires(N >= 3)
+  {
+    return {data[0], data[1], data[2]};
+  }
+
+  constexpr vec<3, T> xyw() const noexcept
+    requires(N >= 4)
+  {
+    return {data[0], data[1], data[3]};
+  }
+
+  constexpr vec<3, T> xzw() const noexcept
+    requires(N >= 4)
+  {
+    return {data[0], data[2], data[3]};
+  }
+
+  constexpr vec<3, T> yzw() const noexcept
+    requires(N >= 4)
+  {
+    return {data[1], data[2], data[3]};
+  }
+
+  constexpr vec<4, T> xyzw() const noexcept
+    requires(N >= 4)
+  {
+    return {data[0], data[1], data[2], data[3]};
+  }
+
+  // Color swizzles: two components.
+
+  constexpr vec<2, T> rg() const noexcept
+    requires(N >= 2)
+  {
+    return {data[0], data[1]};
+  }
+
+  constexpr vec<2, T> rb() const noexcept
+    requires(N >= 3)
+  {
+    return {data[0], data[2]};
+  }
+
+  constexpr vec<2, T> ra() const noexcept
+    requires(N >= 4)
+  {
+    return {data[0], data[3]};
+  }
+
+  constexpr vec<2, T> gb() const noexcept
+    requires(N >= 3)
+  {
+    return {data[1], data[2]};
+  }
+
+  constexpr vec<2, T> ga() const noexcept
+    requires(N >= 4)
+  {
+    return {data[1], data[3]};
+  }
+
+  constexpr vec<2, T> ba() const noexcept
+    requires(N >= 4)
+  {
+    return {data[2], data[3]};
+  }
+
+  // Color swizzles: three and four components.
+
+  constexpr vec<3, T> rgb() const noexcept
+    requires(N >= 3)
+  {
+    return {data[0], data[1], data[2]};
+  }
+
+  constexpr vec<3, T> rga() const noexcept
+    requires(N >= 4)
+  {
+    return {data[0], data[1], data[3]};
+  }
+
+  constexpr vec<3, T> rba() const noexcept
+    requires(N >= 4)
+  {
+    return {data[0], data[2], data[3]};
+  }
+
+  constexpr vec<3, T> gba() const noexcept
+    requires(N >= 4)
+  {
+    return {data[1], data[2], data[3]};
+  }
+
+  constexpr vec<4, T> rgba() const noexcept
+    requires(N >= 4)
+  {
+    return {data[0], data[1], data[2], data[3]};
   }
 
   bool operator==(const vec &o) const noexcept {

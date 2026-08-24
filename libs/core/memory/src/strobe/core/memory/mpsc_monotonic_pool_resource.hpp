@@ -73,7 +73,7 @@ public:
   }
 
   // Allocation must be externally synchronized.
-  void *allocate(std::size_t size, std::size_t align) {
+  void *allocate([[maybe_unused]] std::size_t size, [[maybe_unused]] std::size_t align) {
     assert(size <= block_size);
     assert(align <= block_align);
     assert((block_align % align) == 0);
@@ -96,7 +96,7 @@ public:
   void *allocate() { return allocate(block_size, block_align); }
 
   // Deallocation may be called concurrently.
-  void deallocate(void *ptr, std::size_t size, std::size_t align) noexcept {
+  void deallocate(void *ptr, [[maybe_unused]] std::size_t size, [[maybe_unused]] std::size_t align) noexcept {
     assert(size <= block_size);
     assert(align <= block_align);
     assert((block_align % align) == 0);

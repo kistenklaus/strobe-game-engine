@@ -4,25 +4,31 @@
 #include "strobe/gpu/device/context.hpp"
 #include "strobe/gpu/device/device.hpp"
 #include "strobe/gpu/device/format.hpp"
+#include "strobe/gpu/device/memory_allocation.hpp"
 #include "strobe/gpu/vulkan/image.hpp"
 namespace strobe::gpu {
 
 struct ImageImpl {
 
-  ImageImpl(Context context, vulkan::Image image, ImageType type, Format format,
-            uvec3 extent, uint32_t mip_levels, uint32_t arrayLayers,
-            SampleCount samples)
-      : context(std::move(context)), image(image), type(type), format(format),
-        extent(extent), mip_levels(mip_levels), arrayLayers(arrayLayers),
-        samples(samples) {}
+  ImageImpl(Context context, MemoryAllocation allocation, vulkan::Image image,
+            ImageType type, Format format, uvec3 extent, uint32_t mip_levels,
+            uint32_t arrayLayers, SampleCount samples)
+      : context(std::move(context)), allocation(std::move(allocation)),
+        image(image), type(type), format(format), extent(extent),
+        mip_levels(mip_levels), arrayLayers(arrayLayers), samples(samples) {}
   ImageImpl(const ImageImpl &) = delete;
   ImageImpl(ImageImpl &&) = delete;
   ImageImpl &operator=(const ImageImpl &) = delete;
   ImageImpl &operator=(ImageImpl &&) = delete;
 
-  ~ImageImpl() { vulkan::destroy_image(context.get(), image); }
+  ~ImageImpl() noexcept {
+    if (allocation) {
+      vulkan::destroy_image(context.get(), image);
+    }
+  }
 
   const Context context;
+  const MemoryAllocation allocation;
   const vulkan::Image image; // already contains the vma allocation
   const ImageType type;
   const Format format;

@@ -6,9 +6,9 @@
 #include "strobe/gpu/vulkan/context/get_queues.hpp"
 #include "strobe/gpu/vulkan/context/instance.hpp"
 #include "strobe/gpu/vulkan/context/logical_device.hpp"
+#include "strobe/gpu/vulkan/context/pnf.hpp"
 #include "strobe/gpu/vulkan/context/select_physical_device.hpp"
 #include "strobe/gpu/vulkan/context/select_queues.hpp"
-#include "strobe/gpu/vulkan/context/pnf.hpp"
 #include "strobe/gpu/vulkan/context/vma.hpp"
 #include <GLFW/glfw3.h>
 #include <fmt/format.h>
@@ -59,16 +59,6 @@ Context::~Context() noexcept {
   m_instance = VK_NULL_HANDLE;
 }
 
-// SAN suppressions
-#if !defined(NDEBUGG)
-extern "C" const char *__lsan_default_options() {
-  return "print_suppressions=0";
-}
-extern "C" const char *__lsan_default_suppressions() {
-  return R"(
-leak:libnvidia-glcore.so
-)";
-}
-#endif
-
 } // namespace strobe::gpu::vulkan
+
+

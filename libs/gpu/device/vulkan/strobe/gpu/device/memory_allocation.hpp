@@ -7,6 +7,7 @@ struct MemoryAllocation {
   friend struct MemoryPoolImpl;
   friend class Buffer;
   friend struct BufferImpl;
+  friend class CommandBuffer;
 
 public:
   MemoryAllocation() noexcept = default;

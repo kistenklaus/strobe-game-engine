@@ -2,8 +2,6 @@
 
 #include "strobe/gpu/vulkan/buffer.hpp"
 #include "strobe/gpu/vulkan/context/context.hpp"
-#include <fmt/base.h>
-#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu::vulkan {
@@ -18,30 +16,55 @@ struct AccelerationStructureInfo {
   Buffer buffer = {};
   VkDeviceSize offset = 0;
   VkDeviceSize size = 0;
+  VkAccelerationStructureTypeKHR type;
 };
 
-AccelerationStructure create_acceleration_structure(Context *context, const AccelerationStructureInfo& info = {}) {
+struct AccelerationStructureGeometryTriangleDescription {
+  VkFormat vertexFormat;
+  VkDeviceAddress vertexData;
+  VkDeviceSize vertexStride;
+  uint32_t maxVertex;
 
+  VkIndexType indexType;
+  VkDeviceAddress indexData;
 
-  VkAccelerationStructureCreateInfoKHR createInfo{
-      .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
-      .pNext = nullptr,
-      .createFlags = 0,
-      .buffer = info.buffer.handle,
-      .offset = info.offset,
-      .size = info.size,
-      .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
-      .deviceAddress = get_buffer_device_address(context, info.buffer),
-  };
+  VkDeviceAddress transformData;
+};
 
-  AccelerationStructure ac{};
-  VkResult result = vkCreateAccelerationStructureKHR(
-      context->device(), &createInfo, context->driver_alloc(), &ac.handle);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create acceleration structure");
-  }
+struct AccelerationStructureGeometryAabbDescription {
+  VkDeviceAddress data;
+  VkDeviceSize stride;
+};
 
-  return ac;
-}
+struct AccelerationStructureGeometryInstanceDescription {
+  VkBool32 arrayOfPointers;
+  VkDeviceAddress data;
+};
+
+struct AccelerationStructureGeometryInfo {
+  VkGeometryTypeKHR geometryType;
+  VkAccelerationStructureGeometryDataKHR geometry;
+  VkGeometryFlagsKHR flags;
+};
+
+struct AccelerationStructureBuildDescription {
+  VkAccelerationStructureTypeKHR type;
+  VkBuildAccelerationStructureFlagsKHR flags = 0;
+  span<const VkAccelerationStructureGeometryKHR> geometry = {};
+  span<const VkAccelerationStructureGeometryKHR *> pGeometry = {};
+};
+
+AccelerationStructure
+create_acceleration_structure(Context *context,
+                              const AccelerationStructureInfo &info);
+
+void destroy_acceleration_structure(
+    Context *context, AccelerationStructure accelerationStructure) noexcept;
+
+VkDeviceAddress get_acceleration_structure_device_address(
+    Context *context, AccelerationStructure accelerationStructure);
+
+void get_acceleration_structure_build_sizes(
+    Context *context, const AccelerationStructureBuildDescription &buildDesc);
 
 } // namespace strobe::gpu::vulkan

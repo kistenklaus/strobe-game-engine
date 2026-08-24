@@ -3,6 +3,7 @@
 #include "strobe/core/containers/span.hpp"
 #include "strobe/gpu/device/binary_semaphore.hpp"
 #include "strobe/gpu/device/fence.hpp"
+#include "strobe/gpu/device/pipeline_stage.hpp"
 #include "strobe/gpu/device/swapchain_image.hpp"
 #include "strobe/gpu/device/timeline_semaphore.hpp"
 
@@ -13,12 +14,13 @@ class CommandBuffer;
 struct TimelineSemaphoreSubmitInfo {
   TimelineSemaphore semaphore;
   uint64_t value = 0;
+  PipelineStage stage = PipelineStage::all_commands;
   // TODO: stages.
 };
 
 struct BinarySemaphoreSubmitInfo {
   BinarySemaphore semaphore;
-  // TODO: stages.
+  PipelineStage stage = PipelineStage::all_commands;
 };
 
 struct SubmitInfo {

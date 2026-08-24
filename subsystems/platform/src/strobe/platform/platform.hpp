@@ -8,13 +8,12 @@
 #include <cassert>
 #include <concepts>
 #include <cstddef>
-#include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <new>
 #include <semaphore>
-#include <stop_token>
+#include <thread>
 #include <type_traits>
 #include <utility>
 
@@ -192,12 +191,26 @@ private:
       std::counting_semaphore<static_cast<std::ptrdiff_t>(job_capacity)>;
 
 public:
-  static void start() noexcept {
-    instance().m_thread =
-        std::thread([]() { Platform::instance().native_main_impl(); });
+  // Platform::start() itself must be called from the actual main thread.
+  template <typename Fn>
+    requires std::invocable<std::decay_t<Fn> &>
+  static void start(Fn &&fn) {
+    auto &self = instance();
+    assert(!self.m_thread.joinable());
+    self.m_stopRequested.store(false, std::memory_order_relaxed);
+    if (glfwInit() != GLFW_TRUE) {
+      return;
+    }
+    self.m_thread = std::thread([&self, fn = std::decay_t<Fn>(std::forward<Fn>(
+                                            fn))]() mutable noexcept {
+      std::invoke(fn);
+      self.m_stopRequested.store(true, std::memory_order_release);
+      glfwPostEmptyEvent();
+    });
+    self.native_main_impl();
+    self.m_thread.join();
+    glfwTerminate();
   }
-  // static void native_main() noexcept { instance().native_main_impl(); }
-  static void stop() noexcept { instance().stop_impl(); }
 
   template <typename Fn>
     requires std::invocable<Fn &&>
@@ -232,12 +245,9 @@ private:
   }
 
   void native_main_impl() noexcept {
-    if (glfwInit() != GLFW_TRUE) {
-      return;
-    }
-    while (!m_stopSource.stop_requested()) {
+    while (!m_stopRequested.load(std::memory_order_acquire)) {
       drain_jobs();
-      if (m_stopSource.stop_requested()) {
+      if (m_stopRequested.load(std::memory_order_acquire)) {
         break;
       }
       glfwWaitEvents();
@@ -249,19 +259,6 @@ private:
       }
     }
     drain_jobs();
-    {
-      std::lock_guard lock{m_submissionMutex};
-      glfwTerminate();
-    }
-  }
-
-  void stop_impl() noexcept {
-    {
-      std::lock_guard lock{m_submissionMutex};
-      m_stopSource.request_stop();
-      glfwPostEmptyEvent();
-    }
-    m_thread.join();
   }
 
   template <typename Fn>
@@ -320,8 +317,7 @@ private:
   }
 
   std::thread m_thread;
-
-  std::stop_source m_stopSource;
+  std::atomic<bool> m_stopRequested;
 
   std::array<platform_details::MainThreadRequest *, job_capacity> m_jobs{};
 

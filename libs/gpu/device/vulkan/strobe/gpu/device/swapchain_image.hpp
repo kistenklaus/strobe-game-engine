@@ -27,6 +27,10 @@ public:
   const ImageView &view() const noexcept;
   const BinarySemaphore &presentReady() const noexcept;
 
+  const uvec2 extent() const noexcept {
+    return image().extent().xy();
+  }
+
 private:
   explicit SwapchainImage(void *handle, uint32_t index)
       : m_handle(std::move(handle)), m_index(index) {}

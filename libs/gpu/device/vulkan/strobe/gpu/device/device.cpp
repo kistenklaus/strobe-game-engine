@@ -151,7 +151,7 @@ Queue Device::get_queue(QueueFlags flags) {
 }
 
 Swapchain Device::create_swapchain(GLFWwindow *window,
-                                   const SwapchainCreateInfo &createInfo) {
+                                   const SwapchainInfo &createInfo) {
   ZoneScopedN("Device::create_swapchain");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   vulkan::Surface surface = vulkan::create_surface(impl->context.get(), window);
@@ -263,36 +263,6 @@ CommandPool Device::create_cmd_pool(const Queue &queue) {
       impl->context, queue_impl->native->queue)};
 }
 
-Image Device::create_image(const ImageCreateInfo &createInfo) {
-  ZoneScopedN("Device::create_image");
-  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
-
-  vulkan::ImageInfo info{
-      .type = to_vk_image_type(createInfo.type),
-      .format = to_vk_format(createInfo.format),
-      .extent =
-          VkExtent3D{
-              .width = createInfo.extent.x(),
-              .height = createInfo.extent.y(),
-              .depth = createInfo.extent.z(),
-          },
-      .mip_levels = createInfo.mip_levels,
-      .array_layers = createInfo.arrayLayers,
-      .samples = to_vk_sample_count(createInfo.samples),
-      .tiling = createInfo.linearTiling ? VK_IMAGE_TILING_LINEAR
-                                        : VK_IMAGE_TILING_OPTIMAL,
-      .usage = to_vk_image_usage(createInfo.usage),
-      .flags = to_vk_image_flags(createInfo.flags),
-      .initial_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-      .memory_usage = to_vulkan_memory_usage(createInfo.memoryUsage),
-  };
-  vulkan::Image image = vulkan::create_image(impl->context.get(), info);
-
-  return Image{make_void_handle<ImageImpl>(
-      impl->context, image, createInfo.type, createInfo.format,
-      createInfo.extent, createInfo.mip_levels, createInfo.arrayLayers,
-      createInfo.samples)};
-}
 BinarySemaphore Device::create_binary_semaphore() {
   ZoneScopedN("Device::create_binary_semaphore");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
@@ -322,7 +292,7 @@ Fence Device::create_fence(bool signaled) {
   return Fence{make_void_handle<FenceImpl>(impl->context, fence)};
 }
 
-VertexShader Device::create_vertex_shader(const VertexShaderCreateInfo &info) {
+VertexShader Device::create_vertex_shader(const VertexShaderInfo &info) {
   ZoneScopedN("Device::create_vertex_shader");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
 
@@ -347,8 +317,7 @@ VertexShader Device::create_vertex_shader(const VertexShaderCreateInfo &info) {
   return VertexShader{make_void_handle<ShaderObjectImpl>(impl->context, so)};
 }
 
-FragmentShader
-Device::create_fragment_shader(const FragmentShaderCreateInfo &info) {
+FragmentShader Device::create_fragment_shader(const FragmentShaderInfo &info) {
   ZoneScopedN("Device::create_fragment_shader");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
 
@@ -370,6 +339,30 @@ Device::create_fragment_shader(const FragmentShaderCreateInfo &info) {
                                .specInfo = nullptr,
                            });
   return FragmentShader{make_void_handle<ShaderObjectImpl>(impl->context, so)};
+}
+
+ComputeShader Device::create_compute_shader(const ComputeShaderInfo &info) {
+  ZoneScopedN("Device::create_compute_shader");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+
+  SmallVector<VkPushConstantRange> pcRange{};
+  for (uint32_t i = 0; i < info.pushConstantRange.size(); ++i) {
+    const auto &range = info.pushConstantRange[i];
+    pcRange.push_back({
+        .stageFlags = to_vk_shader_stage(range.stage),
+        .offset = range.offset,
+        .size = range.size,
+    });
+  }
+  vulkan::ShaderObject so = vulkan::create_shader_object(
+      impl->context.get(), vulkan::ShaderObjectCreateInfo{
+                               .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+                               .flags = 0,
+                               .spirv = info.spirv,
+                               .pushConstantRange = pcRange,
+                               .specInfo = nullptr,
+                           });
+  return ComputeShader{make_void_handle<ShaderObjectImpl>(impl->context, so)};
 }
 
 MemoryPool Device::create_memory_pool() {

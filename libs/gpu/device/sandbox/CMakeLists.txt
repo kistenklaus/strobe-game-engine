@@ -14,3 +14,7 @@ target_link_libraries(strobe-device-sandbox
     strobe::tracy
 )
 
+
+if (STROBE_SAN)
+  target_link_libraries(strobe-device-sandbox PRIVATE strobe_sanitizers)
+endif()

@@ -110,7 +110,7 @@ uint32_t get_swapchain_images(Context *context, Swapchain swapchain,
     }
   }
   for (size_t i = 0; i < count; ++i) {
-    images[i] = Image{.handle = native[i], .allocation = VK_NULL_HANDLE};
+    images[i] = Image{.handle = native[i]};
   }
   return count;
 }

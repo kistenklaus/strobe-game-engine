@@ -5,6 +5,7 @@
 #include "strobe/core/memory/Mallocator.hpp"
 #include "strobe/gpu/vulkan/device_info/device_features.hpp"
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu::vulkan {
 
@@ -135,6 +136,28 @@ struct DeviceLimits {
   // VK_API_VERSION_1_4
 };
 
+struct RaytracingPipelineProperties {
+  uint32_t shaderGroupHandleSize;
+  uint32_t maxRayRecursionDepth;
+  uint32_t maxShaderGroupStride;
+  uint32_t shaderGroupBaseAlignment;
+  uint32_t shaderGroupHandleCaptureReplaySize;
+  uint32_t maxRayDispatchInvocationCount;
+  uint32_t shaderGroupHandleAlignment;
+  uint32_t maxRayHitAttributeSize;
+};
+
+struct AccelerationStructureProperties {
+  uint64_t maxGeometryCount;
+  uint64_t maxInstanceCount;
+  uint64_t maxPrimitiveCount;
+  uint32_t maxPerStageDescriptorAccelerationStructures;
+  uint32_t maxPerStageDescriptorUpdateAfterBindAccelerationStructures;
+  uint32_t maxDescriptorSetAccelerationStructures;
+  uint32_t maxDescriptorSetUpdateAfterBindAccelerationStructures;
+  uint32_t minAccelerationStructureScratchOffsetAlignment;
+};
+
 template <Allocator Alloc = strobe::Mallocator> struct DeviceProperties {
   uint32_t apiVersion;
   String<Alloc> deviceName;
@@ -144,6 +167,8 @@ template <Allocator Alloc = strobe::Mallocator> struct DeviceProperties {
   std::array<uint8_t, VK_UUID_SIZE> pipelineCacheUUID;
   DeviceLimits limits;
   SmallVector<VkTimeDomainKHR, 4> calibratableTimeDomains;
+  RaytracingPipelineProperties raytracingPipeline;
+  AccelerationStructureProperties accelerationStructure;
 };
 
 template <Allocator Alloc = strobe::Mallocator>
@@ -151,9 +176,46 @@ static DeviceProperties<Alloc>
 query_device_properties(VkInstance instance, VkPhysicalDevice physicalDevice,
                         const DeviceFeatures *features,
                         const Alloc &alloc = {}) noexcept {
+
+  void *pNext = nullptr;
+
+  VkPhysicalDeviceAccelerationStructurePropertiesKHR asProps{
+      .sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR,
+      .pNext = nullptr,
+      .maxGeometryCount = 0,
+      .maxInstanceCount = 0,
+      .maxPrimitiveCount = 0,
+      .maxPerStageDescriptorAccelerationStructures = 0,
+      .maxPerStageDescriptorUpdateAfterBindAccelerationStructures = 0,
+      .maxDescriptorSetAccelerationStructures = 0,
+      .maxDescriptorSetUpdateAfterBindAccelerationStructures = 0,
+      .minAccelerationStructureScratchOffsetAlignment = 0,
+  };
+  if (features->accelerationStructure) {
+    pNext = &asProps;
+  }
+
+  VkPhysicalDeviceRayTracingPipelinePropertiesKHR rtProps{
+      .sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
+      .pNext = pNext,
+      .shaderGroupHandleSize = 0,
+      .maxRayRecursionDepth = 0,
+      .maxShaderGroupStride = 0,
+      .shaderGroupBaseAlignment = 0,
+      .shaderGroupHandleCaptureReplaySize = 0,
+      .maxRayDispatchInvocationCount = 0,
+      .shaderGroupHandleAlignment = 0,
+      .maxRayHitAttributeSize = 0,
+  };
+  if (features->rayTracingPipeline) {
+    pNext = &rtProps;
+  }
+
   VkPhysicalDeviceProperties2 props{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
-      .pNext = nullptr,
+      .pNext = pNext,
       .properties = {},
   };
   vkGetPhysicalDeviceProperties2(physicalDevice, &props);
@@ -422,6 +484,36 @@ query_device_properties(VkInstance instance, VkPhysicalDevice physicalDevice,
                   props.properties.limits.nonCoherentAtomSize,
           },
       .calibratableTimeDomains = timeDomains,
+      .raytracingPipeline =
+          RaytracingPipelineProperties{
+              .shaderGroupHandleSize = rtProps.shaderGroupHandleSize,
+              .maxRayRecursionDepth = rtProps.maxRayRecursionDepth,
+              .maxShaderGroupStride = rtProps.maxShaderGroupStride,
+              .shaderGroupBaseAlignment = rtProps.shaderGroupBaseAlignment,
+              .shaderGroupHandleCaptureReplaySize =
+                  rtProps.shaderGroupHandleCaptureReplaySize,
+              .maxRayDispatchInvocationCount =
+                  rtProps.maxRayDispatchInvocationCount,
+              .shaderGroupHandleAlignment = rtProps.shaderGroupHandleAlignment,
+              .maxRayHitAttributeSize = rtProps.maxRayHitAttributeSize,
+          },
+      .accelerationStructure =
+          AccelerationStructureProperties{
+              .maxGeometryCount = asProps.maxGeometryCount,
+              .maxInstanceCount = asProps.maxInstanceCount,
+              .maxPrimitiveCount = asProps.maxPrimitiveCount,
+              .maxPerStageDescriptorAccelerationStructures =
+                  asProps.maxPerStageDescriptorAccelerationStructures,
+              .maxPerStageDescriptorUpdateAfterBindAccelerationStructures =
+                  asProps
+                      .maxPerStageDescriptorUpdateAfterBindAccelerationStructures,
+              .maxDescriptorSetAccelerationStructures =
+                  asProps.maxDescriptorSetAccelerationStructures,
+              .maxDescriptorSetUpdateAfterBindAccelerationStructures =
+                  asProps.maxDescriptorSetUpdateAfterBindAccelerationStructures,
+              .minAccelerationStructureScratchOffsetAlignment =
+                  asProps.minAccelerationStructureScratchOffsetAlignment,
+          },
   }; // namespace strobe::gpu::vulkan
 }
 

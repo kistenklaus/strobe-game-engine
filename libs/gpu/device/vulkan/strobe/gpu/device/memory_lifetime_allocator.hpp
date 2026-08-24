@@ -139,6 +139,7 @@ public:
       return MemoryBinding{
           allocInfo->placement.block->memory,
           allocInfo->placement.offset,
+          allocInfo->size,
       };
     }
 
@@ -179,6 +180,7 @@ public:
     return MemoryBinding{
         block->memory,
         allocInfo->placement.offset,
+        allocInfo->size,
     };
   }
 

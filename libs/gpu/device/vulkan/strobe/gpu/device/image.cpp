@@ -2,6 +2,7 @@
 #include "strobe/gpu/device/format_utilts.hpp"
 #include "strobe/gpu/device/handle.hpp"
 #include "strobe/gpu/device/image_aspect_utils.hpp"
+#include "strobe/gpu/device/image_handle_alloc.hpp"
 #include "strobe/gpu/device/image_impl.hpp"
 #include "strobe/gpu/device/image_view_impl.hpp"
 #include "strobe/gpu/device/image_view_type_utils.hpp"
@@ -9,9 +10,31 @@
 
 namespace strobe::gpu {
 
+using handle_alloc = image_handle_alloc_ref;
+
+void unpin_image(void *h) noexcept {
+  if (h == nullptr) {
+    return;
+  }
+  using control_block = handle_control_block<ImageImpl, handle_alloc>;
+  using allocator_traits = AllocatorTraits<handle_alloc>;
+
+  auto *block = static_cast<control_block *>(h);
+
+  if (block->refCount.fetch_sub(1, std::memory_order_acq_rel) != 1) {
+    return;
+  }
+  MemoryAllocation keepAlive = block->value.allocation;
+  handle_alloc alloc = std::move(block->alloc);
+  std::destroy_at(block);
+  // alloc, still has to be valid after destroy!, but destroy might destroy the
+  // underlying pool!
+  allocator_traits::template deallocate<control_block>(alloc, block);
+}
+
 Image::Image(const Image &o) noexcept : m_handle(o.m_handle) {
   if (m_handle != nullptr) {
-    pin_void_handle<ImageImpl>(m_handle);
+    pin_void_handle<ImageImpl, handle_alloc>(m_handle);
   }
 }
 
@@ -23,9 +46,9 @@ Image &Image::operator=(const Image &o) noexcept {
     return *this;
   }
   if (o.m_handle != nullptr) {
-    pin_void_handle<ImageImpl>(o.m_handle);
+    pin_void_handle<ImageImpl, handle_alloc>(o.m_handle);
   }
-  unpin_void_handle<ImageImpl>(m_handle);
+  unpin_image(m_handle);
   m_handle = o.m_handle;
   return *this;
 }
@@ -34,46 +57,46 @@ Image &Image::operator=(Image &&o) noexcept {
   if (this == &o) {
     return *this;
   }
-  unpin_void_handle<ImageImpl>(m_handle);
+  unpin_image(m_handle);
   m_handle = std::exchange(o.m_handle, nullptr);
   return *this;
 }
 
-Image::~Image() noexcept { unpin_void_handle<ImageImpl>(m_handle); }
+Image::~Image() noexcept { unpin_image(m_handle); }
 
 ImageType Image::type() const noexcept {
-  auto *impl = void_handle_ptr<ImageImpl>(m_handle);
+  auto *impl = void_handle_ptr<ImageImpl, handle_alloc>(m_handle);
   return impl->type;
 }
 
 Format Image::format() const noexcept {
-  auto *impl = void_handle_ptr<ImageImpl>(m_handle);
+  auto *impl = void_handle_ptr<ImageImpl, handle_alloc>(m_handle);
   return impl->format;
 }
 
 uvec3 Image::extent() const noexcept {
-  auto *impl = void_handle_ptr<ImageImpl>(m_handle);
+  auto *impl = void_handle_ptr<ImageImpl, handle_alloc>(m_handle);
   return impl->extent;
 }
 
 uint32_t Image::mip_levels() const noexcept {
-  auto *impl = void_handle_ptr<ImageImpl>(m_handle);
+  auto *impl = void_handle_ptr<ImageImpl, handle_alloc>(m_handle);
   return impl->mip_levels;
 }
 
 uint32_t Image::arrayLayers() const noexcept {
-  auto *impl = void_handle_ptr<ImageImpl>(m_handle);
+  auto *impl = void_handle_ptr<ImageImpl, handle_alloc>(m_handle);
   return impl->arrayLayers;
 }
 
 SampleCount Image::samples() const noexcept {
-  auto *impl = void_handle_ptr<ImageImpl>(m_handle);
+  auto *impl = void_handle_ptr<ImageImpl, handle_alloc>(m_handle);
   return impl->samples;
 }
 
 ImageView Image::create_view(ImageViewType type, ImageAspect aspect,
                              const ImageViewCreateInfo &createInfo) {
-  auto *impl = void_handle_ptr<ImageImpl>(m_handle);
+  auto *impl = void_handle_ptr<ImageImpl, handle_alloc>(m_handle);
 
   const Format format =
       createInfo.format == Format::undefined ? impl->format : createInfo.format;

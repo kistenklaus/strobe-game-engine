@@ -32,6 +32,7 @@ class Image {
   friend struct SwapchainImpl;
   friend struct SwapchainGenerationImpl;
   friend class CommandBuffer;
+  friend class MemoryPool;
 
 public:
   Image() noexcept : m_handle(nullptr) {}
@@ -41,6 +42,12 @@ public:
   Image &operator=(Image &&) noexcept;
   ~Image() noexcept;
   explicit operator bool() const noexcept { return m_handle != nullptr; }
+  friend bool operator==(const Image& lhs, const Image& rhs) noexcept {
+    return lhs.m_handle == rhs.m_handle;
+  }
+  friend bool operator!=(const Image& lhs, const Image& rhs) noexcept {
+    return lhs.m_handle != rhs.m_handle;
+  }
 
   ImageType type() const noexcept;
   Format format() const noexcept;

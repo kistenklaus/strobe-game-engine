@@ -294,6 +294,7 @@ double get_device_score(VkInstance instance, VkPhysicalDevice device,
       return unsuitable;
     }
   }
+
   if (!deviceInfo.features.shaderObjects) {
     return unsuitable;
   }
@@ -306,14 +307,32 @@ double get_device_score(VkInstance instance, VkPhysicalDevice device,
     return unsuitable;
   }
 
-  if (info->calibratedTimestamps == required && !deviceInfo.features.calibratedTimestamps) {
+  if (info->calibratedTimestamps == required &&
+      !deviceInfo.features.calibratedTimestamps) {
     return unsuitable;
   }
 
-  if (info->bufferDeviceAddress == required && !deviceInfo.features.bufferDeviceAddress) {
+  if (info->bufferDeviceAddress == required &&
+      !deviceInfo.features.bufferDeviceAddress) {
     return unsuitable;
   }
 
+  if (info->deferredHostOperations == required &&
+      !deviceInfo.features.deferredHostOperations) {
+    return unsuitable;
+  }
+  if (info->accelerationStructure == required &&
+      !deviceInfo.features.accelerationStructure) {
+    return unsuitable;
+  }
+  if (info->raytracingPipeline == required &&
+      !deviceInfo.features.rayTracingPipeline) {
+    return unsuitable;
+  }
+
+  if (info->rayQuery == required && !deviceInfo.features.rayQuery) {
+    return unsuitable;
+  }
 
   double score = device_type_score(deviceInfo.properties.deviceType);
 
@@ -341,7 +360,6 @@ double get_device_score(VkInstance instance, VkPhysicalDevice device,
     if (!std::isfinite(queueScore)) {
       return unsuitable;
     }
-
 
     score += queueScore;
   }

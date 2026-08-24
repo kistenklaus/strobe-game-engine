@@ -1,5 +1,8 @@
 #include "strobe/gpu/vulkan/image.hpp"
-#include "strobe/gpu/vulkan/memory_usage.hpp"
+#include "strobe/gpu/vulkan/context/context.hpp"
+#include "strobe/gpu/vulkan/memory.hpp"
+#include <stdexcept>
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu::vulkan {
 
@@ -12,7 +15,6 @@ Image create_image(Context *context, const ImageInfo &info) {
   assert(info.mip_levels != 0);
   assert(info.array_layers != 0);
   assert(info.usage != 0);
-
   const VkImageCreateInfo imageInfo{
       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
       .pNext = nullptr,
@@ -32,110 +34,73 @@ Image create_image(Context *context, const ImageInfo &info) {
   };
   Image image{};
   {
-    ZoneScopedN("vmaCreateImage");
-    const VkResult result =
-        vmaCreateImage(context->vma(), &imageInfo,
-                       details::get_auto_allocation_create_info(info.memory_usage),
-                       &image.handle, &image.allocation, nullptr);
+    ZoneScopedN("vkCreateImage");
+    const VkResult result = vkCreateImage(
+        context->device(), &imageInfo, context->driver_alloc(), &image.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to create Vulkan image"};
+      throw std::runtime_error("Failed to create vulkan image");
     }
   }
   return image;
 }
 
 void destroy_image(Context *context, Image image) noexcept {
-  assert(context != nullptr);
+  assert(context);
   assert(image);
-  if (image.allocation != VK_NULL_HANDLE) { // externally owned!
-    ZoneScopedN("vmaDestroyImage");
-    vmaDestroyImage(context->vma(), image.handle, image.allocation);
+  ZoneScopedN("vkDestroyImage");
+  vkDestroyImage(context->device(), image.handle, context->driver_alloc());
+}
+MemoryRequirements get_image_memory_requirements(Context *context,
+                                                 Image image) noexcept {
+  assert(context);
+  assert(image);
+  VkImageMemoryRequirementsInfo2 info{
+      .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2,
+      .pNext = nullptr,
+      .image = image.handle,
+  };
+  VkMemoryDedicatedRequirements dedicatedReq{
+      .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS,
+      .pNext = nullptr,
+      .prefersDedicatedAllocation = false,
+      .requiresDedicatedAllocation = false,
+  };
+
+  VkMemoryRequirements2 req2{
+      .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+      .pNext = &dedicatedReq,
+      .memoryRequirements = {},
+  };
+
+  {
+    ZoneScopedN("vkGetImageMemoryRequirements2");
+    vkGetImageMemoryRequirements2(context->device(), &info, &req2);
   }
+
+  return MemoryRequirements{
+      .size = req2.memoryRequirements.size,
+      .alignment = req2.memoryRequirements.alignment,
+      .memoryTypeBits = req2.memoryRequirements.memoryTypeBits,
+      .prefersDedicated =
+          static_cast<bool>(dedicatedReq.prefersDedicatedAllocation),
+      .requiresDedicated =
+          static_cast<bool>(dedicatedReq.requiresDedicatedAllocation),
+  };
 }
 
-void *map_image(Context *context, Image image) {
+void bind_image_memory(Context *context, const Memory &memory, Image image,
+                       VkDeviceSize offset) {
   assert(context != nullptr);
+  assert(memory);
   assert(image);
-  assert(image.allocation != VK_NULL_HANDLE);
-  void *data = nullptr;
   {
-    ZoneScopedN("vmaMapMemory");
-    const VkResult result =
-        vmaMapMemory(context->vma(), image.allocation, &data);
+    ZoneScopedN("vmaBindImageMemory2");
+    VkResult result = vmaBindImageMemory2(context->vma(), memory.handle, offset,
+                                          image.handle, nullptr);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to map Vulkan image"};
+      throw std::runtime_error("Failed to bind image memory");
     }
   }
-  return data;
-}
-
-void unmap_image(Context *context, Image image) noexcept {
-  assert(context != nullptr);
-  assert(image);
-  assert(image.allocation != VK_NULL_HANDLE);
-  {
-    ZoneScopedN("vmaUnmapMemory");
-    vmaUnmapMemory(context->vma(), image.allocation);
-  }
-}
-
-void flush_image(Context *context, Image image, VkDeviceSize offset,
-                 VkDeviceSize size) {
-  assert(context != nullptr);
-  assert(image);
-  assert(image.allocation != VK_NULL_HANDLE);
-  {
-    ZoneScopedN("vmaFlushAllocation");
-    const VkResult result =
-        vmaFlushAllocation(context->vma(), image.allocation, offset, size);
-    if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to flush Vulkan image allocation"};
-    }
-  }
-}
-
-void invalidate_image(Context *context, Image image, VkDeviceSize offset,
-                      VkDeviceSize size) {
-  assert(context != nullptr);
-  assert(image);
-  assert(image.allocation != VK_NULL_HANDLE);
-  {
-    ZoneScopedN("vmaInvalidateAllocation");
-    const VkResult result =
-        vmaInvalidateAllocation(context->vma(), image.allocation, offset, size);
-    if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to invalidate Vulkan image allocation"};
-    }
-  }
-}
-
-void *get_persistently_mapped_image_ptr(Context *context,
-                                        Image image) noexcept {
-  assert(context != nullptr);
-  assert(image);
-  assert(image.allocation != VK_NULL_HANDLE);
-  VmaAllocationInfo allocationInfo{};
-  {
-    ZoneScopedN("vmaGetAllocationInfo");
-    vmaGetAllocationInfo(context->vma(), image.allocation, &allocationInfo);
-  }
-  assert(allocationInfo.pMappedData != nullptr);
-  return allocationInfo.pMappedData;
-}
-
-[[nodiscard]]
-VkSubresourceLayout
-get_image_subresource_layout(Context *context, Image image,
-                             const VkImageSubresource &subresource) noexcept {
-  assert(context != nullptr);
-  assert(image);
-  VkSubresourceLayout layout{};
-  {
-    ZoneScopedN("vkGetImageSubresourceLayout");
-    vkGetImageSubresourceLayout(context->device(), image.handle, &subresource,
-                                &layout);
-  }
-  return layout;
 }
 
 } // namespace strobe::gpu::vulkan

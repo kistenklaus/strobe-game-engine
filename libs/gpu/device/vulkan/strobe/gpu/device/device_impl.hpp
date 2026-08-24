@@ -9,6 +9,7 @@
 #include "strobe/gpu/vulkan/debug_name.hpp"
 #include "strobe/gpu/vulkan/timeline_semaphore.hpp"
 #include <limits>
+#include <thread>
 #include <tracy/TracyVulkan.hpp>
 #include <vulkan/vulkan_core.h>
 
@@ -169,10 +170,6 @@ struct DeviceImpl {
 
         if (result != VK_SUCCESS) {
           break;
-        }
-        {
-          ZoneScopedN("TracyVkCollectHost");
-          TracyVkCollectHost(context.tracyCtx());
         }
       }
     }

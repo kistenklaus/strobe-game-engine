@@ -10,7 +10,7 @@
 #include <limits>
 namespace strobe::gpu {
 
-struct SwapchainCreateInfo {
+struct SwapchainInfo {
   uvec2 extent = {0, 0};
   ImageUsage imageUsage = ImageUsage::color_attachment;
   bool vsync = false;

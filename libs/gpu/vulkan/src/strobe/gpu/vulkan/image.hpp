@@ -1,20 +1,18 @@
 #pragma once
 
 #include "strobe/gpu/vulkan/context/context.hpp"
-#include "strobe/gpu/vulkan/memory_usage.hpp"
+#include "strobe/gpu/vulkan/memory_requirements.hpp"
 
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::gpu::vulkan {
+struct Memory;
 
 struct Image {
   VkImage handle = VK_NULL_HANDLE;
-  VmaAllocation allocation = VK_NULL_HANDLE;
 
-  explicit operator bool() const noexcept {
-    return handle != VK_NULL_HANDLE;
-  }
+  explicit operator bool() const noexcept { return handle != VK_NULL_HANDLE; }
 };
 
 struct ImageInfo {
@@ -32,22 +30,16 @@ struct ImageInfo {
   VkImageUsageFlags usage = 0;
   VkImageCreateFlags flags = 0;
   VkImageLayout initial_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-  MemoryUsage memory_usage = MemoryUsage::automatic;
 };
 
 Image create_image(Context *context, const ImageInfo &info);
-void destroy_image(Context *context, Image image) noexcept;
-void *map_image(Context *context, Image image);
-void unmap_image(Context *context, Image image) noexcept;
-void flush_image(Context *context, Image image, VkDeviceSize offset = 0,
-                 VkDeviceSize size = VK_WHOLE_SIZE);
-void invalidate_image(Context *context, Image image, VkDeviceSize offset = 0,
-                      VkDeviceSize size = VK_WHOLE_SIZE);
-void *get_persistently_mapped_image_ptr(Context *context, Image image) noexcept;
 
-VkSubresourceLayout get_image_subresource_layout(
-    Context *context, Image image,
-    const VkImageSubresource &subresource = VkImageSubresource{
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .arrayLayer = 0}) noexcept;
+void destroy_image(Context *context, Image image) noexcept;
+
+MemoryRequirements get_image_memory_requirements(Context *context,
+                                                 Image image) noexcept;
+
+void bind_image_memory(Context *context, const Memory &memory, Image image,
+                       VkDeviceSize offset);
 
 } // namespace strobe::gpu::vulkan

@@ -1,0 +1,2 @@
+leak:glfwInit
+leak:libnvidia-glcore.so

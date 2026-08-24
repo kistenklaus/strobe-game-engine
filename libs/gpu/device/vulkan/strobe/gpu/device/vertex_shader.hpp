@@ -5,9 +5,9 @@
 #include "strobe/gpu/device/shader_stage.hpp"
 namespace strobe::gpu {
 
-struct VertexShaderCreateInfo {
+struct VertexShaderInfo {
   span<const uint32_t> spirv = {};
-  ShaderStage nextStage = ShaderStage::none;
+  ShaderStage nextStage = ShaderStage::fragment;
   span<const PushConstantRange> pushConstantRange = {};
 };
 
@@ -23,6 +23,13 @@ public:
   VertexShader &operator=(const VertexShader &) noexcept;
   VertexShader &operator=(VertexShader &&) noexcept;
   ~VertexShader() noexcept;
+  explicit operator bool() const noexcept { return m_handle != nullptr; }
+  friend bool operator==(const VertexShader &lhs, const VertexShader &rhs) {
+    return lhs.m_handle == rhs.m_handle;
+  }
+  friend bool operator!=(const VertexShader &lhs, const VertexShader &rhs) {
+    return lhs.m_handle != rhs.m_handle;
+  }
 
 private:
   VertexShader(void *handle) noexcept : m_handle(handle) {}

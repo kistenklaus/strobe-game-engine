@@ -6,6 +6,7 @@
 #include "strobe/gpu/vulkan/command_pool.hpp"
 #include "strobe/gpu/vulkan/fence.hpp"
 #include "strobe/gpu/vulkan/image.hpp"
+#include "strobe/gpu/vulkan/shader_object.hpp"
 #include "strobe/gpu/vulkan/timeline_semaphore.hpp"
 #include <vulkan/vulkan_core.h>
 
@@ -28,5 +29,7 @@ void set_debug_name(Context *context, vulkan::CommandPool pool,
                     const char *name);
 
 void set_debug_name(Context *context, vulkan::Fence fence, const char *name);
+
+void set_debug_name(Context *context, vulkan::ShaderObject, const char *name);
 
 } // namespace strobe::gpu::vulkan

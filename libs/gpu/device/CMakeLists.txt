@@ -3,13 +3,16 @@ include_guard(GLOBAL)
 set(STROBE_GPU_DEVICE_LIB ${STROBE_GPU_LIB}-device)
 
 
-set(VK_SRCS 
+set(VK_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/binary_semaphore.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/blas.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/buffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/command_pool.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/command_buffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/command_buffer_impl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/compute_shader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/context.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/descriptor_heap.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/device.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/fence.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/fragment_shader.cpp
@@ -44,11 +47,24 @@ target_include_directories(${STROBE_GPU_DEVICE_LIB}
 )
 
 
-target_link_libraries(${STROBE_GPU_DEVICE_LIB} 
+target_link_libraries(${STROBE_GPU_DEVICE_LIB}
   PUBLIC ${STROBE_CORE_LIB}
   PRIVATE ${STROBE_GPU_LIB}-vulkan
   PRIVATE strobe::tracy
 )
+
+
+if(STROBE_WARNINGS_AS_ERRORS)
+  target_compile_options(${STROBE_GPU_DEVICE_LIB} PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
+    $<$<CXX_COMPILER_ID:MSVC>:/WX>
+  )
+endif()
+
+
+if (STROBE_SAN)
+  target_link_libraries(${STROBE_GPU_DEVICE_LIB} PRIVATE strobe_sanitizers)
+endif()
 
 add_subdirectory(sandbox)
 

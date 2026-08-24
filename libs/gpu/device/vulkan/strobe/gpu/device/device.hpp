@@ -3,6 +3,7 @@
 #include "strobe/gpu/device/binary_semaphore.hpp"
 #include "strobe/gpu/device/buffer.hpp"
 #include "strobe/gpu/device/command_pool.hpp"
+#include "strobe/gpu/device/compute_shader.hpp"
 #include "strobe/gpu/device/device_create_info.hpp"
 #include "strobe/gpu/device/device_info.hpp"
 #include "strobe/gpu/device/fence.hpp"
@@ -44,14 +45,15 @@ public:
 
   Queue get_queue(QueueFlags flags);
   Swapchain create_swapchain(GLFWwindow *window,
-                             const SwapchainCreateInfo &createInfo = {});
+                             const SwapchainInfo &info = {});
   CommandPool create_cmd_pool(const Queue &queue);
-  Image create_image(const ImageCreateInfo &);
   BinarySemaphore create_binary_semaphore();
   TimelineSemaphore create_timeline_semaphore(uint64_t initalValue = 0);
   Fence create_fence(bool signaled);
-  VertexShader create_vertex_shader(const VertexShaderCreateInfo &info);
-  FragmentShader create_fragment_shader(const FragmentShaderCreateInfo &info);
+
+  VertexShader create_vertex_shader(const VertexShaderInfo &info);
+  FragmentShader create_fragment_shader(const FragmentShaderInfo &info);
+  ComputeShader create_compute_shader(const ComputeShaderInfo &info);
 
   MemoryPool create_memory_pool();
   // NOTE: we may later add this back in (backed by a internal memory pool or something)

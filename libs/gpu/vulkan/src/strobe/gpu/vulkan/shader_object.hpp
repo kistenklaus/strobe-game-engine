@@ -23,7 +23,8 @@ struct ShaderObject {
   }
 };
 
-ShaderObject create_shader_object(Context *context, const ShaderObjectCreateInfo& info);
+ShaderObject create_shader_object(Context *context,
+                                  const ShaderObjectCreateInfo &info);
 
 void destroy_shader_object(Context *context, ShaderObject shader) noexcept;
 

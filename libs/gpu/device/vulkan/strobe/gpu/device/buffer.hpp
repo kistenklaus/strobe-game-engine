@@ -6,10 +6,10 @@
 #include <cstdint>
 namespace strobe::gpu {
 
-struct BufferCreateInfo {
+struct BufferInfo {
   uint64_t size = 0;
-  BufferUsage usage = BufferUsage::none;
-  MemoryUsage memory_usage = MemoryUsage::automatic;
+  BufferUsage bufferUsage = BufferUsage::none;
+  MemoryUsage memoryUsage = MemoryUsage::automatic;
 };
 
 class Buffer {
@@ -17,6 +17,7 @@ class Buffer {
   friend class CommandBuffer;
   friend class MemoryPool;
   friend struct CommandBufferImpl;
+  friend struct BlasImpl; // TODO: remove me
 
 public:
   Buffer() noexcept : m_handle(nullptr) {}
@@ -25,17 +26,24 @@ public:
   Buffer &operator=(const Buffer &) noexcept;
   Buffer &operator=(Buffer &&) noexcept;
   ~Buffer() noexcept;
+  explicit operator bool() const noexcept { return m_handle != nullptr; }
+  friend bool operator==(const Buffer &lhs, const Buffer &rhs) noexcept {
+    return lhs.m_handle == rhs.m_handle;
+  }
+  friend bool operator!=(const Buffer &lhs, const Buffer &rhs) noexcept {
+    return lhs.m_handle != rhs.m_handle;
+  }
 
   uint64_t size() const noexcept;
 
-  void commit();
+  void commit() const;
 
-  void *ptr();
+  void *ptr() const;
+
+  void set_name(const char *name) const noexcept;
 
 private:
-  Buffer(void *handle) noexcept : m_handle(handle) {
-    assert(handle);
-  }
+  Buffer(void *handle) noexcept : m_handle(handle) { assert(handle); }
   void *m_handle;
 };
 } // namespace strobe::gpu

@@ -8,8 +8,9 @@ namespace strobe::gpu {
 
 struct MemoryAllocationImpl {
   MemoryAllocationImpl(MemoryPool pool, MemoryBinding binding,
-                       void *internals) noexcept
-      : pool(std::move(pool)), binding(binding), internals(internals) {}
+                       MemoryUsage memoryUsage, void *internals) noexcept
+      : pool(std::move(pool)), memoryUsage(memoryUsage), binding(binding),
+        internals(internals) {}
 
   ~MemoryAllocationImpl() noexcept;
 
@@ -19,6 +20,7 @@ struct MemoryAllocationImpl {
 
 public:
   MemoryPool pool;
+  MemoryUsage memoryUsage;
   MemoryBinding binding;
   void *internals = nullptr;
   void *mapped = nullptr;
