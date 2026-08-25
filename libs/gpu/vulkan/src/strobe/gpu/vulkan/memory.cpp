@@ -41,14 +41,15 @@ Memory allocate_dedicated_memory(Context *context,
   VkMemoryDedicatedAllocateInfo dedicatedInfo{
       .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,
       .pNext = nullptr,
-      .image = VK_NULL_HANDLE,           
-      .buffer = buffer.handle, 
+      .image = VK_NULL_HANDLE,
+      .buffer = buffer.handle,
   };
 
   Memory memory{};
   ZoneScopedN("vmaAllocateDedicatedMemory");
-  VkResult result = vmaAllocateDedicatedMemory(
-      context->vma(), &req, &allocInfo, &dedicatedInfo, &memory.handle, nullptr);
+  VkResult result =
+      vmaAllocateDedicatedMemory(context->vma(), &req, &allocInfo,
+                                 &dedicatedInfo, &memory.handle, nullptr);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("Failed to allocate dedicated buffer memory");
   }
@@ -68,13 +69,14 @@ Memory allocate_dedicated_memory(Context *context,
   VkMemoryDedicatedAllocateInfo dedicatedInfo{
       .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,
       .pNext = nullptr,
-      .image = image.handle,           
+      .image = image.handle,
       .buffer = VK_NULL_HANDLE,
   };
   Memory memory{};
   ZoneScopedN("vmaAllocateDedicatedMemory");
-  VkResult result = vmaAllocateDedicatedMemory(
-      context->vma(), &req, &allocInfo, &dedicatedInfo, &memory.handle, nullptr);
+  VkResult result =
+      vmaAllocateDedicatedMemory(context->vma(), &req, &allocInfo,
+                                 &dedicatedInfo, &memory.handle, nullptr);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("Failed to allocate dedicated image memory");
   }

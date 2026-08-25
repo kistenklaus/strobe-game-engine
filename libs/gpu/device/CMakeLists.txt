@@ -12,7 +12,6 @@ set(VK_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/command_buffer_impl.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/compute_shader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/context.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/descriptor_heap.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/device.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/fence.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/gpu/device/fragment_shader.cpp

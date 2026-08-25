@@ -197,7 +197,12 @@ struct DeviceFeatures {
   VkBool32 accelerationStructureIndirectBuild;
   VkBool32 descriptorBindingAccelerationStructureUpdateAfterBind;
 
+  // deferred host operations
   VkBool32 deferredHostOperations;
+
+  // descriptor heaps
+  VkBool32 descriptorHeap;
+  VkBool32 descriptorHeapCaptureReplay;
 };
 
 template <typename Alloc>
@@ -325,6 +330,20 @@ inline DeviceFeatures query_device_features(
   if (rayQueryExt) {
     rayQueryFeatures.pNext = pNext;
     pNext = &rayQueryFeatures;
+  }
+
+  const bool descriptorHeapExt = supports_extension<Alloc>(
+      supportedExtensions, VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME);
+  VkPhysicalDeviceDescriptorHeapFeaturesEXT descriptorHeapFeatures{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT,
+      .pNext = nullptr,
+      .descriptorHeap = VK_FALSE,
+      .descriptorHeapCaptureReplay = VK_FALSE,
+  };
+
+  if (descriptorHeapExt) {
+    descriptorHeapFeatures.pNext = pNext;
+    pNext = &descriptorHeapFeatures;
   }
 
   VkPhysicalDeviceFeatures2 features2{
@@ -557,6 +576,9 @@ inline DeviceFeatures query_device_features(
           accelerationStructureFeatures
               .descriptorBindingAccelerationStructureUpdateAfterBind,
       .deferredHostOperations = deferredHostOperationsExt,
+      .descriptorHeap = descriptorHeapFeatures.descriptorHeap,
+      .descriptorHeapCaptureReplay =
+          descriptorHeapFeatures.descriptorHeapCaptureReplay,
   };
 }
 

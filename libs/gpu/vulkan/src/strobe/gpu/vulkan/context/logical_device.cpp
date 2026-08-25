@@ -122,6 +122,13 @@ create_logical_device(VkPhysicalDevice physicalDevice,
       .rayQuery = deviceInfo->features.rayQuery,
   };
 
+  VkPhysicalDeviceDescriptorHeapFeaturesEXT descriptorHeapFeatures{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT,
+      .pNext = nullptr,
+      .descriptorHeap = deviceInfo->features.descriptorHeap,
+      .descriptorHeapCaptureReplay = VK_FALSE,
+  };
+
   Vector<const char *, scratch_allocator_ref> extensions{&scratch};
 
   if (info->swapchain == required && !properties->surface) {
@@ -241,6 +248,16 @@ create_logical_device(VkPhysicalDevice physicalDevice,
     rayQueryFeatures.pNext = pNext;
     pNext = &rayQueryFeatures;
     extensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+  }
+
+  if (info->descriptorHeap != disable && deviceInfo->features.descriptorHeap) {
+    properties->descriptorHeap = true;
+    descriptorHeapFeatures.pNext = pNext;
+    pNext = &descriptorHeapFeatures;
+    extensions.emplace_back(VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME);
+
+    // dependency
+    vulkan14.maintenance5 = VK_TRUE;
   }
 
   Vector<QueueFamilyPlan, scratch_allocator_ref> queueFamilyPlans{&scratch};

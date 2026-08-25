@@ -66,6 +66,16 @@ struct PNF_Functions {
       getPhysicalDeviceCalibrateableTimeDomains = nullptr;
   PFN_vkGetCalibratedTimestampsKHR getCalibratedTimestamps = nullptr;
 
+  // Descriptor heaps
+  PFN_vkCmdBindResourceHeapEXT cmdBindResourceHeap = nullptr;
+  PFN_vkCmdBindSamplerHeapEXT cmdBindSamplerHeap = nullptr;
+  PFN_vkCmdPushDataEXT cmdPushData = nullptr;
+  PFN_vkGetImageOpaqueCaptureDataEXT getImageOpaqueCaptureData = nullptr;
+  PFN_vkGetPhysicalDeviceDescriptorSizeEXT getPhysicalDeviceDescriptorSize =
+      nullptr;
+  PFN_vkWriteResourceDescriptorsEXT writeResourceDescriptors = nullptr;
+  PFN_vkWriteSamplerDescriptorsEXT writeSamplerDescriptors = nullptr;
+
   // Shader objects
   PFN_vkCreateShadersEXT createShaders = nullptr;
   PFN_vkDestroyShaderEXT destroyShader = nullptr;
@@ -218,6 +228,30 @@ load_pnf_functions(VkInstance instance, VkDevice device,
     functions.getCalibratedTimestamps =
         reinterpret_cast<PFN_vkGetCalibratedTimestampsKHR>(
             vkGetDeviceProcAddr(device, "vkGetCalibratedTimestampsKHR"));
+  }
+
+  if (props.descriptorHeap) {
+    functions.cmdBindResourceHeap =
+        reinterpret_cast<PFN_vkCmdBindResourceHeapEXT>(
+            vkGetDeviceProcAddr(device, "vkCmdBindResourceHeapEXT"));
+    functions.cmdBindSamplerHeap =
+        reinterpret_cast<PFN_vkCmdBindSamplerHeapEXT>(
+            vkGetDeviceProcAddr(device, "vkCmdBindSamplerHeapEXT"));
+    functions.cmdPushData = reinterpret_cast<PFN_vkCmdPushDataEXT>(
+        vkGetDeviceProcAddr(device, "vkCmdPushDataEXT"));
+    functions.getImageOpaqueCaptureData =
+        reinterpret_cast<PFN_vkGetImageOpaqueCaptureDataEXT>(
+            vkGetDeviceProcAddr(device, "vkGetImageOpaqueCaptureDataEXT"));
+    functions.getPhysicalDeviceDescriptorSize =
+        reinterpret_cast<PFN_vkGetPhysicalDeviceDescriptorSizeEXT>(
+            vkGetInstanceProcAddr(instance,
+                                  "vkGetPhysicalDeviceDescriptorSizeEXT"));
+    functions.writeResourceDescriptors =
+        reinterpret_cast<PFN_vkWriteResourceDescriptorsEXT>(
+            vkGetDeviceProcAddr(device, "vkWriteResourceDescriptorsEXT"));
+    functions.writeSamplerDescriptors =
+        reinterpret_cast<PFN_vkWriteSamplerDescriptorsEXT>(
+            vkGetDeviceProcAddr(device, "vkWriteSamplerDescriptorsEXT"));
   }
 
   if (props.shaderObjects) {
@@ -895,6 +929,72 @@ inline VkResult vk_get_calibrated_timestamps(
 
   return functions->getCalibratedTimestamps(
       device, timestampCount, timestampInfos, timestamps, maxDeviation);
+}
+
+// -----------------------------------------------------------------------------
+// Descriptor heaps
+// -----------------------------------------------------------------------------
+
+inline void vk_cmd_bind_resource_heap(
+    const PNF_Functions *functions, VkCommandBuffer commandBuffer,
+    const VkBindHeapInfoEXT *bindInfo) noexcept {
+  assert(functions != nullptr);
+  assert(functions->cmdBindResourceHeap != nullptr);
+  functions->cmdBindResourceHeap(commandBuffer, bindInfo);
+}
+
+inline void vk_cmd_bind_sampler_heap(
+    const PNF_Functions *functions, VkCommandBuffer commandBuffer,
+    const VkBindHeapInfoEXT *bindInfo) noexcept {
+  assert(functions != nullptr);
+  assert(functions->cmdBindSamplerHeap != nullptr);
+  functions->cmdBindSamplerHeap(commandBuffer, bindInfo);
+}
+
+inline void vk_cmd_push_data(const PNF_Functions *functions,
+                             VkCommandBuffer commandBuffer,
+                             const VkPushDataInfoEXT *pushDataInfo) noexcept {
+  assert(functions != nullptr);
+  assert(functions->cmdPushData != nullptr);
+  functions->cmdPushData(commandBuffer, pushDataInfo);
+}
+
+inline VkResult vk_get_image_opaque_capture_data(
+    const PNF_Functions *functions, VkDevice device, uint32_t imageCount,
+    const VkImage *images, VkHostAddressRangeEXT *data) noexcept {
+  assert(functions != nullptr);
+  assert(functions->getImageOpaqueCaptureData != nullptr);
+  return functions->getImageOpaqueCaptureData(device, imageCount, images,
+                                              data);
+}
+
+inline VkDeviceSize vk_get_physical_device_descriptor_size(
+    const PNF_Functions *functions, VkPhysicalDevice physicalDevice,
+    VkDescriptorType descriptorType) noexcept {
+  assert(functions != nullptr);
+  assert(functions->getPhysicalDeviceDescriptorSize != nullptr);
+  return functions->getPhysicalDeviceDescriptorSize(physicalDevice,
+                                                    descriptorType);
+}
+
+inline VkResult vk_write_resource_descriptors(
+    const PNF_Functions *functions, VkDevice device, uint32_t resourceCount,
+    const VkResourceDescriptorInfoEXT *resources,
+    const VkHostAddressRangeEXT *descriptors) noexcept {
+  assert(functions != nullptr);
+  assert(functions->writeResourceDescriptors != nullptr);
+  return functions->writeResourceDescriptors(device, resourceCount, resources,
+                                             descriptors);
+}
+
+inline VkResult vk_write_sampler_descriptors(
+    const PNF_Functions *functions, VkDevice device, uint32_t samplerCount,
+    const VkSamplerCreateInfo *samplers,
+    const VkHostAddressRangeEXT *descriptors) noexcept {
+  assert(functions != nullptr);
+  assert(functions->writeSamplerDescriptors != nullptr);
+  return functions->writeSamplerDescriptors(device, samplerCount, samplers,
+                                            descriptors);
 }
 
 } // namespace strobe::gpu::vulkan

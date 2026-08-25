@@ -158,6 +158,28 @@ struct AccelerationStructureProperties {
   uint32_t minAccelerationStructureScratchOffsetAlignment;
 };
 
+struct DescriptorHeapProperties {
+  VkDeviceSize samplerHeapAlignment;
+  VkDeviceSize resourceHeapAlignment;
+  VkDeviceSize maxSamplerHeapSize;
+  VkDeviceSize maxResourceHeapSize;
+  VkDeviceSize minSamplerHeapReservedRange;
+  VkDeviceSize minSamplerHeapReservedRangeWithEmbedded;
+  VkDeviceSize minResourceHeapReservedRange;
+  VkDeviceSize samplerDescriptorSize;
+  VkDeviceSize imageDescriptorSize;
+  VkDeviceSize bufferDescriptorSize;
+  VkDeviceSize samplerDescriptorAlignment;
+  VkDeviceSize imageDescriptorAlignment;
+  VkDeviceSize bufferDescriptorAlignment;
+  VkDeviceSize maxPushDataSize;
+  size_t imageCaptureReplayOpaqueDataSize;
+  uint32_t maxDescriptorHeapEmbeddedSamplers;
+  uint32_t samplerYcbcrConversionCount;
+  VkBool32 sparseDescriptorHeaps;
+  VkBool32 protectedDescriptorHeaps;
+};
+
 template <Allocator Alloc = strobe::Mallocator> struct DeviceProperties {
   uint32_t apiVersion;
   String<Alloc> deviceName;
@@ -169,6 +191,7 @@ template <Allocator Alloc = strobe::Mallocator> struct DeviceProperties {
   SmallVector<VkTimeDomainKHR, 4> calibratableTimeDomains;
   RaytracingPipelineProperties raytracingPipeline;
   AccelerationStructureProperties accelerationStructure;
+  DescriptorHeapProperties descriptorHeap;
 };
 
 template <Allocator Alloc = strobe::Mallocator>
@@ -243,6 +266,34 @@ query_device_properties(VkInstance instance, VkPhysicalDevice physicalDevice,
       }
     } while (result == VK_INCOMPLETE);
     assert(result == VK_SUCCESS);
+  }
+
+  VkPhysicalDeviceDescriptorHeapPropertiesEXT descriptorHeapProperties{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_PROPERTIES_EXT,
+      .pNext = nullptr,
+      .samplerHeapAlignment = 0,
+      .resourceHeapAlignment = 0,
+      .maxSamplerHeapSize = 0,
+      .maxResourceHeapSize = 0,
+      .minSamplerHeapReservedRange = 0,
+      .minSamplerHeapReservedRangeWithEmbedded = 0,
+      .minResourceHeapReservedRange = 0,
+      .samplerDescriptorSize = 0,
+      .imageDescriptorSize = 0,
+      .bufferDescriptorSize = 0,
+      .samplerDescriptorAlignment = 0,
+      .imageDescriptorAlignment = 0,
+      .bufferDescriptorAlignment = 0,
+      .maxPushDataSize = 0,
+      .imageCaptureReplayOpaqueDataSize = 0,
+      .maxDescriptorHeapEmbeddedSamplers = 0,
+      .samplerYcbcrConversionCount = 0,
+      .sparseDescriptorHeaps = VK_FALSE,
+      .protectedDescriptorHeaps = VK_FALSE,
+  };
+  if (features->descriptorHeap) {
+    descriptorHeapProperties.pNext = pNext;
+    pNext = &descriptorHeapProperties;
   }
 
   return DeviceProperties<Alloc>{
@@ -514,7 +565,40 @@ query_device_properties(VkInstance instance, VkPhysicalDevice physicalDevice,
               .minAccelerationStructureScratchOffsetAlignment =
                   asProps.minAccelerationStructureScratchOffsetAlignment,
           },
-  }; // namespace strobe::gpu::vulkan
+      .descriptorHeap = DescriptorHeapProperties{
+          .samplerHeapAlignment = descriptorHeapProperties.samplerHeapAlignment,
+          .resourceHeapAlignment =
+              descriptorHeapProperties.resourceHeapAlignment,
+          .maxSamplerHeapSize = descriptorHeapProperties.maxSamplerHeapSize,
+          .maxResourceHeapSize = descriptorHeapProperties.maxResourceHeapSize,
+          .minSamplerHeapReservedRange =
+              descriptorHeapProperties.minSamplerHeapReservedRange,
+          .minSamplerHeapReservedRangeWithEmbedded =
+              descriptorHeapProperties.minSamplerHeapReservedRangeWithEmbedded,
+          .minResourceHeapReservedRange =
+              descriptorHeapProperties.minResourceHeapReservedRange,
+          .samplerDescriptorSize =
+              descriptorHeapProperties.samplerDescriptorSize,
+          .imageDescriptorSize = descriptorHeapProperties.imageDescriptorSize,
+          .bufferDescriptorSize = descriptorHeapProperties.bufferDescriptorSize,
+          .samplerDescriptorAlignment =
+              descriptorHeapProperties.samplerDescriptorAlignment,
+          .imageDescriptorAlignment =
+              descriptorHeapProperties.imageDescriptorAlignment,
+          .bufferDescriptorAlignment =
+              descriptorHeapProperties.bufferDescriptorAlignment,
+          .maxPushDataSize = descriptorHeapProperties.maxPushDataSize,
+          .imageCaptureReplayOpaqueDataSize =
+              descriptorHeapProperties.imageCaptureReplayOpaqueDataSize,
+          .maxDescriptorHeapEmbeddedSamplers =
+              descriptorHeapProperties.maxDescriptorHeapEmbeddedSamplers,
+          .samplerYcbcrConversionCount =
+              descriptorHeapProperties.samplerYcbcrConversionCount,
+          .sparseDescriptorHeaps =
+              descriptorHeapProperties.sparseDescriptorHeaps,
+          .protectedDescriptorHeaps =
+              descriptorHeapProperties.protectedDescriptorHeaps,
+      }}; // namespace strobe::gpu::vulkan
 }
 
 } // namespace strobe::gpu::vulkan

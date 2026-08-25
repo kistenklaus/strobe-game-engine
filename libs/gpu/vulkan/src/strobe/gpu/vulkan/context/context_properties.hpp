@@ -29,6 +29,8 @@ struct ContextProperties {
   uint32_t raytracingPipeline : 1 = false;
   uint32_t raytracingPipelineMain1 : 1 = false;
   uint32_t rayQuery : 1 = false;
+
+  uint32_t descriptorHeap : 1 = false;
 };
 
 } // namespace strobe::gpu::vulkan

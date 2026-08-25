@@ -39,6 +39,8 @@ struct ContextCreateInfo {
   feature deferredHostOperations = required;
   feature rayQuery = required;
 
+  feature descriptorHeap = required;
+
   uint32_t queue_count = 0;
   const QueueDescription *pQueues;
 };

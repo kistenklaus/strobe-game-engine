@@ -1,0 +1,14 @@
+#pragma once
+
+#include "strobe/core/memory/AllocatorReference.hpp"
+#include "strobe/core/memory/ranked_mpsc_resource.hpp"
+#include "strobe/rhi/allocator.hpp"
+
+namespace strobe::rhi {
+
+using cmd_buf_state_allocator = strobe::rhi::allocator_ref;
+// RankedMPSCResource<AllocatorReference<strobe::rhi::allocator>, 7, 12>;
+
+using cmd_buf_state_allocator_ref = AllocatorReference<cmd_buf_state_allocator>;
+
+} // namespace strobe::rhi

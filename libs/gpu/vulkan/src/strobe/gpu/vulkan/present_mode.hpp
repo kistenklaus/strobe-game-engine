@@ -1,8 +1,6 @@
 #pragma once
 
-#include <compare>
 #include <cstdint>
-#include <type_traits>
 
 namespace strobe::gpu::vulkan {
 

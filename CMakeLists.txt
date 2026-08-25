@@ -37,6 +37,7 @@ add_subdirectory(libs/core)
 
 add_subdirectory(subsystems/platform)
 add_subdirectory(libs/gpu)
+add_subdirectory(libs/rhi)
 
 add_subdirectory(subsystems/window)
 add_subdirectory(subsystems/input)
