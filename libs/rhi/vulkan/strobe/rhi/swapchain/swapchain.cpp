@@ -1,10 +1,13 @@
 #include "strobe/rhi/objects/swapchain.hpp"
-#include "strobe/rhi/queue/binary_semaphore_impl.hpp"
-#include "strobe/rhi/queue/fence_impl.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/swapchain/swapchain_generation_impl.hpp"
+#include "strobe/rhi/swapchain/swapchain_image_impl.hpp"
 #include "strobe/rhi/swapchain/swapchain_impl.hpp"
+#include "strobe/rhi/sync/binary_semaphore_impl.hpp"
+#include "strobe/rhi/sync/fence_impl.hpp"
+#include "strobe/rhi/vulkan/binary_semaphore.hpp"
 #include "strobe/rhi/vulkan/swapchain.hpp"
+#include <cassert>
 #include <utility>
 #include <vulkan/vulkan_core.h>
 
@@ -51,69 +54,56 @@ void Swapchain::resize(uvec2 extent) noexcept {
 SwapchainImage Swapchain::acquire(BinarySemaphore signalSemaphore, Fence fence,
                                   uint64_t timeout) {
   ZoneScopedN("Swapchain::acquire");
-
+  assert(signalSemaphore &&
+         "Swapchain::acquire requires the signalSemaphore to be non null");
   auto *impl = void_handle_ptr<SwapchainImpl>(m_handle);
-  assert(signalSemaphore);
+  vulkan::Context *ctx = impl->context.ctx();
+
+  vulkan::Fence acquireFence{};
+  if (fence) {
+    acquireFence = object_handle_ptr<FenceImpl>(fence)->fence;
+  }
+  vulkan::BinarySemaphore signal{};
+  if (signalSemaphore) {
+    signal = object_handle_ptr<BinarySemaphoreImpl>(signalSemaphore)->semaphore;
+  }
+
   // Lazy initial creation.
   if (!impl->generation) {
     impl->recreate();
   }
 
   while (true) {
-    const auto generationHandle = impl->generation.m_handle;
-    auto *genImpl = void_handle_ptr<SwapchainGenerationImpl>(generationHandle);
-    auto *semImpl =
-        void_handle_ptr<BinarySemaphoreImpl>(signalSemaphore.m_handle);
-    // The semaphore must not still carry an unconsumed swapchain
-    // operation from a previous use.
-    assert(semImpl->swapchainGeneration == nullptr);
+    SwapchainGeneration generation = impl->generation;
+    auto *gen_impl = object_handle_ptr<SwapchainGenerationImpl>(generation);
 
-    vulkan::Fence vkFence{};
-    if (fence) {
-      auto *fenceImpl = void_handle_ptr<FenceImpl>(fence.m_handle);
-      vkFence = fenceImpl->fence;
+    uint32_t imageIndex;
+    auto result = vulkan::acquire_next_swapchain_image(
+        ctx, gen_impl->swapchain,
+        {.timeout = timeout, .signalSemaphore = signal, .fence = acquireFence},
+        &imageIndex);
+
+    switch (result) {
+    case vulkan::SwapchainAcquireStatus::success: {
+      gen_impl->images[imageIndex].acquireSignal = signalSemaphore;
+      gen_impl->images[imageIndex].acquireFence = fence;
+      return SwapchainImage{make_void_handle<SwapchainImageImpl>(
+          impl->swapchainImageHandleAlloc, std::move(generation), imageIndex)};
     }
-
-    VkAcquireNextImageInfoKHR acquireInfo{
-        .sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR,
-        .pNext = nullptr,
-        .swapchain = genImpl->swapchain.handle,
-        .timeout = timeout,
-        .semaphore = semImpl->semaphore.handle,
-        .fence = vkFence.handle,
-        .deviceMask = 1,
-    };
-    uint32_t imageIndex = 0;
-    VkResult result;
-    {
-      ZoneScopedN("vkAcquireNextImage2KHR");
-      result = vkAcquireNextImage2KHR(impl->context.ctx()->device(),
-                                      &acquireInfo, &imageIndex);
+    case vulkan::SwapchainAcquireStatus::suboptimal: {
+      gen_impl->images[imageIndex].acquireSignal = signalSemaphore;
+      gen_impl->images[imageIndex].acquireFence = fence;
+      impl->generation = {};
+      return SwapchainImage{make_void_handle<SwapchainImageImpl>(
+          impl->swapchainImageHandleAlloc, std::move(generation), imageIndex)};
     }
-
-    if (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR) {
-      auto &state = genImpl->images[imageIndex];
-      state.acquireFence = {};
-      assert(!state.acquireSignal);
-      state.acquireSignal = signalSemaphore;
-      state.acquireFence = fence;
-      semImpl->swapchainGeneration = genImpl;
-
-      pin_void_handle<SwapchainGenerationImpl>(generationHandle);
-      if (result == VK_SUBOPTIMAL_KHR) {
-        impl->generation = {};
-      }
-      return SwapchainImage{
-          generationHandle,
-          imageIndex,
-      };
-    } else if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+    case vulkan::SwapchainAcquireStatus::out_of_date: {
       impl->recreate();
       continue;
-    } else if (result == VK_TIMEOUT || result == VK_NOT_READY) {
-      return {};
-    } else {
-      throw std::runtime_error("Failed to acquire swapchain image");
+    }
+    case vulkan::SwapchainAcquireStatus::timeout:
+    case vulkan::SwapchainAcquireStatus::not_ready:
+      return SwapchainImage{};
     }
   }
 }

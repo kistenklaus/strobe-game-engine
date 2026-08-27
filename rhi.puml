@@ -1,0 +1,61 @@
+@startuml
+skinparam linetype polyline
+
+together {
+component "context" as context #LightGreen
+Component "mem" as mem #LightGreen
+}
+
+together {
+component "shader" as shader #LightGreen
+component "sync" as sync #LightGreen
+component "buf" as buf #LightGreen
+component "img" as img #LightGreen
+component "bvh" as bvh #LightYellow
+}
+
+
+component "stage" as stage #LightGreen
+component "cmd" as cmd #Purple
+component "queue" as queue #LightBlue
+component "gc" as gc #LightBlue
+
+
+component "dma" as dma #Red
+component "heap" as heap #Red
+
+component "device" as device #LightBlue
+
+[shader] --> [context]
+[sync] --> [context]
+[mem] --> [context]
+
+[buf] --> [mem]
+[img] --> [mem]
+[bvh] --> [mem]
+
+[stage] --> [buf]
+
+[cmd] --> [buf]
+[cmd] --> [img]
+[cmd] --> [bvh]
+[cmd] --> [shader]
+[cmd] --> [stage]
+
+[queue] --> [gc]
+[gc] --> [sync]
+[queue] -> [cmd]
+[queue] -> [sync]
+
+[dma] --> [queue]
+[dma] --> [stage]
+[dma] --> [cmd]
+
+[heap] --> [dma]
+[heap] --> [buf]
+
+[device] --> [heap]
+[device] --> [gc]
+
+
+@enduml

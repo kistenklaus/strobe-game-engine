@@ -5,13 +5,13 @@
 
 namespace strobe::rhi {
 
-class SwapchainGeneration {
+class SwapchainGeneration : Object<SwapchainGeneration> {
   friend class Swapchain;
   friend struct SwapchainImpl;
   friend class Queue;
 
 public:
-  SwapchainGeneration() noexcept : m_handle(nullptr) {}
+  SwapchainGeneration() noexcept : Object(nullptr) {}
   SwapchainGeneration(const SwapchainGeneration &) noexcept;
   SwapchainGeneration(SwapchainGeneration &&) noexcept;
   SwapchainGeneration &operator=(const SwapchainGeneration &) noexcept;
@@ -21,11 +21,10 @@ public:
   explicit operator bool() const noexcept { return m_handle != nullptr; }
 
   const Image &image(uint32_t index) const noexcept;
+  const ImageView &view(uint32_t index) const noexcept;
   const BinarySemaphore &presentReady(uint32_t index) const noexcept;
 
-private:
-  SwapchainGeneration(void *handle) noexcept : m_handle(handle) {}
-  void *m_handle;
+  explicit SwapchainGeneration(void *handle) noexcept : Object(handle) {}
 };
 
 } // namespace strobe::rhi

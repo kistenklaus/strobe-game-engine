@@ -1,6 +1,6 @@
 #pragma once
 
-#include "strobe/rhi/device/context.hpp"
+#include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/vulkan/shader_object.hpp"
 
 namespace strobe::rhi {
@@ -8,7 +8,8 @@ namespace strobe::rhi {
 struct ShaderObjectImpl {
 
   ShaderObjectImpl(Context context, vulkan::ShaderObject shader)
-      : context(std::move(context)), shader(shader) {}
+      : context(std::move(context)), shader(shader) {
+  }
   ~ShaderObjectImpl() noexcept {
     vulkan::destroy_shader_object(context.ctx(), shader);
   }

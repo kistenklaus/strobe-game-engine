@@ -5,17 +5,17 @@
 
 namespace strobe::rhi {
 
-ComputeShader::ComputeShader(const ComputeShader & o) noexcept : m_handle(o.m_handle){
+ComputeShader::ComputeShader(const ComputeShader &o) noexcept
+    : Object(o.m_handle) {
   if (m_handle) {
     pin_void_handle<ShaderObjectImpl>(m_handle);
   }
 }
 
-ComputeShader::ComputeShader(ComputeShader && o) noexcept : m_handle(std::exchange(o.m_handle, nullptr)) {
+ComputeShader::ComputeShader(ComputeShader &&o) noexcept
+    : Object(std::exchange(o.m_handle, nullptr)) {}
 
-}
-
-ComputeShader &ComputeShader::operator=(const ComputeShader &o ) noexcept {
+ComputeShader &ComputeShader::operator=(const ComputeShader &o) noexcept {
   if (this == &o) {
     return *this;
   }
@@ -27,7 +27,7 @@ ComputeShader &ComputeShader::operator=(const ComputeShader &o ) noexcept {
   return *this;
 }
 
-ComputeShader &ComputeShader::operator=(ComputeShader && o) noexcept {
+ComputeShader &ComputeShader::operator=(ComputeShader &&o) noexcept {
   if (this == &o) {
     return *this;
   }
@@ -42,7 +42,7 @@ ComputeShader::~ComputeShader() noexcept {
 
 void ComputeShader::set_name(const char *name) {
   assert(m_handle);
-  auto* impl = void_handle_ptr<ShaderObjectImpl>(m_handle);
+  auto *impl = void_handle_ptr<ShaderObjectImpl>(m_handle);
   vulkan::set_debug_name(impl->context.ctx(), impl->shader, name);
 }
 

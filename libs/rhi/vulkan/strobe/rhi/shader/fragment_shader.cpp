@@ -5,14 +5,14 @@
 namespace strobe::rhi {
 
 FragmentShader::FragmentShader(const FragmentShader & o) noexcept 
-  : m_handle(o.m_handle) {
+  : Object(o.m_handle) {
     if (m_handle != nullptr) {
       pin_void_handle<ShaderObjectImpl>(m_handle);
     }
   }
 
 FragmentShader::FragmentShader(FragmentShader && o) noexcept 
-  : m_handle(std::exchange(o.m_handle, nullptr)){
+  : Object(std::exchange(o.m_handle, nullptr)){
 }
 
 FragmentShader &FragmentShader::operator=(const FragmentShader & o) noexcept {

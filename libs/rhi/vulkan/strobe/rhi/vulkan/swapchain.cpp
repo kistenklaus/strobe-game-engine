@@ -109,9 +109,10 @@ uint32_t get_swapchain_images(Context *context, Swapchain swapchain,
   return count;
 }
 
-SwapchainAcquireResult
+SwapchainAcquireStatus
 acquire_next_swapchain_image(Context *context, Swapchain swapchain,
-                             const SwapchainAcquireInfo &info) {
+                             const SwapchainAcquireInfo &info,
+                             uint32_t *imageIndex) {
   assert(context != nullptr);
   assert(context->properties().swapchain);
   assert(swapchain);
@@ -126,39 +127,22 @@ acquire_next_swapchain_image(Context *context, Swapchain swapchain,
       .deviceMask = 1,
   };
 
-  uint32_t imageIndex = 0;
-
   VkResult result;
   {
     ZoneScopedN("vkAcquireNextImage2KHR");
     result =
-        vkAcquireNextImage2KHR(context->device(), &acquireInfo, &imageIndex);
+        vkAcquireNextImage2KHR(context->device(), &acquireInfo, imageIndex);
   }
   if (result == VK_SUCCESS) {
-    return SwapchainAcquireResult{
-        .status = SwapchainAcquireStatus::success,
-        .imageIndex = imageIndex,
-    };
+    return SwapchainAcquireStatus::success;
   } else if (result == VK_SUBOPTIMAL_KHR) {
-    return SwapchainAcquireResult{
-        .status = SwapchainAcquireStatus::suboptimal,
-        .imageIndex = std::numeric_limits<uint32_t>::max(),
-    };
+    return SwapchainAcquireStatus::suboptimal;
   } else if (result == VK_TIMEOUT) {
-    return SwapchainAcquireResult{
-        .status = SwapchainAcquireStatus::timeout,
-        .imageIndex = std::numeric_limits<uint32_t>::max(),
-    };
+    return SwapchainAcquireStatus::timeout;
   } else if (result == VK_NOT_READY) {
-    return SwapchainAcquireResult{
-        .status = SwapchainAcquireStatus::not_ready,
-        .imageIndex = std::numeric_limits<uint32_t>::max(),
-    };
+    return SwapchainAcquireStatus::not_ready;
   } else if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-    return SwapchainAcquireResult{
-        .status = SwapchainAcquireStatus::out_of_date,
-        .imageIndex = std::numeric_limits<uint32_t>::max(),
-    };
+    return SwapchainAcquireStatus::out_of_date;
   } else {
     throw std::runtime_error("Failed to acquire next swapchain image");
   }

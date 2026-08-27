@@ -2,19 +2,16 @@
 
 #include "strobe/rhi/objects/binary_semaphore.hpp"
 #include "strobe/rhi/objects/image.hpp"
-#include <cstdint>
-#include <limits>
 #include <utility>
 
 namespace strobe::rhi {
 
-class SwapchainImage {
+class SwapchainImage : Object<SwapchainImage> {
   friend class Swapchain;
   friend class Queue;
 
 public:
-  SwapchainImage()
-      : m_handle(nullptr), m_index(std::numeric_limits<uint32_t>::max()) {}
+  SwapchainImage() : Object(nullptr) {}
 
   SwapchainImage(const SwapchainImage &) noexcept;
   SwapchainImage(SwapchainImage &&) noexcept;
@@ -27,16 +24,9 @@ public:
   const ImageView &view() const noexcept;
   const BinarySemaphore &presentReady() const noexcept;
 
-  const uvec2 extent() const noexcept {
-    return image().extent().xy();
-  }
+  const uvec2 extent() const noexcept { return image().extent().xy(); }
 
-private:
-  explicit SwapchainImage(void *handle, uint32_t index)
-      : m_handle(std::move(handle)), m_index(index) {}
-
-  void *m_handle;
-  uint32_t m_index;
+  explicit SwapchainImage(void *handle) : Object(std::move(handle)) {}
 };
 
 } // namespace strobe::rhi

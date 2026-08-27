@@ -1,220 +1,242 @@
 #pragma once
 
 #include "strobe/core/memory/AllocatorTraits.hpp"
-#include "strobe/core/memory/Mallocator.hpp"
+#include "strobe/core/memory/align.hpp"
+#include "strobe/core/memory/mpsc_monotonic_pool_resource.hpp"
 #include "strobe/rhi/allocator.hpp"
-
+#include "strobe/rhi/objects/object.hpp"
 #include <atomic>
+#include <bit>
 #include <cassert>
-#include <cstdint>
+#include <cstring>
 #include <memory>
 #include <type_traits>
-#include <utility>
 
 namespace strobe::rhi {
 
-template <typename T, typename Alloc = strobe::Mallocator>
-struct handle_control_block {
-  using allocator = Alloc;
+template <typename T> struct handle_control_block;
+
+template <typename T> struct handle_allocator {
+  friend struct handle_control_block<T>;
+  using type = std::remove_cvref_t<T>;
+
+public:
+  static constexpr uint16_t handle_alignment =
+      std::max(alignof(std::atomic<uint64_t>),
+               std::max(alignof(type), alignof(handle_allocator<type> *)));
+  static constexpr size_t handle_size =
+      memory::align_up(
+          memory::align_up(sizeof(std::atomic<uint64_t>), alignof(type)) +
+              sizeof(type),
+          alignof(void *)) +
+      sizeof(void *);
+  using upstream_alloc = strobe::rhi::allocator_ref;
+  using upstream_traits = AllocatorTraits<upstream_alloc>;
+  using allocator =
+      MPSCMonotonicPoolResource<handle_size, handle_alignment, upstream_alloc>;
   using allocator_traits = AllocatorTraits<allocator>;
 
-  template <typename... Args>
-  explicit handle_control_block(allocator alloc, Args &&...args)
-      : refCount(1), value(std::forward<Args>(args)...),
-        alloc(std::move(alloc)) {}
+  handle_allocator(strobe::rhi::allocator_ref alloc)
+      : storage(upstream_traits::template allocate<Storage>(alloc)) {
+    std::construct_at(storage, std::move(alloc));
+  }
+  handle_allocator(const handle_allocator &o) noexcept : storage(o.storage) {
+    if (storage != nullptr) {
+      storage->refCount.fetch_add(1, std::memory_order_acq_rel);
+    }
+  }
+  handle_allocator(handle_allocator &&o) noexcept
+      : storage(std::exchange(o.storage, nullptr)) {}
+  handle_allocator &operator=(const handle_allocator &o) noexcept {
+    if (this == &o) {
+      return *this;
+    }
+    if (o.storage != nullptr) {
+      o.storage->refCount.fetch_add(1, std::memory_order_relaxed);
+    }
+    { // unpin
+      if (storage->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+        upstream_alloc tmp = std::move(storage->upstream);
+        std::destroy_at(storage);
+        upstream_traits::template deallocate<Storage>(tmp, storage);
+      }
+    }
+    storage = o.storage;
+    return *this;
+  }
+  handle_allocator &operator=(handle_allocator &&o) noexcept {
+    if (this == &o) {
+      return *this;
+    }
+    { // unpin
+      if (storage->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+        upstream_alloc tmp = std::move(storage->upstream);
+        std::destroy_at(storage);
+        upstream_traits::template deallocate<Storage>(tmp, storage);
+      }
+    }
+    storage = std::exchange(o.storage, nullptr);
+    return *this;
+  }
+  ~handle_allocator() noexcept {
+    if (storage == nullptr) {
+      return;
+    }
+    if (storage->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      upstream_alloc tmp = std::move(storage->upstream);
+      std::destroy_at(storage);
+      upstream_traits::template deallocate<Storage>(tmp, storage);
+    }
+  }
 
-  std::atomic<uint64_t> refCount{1};
-  T value;
+  handle_control_block<T> *allocate() {
+    assert(m_storage != nullptr);
+    void *ptr = allocator_traits::allocate(storage->alloc, handle_size,
+                                           handle_alignment);
+    return static_cast<handle_control_block<T> *>(ptr);
+  }
 
-  [[no_unique_address]]
-  allocator alloc;
+  void deallocate(handle_control_block<T> *ptr) {
+    assert(m_storage != nullptr);
+    allocator_traits::deallocate(storage->alloc, ptr, handle_size,
+                                 handle_alignment);
+  }
+
+  struct Storage {
+    explicit Storage(upstream_alloc up)
+        : upstream(std::move(up)), alloc(upstream) {}
+    std::atomic<uint64_t> refCount{1};
+    upstream_alloc upstream;
+    allocator alloc;
+  };
+  Storage *storage;
 };
 
-template <typename T, typename Alloc = strobe::Mallocator>
-using handle = handle_control_block<T, Alloc> *;
+template <typename T>
+using handle_allocator_ref = handle_allocator<std::remove_cvref_t<T>> *;
 
-// -----------------------------------------------------------------------------
-// allocation
-// -----------------------------------------------------------------------------
+namespace details {} // namespace details
 
-template <typename T, typename Alloc = strobe::Mallocator,
-          typename... Args>
-handle<T, Alloc> alloc_handle(Alloc alloc, Args &&...args) {
+template <typename T> struct handle_control_block {
+  using type = std::remove_cvref_t<T>;
+  using allocator = handle_allocator<T>;
+  using allocator_storage = allocator::Storage;
 
-  using cb = handle_control_block<T, Alloc>;
-  using traits = typename cb::allocator_traits;
+  template <typename... Args>
+  explicit handle_control_block(handle_allocator<T> *alloc, Args &&...args)
+      : refCount{1}, value(std::forward<Args>(args)...),
+        allocatorStorage(alloc->storage) {
+    static_assert(allocator::handle_size == sizeof(decltype(*this)));
+    static_assert(allocator::handle_alignment == alignof(decltype(*this)));
+    assert(allocatorStorage != 0);
+  }
 
-  cb *h = traits::template allocate<cb>(alloc);
+  std::atomic<uint64_t> refCount{1};
+  type value;
+  allocator_storage *allocatorStorage;
+};
 
+// inline int foo() {
+//   strobe::rhi::allocator upstream{};
+//   handle_allocator<int> alloc{&upstream};
+//   handle_control_block<int> x{&alloc, 4};
+// }
+
+template <typename T>
+using handle = handle_control_block<std::remove_cvref_t<T>> *;
+
+template <typename T, typename... Args>
+handle<T> make_handle(handle_allocator<T> *alloc, Args &&...args) {
+  handle<T> h = alloc->allocate();
   try {
     std::construct_at(h, alloc, std::forward<Args>(args)...);
   } catch (...) {
-    traits::template deallocate<cb>(alloc, h);
+    alloc->deallocate(h);
     throw;
   }
-
   return h;
 }
 
-template <typename T, typename... Args> handle<T> make_handle(Args &&...args) {
-  return alloc_handle<T>(Mallocator{}, std::forward<Args>(args)...);
-}
-
-// -----------------------------------------------------------------------------
-// pinning
-// -----------------------------------------------------------------------------
-
-template <typename T, typename Alloc = strobe::Mallocator>
-void pin_handle(handle<T, Alloc> h) noexcept {
-
+template <typename T> void pin_handle(handle<T> h) noexcept {
   assert(h != nullptr);
-
   h->refCount.fetch_add(1, std::memory_order_relaxed);
 }
 
-template <typename T, typename Alloc = strobe::Mallocator>
-void pin_void_handle(void *h) noexcept {
+template <typename T> void unpin_handle(handle<T> h) noexcept {
 
-  pin_handle<T, Alloc>(static_cast<handle<T, Alloc>>(h));
-}
-
-// -----------------------------------------------------------------------------
-// unpinning
-// -----------------------------------------------------------------------------
-
-template <typename T, typename Alloc = strobe::Mallocator>
-void unpin_handle(handle<T, Alloc> h) noexcept {
+  using handle_alloc = handle_allocator<T>;
+  using mpsc_alloc = handle_alloc::allocator;
+  using mpsc_traits = AllocatorTraits<mpsc_alloc>;
+  using upstream_alloc = handle_alloc::upstream_alloc;
+  using upstream_traits = AllocatorTraits<upstream_alloc>;
+  using cb = handle_control_block<T>;
+  using alloc_storage = handle_alloc::Storage;
 
   if (h == nullptr) {
     return;
   }
-
   if (h->refCount.fetch_sub(1, std::memory_order_acq_rel) != 1) {
     return;
   }
-
-  using cb = handle_control_block<T, Alloc>;
-  using traits = typename cb::allocator_traits;
-
-  static_assert(std::is_nothrow_move_constructible_v<Alloc>,
-                "Handle allocator must be nothrow move constructible");
-
-  /*
-   * The allocator is part of the control block, so copy/move
-   * it out before destroying the block.
-   */
-  Alloc alloc = std::move(h->alloc);
-
+  // pin allocator storage
+  alloc_storage *storage = h->allocatorStorage;
+  assert(storage != nullptr);
+  storage->refCount.fetch_add(1, std::memory_order_relaxed);
+  // destroy control block
   std::destroy_at(h);
-
-  traits::template deallocate<cb>(alloc, h);
+  // deallocate control block
+  mpsc_traits::template deallocate<cb>(storage->alloc, h);
+  // unpin allocator
+  if (storage->refCount.fetch_sub(1, std::memory_order_acq_rel) != 1) {
+    return;
+  }
+  strobe::rhi::allocator_ref upstream = std::move(storage->upstream);
+  std::destroy_at(storage);
+  upstream_traits::template deallocate<alloc_storage>(upstream, storage);
 }
 
-template <typename T, typename Alloc = strobe::Mallocator>
-void unpin_void_handle(void *h) noexcept {
-
-  unpin_handle<T, Alloc>(static_cast<handle<T, Alloc>>(h));
+template <typename T> void pin_void_handle(void *h) noexcept {
+  pin_handle<T>(static_cast<handle<T>>(h));
+}
+template <typename T> void unpin_void_handle(void *h) noexcept {
+  unpin_handle<T>(static_cast<handle<T>>(h));
 }
 
-// -----------------------------------------------------------------------------
-// void handle allocation
-// -----------------------------------------------------------------------------
-
-template <typename T, typename... Args> void *make_void_handle(Args &&...args) {
-
-  return static_cast<void *>(make_handle<T>(std::forward<Args>(args)...));
-}
-
-template <typename T, typename Alloc, typename... Args>
-void *alloc_void_handle(Alloc alloc, Args &&...args) {
-
-  return static_cast<void *>(
-      alloc_handle<T, Alloc>(std::move(alloc), std::forward<Args>(args)...));
-}
-
-// -----------------------------------------------------------------------------
-// typed access
-// -----------------------------------------------------------------------------
-
-template <typename T, typename Alloc = strobe::Mallocator>
-[[nodiscard]]
-T *handle_ptr(handle<T, Alloc> h) noexcept {
-  return h != nullptr ? &h->value : nullptr;
-}
-
-template <typename T, typename Alloc = strobe::Mallocator>
-[[nodiscard]]
-const T *handle_ptr(const handle_control_block<T, Alloc> *h) noexcept {
-
-  return h != nullptr ? &h->value : nullptr;
-}
-
-template <typename T, typename Alloc = strobe::Mallocator>
-[[nodiscard]]
-T &handle_ref(handle<T, Alloc> h) noexcept {
-
+template <typename T> T *handle_ptr(handle<T> h) noexcept {
   assert(h != nullptr);
-  return h->value;
+  return &h->value;
 }
 
-template <typename T, typename Alloc = strobe::Mallocator>
-[[nodiscard]]
-const T &handle_ref(const handle_control_block<T, Alloc> *h) noexcept {
-
+template <typename T>
+const T *handle_ptr(const handle_control_block<T> *h) noexcept {
   assert(h != nullptr);
-  return h->value;
+  return &h->value;
 }
 
-// -----------------------------------------------------------------------------
-// void handle access
-// -----------------------------------------------------------------------------
+template <typename T, typename... Args>
+void *make_void_handle(handle_allocator_ref<T> alloc, Args &&...args) {
+  return make_handle<T, Args...>(alloc, std::forward<Args>(args)...);
+}
 
-template <typename T, typename Alloc = strobe::Mallocator>
+template <typename T>
 [[nodiscard]]
 T *void_handle_ptr(void *h) noexcept {
-#if defined(__GNUC__) && !defined(__clang__)
-  if (h == nullptr) [[unlikely]]
-    __builtin_unreachable();
-
-  auto *typedHandle = static_cast<handle<T, Alloc>>(h);
-
-  typedHandle = static_cast<handle<T, Alloc>>(__builtin_assume_aligned(
-      typedHandle, alignof(handle_control_block<T, Alloc>)));
-
-  auto *ptr = handle_ptr<T, Alloc>(typedHandle);
-
-  if (ptr == nullptr) [[unlikely]]
-    __builtin_unreachable();
-
-  ptr = static_cast<T *>(__builtin_assume_aligned(ptr, alignof(T)));
-
-  return __builtin_launder(ptr);
-#else
-  return handle_ptr<T, Alloc>(static_cast<handle<T, Alloc>>(h));
-#endif
+  return handle_ptr<T>(static_cast<handle<T>>(h));
 }
 
-template <typename T, typename Alloc = strobe::Mallocator>
+template <typename T>
 [[nodiscard]]
 const T *void_handle_ptr(const void *h) noexcept {
-
-  return handle_ptr<T, Alloc>(
-      static_cast<const handle_control_block<T, Alloc> *>(h));
+  return handle_ptr<T>(static_cast<const handle_control_block<T> *>(h));
 }
 
-template <typename T, typename Alloc = strobe::Mallocator>
-[[nodiscard]]
-T &void_handle_ref(void *h) noexcept {
-
-  return handle_ref<T, Alloc>(static_cast<handle<T, Alloc>>(h));
-}
-
-template <typename T, typename Alloc = strobe::Mallocator>
-[[nodiscard]]
-const T &void_handle_ref(const void *h) noexcept {
-
-  return handle_ref<T, Alloc>(
-      static_cast<const handle_control_block<T, Alloc> *>(h));
+template <typename T, typename Obj>
+  requires std::is_base_of_v<Object<Obj>, Obj>
+T *object_handle_ptr(const Obj &obj) {
+  handle<T> h;
+  std::memcpy(&h, &obj, sizeof(void *));
+  assert(h);
+  return &h->value;
 }
 
 } // namespace strobe::rhi

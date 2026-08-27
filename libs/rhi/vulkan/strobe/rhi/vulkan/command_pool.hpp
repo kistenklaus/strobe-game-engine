@@ -16,7 +16,7 @@ struct CommandPool {
 };
 
 struct CommandPoolInfo {
-  Queue queue{};
+  uint32_t queueFamily = 0;
   VkCommandPoolCreateFlags flags = 0;
 };
 

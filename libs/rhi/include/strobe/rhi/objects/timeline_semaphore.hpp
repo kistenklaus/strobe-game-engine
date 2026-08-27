@@ -8,6 +8,7 @@ namespace strobe::rhi {
 class TimelineSemaphore {
   friend class Device;
   friend class Queue;
+
 public:
   TimelineSemaphore() noexcept : m_handle(nullptr) {}
   TimelineSemaphore(const TimelineSemaphore &) noexcept;
@@ -22,10 +23,11 @@ public:
   void signal(uint64_t value);
 
   bool wait(uint64_t value,
-                uint64_t timeout = std::numeric_limits<uint64_t>::max());
+            uint64_t timeout = std::numeric_limits<uint64_t>::max());
+
+  explicit TimelineSemaphore(void *handle) noexcept : m_handle(handle) {}
 
 private:
-  explicit TimelineSemaphore(void *handle) noexcept : m_handle(handle) {}
   void *m_handle;
 };
 

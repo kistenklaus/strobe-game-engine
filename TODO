@@ -1,42 +1,56 @@
 
-
-Remove ImageLayouts
-  - transition to present is still required but we can try to hide it completely, if we know that the image will be in a general layout
-    => still requires us to figure out some synchronization but the idea sounds good.
-  - refactor image / buffer barriers => global barriers may just be more efficient!
-
-Staging Allocations: CommandBuffer / CommandPool
+BIGGER REFACTORS:
+!!! Proper CRTP move copy ctors and assignment operators.
 
 
-MemoryPool <- internal host synchronization
+WELL REASONED REFACTORS:
+- seperate staging allocation from the command pool.
+  may either be another independent submodule, which is used by the cmd
+  or be another header inside of the cmd module. (i think if we can split it, it should be worth it).
+  Would later be easy to refactor if we see that a single staging buffer of a pool grows to much and a
+  single staging buffer across all command pools actually performs better.
+  
+  staging component, would only depend on memory and buf
+
+  Could possibly also be something that could later reuse for scratch or other applications like 
+  descriptor heap uploads paths or something like that.
+
+  thread-safe scratch could actually be quite nice, the downsides seem reasonable.
+
+  The previously nice part is that because pools are already externally synchronized 
+  we scratch allocation didn't need to be internally synchronized but doing so would probably not 
+  lead to a lot of performance degration especially because block allocation is fairly rare.
+  => Do this one it's reasonable next step in cleaning this codebase up and moving towards descriptor heaps.
+
+
 
 CommandBuffer::pipeline_barrier
 DebugUtils set_name 
-bind_vertex_buffer
 bind_index_buffer
 copy_buffer
 
 
-
-
-CommandBuffer
-  - Staging arena (internal VmaPool, may be managed by cmdpool?)
-
 ShaderPrograms 
   - linking shader objects
 
-
 Milestones:
-VertexBuffer:
-  - command buffer copy / staging commands
-  - How do we want to handle staging! (command buffer arena ???)
-    => The dream would be cmd.alloc_tmp() -> DeviceAddress or something like that.
-    => Maybe a cmd_upload would be nice to upload a buffer to a buffer even if it's device local!
-IndexBuffer:
-
 
 DescriptorHeap: 
-  - really really big one we have to think about a lot!!
-  - expect many refactors!!! We will not get it right the first time.
+  So we did now think about this a lot and the cleanest solution seems to be to have 
+  one internal descriptor heap, which manages it's own memory, and may even grow. 
+  This can be achieved either through ReBAR or through async transfers and timeline semaphores.
+  The proposed interface would then just be 
+  Device::create_buffer_descriptor({info}); this returns a immutable RAII handle 
+  which can be used through some magical API as a push constant and be bound to a command buffer state.
+
+  We can make the RAII mess a bit simpler, by also exposing ideas like a BufferDescriptorArrays or 
+  ImageDescriptorArrays, which internally still just hold references to Descriptors, but adding them to a state 
+  only decs one count and not thousands. We will have to see if the Descriptor handle allocation can be done lazily 
+  or something like that. DescriptorTables would be a similar idea, but probably less required.
+
+  The ReBAR or async transfer implementation should be completely hidden to the user, which with async transfer we should be 
+  able to do, but object ownership transfer still has to be figured out. Maintainance9 seems like it removes explicit 
+  queue ownership transfer for buffer, which would fit nicely here. 
+
 
 

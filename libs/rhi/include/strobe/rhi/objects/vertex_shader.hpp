@@ -1,6 +1,7 @@
 #pragma once
 
 #include "strobe/core/containers/span.hpp"
+#include "strobe/rhi/objects/object.hpp"
 #include "strobe/rhi/types/push_constant_range.hpp"
 #include "strobe/rhi/types/shader_stage.hpp"
 
@@ -12,13 +13,14 @@ struct VertexShaderInfo {
   span<const PushConstantRange> pushConstantRange = {};
 };
 
-struct VertexShader {
+struct VertexShader : Object<VertexShader> {
   friend class Device;
   friend class CommandBuffer;
   friend struct CommandBufferImpl;
 
 public:
-  VertexShader() noexcept : m_handle(nullptr) {}
+  explicit VertexShader(void *handle) noexcept : Object(handle) {}
+  VertexShader() noexcept : Object(nullptr) {}
   VertexShader(const VertexShader &) noexcept;
   VertexShader(VertexShader &&) noexcept;
   VertexShader &operator=(const VertexShader &) noexcept;
@@ -31,10 +33,6 @@ public:
   friend bool operator!=(const VertexShader &lhs, const VertexShader &rhs) {
     return lhs.m_handle != rhs.m_handle;
   }
-
-private:
-  VertexShader(void *handle) noexcept : m_handle(handle) {}
-  void *m_handle;
 };
 
 } // namespace strobe::rhi

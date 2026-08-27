@@ -1,15 +1,16 @@
 #pragma once
 
+#include "strobe/rhi/objects/object.hpp"
 namespace strobe::rhi {
 
-struct BinarySemaphore {
+struct BinarySemaphore : Object<BinarySemaphore> {
   friend class Device;
   friend class Queue;
   friend class Swapchain;
   friend struct SwapchainImpl;
 
 public:
-  BinarySemaphore() noexcept : m_handle(nullptr) {}
+  BinarySemaphore() noexcept : Object(nullptr) {}
   BinarySemaphore(const BinarySemaphore &) noexcept;
   BinarySemaphore(BinarySemaphore &&) noexcept;
   BinarySemaphore &operator=(const BinarySemaphore &) noexcept;
@@ -28,9 +29,7 @@ public:
     return lhs.m_handle != rhs.m_handle;
   }
 
-private:
-  explicit BinarySemaphore(void *handle) noexcept : m_handle(handle) {}
-  void *m_handle;
+  explicit BinarySemaphore(void *handle) noexcept : Object(handle) {}
 };
 
 } // namespace strobe::rhi

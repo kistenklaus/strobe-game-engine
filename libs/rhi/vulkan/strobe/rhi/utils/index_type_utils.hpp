@@ -15,6 +15,8 @@ constexpr VkIndexType to_vk_index_type(IndexType type) {
     return VK_INDEX_TYPE_UINT16;
   case IndexType::uint32:
     return VK_INDEX_TYPE_UINT32;
+  case IndexType::none:
+    return VK_INDEX_TYPE_NONE_KHR;
   }
   std::unreachable();
 }
@@ -28,6 +30,7 @@ constexpr IndexType from_vk_index_type(VkIndexType type) {
   case VK_INDEX_TYPE_UINT8:
     return IndexType::uint8;
   case VK_INDEX_TYPE_NONE_KHR:
+    return IndexType::none;
   case VK_INDEX_TYPE_MAX_ENUM:
     break;
   }

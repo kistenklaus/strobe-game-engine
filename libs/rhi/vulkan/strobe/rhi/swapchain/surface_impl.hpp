@@ -1,6 +1,6 @@
 #pragma once
 
-#include "strobe/rhi/device/context.hpp"
+#include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/vulkan/surface.hpp"
 
 namespace strobe::rhi {

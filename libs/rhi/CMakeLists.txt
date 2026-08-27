@@ -1,39 +1,13 @@
 include_guard(GLOBAL)
 
 # Vulkan RHI:
+# sub components listed in dependency order
+# Later components may only list eariler components.
 add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
-  # strobe::rhi command 
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/command/command_buffer.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/command/command_buffer_impl.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/command/command_pool.cpp
-  # strobe::rhi device
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/device/context.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/device/device.cpp
-  # strobe::rhi memory
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/blas.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/buffer.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/image.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/image_view.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory_allocation.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory_allocation_impl.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory_lifetime_allocator.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory_pool.cpp
-  #strobe::rhi queue
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/binary_semaphore.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/fence.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/queue.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/timeline_semaphore.cpp
-  #strobe::rhi shader
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/compute_shader.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/fragment_shader.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/vertex_shader.cpp
-  #strobe::rhi swapchain
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/surface.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain_generation.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain_image.cpp
-
   # strobe::rhi::vulkan
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/cmd/barrier.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/cmd/rendering.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/cmd/transfer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/context/context.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/context/debug_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/context/get_queues.cpp
@@ -65,6 +39,52 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/surface.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/swapchain.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/timeline_semaphore.cpp
+  # strobe::rhi context
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/context/context.cpp
+  # strobe::rhi shader
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/compute_shader.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/fragment_shader.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/shader.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/vertex_shader.cpp
+  # strobe::rhi sync
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/binary_semaphore.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/fence.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/sync.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/timeline_semaphore.cpp
+  # strobe::rhi mem
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory_allocation.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory_allocation_impl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory_lifetime_allocator.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory_pool.cpp
+  # strobe::rhi buf
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/buf/buffer.cpp
+  # strobe::rhi img
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/img/image.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/img/image_view.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/img/img.cpp
+  # strobe::rhi bvh
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/bvh/blas.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/bvh/bvh.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/bvh/scratch_buffer.cpp
+  # strobe::rhi stage
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/stage/stage.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/stage/staging_pool.cpp
+  # # strobe::rhi command
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/cmd.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_buffer.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_buffer_impl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_pool.cpp
+  # #strobe::rhi swapchain
+  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/surface.cpp
+  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain.cpp
+  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain_generation.cpp
+  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain_image.cpp
+  # # strobe::rhi device
+  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/device/device.cpp
+  # #strobe::rhi queue
+  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/queue.cpp
+
+
 )
 target_include_directories(strobe-rhi-vulkan
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -89,4 +109,10 @@ target_link_libraries(strobe-rhi-sandbox
   PRIVATE strobe-platform
   PRIVATE strobe-window
   PRIVATE strobe::tracy
+
+  PRIVATE Vulkan::Vulkan
+  PRIVATE strobe::vma
+)
+target_include_directories(strobe-rhi-sandbox
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/vulkan
 )

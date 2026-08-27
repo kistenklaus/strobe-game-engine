@@ -1,7 +1,9 @@
 #pragma once
 
 #include "strobe/rhi/memory/memory_binding.hpp"
-#include "strobe/rhi/objects/memory_pool.hpp"
+#include "strobe/rhi/memory/memory_pool.hpp"
+#include "strobe/rhi/types/memory_usage.hpp"
+#include "strobe/rhi/vulkan/buffer.hpp"
 
 namespace strobe::rhi {
 
@@ -16,6 +18,7 @@ struct MemoryAllocationImpl {
   void *map();
   void flush();
   void invalidate();
+  bool commit();
 
 public:
   MemoryPool pool;

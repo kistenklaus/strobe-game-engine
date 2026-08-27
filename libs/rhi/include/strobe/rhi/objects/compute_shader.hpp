@@ -1,6 +1,7 @@
 #pragma once
 
 #include "strobe/core/containers/span.hpp"
+#include "strobe/rhi/objects/object.hpp"
 #include "strobe/rhi/types/push_constant_range.hpp"
 
 namespace strobe::rhi {
@@ -10,13 +11,14 @@ struct ComputeShaderInfo {
   span<const PushConstantRange> pushConstantRange = {};
 };
 
-class ComputeShader {
+class ComputeShader : Object<ComputeShader> {
   friend class Device;
   friend class CommandBuffer;
   friend struct CommandBufferImpl;
 
 public:
-  ComputeShader() noexcept : m_handle(nullptr) {}
+  explicit ComputeShader(void *handle) noexcept : Object(handle) {}
+  ComputeShader() noexcept : Object(nullptr) {}
   ComputeShader(const ComputeShader &) noexcept;
   ComputeShader(ComputeShader &&) noexcept;
   ComputeShader &operator=(const ComputeShader &) noexcept;
@@ -32,10 +34,6 @@ public:
     return lhs.m_handle == rhs.m_handle;
   }
   void set_name(const char *name);
-
-private:
-  ComputeShader(void *handle) noexcept : m_handle(handle) {}
-  void *m_handle;
 };
 
 } // namespace strobe::rhi

@@ -1,19 +1,13 @@
 #pragma once
 
-#include "strobe/rhi/types/buffer_usage.hpp"
-#include "strobe/rhi/types/memory_usage.hpp"
+#include "strobe/rhi/objects/object.hpp"
+#include "strobe/rhi/types/buffer_offset.hpp"
 #include <cassert>
 #include <cstdint>
 
 namespace strobe::rhi {
 
-struct BufferInfo {
-  uint64_t size = 0;
-  BufferUsage bufferUsage = BufferUsage::none;
-  MemoryUsage memoryUsage = MemoryUsage::automatic;
-};
-
-class Buffer {
+class Buffer : Object<Buffer> {
   friend class Device;
   friend class CommandBuffer;
   friend class MemoryPool;
@@ -21,7 +15,7 @@ class Buffer {
   friend struct BlasImpl; // TODO: remove me
 
 public:
-  Buffer() noexcept : m_handle(nullptr) {}
+  Buffer() noexcept : Object(nullptr) {}
   Buffer(const Buffer &) noexcept;
   Buffer(Buffer &&) noexcept;
   Buffer &operator=(const Buffer &) noexcept;
@@ -34,17 +28,16 @@ public:
   friend bool operator!=(const Buffer &lhs, const Buffer &rhs) noexcept {
     return lhs.m_handle != rhs.m_handle;
   }
+  operator BufferOffset() const noexcept {
+    return BufferOffset{.buffer = *this, .offset = 0};
+  }
 
   uint64_t size() const noexcept;
-
-  void commit() const;
 
   void *ptr() const;
 
   void set_name(const char *name) const noexcept;
 
-private:
-  Buffer(void *handle) noexcept : m_handle(handle) { assert(handle); }
-  void *m_handle;
+  explicit Buffer(void *handle) noexcept : Object(handle) { assert(handle); }
 };
 } // namespace strobe::rhi

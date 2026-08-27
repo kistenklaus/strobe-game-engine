@@ -7,21 +7,22 @@
 
 namespace strobe::rhi::vulkan {
 
-Memory allocate_memory(Context *context, MemoryRequirements requirements,
-                       MemoryUsage usage, bool alias) {
+Memory allocate_memory(Context *context,
+                                                MemoryRequirements requirements,
+                                                MemoryUsage usage, bool alias) {
   assert(requirements.requiresDedicated == false);
   VkMemoryRequirements req{
       .size = requirements.size,
       .alignment = requirements.alignment,
       .memoryTypeBits = requirements.memoryTypeBits,
   };
-  VmaAllocationCreateInfo allocInfo =
+  VmaAllocationCreateInfo createInfo =
       details::get_allocation_create_info(requirements, usage, alias);
 
   Memory memory{};
   ZoneScopedN("vmaAllocateMemory");
-  VkResult result = vmaAllocateMemory(context->vma(), &req, &allocInfo,
-                                      &memory.handle, nullptr);
+  VkResult result = vmaAllocateMemory(context->vma(), &req, &createInfo,
+                                      &memory.handle,nullptr);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("Failed to allocate memory");
   }

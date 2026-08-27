@@ -1,6 +1,6 @@
 #pragma once
 
-#include "strobe/rhi/device/context.hpp"
+#include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/queue/native_queue.hpp"
 #include "strobe/rhi/types/device_create_info.hpp"
 #include "strobe/rhi/vulkan/context/context.hpp"

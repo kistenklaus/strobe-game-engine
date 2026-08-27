@@ -35,4 +35,14 @@ void MemoryAllocationImpl::invalidate() {
   vulkan::invalidate_memory(ctx, binding.memory, binding.offset);
 }
 
+bool MemoryAllocationImpl::commit() {
+  if (!binding) {
+    auto *pool_impl = void_handle_ptr<MemoryPoolImpl>(pool.m_handle);
+    binding = pool_impl->commit_memory(internals);
+    assert(binding);
+    return true;
+  }
+  return true;
+}
+
 } // namespace strobe::rhi

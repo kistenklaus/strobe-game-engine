@@ -8,6 +8,7 @@
 #include "strobe/rhi/types/access_scope.hpp"
 #include "strobe/rhi/types/blend_equation.hpp"
 #include "strobe/rhi/types/color_component.hpp"
+#include "strobe/rhi/types/image_layout.hpp"
 #include "strobe/rhi/types/compare_op.hpp"
 #include "strobe/rhi/types/cull_mode.hpp"
 #include "strobe/rhi/types/front_face.hpp"
@@ -21,6 +22,8 @@
 #include "strobe/rhi/types/shader_stage.hpp"
 #include "strobe/rhi/types/stencil_face.hpp"
 #include "strobe/rhi/types/stencil_op.hpp"
+#include "strobe/rhi/types/triangle_geometry_data.hpp"
+#include "strobe/rhi/types/aabb_geometry_data.hpp"
 #include "strobe/rhi/types/vertex_attribute.hpp"
 #include "strobe/rhi/types/vertex_binding.hpp"
 #include "strobe/rhi/types/viewport.hpp"
@@ -28,14 +31,14 @@
 
 namespace strobe::rhi {
 
-class CommandBuffer {
+class CommandBuffer : Object<CommandBuffer> {
   friend struct CommandPoolImpl;
   friend class CommandPool;
   friend struct SwapchainImpl;
   friend class Queue;
 
 public:
-  CommandBuffer() noexcept : m_handle(nullptr) {}
+  CommandBuffer() noexcept : Object(nullptr) {}
   CommandBuffer(const CommandBuffer &) noexcept;
   CommandBuffer(CommandBuffer &&) noexcept;
   CommandBuffer &operator=(const CommandBuffer &) noexcept;
@@ -49,6 +52,8 @@ public:
 
   void memory_barrier(const MemoryBarrier &barrier);
   void memory_barrier(AccessScope src, AccessScope dst);
+
+  void transition_image(const Image& image, ImageLayout src, ImageLayout dst) noexcept;
 
   // ============= rendering ===============
   void begin_rendering(const RenderingInfo &info) noexcept;
@@ -136,10 +141,11 @@ public:
 
   // ====== transfers ===========
 
-  void copy_buffer(const Buffer &dst, const Buffer &src) noexcept;
+  void
+  copy_buffer(BufferOffset dst, BufferOffset src,
+              uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
 
-  void update(const Buffer &dst, const void *src, uint64_t size,
-              uint64_t dstOffset = 0);
+  void update(BufferOffset dst, const void *src, uint64_t size) noexcept;
 
   template <typename T>
   inline void update(const Buffer &dst, span<const T> src,
@@ -155,11 +161,13 @@ public:
                     uint32_t firstInstance = 0) noexcept;
 
   // ===== acceleration structure =======
-  void build(const Blas &blas, span<const BuildRangeInfo> ranges);
+  void build(const Blas &blas,
+             span<const TriangleGeometryData> triangleGeometries) noexcept;
 
-private:
-  CommandBuffer(void *handle) noexcept : m_handle(handle) {}
-  void *m_handle;
+  void build(const Blas &blas,
+             span<const AabbGeometryData> aabbGeometries) noexcept;
+
+  explicit CommandBuffer(void *handle) noexcept : Object(handle) {}
 };
 
 } // namespace strobe::rhi

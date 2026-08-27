@@ -10,7 +10,7 @@ CommandPool create_command_pool(Context *context, const CommandPoolInfo &info) {
       .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
       .pNext = nullptr,
       .flags = info.flags,
-      .queueFamilyIndex = info.queue.family,
+      .queueFamilyIndex = info.queueFamily,
   };
   CommandPool cmdpool;
   {

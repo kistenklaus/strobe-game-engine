@@ -1,8 +1,11 @@
 #pragma once
 
+#include "strobe/rhi/memory/memory_binding.hpp"
+#include "strobe/rhi/objects/object.hpp"
+
 namespace strobe::rhi {
 
-struct MemoryAllocation {
+struct MemoryAllocation : Object<MemoryAllocation> {
   friend class MemoryPool;
   friend struct MemoryPoolImpl;
   friend class Buffer;
@@ -10,7 +13,8 @@ struct MemoryAllocation {
   friend class CommandBuffer;
 
 public:
-  MemoryAllocation() noexcept = default;
+  explicit MemoryAllocation(void *handle) noexcept : Object(handle) {}
+  MemoryAllocation() noexcept : Object(nullptr) {}
 
   MemoryAllocation(const MemoryAllocation &) noexcept;
   MemoryAllocation(MemoryAllocation &&) noexcept;
@@ -28,10 +32,9 @@ public:
   void *map() const ;
   void flush() const;
   void invalidate() const;
+  bool commit() const;
 
-private:
-  explicit MemoryAllocation(void *handle) noexcept : m_handle(handle) {}
-  void *m_handle;
+  const MemoryBinding& binding() const;
 };
 
 } // namespace strobe::rhi

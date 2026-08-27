@@ -12,7 +12,7 @@ static constexpr uint32_t REMAINING_ARRAY_LAYERS =
     std::numeric_limits<uint32_t>::max();
 
 struct ImageSubresourceRange {
-  ImageAspect aspect;
+  ImageAspect aspect = ImageAspect::none;
   uint32_t baseMipLevel = 0;
   uint32_t levelCount = REMAINING_MIP_LEVELS;
   uint32_t baseArrayLayer = 0;

@@ -66,11 +66,6 @@ enum class SwapchainAcquireStatus {
   out_of_date,
 };
 
-struct SwapchainAcquireResult {
-  SwapchainAcquireStatus status;
-  uint32_t imageIndex;
-};
-
 Swapchain create_swapchain(Context *context, const SwapchainInfo &info = {});
 
 void destroy_swapchain(Context *context, Swapchain swapchain) noexcept;
@@ -78,8 +73,9 @@ void destroy_swapchain(Context *context, Swapchain swapchain) noexcept;
 uint32_t get_swapchain_images(Context *context, Swapchain swapchain,
                               span<Image> images = {});
 
-SwapchainAcquireResult
+SwapchainAcquireStatus
 acquire_next_swapchain_image(Context *context, Swapchain swapchain,
-                             const SwapchainAcquireInfo &info);
+                             const SwapchainAcquireInfo &info,
+                             uint32_t *imageIndex);
 
 } // namespace strobe::rhi::vulkan

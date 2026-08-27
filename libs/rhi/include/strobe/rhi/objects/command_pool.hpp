@@ -5,7 +5,7 @@
 
 namespace strobe::rhi {
 
-class CommandPool {
+class CommandPool : Object<CommandPool> {
   friend class Device;
   friend struct DeviceImpl;
   friend struct CommandBufferImpl;
@@ -13,7 +13,7 @@ class CommandPool {
   friend struct CommandPoolImpl;
 
 public:
-  CommandPool() noexcept : m_handle(nullptr) {}
+  CommandPool() noexcept : Object(nullptr) {}
   CommandPool(const CommandPool &) noexcept;
   CommandPool(CommandPool &&) noexcept;
   CommandPool &operator=(const CommandPool &) noexcept;
@@ -23,8 +23,6 @@ public:
 
   CommandBuffer alloc(CommandBufferFlags flags = CommandBufferFlags::none);
 
-private:
-  CommandPool(void *handle) : m_handle(handle) {};
-  void *m_handle;
+  explicit CommandPool(void *handle) : Object(handle) {};
 };
 } // namespace strobe::rhi

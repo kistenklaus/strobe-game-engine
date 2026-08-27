@@ -1,6 +1,7 @@
 #pragma once
 
 #include "strobe/rhi/types/format.hpp"
+#include "strobe/rhi/types/image_aspect.hpp"
 #include <cassert>
 #include <utility>
 #include <vulkan/vulkan_core.h>
@@ -166,6 +167,60 @@ static inline Format from_vk_format(VkFormat format) {
   default:
     return Format::unsupported;
   }
+  std::unreachable();
+}
+
+[[nodiscard]] constexpr ImageAspect format_image_aspects(Format format) {
+  switch (format) {
+  case Format::r8_unorm:
+  case Format::r8_snorm:
+  case Format::r8_uint:
+  case Format::r8_sint:
+
+  case Format::rg8_unorm:
+  case Format::rg8_snorm:
+  case Format::rg8_uint:
+  case Format::rg8_sint:
+
+  case Format::rgba8_unorm:
+  case Format::rgba8_srgb:
+  case Format::rgba8_uint:
+  case Format::rgba8_sint:
+
+  case Format::bgra8_unorm:
+  case Format::bgra8_srgb:
+
+  case Format::r16_float:
+  case Format::rg16_float:
+  case Format::rgba16_float:
+
+  case Format::r32_float:
+  case Format::rg32_float:
+  case Format::rgb32_float:
+  case Format::rgba32_float:
+
+  case Format::r32_uint:
+  case Format::rg32_uint:
+  case Format::rgba32_uint:
+
+  case Format::r32_sint:
+  case Format::rg32_sint:
+  case Format::rgba32_sint:
+    return ImageAspect::color;
+
+  case Format::d16_unorm:
+  case Format::d32_float:
+    return ImageAspect::depth;
+
+  case Format::d24_unorm_s8_uint:
+  case Format::d32_float_s8_uint:
+    return ImageAspect::depth | ImageAspect::stencil;
+
+  case Format::undefined:
+  case Format::unsupported:
+    std::unreachable();
+  }
+
   std::unreachable();
 }
 

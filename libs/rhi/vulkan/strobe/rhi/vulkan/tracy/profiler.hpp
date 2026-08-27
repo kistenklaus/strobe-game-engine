@@ -82,7 +82,10 @@ public:
   Context &operator=(const Context &) = delete;
   Context &operator=(Context &&) = delete;
 
-  ~Context() noexcept { vulkan::destroy_query_pool(m_context, m_pool); }
+  ~Context() noexcept {
+    // destroy tracy context.
+    vulkan::destroy_query_pool(m_context, m_pool);
+  }
 
   void setName(const char *name) {
     const size_t length = std::strlen(name);

@@ -9,7 +9,7 @@ namespace strobe::rhi {
 VkDeviceSize MemoryLifetimeAllocator::greedy_pack_intervals(
     std::span<AllocationInfo *> allocations, std::span<VkDeviceSize> offsets,
     VkDeviceSize bufferImageGranularity,
-    MemoryLifetimeAllocator::allocator &alloc) {
+    strobe::rhi::allocator_ref &alloc) {
   ZoneScopedN("greedy-pack-intervals");
 
   assert(offsets.empty() || allocations.size() == offsets.size());

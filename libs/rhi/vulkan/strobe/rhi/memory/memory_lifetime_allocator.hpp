@@ -20,7 +20,7 @@ namespace strobe::rhi {
 
 class MemoryLifetimeAllocator {
 public:
-  using allocator = strobe::rhi::allocator_ref;
+  // using allocator = strobe::rhi::allocator_ref;
 
   struct MemoryBlockHeader {
     vulkan::Memory memory;
@@ -58,7 +58,7 @@ public:
   };
   using allocation_info_pool =
       MonotonicPoolResource<sizeof(AllocationInfo), alignof(AllocationInfo),
-                            allocator>;
+                            strobe::rhi::allocator_ref>;
   using info_pool_traits = AllocatorTraits<allocation_info_pool>;
 
   struct MemoryBlock : MemoryBlockHeader {
@@ -68,7 +68,7 @@ public:
 
   using memory_block_allocator =
       MonotonicPoolResource<sizeof(MemoryBlock), alignof(MemoryBlock),
-                            allocator>;
+                            strobe::rhi::allocator_ref>;
   using block_alloc_traits = AllocatorTraits<memory_block_allocator>;
 
   struct Interval {
@@ -82,7 +82,7 @@ public:
     VkMemoryPropertyFlags avoid;
   };
 
-  MemoryLifetimeAllocator(const allocator &alloc)
+  MemoryLifetimeAllocator(const strobe::rhi::allocator_ref &alloc)
       : m_alloc(alloc), m_infoPool(m_alloc), m_blockPool(m_alloc) {}
 
   MemoryLifetimeAllocator(const MemoryLifetimeAllocator &) = delete;
@@ -265,10 +265,9 @@ private:
   // Uses a greedy alignment-aware line sweep; the result is valid but not
   // necessarily globally minimal. Expected time complexity is O(n log n),
   // with O(n) temporary memory obtained from alloc.
-  static VkDeviceSize
-  greedy_pack_intervals(std::span<AllocationInfo *> allocations,
-                        std::span<VkDeviceSize> offsets,
-                        VkDeviceSize bufferImageGranularity, allocator &alloc);
+  static VkDeviceSize greedy_pack_intervals(
+      std::span<AllocationInfo *> allocations, std::span<VkDeviceSize> offsets,
+      VkDeviceSize bufferImageGranularity, strobe::rhi::allocator_ref &alloc);
 
   static std::pair<size_t, uint32_t>
   greedy_preferred_grouping(uint32_t start,
@@ -278,7 +277,7 @@ private:
                                     std::span<AllocationInfo *> reserved);
 
 private:
-  [[no_unique_address]] allocator m_alloc;
+  [[no_unique_address]] strobe::rhi::allocator_ref m_alloc;
   allocation_info_pool m_infoPool;
   memory_block_allocator m_blockPool;
 

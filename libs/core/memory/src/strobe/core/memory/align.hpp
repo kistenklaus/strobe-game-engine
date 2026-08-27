@@ -4,17 +4,13 @@
 #include <cstddef>
 namespace strobe::memory {
 
-inline std::size_t align_up(std::size_t offset,
+inline constexpr std::size_t align_up(std::size_t offset,
                             std::size_t alignment) noexcept {
-  assert(alignment && (alignment & (alignment - 1)) == 0 &&
-         "alignment must be power of two");
   return (offset + alignment - 1) & ~(alignment - 1);
 }
 
-inline std::size_t align_down(std::size_t offset,
+inline constexpr std::size_t align_down(std::size_t offset,
                               std::size_t alignment) noexcept {
-  assert(alignment && (alignment & (alignment - 1)) == 0 &&
-         "alignment must be power of two");
   return offset & ~(alignment - 1);
 }
 

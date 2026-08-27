@@ -191,7 +191,7 @@ private:
       std::counting_semaphore<static_cast<std::ptrdiff_t>(job_capacity)>;
 
 public:
-  // Platform::start() itself must be called from the actual main thread.
+  // Platform::start(Fn) itself must be called from the actual main thread.
   template <typename Fn>
     requires std::invocable<std::decay_t<Fn> &>
   static void start(Fn &&fn) {
