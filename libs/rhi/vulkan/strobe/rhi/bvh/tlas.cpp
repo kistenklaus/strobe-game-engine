@@ -1,18 +1,21 @@
-#include "strobe/rhi/objects/blas.hpp"
+#include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/bvh/bvh_impl.hpp"
 #include "strobe/rhi/handle.hpp"
+#include <utility>
 
 namespace strobe::rhi {
 
-Blas::Blas(const Blas &o) noexcept : Object(o.m_handle) {
+Tlas::Tlas(const Tlas & o) noexcept : Object(o.m_handle) {
   if (m_handle) {
     pin_void_handle<BvhImpl>(m_handle);
   }
 }
 
-Blas::Blas(Blas &&o) noexcept : Object(std::exchange(o.m_handle, nullptr)) {}
+Tlas::Tlas(Tlas && o) noexcept : Object(std::exchange(o.m_handle, nullptr)){
 
-Blas &Blas::operator=(const Blas &o) noexcept {
+}
+
+Tlas &Tlas::operator=(const Tlas & o) noexcept {
   if (this == &o) {
     return *this;
   }
@@ -23,7 +26,7 @@ Blas &Blas::operator=(const Blas &o) noexcept {
   return *this;
 }
 
-Blas &Blas::operator=(Blas &&o) noexcept {
+Tlas &Tlas::operator=(Tlas && o) noexcept {
   if (this == &o) {
     return *this;
   }
@@ -32,8 +35,9 @@ Blas &Blas::operator=(Blas &&o) noexcept {
   return *this;
 }
 
-Blas::~Blas() noexcept { 
+Tlas::~Tlas() noexcept {
   unpin_void_handle<BvhImpl>(m_handle); 
 }
+
 
 } // namespace strobe::rhi

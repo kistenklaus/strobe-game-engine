@@ -10,9 +10,9 @@
 
 namespace strobe::rhi {
 
-struct BlasImpl {
+struct BvhImpl {
 
-  explicit BlasImpl(Context context, Buffer buffer, ScratchBuffer scratchBuffer,
+  explicit BvhImpl(Context context, Buffer buffer, ScratchBuffer scratchBuffer,
                     vulkan::AccelerationStructure accelerationStructure,
                     BvhGeometryInfo geometryInfo) noexcept
       : context(std::move(context)), buffer(std::move(buffer)),
@@ -23,7 +23,7 @@ struct BlasImpl {
     assert(this->accelerationStructure);
   }
 
-  ~BlasImpl() noexcept {
+  ~BvhImpl() noexcept {
     assert(this->buffer);
     assert(this->accelerationStructure);
     vulkan::destroy_acceleration_structure(context.ctx(),

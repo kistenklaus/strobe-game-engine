@@ -1,30 +1,27 @@
 @startuml
 skinparam linetype polyline
 
-together {
 component "context" as context #LightGreen
 Component "mem" as mem #LightGreen
-}
 
-together {
 component "shader" as shader #LightGreen
 component "sync" as sync #LightGreen
 component "buf" as buf #LightGreen
 component "img" as img #LightGreen
-component "bvh" as bvh #LightYellow
-}
+component "bvh" as bvh #LightGreen
+component "swapchain" as swapchain #DarkOrange
 
 
 component "stage" as stage #LightGreen
-component "cmd" as cmd #Purple
-component "queue" as queue #LightBlue
-component "gc" as gc #LightBlue
+component "cmd" as cmd #LightGreen
+component "queue" as queue #DarkOrange
+component "gc" as gc #LightGreen
 
 
 component "dma" as dma #Red
 component "heap" as heap #Red
 
-component "device" as device #LightBlue
+component "heapctl" as heapctl #Red
 
 [shader] --> [context]
 [sync] --> [context]
@@ -32,7 +29,8 @@ component "device" as device #LightBlue
 
 [buf] --> [mem]
 [img] --> [mem]
-[bvh] --> [mem]
+
+[bvh] --> [buf]
 
 [stage] --> [buf]
 
@@ -42,8 +40,16 @@ component "device" as device #LightBlue
 [cmd] --> [shader]
 [cmd] --> [stage]
 
+[cmd] --> [heap]
+[cmd] --> [sync]
+
+[swapchain] --> [img]
+[swapchain] --> [sync]
+[queue] --> [swapchain]
+
 [queue] --> [gc]
 [gc] --> [sync]
+[gc] --> [cmd]
 [queue] -> [cmd]
 [queue] -> [sync]
 
@@ -51,11 +57,9 @@ component "device" as device #LightBlue
 [dma] --> [stage]
 [dma] --> [cmd]
 
-[heap] --> [dma]
 [heap] --> [buf]
-
-[device] --> [heap]
-[device] --> [gc]
-
+[heapctl] --> [heap]
+[heapctl] --> [dma]
+[heapctl] --> [queue]
 
 @enduml

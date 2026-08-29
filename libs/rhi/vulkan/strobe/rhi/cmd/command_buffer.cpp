@@ -1,7 +1,7 @@
 #include "strobe/rhi/objects/command_buffer.hpp"
 #include "strobe/core/containers/small_vector.hpp"
 #include "strobe/rhi/buf/buffer_impl.hpp"
-#include "strobe/rhi/bvh/blas_impl.hpp"
+#include "strobe/rhi/bvh/bvh_impl.hpp"
 #include "strobe/rhi/cmd/command_buffer_impl.hpp"
 #include "strobe/rhi/cmd/command_buffer_rendering_state.hpp"
 #include "strobe/rhi/handle.hpp"
@@ -19,10 +19,13 @@
 #include "strobe/rhi/vulkan/cmd/transfer.hpp"
 #include "strobe/rhi/vulkan/command_buffer.hpp"
 #include "strobe/rhi/vulkan/context/pnf.hpp"
+#include <exception>
 #include <fmt/format.h>
 #include <limits>
+#include <stdexcept>
 #include <tracy/Tracy.hpp>
 #include <tracy/TracyVulkan.hpp>
+#include <utility>
 #include <vulkan/vulkan_core.h>
 
 #ifdef STROBE_TRACY
@@ -639,11 +642,11 @@ void CommandBuffer::update(BufferOffset dst, const void *src,
     return;
   }
   assert(src);
-  assert(dst);
+  assert(dst.buffer);
   auto *dst_impl = object_handle_ptr<BufferImpl>(dst.buffer);
   dst_impl->commit();
-  assert(dstOffset <= dst_impl->size);
-  assert(size <= dst_impl->size - dstOffset);
+  assert(dst.offset <= dst_impl->size);
+  assert(size <= dst_impl->size - dst.offset);
 
   auto *mem_impl =
       object_handle_ptr<MemoryAllocationImpl>(dst_impl->allocation);
@@ -663,7 +666,7 @@ void CommandBuffer::update(BufferOffset dst, const void *src,
           size);
     } else {
       StageBuffer stage = impl->localStage.alloc(size, 1);
-      assert(stage.mapped);
+      assert(stage.ptr);
       std::memcpy(stage.ptr, src, size);
       vulkan::cmd_copy_buffer(
           impl->cmd,                                          //
@@ -707,13 +710,13 @@ void CommandBuffer::build(
   // cached. makes the code a bit more uggly =^(.
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
 
-  auto *blas_impl = object_handle_ptr<BlasImpl>(blas);
+  auto *blas_impl = object_handle_ptr<BvhImpl>(blas);
   auto blasLck = blas_impl->lockBuildInfo();
   auto [buildInfo, buildRange] = blas_impl->buildInfo();
 
   buildInfo->srcAccelerationStructure = VK_NULL_HANDLE;
   buildInfo->dstAccelerationStructure = blas_impl->accelerationStructure.handle;
-  assert(buildInfo->geometryCount == trianglesGeometry.size());
+  assert(buildInfo->geometryCount == triangleGeometries.size());
   auto *geometries =
       const_cast<VkAccelerationStructureGeometryKHR *>(buildInfo->pGeometries);
 
@@ -767,13 +770,13 @@ void CommandBuffer::build(
   // cached. makes the code a bit more uggly =^(.
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
 
-  auto *blas_impl = object_handle_ptr<BlasImpl>(blas);
+  auto *blas_impl = object_handle_ptr<BvhImpl>(blas);
   auto blasLck = blas_impl->lockBuildInfo();
   auto [buildInfo, buildRange] = blas_impl->buildInfo();
 
   buildInfo->srcAccelerationStructure = VK_NULL_HANDLE;
   buildInfo->dstAccelerationStructure = blas_impl->accelerationStructure.handle;
-  assert(buildInfo->geometryCount == trianglesGeometry.size());
+  assert(buildInfo->geometryCount == aabbGeometries.size());
   auto *geometries =
       const_cast<VkAccelerationStructureGeometryKHR *>(buildInfo->pGeometries);
 
@@ -796,6 +799,11 @@ void CommandBuffer::build(
 
   vulkan::vk_cmd_build_acceleration_structures(
       impl->ctx->pnf(), impl->cmd.handle, 1, buildInfo, &buildRange);
+}
+
+void CommandBuffer::build(const Tlas &blas, BufferOffset instanceBuffer,
+                          uint32_t count) noexcept {
+  std::unreachable();
 }
 
 } // namespace strobe::rhi

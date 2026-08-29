@@ -62,18 +62,23 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/img/image.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/img/image_view.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/img/img.cpp
+  # strobe::rhi stage
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/stage/stage.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/stage/staging_pool.cpp
   # strobe::rhi bvh
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/bvh/blas.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/bvh/bvh.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/bvh/scratch_buffer.cpp
-  # strobe::rhi stage
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/stage/stage.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/stage/staging_pool.cpp
-  # # strobe::rhi command
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/bvh/tlas.cpp
+  # strobe::rhi command
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/cmd.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_buffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_buffer_impl.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_pool.cpp
+  # strobe::rhi gc
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/gc/garbage_collector.cpp
+  
+
   # #strobe::rhi swapchain
   # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/surface.cpp
   # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain.cpp

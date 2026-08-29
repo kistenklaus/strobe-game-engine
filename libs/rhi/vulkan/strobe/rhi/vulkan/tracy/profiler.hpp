@@ -61,7 +61,7 @@ public:
         "strobe::tracy requires the VK_EXT_calibrated_timestamps extension!");
     assert(m_context->properties().hostQueryReset &&
            "strobe::tracy requires the VK_EXT_host_query_reset extension!");
-    assert(m_tracyCtxId != ::tracy::InvalidGpuContextId);
+    assert(m_tracyCtxId != 255);
 
     vulkan::reset_query_pool(m_context, m_pool, 0, QUERY_COUNT);
 

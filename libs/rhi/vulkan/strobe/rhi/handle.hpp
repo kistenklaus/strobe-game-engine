@@ -6,7 +6,6 @@
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/objects/object.hpp"
 #include <atomic>
-#include <bit>
 #include <cassert>
 #include <cstring>
 #include <memory>
@@ -90,14 +89,14 @@ public:
   }
 
   handle_control_block<T> *allocate() {
-    assert(m_storage != nullptr);
+    assert(storage != nullptr);
     void *ptr = allocator_traits::allocate(storage->alloc, handle_size,
                                            handle_alignment);
     return static_cast<handle_control_block<T> *>(ptr);
   }
 
   void deallocate(handle_control_block<T> *ptr) {
-    assert(m_storage != nullptr);
+    assert(storage != nullptr);
     allocator_traits::deallocate(storage->alloc, ptr, handle_size,
                                  handle_alignment);
   }

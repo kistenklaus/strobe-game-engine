@@ -140,8 +140,8 @@ void cmd_transition_image(CommandBuffer cmd, Image image,
       .dstAccessMask = dstAccess,
       .oldLayout = to_vk_image_layout(src),
       .newLayout = to_vk_image_layout(dst),
-      .srcQueueFamilyIndex = 0,
-      .dstQueueFamilyIndex = 0,
+      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .image = image.handle,
       .subresourceRange =
           VkImageSubresourceRange{

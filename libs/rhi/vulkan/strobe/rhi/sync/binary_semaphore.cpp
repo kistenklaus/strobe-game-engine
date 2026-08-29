@@ -45,7 +45,7 @@ BinarySemaphore::~BinarySemaphore() noexcept {
 void BinarySemaphore::set_name([[maybe_unused]] const char *name) noexcept {
 #ifndef NDEBUG
   auto *impl = void_handle_ptr<BinarySemaphoreImpl>(m_handle);
-  vulkan::set_debug_name(impl->context.get(), impl->semaphore, name);
+  vulkan::set_debug_name(impl->context.ctx(), impl->semaphore, name);
 #endif
 }
 

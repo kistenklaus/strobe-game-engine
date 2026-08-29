@@ -20,6 +20,11 @@ struct TimelineSemaphoreInfo {
   VkSemaphoreCreateFlags flags = 0;
 };
 
+struct Timepoint {
+  TimelineSemaphore semaphore;
+  uint64_t value;
+};
+
 TimelineSemaphore
 create_timeline_semaphore(Context *context,
                           const TimelineSemaphoreInfo &info = {});

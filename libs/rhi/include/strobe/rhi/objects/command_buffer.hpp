@@ -4,14 +4,16 @@
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/compute_shader.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
+#include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
+#include "strobe/rhi/types/aabb_geometry_data.hpp"
 #include "strobe/rhi/types/access_scope.hpp"
 #include "strobe/rhi/types/blend_equation.hpp"
 #include "strobe/rhi/types/color_component.hpp"
-#include "strobe/rhi/types/image_layout.hpp"
 #include "strobe/rhi/types/compare_op.hpp"
 #include "strobe/rhi/types/cull_mode.hpp"
 #include "strobe/rhi/types/front_face.hpp"
+#include "strobe/rhi/types/image_layout.hpp"
 #include "strobe/rhi/types/logic_op.hpp"
 #include "strobe/rhi/types/memory_barrier.hpp"
 #include "strobe/rhi/types/polygon_mode.hpp"
@@ -23,7 +25,6 @@
 #include "strobe/rhi/types/stencil_face.hpp"
 #include "strobe/rhi/types/stencil_op.hpp"
 #include "strobe/rhi/types/triangle_geometry_data.hpp"
-#include "strobe/rhi/types/aabb_geometry_data.hpp"
 #include "strobe/rhi/types/vertex_attribute.hpp"
 #include "strobe/rhi/types/vertex_binding.hpp"
 #include "strobe/rhi/types/viewport.hpp"
@@ -53,7 +54,8 @@ public:
   void memory_barrier(const MemoryBarrier &barrier);
   void memory_barrier(AccessScope src, AccessScope dst);
 
-  void transition_image(const Image& image, ImageLayout src, ImageLayout dst) noexcept;
+  void transition_image(const Image &image, ImageLayout src,
+                        ImageLayout dst) noexcept;
 
   // ============= rendering ===============
   void begin_rendering(const RenderingInfo &info) noexcept;
@@ -166,6 +168,9 @@ public:
 
   void build(const Blas &blas,
              span<const AabbGeometryData> aabbGeometries) noexcept;
+
+  void build(const Tlas &blas, BufferOffset instanceBuffer,
+             uint32_t count) noexcept;
 
   explicit CommandBuffer(void *handle) noexcept : Object(handle) {}
 };

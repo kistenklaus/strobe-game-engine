@@ -2,7 +2,6 @@
 #include "strobe/rhi/buf/buf.hpp"
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/memory/memory_pool_impl.hpp"
 #include "strobe/rhi/types/aabb.hpp"
 #include "strobe/rhi/types/aabb_geometry_info_size_info.hpp"
 #include "strobe/rhi/types/build_flags.hpp"
@@ -15,6 +14,7 @@
 #include "strobe/rhi/vulkan/context/pnf.hpp"
 #include <utility>
 #include <variant>
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi::bvh {
 
@@ -173,6 +173,73 @@ get_triangle_bvh_size(vulkan::Context *ctx, BuildFlags buildFlags,
   };
 }
 
+static std::pair<BvhGeometryInfo, VkDeviceSize>
+get_tlas_size(vulkan::Context *ctx, BuildFlags buildFlags,
+              uint32_t instanceCount) {
+
+  Vector<uint32_t> maxPrimitiveCounts{1};
+  Vector<VkAccelerationStructureGeometryKHR> geometries{1};
+  maxPrimitiveCounts[0] = instanceCount;
+  geometries[0] = VkAccelerationStructureGeometryKHR{
+      .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+      .pNext = nullptr,
+      .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
+      .geometry{
+          .instances =
+              VkAccelerationStructureGeometryInstancesDataKHR{
+                  .sType =
+                      VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+                  .pNext = nullptr,
+                  .arrayOfPointers = VK_FALSE,
+                  .data = {.hostAddress = nullptr},
+              },
+      },
+      .flags = 0,
+  };
+
+  VkAccelerationStructureBuildGeometryInfoKHR buildInfo{
+      .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+      .pNext = nullptr,
+      .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+      .flags = to_vk_build_flags(buildFlags),
+      .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+      .srcAccelerationStructure = VK_NULL_HANDLE,
+      .dstAccelerationStructure = VK_NULL_HANDLE,
+      .geometryCount = static_cast<uint32_t>(geometries.size()),
+      .pGeometries = geometries.data(),
+      .ppGeometries = nullptr,
+      .scratchData = {.deviceAddress = 0},
+  };
+  VkAccelerationStructureBuildSizesInfoKHR sizeInfo{};
+  sizeInfo.sType =
+      VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+  {
+    ZoneScopedN("vkGetAccelerationStructureBuildSizes");
+    vulkan::vk_get_acceleration_structure_build_sizes(
+        ctx->pnf(), ctx->device(),
+        VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo,
+        maxPrimitiveCounts.data(), &sizeInfo);
+  }
+  Vector<VkAccelerationStructureBuildRangeInfoKHR> buildRange{
+      geometries.size(),
+  };
+  std::memset(buildRange.data(), 0,
+              buildRange.size() *
+                  sizeof(VkAccelerationStructureBuildRangeInfoKHR));
+  return {
+      BvhGeometryInfo{
+          .buildFlags = BuildFlags::none,
+          .scratchSize =
+              std::max(sizeInfo.buildScratchSize, sizeInfo.updateScratchSize),
+          .maxPrimitiveCount = std::move(maxPrimitiveCounts),
+          .geometries = std::move(geometries),
+          .buildInfo = buildInfo,
+          .buildRange = std::move(buildRange),
+      },
+      sizeInfo.accelerationStructureSize,
+  };
+}
+
 Blas create_blas(MemoryPool memoryPool, ScratchBuffer scratchBuffer,
                  const BlasInfo &info, const MemoryLifetime &lifetime,
                  handle_allocators *alloc) {
@@ -219,15 +286,49 @@ Blas create_blas(MemoryPool memoryPool, ScratchBuffer scratchBuffer,
            });
   scratchBuffer.require(sizeInfo.first.scratchSize);
 
-  return Blas{make_void_handle<BlasImpl>(
-      &alloc->blasAllocator, std::move(context), std::move(buffer),
+  return Blas{make_void_handle<BvhImpl>(
+      &alloc->bvhAllocator, std::move(context), std::move(buffer),
       std::move(scratchBuffer), bvh, std::move(sizeInfo.first))};
+}
+
+Tlas create_tlas(MemoryPool memoryPool, ScratchBuffer scratchBuffer,
+                 const TlasInfo &info, const MemoryLifetime &lifetime,
+                 handle_allocators *alloc) {
+  Context context = memoryPool.context();
+  vulkan::Context *ctx = context.ctx();
+
+  auto [bvhInfo, size] =
+      get_tlas_size(ctx, info.buildFlags, info.instanceCount);
+  bvhInfo.buildFlags = info.buildFlags;
+
+  Buffer buffer =
+      buf::create_buffer(memoryPool,
+                         {
+                             .size = size,
+                             .bufferUsage = BufferUsage::storage |
+                                            BufferUsage::shader_device_address,
+                         },
+                         lifetime, alloc->bufAllocators);
+
+  auto *buf_impl = object_handle_ptr<BufferImpl>(buffer);
+
+  vulkan::AccelerationStructure bvh = vulkan::create_acceleration_structure(
+      ctx, {
+               .buffer = buf_impl->buffer,
+               .offset = 0,
+               .size = buf_impl->size,
+               .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+           });
+  scratchBuffer.require(bvhInfo.scratchSize);
+
+  return Tlas{make_void_handle<BvhImpl>(
+      &alloc->bvhAllocator, std::move(context), std::move(buffer),
+      std::move(scratchBuffer), bvh, std::move(bvhInfo))};
 }
 
 ScratchBuffer create_scratch(MemoryPool memoryPool, handle_allocators *alloc) {
   return ScratchBuffer{make_void_handle<ScratchBufferImpl>(
-      &alloc->scratchBufferAllocator, std::move(memoryPool),
-      alloc->bufAllocators)};
+      &alloc->scratchAllocator, std::move(memoryPool), alloc->bufAllocators)};
 }
 
 } // namespace strobe::rhi::bvh

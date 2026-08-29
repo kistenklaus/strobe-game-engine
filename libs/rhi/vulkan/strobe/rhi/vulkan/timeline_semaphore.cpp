@@ -1,4 +1,5 @@
 #include "strobe/rhi/vulkan/timeline_semaphore.hpp"
+#include "strobe/core/containers/small_vector.hpp"
 #include <stdexcept>
 
 namespace strobe::rhi::vulkan {
@@ -103,5 +104,4 @@ bool wait_for_timeline_semaphore(Context *context, TimelineSemaphore sem,
   }
   return true;
 }
-
 } // namespace strobe::rhi::vulkan
