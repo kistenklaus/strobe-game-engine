@@ -36,11 +36,11 @@ FencePool &FencePool::operator=(FencePool &&o) noexcept {
 
 FencePool::~FencePool() noexcept { unpin_void_handle<FencePoolImpl>(m_handle); }
 
-Fence FencePool::allocate() noexcept {
+Fence FencePool::allocate(void *pUserData, void (*callback)(void *)) noexcept {
   auto *impl = void_handle_ptr<FencePoolImpl>(m_handle);
   FenceNode *node = impl->allocate();
-  return Fence{
-      make_void_handle<FenceImpl>(impl->get_fence_handle_alloc(), *this, node)};
+  return Fence{make_void_handle<FenceImpl>(impl->get_fence_handle_alloc(),
+                                           *this, node, pUserData, callback)};
 }
 
 } // namespace strobe::rhi

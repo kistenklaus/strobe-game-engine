@@ -22,7 +22,7 @@ public:
     return lhs.m_handle != rhs.m_handle;
   }
 
-  Fence allocate() noexcept;
+  Fence allocate(void *pUserData, void (*callback)(void*)) noexcept;
 };
 
 } // namespace strobe::rhi

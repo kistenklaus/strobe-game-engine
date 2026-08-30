@@ -41,6 +41,9 @@ bool Fence::wait(uint64_t timeout) const noexcept {
   auto *pool_impl = object_handle_ptr<FencePoolImpl>(impl->pool);
   bool signaled =
       vulkan::wait_for_fence(pool_impl->ctx(), impl->node->fence, timeout);
+  if (impl->callback != nullptr) {
+    impl->callback(impl->pUserData);
+  }
   pool_impl->recycle(impl->node);
   impl->node = nullptr;
   return signaled;
@@ -55,6 +58,9 @@ bool Fence::signaled() const noexcept {
   bool signaled =
       vulkan::is_fence_signaled(pool_impl->ctx(), impl->node->fence);
   if (signaled) {
+    if (impl->callback) {
+      impl->callback(impl->pUserData);
+    }
     pool_impl->recycle(impl->node);
     impl->node = nullptr;
   }

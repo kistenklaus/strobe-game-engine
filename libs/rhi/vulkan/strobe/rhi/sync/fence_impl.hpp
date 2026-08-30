@@ -8,8 +8,10 @@ namespace strobe::rhi {
 
 struct FenceImpl {
 
-  explicit FenceImpl(FencePool pool, FenceNode *node) noexcept
-      : pool(std::move(pool)), node(node) {}
+  explicit FenceImpl(FencePool pool, FenceNode *node, void *pUserData,
+                     void (*callback)(void *)) noexcept
+      : pool(std::move(pool)), node(node), pUserData(pUserData),
+        callback(callback) {}
   FenceImpl(const FenceImpl &) = delete;
   FenceImpl(FenceImpl &&) = delete;
   FenceImpl &operator=(const FenceImpl &) = delete;
@@ -18,6 +20,8 @@ struct FenceImpl {
 
   FencePool pool;
   FenceNode *node;
+  void *pUserData;
+  void (*callback)(void *);
 };
 
 } // namespace strobe::rhi
