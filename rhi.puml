@@ -14,7 +14,7 @@ component "swapchain" as swapchain #DarkOrange
 
 component "stage" as stage #LightGreen
 component "cmd" as cmd #LightGreen
-component "queue" as queue #DarkOrange
+component "queue" as queue #LightYellow
 component "gc" as gc #LightGreen
 
 

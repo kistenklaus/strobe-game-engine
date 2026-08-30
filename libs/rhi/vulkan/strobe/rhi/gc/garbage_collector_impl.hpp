@@ -10,12 +10,12 @@
 #include "strobe/rhi/sync/timeline.hpp"
 #include "strobe/rhi/sync/timeline_barrier.hpp"
 #include "strobe/rhi/sync/timepoint.hpp"
-#include <limits>
-#include <mutex>
-#include <thread>
-#include <stop_token>
 #include <cassert>
 #include <cstdint>
+#include <limits>
+#include <mutex>
+#include <stop_token>
+#include <thread>
 
 namespace strobe::rhi {
 
@@ -25,8 +25,7 @@ struct GarbageCollectorImpl {
   // " we call retired but not yet completed timepoints pending.
   static constexpr uint32_t BACKPRESSURE_THRESHOLD = 2;
 
-  explicit GarbageCollectorImpl(Context context,
-                                span<Timeline *> timelines)
+  explicit GarbageCollectorImpl(Context context, span<Timeline *> timelines)
       : m_context(std::move(context)), m_retireBuffers(timelines.size()),
         m_barrier(m_context, timelines) {
     for (uint32_t i = 0; i < timelines.size(); ++i) {
@@ -42,6 +41,34 @@ struct GarbageCollectorImpl {
   GarbageCollectorImpl &operator=(const GarbageCollectorImpl &) = delete;
   GarbageCollectorImpl &operator=(GarbageCollectorImpl &&) = delete;
   ~GarbageCollectorImpl() noexcept = default;
+
+  // Retire a timepoint, might initally feel weird, but essentially
+  // registers the timepoint to the gc for backpressure.
+  void retire(Timepoint timepoint) {
+    uint32_t timelineIndex = std::numeric_limits<uint32_t>::max();
+    for (uint32_t i = 0; i < m_retireBuffers.size(); ++i) {
+      if (m_retireBuffers[i].timeline->contains(timepoint)) {
+        timelineIndex = i;
+        break;
+      }
+    }
+    assert(timelineIndex != std::numeric_limits<uint32_t>::max());
+    auto &buffer = m_retireBuffers[timelineIndex];
+    bool wake;
+    {
+      std::lock_guard lock{buffer.mutex};
+      assert(buffer.retired <= timepoint);
+      if (buffer.retired == timepoint) {
+        return;
+      }
+      buffer.retired = timepoint;
+      const uint64_t pending = buffer.retired - buffer.completed;
+      wake = pending <= BACKPRESSURE_THRESHOLD;
+    }
+    if (wake) {
+      m_barrier.notify();
+    }
+  }
 
   void retire(Timepoint timepoint, span<const CommandBuffer> cmds) {
     uint32_t timelineIndex = std::numeric_limits<uint32_t>::max();
@@ -80,8 +107,8 @@ struct GarbageCollectorImpl {
       }
       if (timepoint) {
         auto &retireBuffer = m_retireBuffers[timelineIndex];
-        retireBuffer.timeline->complete(timepoint);
         collect(retireBuffer, timepoint);
+        retireBuffer.timeline->complete(timepoint);
         backpressure(retireBuffer, timepoint);
       } else { // invalid timepoint; just apply backpressure to all timelines
         for (uint32_t i = 0; i < m_retireBuffers.size(); ++i) {

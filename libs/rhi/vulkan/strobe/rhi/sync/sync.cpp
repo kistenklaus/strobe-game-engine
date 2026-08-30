@@ -1,39 +1,31 @@
 #include "strobe/rhi/sync/sync.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/sync/binary_semaphore_impl.hpp"
+#include "strobe/rhi/sync/fence_pool_impl.hpp"
 #include "strobe/rhi/sync/timeline_semaphore_impl.hpp"
-#include "strobe/rhi/vulkan/binary_semaphore.hpp"
-#include "strobe/rhi/vulkan/fence.hpp"
 #include "strobe/rhi/vulkan/timeline_semaphore.hpp"
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi::sync {
 
-BinarySemaphore
-create_binary_sem(Context context,
-                  [[maybe_unused]] const BinarySemaphoreInfo &info,
-                  handle_allocators* alloc) {
-  const vulkan::BinarySemaphore sem =
-      vulkan::create_binary_semaphore(context.ctx(), {});
-  return BinarySemaphore{
-      make_void_handle<BinarySemaphoreImpl>(&alloc->binarySemaphoreAllocator, std::move(context), sem)};
+BinarySemaphorePool create_binary_pool(Context context,
+                                       handle_allocators *alloc) {
+
+  return BinarySemaphorePool{make_void_handle<BinarySemaphorePoolImpl>(
+      &alloc->binaryPoolAlloc, std::move(context), alloc->alloc)};
+}
+
+FencePool create_fence_pool(Context context, handle_allocators *alloc) {
+  return FencePool{make_void_handle<FencePoolImpl>(
+      &alloc->fencePoolAlloc, std::move(context), &alloc->fenceAlloc,
+      alloc->alloc)};
 }
 
 TimelineSemaphore create(Context context, const TimelineSemaphoreInfo &info,
-                         handle_allocators* alloc) {
+                         handle_allocators *alloc) {
   const vulkan::TimelineSemaphore sem = vulkan::create_timeline_semaphore(
       context.ctx(), {.initalValue = info.initialValue});
-  return TimelineSemaphore{
-      make_void_handle<TimelineSemaphoreImpl>(&alloc->timelineSemaphoreAllocator, std::move(context), sem)};
-}
-
-Fence create_fence(Context context, const FenceInfo &info,
-                   handle_allocators* alloc) {
-  const vulkan::Fence fence = vulkan::create_fence(
-      context.ctx(),
-      {.flags = info.signaled ? VkFenceCreateFlags(VK_FENCE_CREATE_SIGNALED_BIT)
-                              : VkFenceCreateFlags(0)});
-  return Fence{make_void_handle<FenceImpl>(&alloc->fenceAlloc, std::move(context), fence)};
+  return TimelineSemaphore{make_void_handle<TimelineSemaphoreImpl>(
+      &alloc->timelineSemaphoreAllocator, std::move(context), sem)};
 }
 
 } // namespace strobe::rhi::sync

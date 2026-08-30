@@ -212,6 +212,7 @@ int main() {
 //       cmd.begin_rendering({
 //           .colorAttachments = &colorAttachment1,
 //       });
+//
 //       {
 //         cmd.bind_vertex_buffer(frame.vertex2);
 //         cmd.draw(3);

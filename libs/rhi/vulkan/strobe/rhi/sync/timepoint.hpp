@@ -66,7 +66,7 @@ public:
 
   bool wait(uint64_t timeout) const noexcept;
   bool poll() const noexcept;
-  bool weak_poll() const noexcept;
+  bool relaxed_poll() const noexcept;
 
 private:
   explicit Timepoint(void *handle, uint64_t serial) noexcept

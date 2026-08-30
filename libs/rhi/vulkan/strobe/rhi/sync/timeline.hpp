@@ -40,7 +40,10 @@ public:
   Timepoint epoch() noexcept { return Timepoint{this, 0}; }
 
   // ensures that the timepoints timeline as commited this timepoint
-  static void notify(Timepoint timepoint) {
+  static void notify(Timepoint timepoint) noexcept {
+    if (timepoint.relaxed_poll()) {
+      return;
+    }
     auto *timeline = static_cast<Timeline *>(timepoint.m_handle);
     std::lock_guard lck{timeline->m_mutex};
     uint64_t serial = timeline->m_serial.load(std::memory_order_relaxed);
@@ -57,6 +60,15 @@ public:
   }
 
 protected:
+  static vulkan::TimelineSemaphore
+  get_timepoint_semaphore(Timepoint timepoint) {
+    return static_cast<Timeline *>(timepoint.m_handle)->m_timelineSemaphore;
+  }
+  static uint64_t get_timepoint_serial(Timepoint timepoint) {
+    return timepoint.m_serial;
+  }
+
+  /// advances timeline and returns old timepoint.
   Timepoint advance() {
     return Timepoint{this, m_serial.fetch_add(1, std::memory_order_release)};
   }
@@ -67,7 +79,7 @@ protected:
 
   // internally synchronized
   // Is not allowed to call Timeline::notify in it's implementation
-  virtual void commit(Timepoint timepoint) = 0;
+  virtual void commit(Timepoint timepoint) noexcept = 0;
 
   const Context context;
 

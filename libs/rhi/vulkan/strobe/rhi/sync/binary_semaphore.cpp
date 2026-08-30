@@ -1,30 +1,39 @@
-#include "strobe/rhi/objects/binary_semaphore.hpp"
+#include "strobe/rhi/sync/binary_semaphore.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/sync/binary_semaphore_impl.hpp"
-#ifndef NDEBUG
-#include "strobe/rhi/vulkan/debug_name.hpp"
-#endif
+#include "strobe/rhi/sync/binary_semaphore_node.hpp"
+#include "strobe/rhi/sync/binary_semaphore_pool_impl.hpp"
+#include "strobe/rhi/utils/pipeline_stage_utils.hpp"
+#include <atomic>
+#include <utility>
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi {
 
 BinarySemaphore::BinarySemaphore(const BinarySemaphore &o) noexcept
-    : Object(o.m_handle) {
+    : m_handle(o.m_handle) {
   if (m_handle != nullptr) {
-    pin_void_handle<BinarySemaphoreImpl>(m_handle);
+    auto *node = static_cast<BinarySemaphoreNode *>(m_handle);
+    node->refCount.fetch_add(1, std::memory_order_relaxed);
   }
 }
 
 BinarySemaphore::BinarySemaphore(BinarySemaphore &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
+    : m_handle(std::exchange(o.m_handle, nullptr)) {}
 
 BinarySemaphore &BinarySemaphore::operator=(const BinarySemaphore &o) noexcept {
   if (this == &o) {
     return *this;
   }
   if (o.m_handle != nullptr) {
-    pin_void_handle<BinarySemaphoreImpl>(o.m_handle);
+    auto *node = static_cast<BinarySemaphoreNode *>(o.m_handle);
+    node->refCount.fetch_add(1, std::memory_order_relaxed);
   }
-  unpin_void_handle<BinarySemaphoreImpl>(m_handle);
+  { // unpin
+    auto *node = static_cast<BinarySemaphoreNode *>(m_handle);
+    if (node->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      void_handle_ptr<BinarySemaphorePoolImpl>(node->pool)->recycle(node);
+    }
+  }
   m_handle = o.m_handle;
   return *this;
 }
@@ -33,20 +42,37 @@ BinarySemaphore &BinarySemaphore::operator=(BinarySemaphore &&o) noexcept {
   if (this == &o) {
     return *this;
   }
-  unpin_void_handle<BinarySemaphoreImpl>(m_handle);
+  { // unpin
+    auto *node = static_cast<BinarySemaphoreNode *>(m_handle);
+    if (node->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      void_handle_ptr<BinarySemaphorePoolImpl>(node->pool)->recycle(node);
+    }
+  }
   m_handle = std::exchange(o.m_handle, nullptr);
   return *this;
 }
 
 BinarySemaphore::~BinarySemaphore() noexcept {
-  unpin_void_handle<BinarySemaphoreImpl>(m_handle);
+  { // unpin
+    auto *node = static_cast<BinarySemaphoreNode *>(m_handle);
+    if (node->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      void_handle_ptr<BinarySemaphorePoolImpl>(node->pool)->recycle(node);
+    }
+  }
 }
-
-void BinarySemaphore::set_name([[maybe_unused]] const char *name) noexcept {
-#ifndef NDEBUG
-  auto *impl = void_handle_ptr<BinarySemaphoreImpl>(m_handle);
-  vulkan::set_debug_name(impl->context.ctx(), impl->semaphore, name);
-#endif
+VkSemaphoreSubmitInfo
+BinarySemaphore::signal(PipelineStage stage) const noexcept {
+  assert(m_handle);
+  auto *node = static_cast<BinarySemaphoreNode *>(m_handle);
+  node->signaled = true;
+  return VkSemaphoreSubmitInfo{
+      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+      .pNext = nullptr,
+      .semaphore = node->semaphore.handle,
+      .value = 0,
+      .stageMask = to_vk_pipeline_stage(stage),
+      .deviceIndex = 0,
+  };
 }
 
 } // namespace strobe::rhi

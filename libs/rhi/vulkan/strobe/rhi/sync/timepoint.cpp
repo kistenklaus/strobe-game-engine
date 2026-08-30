@@ -30,9 +30,9 @@ bool Timepoint::poll() const noexcept {
   return false;
 }
 
-bool Timepoint::weak_poll() const noexcept {
+bool Timepoint::relaxed_poll() const noexcept {
   auto *timeline = static_cast<Timeline *>(m_handle);
-  uint64_t completed = timeline->m_completed.load(std::memory_order_acquire);
+  uint64_t completed = timeline->m_completed.load(std::memory_order_relaxed);
   if (completed > m_serial) {
     return true;
   }

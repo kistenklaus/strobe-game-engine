@@ -1,16 +1,16 @@
 #pragma once
 
 #include "strobe/rhi/objects/object.hpp"
+#include "strobe/rhi/vulkan/fence.hpp"
 #include <cstdint>
 #include <limits>
 
 namespace strobe::rhi {
 
+// Not a object
 class Fence : Object<Fence> {
-  friend class Device;
-  friend class Queue;
-  friend class Swapchain;
-  friend struct SwapchainImpl;
+  friend class FencePool;
+  explicit Fence(void *handle) noexcept : Object(handle) {}
 
 public:
   Fence() noexcept : Object(nullptr) {}
@@ -23,13 +23,10 @@ public:
 
   bool
   wait(uint64_t timeout = std::numeric_limits<uint64_t>::max()) const noexcept;
-  void reset() noexcept;
 
-  bool wait_and_reset(
-      uint64_t timeout = std::numeric_limits<uint64_t>::max()) const noexcept;
   bool signaled() const noexcept;
 
-  explicit Fence(void *handle) noexcept : Object(handle) {}
+  vulkan::Fence fence() const noexcept;
 };
 
 } // namespace strobe::rhi

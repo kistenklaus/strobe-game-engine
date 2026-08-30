@@ -18,8 +18,8 @@ namespace strobe::rhi {
 struct SwapchainImageState {
   Image image;
   ImageView view;
-  BinarySemaphore presentReady;
-  Fence presentFence;
+  vulkan::BinarySemaphore presentReady;
+  vulkan::Fence presentFence;
   bool pending = false;
 
   // just to keep them alive, until the next acquire

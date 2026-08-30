@@ -48,7 +48,10 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/vertex_shader.cpp
   # strobe::rhi sync
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/binary_semaphore.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/binary_semaphore_pool.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/fence.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/fence_impl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/fence_pool.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/sync.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/timeline_semaphore.cpp
   # strobe::rhi mem
@@ -75,15 +78,16 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_buffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_buffer_impl.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_pool.cpp
-  # strobe::rhi gc
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/gc/garbage_collector.cpp
-  
-
   # #strobe::rhi swapchain
   # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/surface.cpp
   # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain.cpp
   # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain_generation.cpp
   # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain_image.cpp
+  # strobe::rhi gc
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/gc/garbage_collector.cpp
+  # strobe::rhi queue
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/queue.cpp
+
   # # strobe::rhi device
   # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/device/device.cpp
   # #strobe::rhi queue

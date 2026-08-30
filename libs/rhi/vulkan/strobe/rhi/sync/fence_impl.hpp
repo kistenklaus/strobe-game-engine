@@ -1,19 +1,23 @@
 #pragma once
 
-#include "strobe/rhi/context/context.hpp"
-#include "strobe/rhi/vulkan/fence.hpp"
+#include "strobe/rhi/handle.hpp"
+#include "strobe/rhi/sync/fence_node.hpp"
+#include "strobe/rhi/sync/fence_pool.hpp"
 
 namespace strobe::rhi {
 
 struct FenceImpl {
-  FenceImpl(Context context, vulkan::Fence fence) noexcept
-      : context(std::move(context)), fence(fence) {}
-  ~FenceImpl() noexcept {
-    vulkan::destroy_fence(context.ctx(), fence);
-  }
 
-  Context context;
-  vulkan::Fence fence;
+  explicit FenceImpl(FencePool pool, FenceNode *node) noexcept
+      : pool(std::move(pool)), node(node) {}
+  FenceImpl(const FenceImpl &) = delete;
+  FenceImpl(FenceImpl &&) = delete;
+  FenceImpl &operator=(const FenceImpl &) = delete;
+  FenceImpl &operator=(FenceImpl &&) = delete;
+  ~FenceImpl() noexcept;
+
+  FencePool pool;
+  FenceNode *node;
 };
 
 } // namespace strobe::rhi
