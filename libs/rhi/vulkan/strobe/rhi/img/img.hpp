@@ -13,15 +13,16 @@
 namespace strobe::rhi::img {
 
 struct handle_allocators {
+  explicit handle_allocators(strobe::rhi::allocator_ref alloc) noexcept
+      : imageAllocator(alloc), imageViewAllocator(alloc) {}
   handle_allocator<ImageImpl> imageAllocator;
-  handle_allocator<ImageView> imageViewAllocator;
+  handle_allocator<ImageViewImpl> imageViewAllocator;
 };
 
 Image create_image(const MemoryPool &memoryPool, const ImageInfo &info,
-                   const MemoryLifetime &lifetime,
-                   handle_allocator_ref<ImageImpl> alloc);
+                   const MemoryLifetime &lifetime, handle_allocators *alloc);
 
 ImageView create_image_view(Image image, const ImageViewInfo &info,
-                            handle_allocator_ref<ImageViewImpl> alloc);
+                            handle_allocators *alloc);
 
 } // namespace strobe::rhi::img

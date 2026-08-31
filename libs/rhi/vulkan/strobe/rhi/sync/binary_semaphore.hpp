@@ -1,6 +1,7 @@
 #pragma once
 
 #include "strobe/rhi/types/pipeline_stage.hpp"
+#include "strobe/rhi/vulkan/binary_semaphore.hpp"
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi {
@@ -28,7 +29,8 @@ public:
     return lhs.m_handle != rhs.m_handle;
   }
 
-  VkSemaphoreSubmitInfo signal(PipelineStage stage) const noexcept;
+  vulkan::BinarySemaphore signal() const noexcept;
+  vulkan::BinarySemaphore wait() const noexcept;
 
 private:
   explicit BinarySemaphore(void *handle) noexcept : m_handle(handle) {}

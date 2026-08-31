@@ -46,4 +46,10 @@ void GarbageCollector::retire(Timepoint timepoint,
   impl->retire(timepoint, cmds);
 }
 
+void GarbageCollector::retire(Timepoint timepoint,
+                              span<const BinarySemaphore> sems) {
+  auto *impl = void_handle_ptr<GarbageCollectorImpl>(m_handle);
+  impl->retire(timepoint, sems);
+}
+
 } // namespace strobe::rhi

@@ -1,15 +1,17 @@
 #pragma once
 
 #include "strobe/rhi/swapchain/swapchain_generation.hpp"
+#include <cstdint>
+
 namespace strobe::rhi {
 
 struct SwapchainImageImpl {
   explicit SwapchainImageImpl(SwapchainGeneration generation,
-                              uint32_t imageIndex)
-      : generation(std::move(generation)), imageIndex(imageIndex) {}
+                              uint32_t index) noexcept
+      : generation(std::move(generation)), index(index) {}
 
-  const SwapchainGeneration generation;
-  const uint32_t imageIndex;
+  SwapchainGeneration generation;
+  uint32_t index;
 };
 
 } // namespace strobe::rhi

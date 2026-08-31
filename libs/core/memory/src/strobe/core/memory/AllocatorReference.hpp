@@ -32,4 +32,4 @@ private:
   Resource *m_resource;
 };
 
-} // namespace strobe::memory
+} // namespace strobe

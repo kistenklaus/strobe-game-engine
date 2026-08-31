@@ -342,6 +342,8 @@ void cmd_set_rasterizer_samples(const Context *context, CommandBuffer cmd,
                                 SampleCount samples) noexcept {
   cmd_set_rasterizer_samples(context, cmd, to_vk_sample_count(samples));
 }
+
+
 void cmd_set_sample_mask(const Context *context, CommandBuffer cmd,
                          SampleCount samples, uint64_t mask) noexcept {
   const VkSampleCountFlagBits sampleCount = to_vk_sample_count(samples);
@@ -354,7 +356,7 @@ void cmd_set_sample_mask(const Context *context, CommandBuffer cmd,
 
 void cmd_set_sample_mask(const Context *context, CommandBuffer cmd,
                          VkSampleCountFlagBits samples,
-                         VkSampleMask mask[2]) noexcept {
+                         const VkSampleMask mask[2]) noexcept {
   {
     ZoneScopedN("vkCmdSetSampleMask");
     vulkan::vk_cmd_set_sample_mask(context->pnf(), cmd.handle, samples, mask);
@@ -392,7 +394,9 @@ void cmd_set_polygon_mode(const Context *context, CommandBuffer cmd,
                           PolygonMode polygonMode) noexcept {
   cmd_set_polygon_mode(context, cmd, to_vk_polygon_mode(polygonMode));
 }
-void cmd_set_depth_clamp_enable(Context *context, CommandBuffer cmd,
+
+
+void cmd_set_depth_clamp_enable(const Context *context, CommandBuffer cmd,
                                 bool depthClampEnable) {
   {
     ZoneScopedN("vkCmdSetDepthClampEnable");

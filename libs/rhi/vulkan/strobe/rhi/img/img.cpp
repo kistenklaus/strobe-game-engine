@@ -16,7 +16,7 @@ namespace strobe::rhi::img {
 
 Image create_image(const MemoryPool &memoryPool, const ImageInfo &info,
                    const MemoryLifetime &lifetime,
-                   handle_allocator_ref<ImageImpl> alloc) {
+                   handle_allocators* alloc) {
   Context context = memoryPool.context();
   vulkan::Context *ctx = context.ctx();
 
@@ -70,13 +70,13 @@ Image create_image(const MemoryPool &memoryPool, const ImageInfo &info,
                               allocation.binding().offset);
   }
   return Image{make_void_handle<ImageImpl>(
-      alloc, std::move(context), std::move(allocation), image, info.type,
+      &alloc->imageAllocator, std::move(context), std::move(allocation), image, info.type,
       info.format, info.extent, info.mip_levels, info.arrayLayers,
       info.samples)};
 }
 
 ImageView create_image_view(Image image, const ImageViewInfo &info,
-                            handle_allocator_ref<ImageViewImpl> alloc) {
+                            handle_allocators *alloc) {
   auto *img_impl = object_handle_ptr<ImageImpl, Image>(image);
   Context context = img_impl->context;
   vulkan::Context *const ctx = context.ctx();
@@ -132,8 +132,8 @@ ImageView create_image_view(Image image, const ImageViewInfo &info,
                    },
            });
 
-  return ImageView{
-      make_void_handle<ImageViewImpl>(alloc, std::move(image), view, format)};
+  return ImageView{make_void_handle<ImageViewImpl>(
+      &alloc->imageViewAllocator, std::move(image), view, format)};
 }
 
 } // namespace strobe::rhi::img

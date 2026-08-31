@@ -8,7 +8,6 @@ struct BinarySemaphoreNode {
   void *pool = nullptr;
   std::atomic<uint32_t> refCount{0};
   vulkan::BinarySemaphore semaphore{};
-  bool signaled = false;
   BinarySemaphoreNode *next = nullptr;
 };
 

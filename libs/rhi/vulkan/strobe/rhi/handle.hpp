@@ -7,6 +7,7 @@
 #include "strobe/rhi/objects/object.hpp"
 #include <atomic>
 #include <cassert>
+#include <cstddef>
 #include <cstring>
 #include <memory>
 #include <type_traits>
@@ -20,15 +21,16 @@ template <typename T> struct handle_allocator {
   using type = std::remove_cvref_t<T>;
 
 public:
-  static constexpr uint16_t handle_alignment =
-      std::max(alignof(std::atomic<uint64_t>),
-               std::max(alignof(type), alignof(handle_allocator<type> *)));
-  static constexpr size_t handle_size =
+  static constexpr uint16_t handle_alignment = std::max(
+      alignof(std::atomic<uint64_t>), std::max(alignof(type), alignof(void *)));
+  static constexpr size_t handle_size = memory::align_up(
       memory::align_up(
           memory::align_up(sizeof(std::atomic<uint64_t>), alignof(type)) +
               sizeof(type),
           alignof(void *)) +
-      sizeof(void *);
+          sizeof(void *),
+      handle_alignment);
+
   using upstream_alloc = strobe::rhi::allocator_ref;
   using upstream_traits = AllocatorTraits<upstream_alloc>;
   using allocator =
@@ -114,8 +116,6 @@ public:
 template <typename T>
 using handle_allocator_ref = handle_allocator<std::remove_cvref_t<T>> *;
 
-namespace details {} // namespace details
-
 template <typename T> struct handle_control_block {
   using type = std::remove_cvref_t<T>;
   using allocator = handle_allocator<T>;
@@ -125,8 +125,8 @@ template <typename T> struct handle_control_block {
   explicit handle_control_block(handle_allocator<T> *alloc, Args &&...args)
       : refCount{1}, value(std::forward<Args>(args)...),
         allocatorStorage(alloc->storage) {
-    static_assert(allocator::handle_size == sizeof(decltype(*this)));
-    static_assert(allocator::handle_alignment == alignof(decltype(*this)));
+    static_assert(allocator::handle_size >= sizeof(decltype(*this)));
+    static_assert(allocator::handle_alignment >= alignof(decltype(*this)));
     assert(allocatorStorage != 0);
   }
 
@@ -134,12 +134,6 @@ template <typename T> struct handle_control_block {
   type value;
   allocator_storage *allocatorStorage;
 };
-
-// inline int foo() {
-//   strobe::rhi::allocator upstream{};
-//   handle_allocator<int> alloc{&upstream};
-//   handle_control_block<int> x{&alloc, 4};
-// }
 
 template <typename T>
 using handle = handle_control_block<std::remove_cvref_t<T>> *;
@@ -236,6 +230,14 @@ T *object_handle_ptr(const Obj &obj) {
   std::memcpy(&h, &obj, sizeof(void *));
   assert(h);
   return &h->value;
+}
+
+template <typename T, typename Obj>
+  requires std::is_base_of_v<Object<Obj>, Obj>
+void *object_handle(const Obj &obj) {
+  handle<T> h;
+  std::memcpy(&h, &obj, sizeof(void *));
+  return h;
 }
 
 } // namespace strobe::rhi

@@ -14,6 +14,7 @@
 #include "strobe/rhi/sync/timepoint.hpp"
 #include <cassert>
 #include <cstdint>
+#include <fmt/ostream.h>
 #include <limits>
 #include <mutex>
 #include <stop_token>
@@ -27,13 +28,14 @@ struct GarbageCollectorImpl {
   // " we call retired but not yet completed timepoints pending.
   static constexpr uint32_t BACKPRESSURE_THRESHOLD = 2;
 
-  explicit GarbageCollectorImpl(Context context, span<Timeline *> timelines)
+  explicit GarbageCollectorImpl(Context context, span<Timeline> timelines,
+                                strobe::rhi::allocator_ref alloc)
       : m_context(std::move(context)), m_retireBuffers(timelines.size()),
-        m_barrier(m_context, timelines) {
+        m_barrier(m_context, timelines, alloc) {
     for (uint32_t i = 0; i < timelines.size(); ++i) {
       m_retireBuffers[i].timeline = timelines[i];
-      m_retireBuffers[i].completed = timelines[i]->epoch();
-      m_retireBuffers[i].retired = timelines[i]->epoch();
+      m_retireBuffers[i].completed = timelines[i].epoch();
+      m_retireBuffers[i].retired = timelines[i].epoch();
     }
     m_thread = std::jthread(&GarbageCollectorImpl::gc_main, this);
   }
@@ -49,7 +51,7 @@ struct GarbageCollectorImpl {
   void retire(Timepoint timepoint) {
     uint32_t timelineIndex = std::numeric_limits<uint32_t>::max();
     for (uint32_t i = 0; i < m_retireBuffers.size(); ++i) {
-      if (m_retireBuffers[i].timeline->contains(timepoint)) {
+      if (m_retireBuffers[i].timeline.contains(timepoint)) {
         timelineIndex = i;
         break;
       }
@@ -75,7 +77,7 @@ struct GarbageCollectorImpl {
   void retire(Timepoint timepoint, span<const BinarySemaphore> sems) {
     uint32_t timelineIndex = std::numeric_limits<uint32_t>::max();
     for (uint32_t i = 0; i < m_retireBuffers.size(); ++i) {
-      if (m_retireBuffers[i].timeline->contains(timepoint)) {
+      if (m_retireBuffers[i].timeline.contains(timepoint)) {
         timelineIndex = i;
         break;
       }
@@ -101,7 +103,7 @@ struct GarbageCollectorImpl {
   void retire(Timepoint timepoint, span<const CommandBuffer> cmds) {
     uint32_t timelineIndex = std::numeric_limits<uint32_t>::max();
     for (uint32_t i = 0; i < m_retireBuffers.size(); ++i) {
-      if (m_retireBuffers[i].timeline->contains(timepoint)) {
+      if (m_retireBuffers[i].timeline.contains(timepoint)) {
         timelineIndex = i;
         break;
       }
@@ -141,7 +143,7 @@ struct GarbageCollectorImpl {
       if (timepoint) {
         auto &retireBuffer = m_retireBuffers[timelineIndex];
         collect(retireBuffer, timepoint);
-        retireBuffer.timeline->complete(timepoint);
+        retireBuffer.timeline.complete(timepoint);
         backpressure(retireBuffer, timepoint);
       } else { // invalid timepoint; just apply backpressure to all timelines
         for (uint32_t i = 0; i < m_retireBuffers.size(); ++i) {
@@ -159,7 +161,7 @@ private:
   };
 
   struct TimelineRetireBuffer {
-    Timeline *timeline;
+    Timeline timeline;
     std::mutex mutex{};
     VectorDeque<Retire<CommandBuffer>> retiredCmds;
     VectorDeque<Retire<BinarySemaphore>> retiredSems;

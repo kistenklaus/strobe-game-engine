@@ -1,7 +1,10 @@
 #pragma once
 
 #include "strobe/core/containers/vector.hpp"
+#include "strobe/rhi/context/context.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/sync/timeline.hpp"
+#include "strobe/rhi/sync/timepoint.hpp"
 #include "strobe/rhi/vulkan/timeline_semaphore.hpp"
 #include <limits>
 #include <mutex>
@@ -12,14 +15,16 @@ namespace strobe::rhi {
 
 class TimelineBarrier {
 public:
-  explicit TimelineBarrier(Context context,
-                           span<Timeline *> timelines) noexcept
-      : m_context(std::move(context)), m_timelines(timelines), m_rr(0),
-        m_values(m_timelines.size() + 1), m_semaphores(m_timelines.size() + 1) {
+  explicit TimelineBarrier(Context context, span<Timeline> timelines,
+                           strobe::rhi::allocator_ref alloc) noexcept
+      : m_context(std::move(context)), m_timelines(timelines, alloc), m_rr(0),
+        m_values(m_timelines.size() + 1, alloc),
+        m_semaphores(m_timelines.size() + 1, alloc) {
     assert(!timelines.empty());
     for (uint32_t i = 0; i < m_timelines.size(); ++i) {
-      m_values[i] = m_timelines[i]->m_serial.load(std::memory_order_acquire);
-      m_semaphores[i] = m_timelines[i]->m_timelineSemaphore.handle;
+      assert(m_timelines[i]);
+      m_values[i] = m_timelines[i].serial();
+      m_semaphores[i] = m_timelines[i].timelineSemaphore().handle;
     }
     m_semaphores.back() =
         vulkan::create_timeline_semaphore(m_context.ctx(), {}).handle;
@@ -40,6 +45,7 @@ public:
   std::pair<uint32_t, Timepoint>
   wait_any(uint64_t timeout = std::numeric_limits<uint64_t>::max()) {
     vulkan::Context *ctx = m_context.ctx();
+    assert(ctx);
 
     uint64_t wake;
     {
@@ -49,7 +55,7 @@ public:
     m_values.back() = wake;
 
     for (uint32_t i = 0; i < m_timelines.size(); ++i) {
-      Timeline::notify(Timepoint{m_timelines[i], m_values[i]});
+      m_timelines[i].notify(m_values[i]);
     }
 
     VkSemaphoreWaitInfo waitInfo{
@@ -70,13 +76,13 @@ public:
       return {std::numeric_limits<uint32_t>::max(), Timepoint{}};
     }
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to wait for timeline semaphore");
+      vulkan_error(result, "Failed to wait for timeline semaphore");
     }
 
     const uint32_t end = m_rr;
     do {
-      Timeline *timeline = m_timelines[m_rr];
-      if (timeline->now().m_serial > m_values[m_rr]) {
+      Timeline timeline = m_timelines[m_rr];
+      if (timeline.now().m_serial > m_values[m_rr]) {
         const uint64_t value = vulkan::get_timeline_semaphore_value(
             ctx, vulkan::TimelineSemaphore{.handle = m_semaphores[m_rr]});
         if (value >= m_values[m_rr]) {
@@ -86,7 +92,7 @@ public:
           if (m_rr >= m_timelines.size()) {
             m_rr -= m_timelines.size();
           }
-          return {index, Timepoint{timeline, value}};
+          return {index, timeline.from_serial(value)};
         }
       }
       ++m_rr;
@@ -108,10 +114,10 @@ public:
 
 private:
   Context m_context;
-  span<Timeline *> m_timelines;
+  Vector<Timeline, strobe::rhi::allocator_ref> m_timelines;
   uint32_t m_rr;
-  Vector<uint64_t> m_values;
-  Vector<VkSemaphore> m_semaphores;
+  Vector<uint64_t, strobe::rhi::allocator_ref> m_values;
+  Vector<VkSemaphore, strobe::rhi::allocator_ref> m_semaphores;
   std::mutex m_mutex;
   uint64_t m_wakeValue{0};
 };

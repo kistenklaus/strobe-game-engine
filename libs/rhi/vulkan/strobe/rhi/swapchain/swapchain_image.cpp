@@ -1,4 +1,4 @@
-#include "strobe/rhi/objects/swapchain_image.hpp"
+#include "strobe/rhi/swapchain/swapchain_image.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/swapchain/swapchain_generation_impl.hpp"
 #include "strobe/rhi/swapchain/swapchain_image_impl.hpp"
@@ -8,7 +8,7 @@ namespace strobe::rhi {
 SwapchainImage::SwapchainImage(const SwapchainImage &o) noexcept
     : Object(o.m_handle) {
   if (m_handle != nullptr) {
-    pin_void_handle<SwapchainGenerationImpl>(m_handle);
+    pin_void_handle<SwapchainImageImpl>(m_handle);
   }
 }
 
@@ -41,18 +41,19 @@ SwapchainImage::~SwapchainImage() noexcept {
 }
 
 const Image &SwapchainImage::image() const noexcept {
+  assert(m_handle);
   auto *impl = void_handle_ptr<SwapchainImageImpl>(m_handle);
-  return impl->generation.image(impl->imageIndex);
+  auto *gen =
+      void_handle_ptr<SwapchainGenerationImpl>(impl->generation.m_handle);
+  return gen->frames[impl->index].image;
 }
 
 const ImageView &SwapchainImage::view() const noexcept {
+  assert(m_handle);
   auto *impl = void_handle_ptr<SwapchainImageImpl>(m_handle);
-  return impl->generation.view(impl->imageIndex);
-}
-
-const BinarySemaphore &SwapchainImage::presentReady() const noexcept {
-  auto *impl = void_handle_ptr<SwapchainImageImpl>(m_handle);
-  return impl->generation.presentReady(impl->imageIndex);
+  auto *gen =
+      void_handle_ptr<SwapchainGenerationImpl>(impl->generation.m_handle);
+  return gen->frames[impl->index].view;
 }
 
 } // namespace strobe::rhi

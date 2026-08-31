@@ -10,6 +10,8 @@
 namespace strobe::rhi::shader {
 
 struct handle_allocators {
+  explicit handle_allocators(strobe::rhi::allocator_ref alloc) noexcept
+      : shaderAlloc(alloc) {}
   handle_allocator<ShaderObjectImpl> shaderAlloc;
 };
 

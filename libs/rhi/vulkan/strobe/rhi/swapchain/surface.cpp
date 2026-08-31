@@ -4,15 +4,13 @@
 
 namespace strobe::rhi {
 
-Surface::Surface(const Surface &other) noexcept
-    : m_handle(other.m_handle) {
+Surface::Surface(const Surface &other) noexcept : m_handle(other.m_handle) {
   if (m_handle) {
     pin_void_handle<SurfaceImpl>(m_handle);
   }
 }
 
-Surface::Surface(Surface &&other) noexcept
-    : m_handle(other.m_handle) {
+Surface::Surface(Surface &&other) noexcept : m_handle(other.m_handle) {
   other.m_handle = nullptr;
 }
 
@@ -44,6 +42,21 @@ Surface::~Surface() noexcept {
   if (m_handle) {
     unpin_void_handle<SurfaceImpl>(m_handle);
   }
+}
+
+vulkan::Surface Surface::get() const noexcept {
+  auto *impl = void_handle_ptr<SurfaceImpl>(m_handle);
+  return impl->surface;
+}
+
+vulkan::Context *Surface::ctx() const noexcept {
+  auto *impl = void_handle_ptr<SurfaceImpl>(m_handle);
+  return impl->context.ctx();
+}
+
+const Context &Surface::context() const noexcept {
+  auto *impl = void_handle_ptr<SurfaceImpl>(m_handle);
+  return impl->context;
 }
 
 } // namespace strobe::rhi

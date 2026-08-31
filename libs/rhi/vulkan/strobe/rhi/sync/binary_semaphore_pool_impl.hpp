@@ -6,6 +6,7 @@
 #include "strobe/rhi/vulkan/binary_semaphore.hpp"
 #include <atomic>
 #include <memory>
+#include <mutex>
 
 namespace strobe::rhi {
 
@@ -34,17 +35,12 @@ public:
     auto *node = m_ready;
     m_ready = node->next;
     node->next = nullptr;
-    assert(node->signaled == false);
     return node;
   }
 
   void recycle(BinarySemaphoreNode *node) {
     assert(node);
     assert(node->next == nullptr);
-    if (!node->signaled) {
-      destroy_nodes(node);
-    }
-
     // lockfree push to returend
     auto *head = m_returned.load(std::memory_order_relaxed);
     do {

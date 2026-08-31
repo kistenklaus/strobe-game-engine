@@ -30,7 +30,11 @@ public:
                            buf::handle_allocators *bufAllocators,
                            strobe::rhi::allocator_ref alloc) noexcept 
       : memoryPool(std::move(memoryPool)), m_bufAllocators(bufAllocators),
-        m_pageAlloc(alloc) {}
+        m_pageAlloc(alloc) {
+    for (uint32_t i = 0; i < STAGING_CLASSES.size(); ++i) {
+      m_readyPages[i] = nullptr;
+    }
+  }
   StagingPoolImpl(const StagingPoolImpl &) = delete;
   StagingPoolImpl(StagingPoolImpl &&) = delete;
   StagingPoolImpl &operator=(const StagingPoolImpl &) = delete;

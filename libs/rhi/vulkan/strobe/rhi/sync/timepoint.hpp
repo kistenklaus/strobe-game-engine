@@ -7,15 +7,17 @@ namespace strobe::rhi {
 
 class Timepoint {
   friend class Timeline;
+  friend struct TimelineImpl;
   friend class TimelineBarrier;
 
 public:
   Timepoint() noexcept : m_handle(nullptr), m_serial{0} {}
-  Timepoint(const Timepoint &) noexcept = default;
-  Timepoint(Timepoint &&) noexcept = default;
-  Timepoint &operator=(const Timepoint &) noexcept = default;
-  Timepoint &operator=(Timepoint &&) noexcept = default;
-  ~Timepoint() noexcept = default;
+  Timepoint(const Timepoint &) noexcept;
+  Timepoint(Timepoint &&) noexcept;
+  Timepoint &operator=(const Timepoint &) noexcept;
+  Timepoint &operator=(Timepoint &&) noexcept;
+  ~Timepoint() noexcept;
+
   explicit operator bool() const noexcept { return m_handle != nullptr; }
   friend bool operator==(const Timepoint &lhs, const Timepoint &rhs) noexcept {
     assert(lhs.m_handle == rhs.m_handle &&
@@ -69,8 +71,7 @@ public:
   bool relaxed_poll() const noexcept;
 
 private:
-  explicit Timepoint(void *handle, uint64_t serial) noexcept
-      : m_handle(handle), m_serial(serial) {}
+  explicit Timepoint(void *handle, uint64_t serial) noexcept;
   void *m_handle;
   uint64_t m_serial;
 };

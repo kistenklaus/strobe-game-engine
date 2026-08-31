@@ -1,5 +1,7 @@
 #pragma once
 
+#include "strobe/rhi/context/context.hpp"
+#include "strobe/rhi/vulkan/surface.hpp"
 namespace strobe::rhi {
 
 class Device;
@@ -21,6 +23,10 @@ public:
   ~Surface() noexcept;
 
   explicit operator bool() const noexcept { return m_handle != nullptr; }
+
+  vulkan::Surface get() const noexcept;
+  vulkan::Context *ctx() const noexcept;
+  const Context& context() const noexcept;
 
 private:
   explicit Surface(void *handle) noexcept : m_handle(handle) {}

@@ -49,7 +49,7 @@ CommandBuffer CommandPool::alloc(CommandBufferFlags flags) {
       impl->alloc((flags & CommandBufferFlags::secondary) == 0);
 
   return CommandBuffer{make_void_handle<CommandBufferImpl>(
-      impl->cmdAlloc, *this, impl->stagingPool, nativePool, cmd, flags,
+      &impl->cmdAlloc, *this, impl->stagingPool, nativePool, cmd, flags,
       impl->stateAlloc)};
 }
 

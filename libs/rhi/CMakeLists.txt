@@ -39,6 +39,8 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/surface.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/swapchain.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/timeline_semaphore.cpp
+  # strobe::rhi error
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/error/vulkan_error.cpp
   # strobe::rhi context
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/context/context.cpp
   # strobe::rhi shader
@@ -53,14 +55,18 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/fence_impl.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/fence_pool.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/sync.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/timeline.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/timeline_semaphore.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/sync/timepoint.cpp
   # strobe::rhi mem
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory_allocation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory_allocation_impl.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory_lifetime_allocator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/memory/memory_pool.cpp
   # strobe::rhi buf
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/buf/buffer.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/buf/buf.cpp
   # strobe::rhi img
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/img/image.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/img/image_view.cpp
@@ -79,19 +85,21 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_buffer_impl.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_pool.cpp
   # #strobe::rhi swapchain
-  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/surface.cpp
-  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain.cpp
-  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain_generation.cpp
-  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain_image.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/surface.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain_generation.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain_image.cpp
   # strobe::rhi gc
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/gc/garbage_collector.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/gc/gc.cpp
   # strobe::rhi queue
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/queue.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/que.cpp
+  # strobe::rhi device
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/device/device.cpp
 
-  # # strobe::rhi device
-  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/device/device.cpp
-  # #strobe::rhi queue
-  # ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/queue.cpp
+  # strobe::rhi 
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/rhi.cpp
 
 
 )

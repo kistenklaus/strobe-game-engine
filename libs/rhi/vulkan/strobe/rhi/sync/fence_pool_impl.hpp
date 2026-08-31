@@ -8,6 +8,7 @@
 #include "strobe/rhi/sync/fence_impl.hpp"
 #include "strobe/rhi/sync/fence_node.hpp"
 #include "strobe/rhi/vulkan/fence.hpp"
+#include <mutex>
 #include <atomic>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>

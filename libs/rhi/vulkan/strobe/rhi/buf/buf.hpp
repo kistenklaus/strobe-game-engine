@@ -10,6 +10,9 @@
 namespace strobe::rhi::buf {
 
 struct handle_allocators {
+  explicit handle_allocators(strobe::rhi::allocator_ref alloc) noexcept
+      : bufferAllocator(alloc) {}
+
   handle_allocator<BufferImpl> bufferAllocator;
 };
 

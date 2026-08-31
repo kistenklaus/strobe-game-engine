@@ -1,4 +1,4 @@
-#include "strobe/rhi/objects/timeline_semaphore.hpp"
+#include "strobe/rhi/sync/timeline_semaphore.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/sync/timeline_semaphore_impl.hpp"
 #include "strobe/rhi/vulkan/timeline_semaphore.hpp"

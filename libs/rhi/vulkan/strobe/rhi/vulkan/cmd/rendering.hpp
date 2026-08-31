@@ -155,6 +155,7 @@ void cmd_set_polygon_mode(const Context *context, CommandBuffer cmd,
                           VkPolygonMode polygonMode) noexcept;
 void cmd_set_polygon_mode(const Context *context, CommandBuffer cmd,
                           PolygonMode polygonMode) noexcept;
+
 void cmd_set_depth_clamp_enable(const Context *context, CommandBuffer cmd,
                                 bool depthClampEnable);
 

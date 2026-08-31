@@ -2,6 +2,8 @@
 #include "strobe/core/memory/AllocatorReference.hpp"
 #include "strobe/core/memory/Mallocator.hpp"
 #include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
+#include "strobe/rhi/types/queue_flags.hpp"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -109,7 +111,7 @@ void wait_queue_idle(Queue queue) {
     ZoneScopedN("vkQueueWaitIdle");
     VkResult result = vkQueueWaitIdle(queue.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Wait to wait for queue idle");
+      vulkan_error(result, "Failed to wait for queue idle!");
     }
   }
 }
@@ -118,23 +120,29 @@ PresentStatus queue_present(Queue queue, Swapchain swapchain,
   assert(queue);
   assert(swapchain);
 
-  static constexpr size_t SCRATCH_SIZE = sizeof(VkSemaphore) * 8;
-  using scratch_allocator =
-      InplaceMonotonicResource<strobe::Mallocator, SCRATCH_SIZE>;
-  using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
-  scratch_allocator scratch{};
+  VkFence presentFence = VK_NULL_HANDLE;
+  if (info.presentFence) {
+    presentFence = info.presentFence.handle;
+  }
 
-  Vector<VkSemaphore, scratch_allocator_ref> sems{
-      info.waitBinarySemaphores.size(), &scratch};
-  for (size_t i = 0; i < info.waitBinarySemaphores.size(); ++i) {
-    sems[i] = info.waitBinarySemaphores[i].handle;
+  VkSwapchainPresentFenceInfoKHR fenceInfo{
+      .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_FENCE_INFO_KHR,
+      .pNext = nullptr,
+      .swapchainCount = 1,
+      .pFences = &presentFence,
+  };
+
+  void *pNext = nullptr;
+  if (info.presentFence) {
+    fenceInfo.pNext = nullptr;
+    pNext = &fenceInfo;
   }
 
   VkPresentInfoKHR presentInfo{
       .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-      .pNext = nullptr,
-      .waitSemaphoreCount = static_cast<uint32_t>(sems.size()),
-      .pWaitSemaphores = sems.data(),
+      .pNext = pNext,
+      .waitSemaphoreCount = 1,
+      .pWaitSemaphores = &info.presentReady.handle,
       .swapchainCount = 1,
       .pSwapchains = &swapchain.handle,
       .pImageIndices = &imageIndex,

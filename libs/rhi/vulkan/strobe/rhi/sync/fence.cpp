@@ -34,6 +34,7 @@ Fence &Fence::operator=(Fence &&o) noexcept {
 Fence::~Fence() noexcept { unpin_void_handle<FenceImpl>(m_handle); }
 
 bool Fence::wait(uint64_t timeout) const noexcept {
+  assert(m_handle);
   auto *impl = void_handle_ptr<FenceImpl>(m_handle);
   if (impl->node == nullptr) {
     return true;
@@ -50,6 +51,7 @@ bool Fence::wait(uint64_t timeout) const noexcept {
 }
 
 bool Fence::signaled() const noexcept {
+  assert(m_handle);
   auto *impl = void_handle_ptr<FenceImpl>(m_handle);
   if (impl->node == nullptr) {
     return true;
@@ -68,6 +70,7 @@ bool Fence::signaled() const noexcept {
 }
 
 vulkan::Fence Fence::fence() const noexcept {
+  assert(m_handle);
   auto *impl = void_handle_ptr<FenceImpl>(m_handle);
   if (impl->node == nullptr) {
     return {};

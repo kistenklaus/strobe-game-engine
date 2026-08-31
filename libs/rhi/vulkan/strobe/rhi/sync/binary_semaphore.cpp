@@ -60,19 +60,16 @@ BinarySemaphore::~BinarySemaphore() noexcept {
     }
   }
 }
-VkSemaphoreSubmitInfo
-BinarySemaphore::signal(PipelineStage stage) const noexcept {
+vulkan::BinarySemaphore BinarySemaphore::signal() const noexcept {
   assert(m_handle);
   auto *node = static_cast<BinarySemaphoreNode *>(m_handle);
-  node->signaled = true;
-  return VkSemaphoreSubmitInfo{
-      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-      .pNext = nullptr,
-      .semaphore = node->semaphore.handle,
-      .value = 0,
-      .stageMask = to_vk_pipeline_stage(stage),
-      .deviceIndex = 0,
-  };
+  return node->semaphore;
+}
+
+vulkan::BinarySemaphore BinarySemaphore::wait() const noexcept {
+  assert(m_handle);
+  auto *node = static_cast<BinarySemaphoreNode *>(m_handle);
+  return node->semaphore;
 }
 
 } // namespace strobe::rhi

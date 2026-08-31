@@ -31,7 +31,8 @@ struct SubmitInfo {
 };
 
 struct PresentInfo {
-  span<const BinarySemaphore> waitBinarySemaphores = {};
+  BinarySemaphore presentReady{};
+  Fence presentFence{};
 };
 
 enum class PresentStatus {

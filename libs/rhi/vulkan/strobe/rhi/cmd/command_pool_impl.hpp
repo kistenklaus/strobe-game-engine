@@ -26,14 +26,13 @@ struct CommandPoolImpl {
 
   CommandPoolImpl(Context context, StagingPool stagingPool,
                   uint32_t queueFamily, cmd_buf_state_allocator_ref stateAlloc,
-                  handle_allocator_ref<CommandBufferImpl> cmdAlloc,
                   strobe::rhi::allocator_ref alloc) noexcept 
       : context(std::move(context)), stagingPool(std::move(stagingPool)),
         queueFamily(queueFamily),
 #ifdef STROBE_TRACY
         profilerContext(context.ctx()),
 #endif
-        stateAlloc(stateAlloc), cmdAlloc(cmdAlloc), m_nodePool(alloc) {
+        stateAlloc(stateAlloc), cmdAlloc(alloc), m_nodePool(alloc) {
   }
 
   CommandPoolImpl(const CommandPoolImpl &) = delete;
@@ -136,7 +135,7 @@ public:
 #endif
 
   cmd_buf_state_allocator_ref stateAlloc;
-  handle_allocator_ref<CommandBufferImpl> cmdAlloc;
+  handle_allocator<CommandBufferImpl> cmdAlloc;
 
 private:
   MPSCMonotonicPoolResource<sizeof(CmdPoolNode), alignof(CmdPoolNode),

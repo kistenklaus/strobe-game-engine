@@ -2,6 +2,7 @@
 
 #include "strobe/rhi/objects/command_buffer.hpp"
 #include "strobe/rhi/objects/object.hpp"
+#include "strobe/rhi/sync/binary_semaphore.hpp"
 #include "strobe/rhi/sync/timepoint.hpp"
 namespace strobe::rhi {
 
@@ -25,6 +26,7 @@ public:
   }
 
   void retire(Timepoint timepoint, span<const CommandBuffer> cmds);
+  void retire(Timepoint timepoint, span<const BinarySemaphore> sems);
 };
 
 } // namespace strobe::rhi

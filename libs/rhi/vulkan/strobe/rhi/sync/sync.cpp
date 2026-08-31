@@ -1,7 +1,7 @@
 #include "strobe/rhi/sync/sync.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/sync/fence_pool_impl.hpp"
-#include "strobe/rhi/sync/timeline_semaphore_impl.hpp"
+#include "strobe/rhi/sync/timeline_impl.hpp"
 #include "strobe/rhi/vulkan/timeline_semaphore.hpp"
 #include <vulkan/vulkan_core.h>
 
@@ -20,12 +20,14 @@ FencePool create_fence_pool(Context context, handle_allocators *alloc) {
       alloc->alloc)};
 }
 
-TimelineSemaphore create(Context context, const TimelineSemaphoreInfo &info,
-                         handle_allocators *alloc) {
-  const vulkan::TimelineSemaphore sem = vulkan::create_timeline_semaphore(
-      context.ctx(), {.initalValue = info.initialValue});
-  return TimelineSemaphore{make_void_handle<TimelineSemaphoreImpl>(
-      &alloc->timelineSemaphoreAllocator, std::move(context), sem)};
+Timeline create_timeline(Context context, handle_allocators *alloc) {
+
+  const vulkan::TimelineSemaphore sem =
+      vulkan::create_timeline_semaphore(context.ctx());
+  return Timeline{
+      make_void_handle<TimelineImpl>(&alloc->timelineAlloc, std::move(context),
+                                     sem),
+  };
 }
 
 } // namespace strobe::rhi::sync
