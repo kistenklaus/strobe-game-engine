@@ -13,6 +13,7 @@
 #include "strobe/rhi/sync/timeline.hpp"
 #include "strobe/rhi/sync/timeline_barrier.hpp"
 #include "strobe/rhi/sync/timeline_impl.hpp"
+#include "strobe/rhi/sync/timeline_notify_flag.hpp"
 #include <cassert>
 #include <common/TracySystem.hpp>
 #include <cstdint>
@@ -201,7 +202,12 @@ private:
 
   struct TimelineRetireBuffer {
     Timeline timeline;
+
+#ifdef STROBE_RHI_TRACE_LOCKS
+    TracyLockableN(std::mutex, mutex, "GC-fence");
+#else
     std::mutex mutex{};
+#endif
     VectorDeque<Retire<CommandBuffer>> retiredCmds;
     VectorDeque<Retire<BinarySemaphore>> retiredSems;
     Timepoint completed;
@@ -215,7 +221,7 @@ private:
     collect_retired(retireBuffer.mutex, retireBuffer.retiredSems, timepoint);
   }
 
-  void collect_retired(std::mutex &mutex,
+  void collect_retired(auto &mutex,
                        VectorDeque<Retire<CommandBuffer>> &retired,
                        Timepoint timepoint) {
     m_scratch.release();
@@ -238,7 +244,7 @@ private:
       }
     }
   }
-  void collect_retired(std::mutex &mutex,
+  void collect_retired(auto &mutex,
                        VectorDeque<Retire<BinarySemaphore>> &retired,
                        Timepoint timepoint) {
     m_scratch.release();
@@ -283,7 +289,7 @@ private:
         return;
       }
     }
-    Timeline::notify(target);
+    Timeline::notify(target, TimelineNotifyFlag::backpressure);
   }
 
   void collect_fences() {
@@ -314,7 +320,7 @@ private:
       buffer.requestedCommit = {};
     }
     ZoneScopedN("gc/commit-requested");
-    Timeline::notify(target);
+    Timeline::notify(target, TimelineNotifyFlag::backpressure);
   }
 
 private:
@@ -324,7 +330,13 @@ private:
   using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
   scratch_allocator m_scratch;
   Vector<TimelineRetireBuffer> m_retireBuffers;
+
+#ifdef STROBE_RHI_TRACE_LOCKS
+  TracyLockableN(std::mutex, m_retiredFencesMutex, "GC-fence");
+#else
   std::mutex m_retiredFencesMutex;
+#endif
+
   VectorDeque<Fence> m_retiredFences;
   TimelineBarrier m_barrier;
   std::jthread m_thread;

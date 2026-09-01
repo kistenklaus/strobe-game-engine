@@ -1,6 +1,8 @@
 #include "strobe/rhi/sync/timeline.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/sync/timeline_impl.hpp"
+#include "strobe/rhi/sync/timeline_notify_flag.hpp"
+#include <atomic>
 #include <thread>
 
 namespace strobe::rhi {
@@ -37,11 +39,14 @@ Timeline &Timeline::operator=(Timeline &&o) noexcept {
 
 Timeline::~Timeline() noexcept { unpin_void_handle<TimelineImpl>(m_handle); }
 
-void Timeline::notify(const Timepoint& timepoint) noexcept {
+void Timeline::notify(const Timepoint &timepoint,
+                      TimelineNotifyFlag flag) noexcept {
   ZoneScopedN("sync/timeline-notify");
+
   auto *timeline = void_handle_ptr<TimelineImpl>(timepoint.m_handle);
   void *pUserData = nullptr;
   void (*commit)(void *, Timepoint) = nullptr;
+
   {
     std::lock_guard lck{
         timeline->m_mutex}; // <- somehow this ends up beeing a deadlock
@@ -49,10 +54,15 @@ void Timeline::notify(const Timepoint& timepoint) noexcept {
         timeline->m_serial.load(std::memory_order_relaxed);
     assert(timepoint.m_serial < serial);
 
-    if (timepoint.m_serial <= timeline->m_commited) {
+    if (flag != TimelineNotifyFlag::block &&
+        timeline->m_commited >= timepoint.m_serial) {
       return;
     }
-    timeline->m_commited = serial;
+
+    assert(timepoint.m_serial <
+           timeline->m_serial.load(std::memory_order_relaxed));
+    timeline->m_commited = timepoint.m_serial;
+
     pUserData = timeline->m_pUserData;
     commit = timeline->m_commit;
   }
@@ -62,9 +72,9 @@ void Timeline::notify(const Timepoint& timepoint) noexcept {
   }
 }
 
-void Timeline::notify(uint64_t serial) noexcept {
+void Timeline::notify(uint64_t serial, TimelineNotifyFlag flag) noexcept {
   assert(m_handle);
-  notify(Timepoint{m_handle, serial});
+  notify(Timepoint{m_handle, serial}, flag);
 }
 
 Timepoint Timeline::now() noexcept {

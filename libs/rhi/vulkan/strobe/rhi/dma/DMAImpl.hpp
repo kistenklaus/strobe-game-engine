@@ -8,7 +8,11 @@
 #include "strobe/rhi/queue/queue_impl.hpp"
 #include "strobe/rhi/sync/timeline.hpp"
 #include "strobe/rhi/types/buffer_offset.hpp"
+
+#include <cassert>
+#include <mutex>
 #include <tracy/Tracy.hpp>
+#include <utility>
 
 namespace strobe::rhi {
 
@@ -16,85 +20,147 @@ struct DMAImpl {
 public:
   explicit DMAImpl(Timeline timeline, GarbageCollector gc, Queue queue,
                    CommandPool cmdpool) noexcept
-      : m_timeline(std::move(timeline)), m_gc(std::move(gc)),
-        m_queue(std::move(queue)), m_cmdpool(std::move(cmdpool)) {
-
-    m_committed = m_timeline.epoch();
-    begin_cmd();
-    m_timeline.install_commit(this,
-                              [](void *ptr, Timepoint timepoint) noexcept {
-                                static_cast<DMAImpl *>(ptr)->commit(timepoint);
-                              });
+      : m_timeline(std::move(timeline)),
+        m_gc(std::move(gc)),
+        m_queue(std::move(queue)),
+        m_cmdpool(std::move(cmdpool)),
+        m_committed(m_timeline.epoch()) {
+    m_open = make_recording_batch();
+    m_spare = make_recording_batch();
+    m_timeline.install_commit(
+        this, [](void *ptr, Timepoint timepoint) noexcept {
+          static_cast<DMAImpl *>(ptr)->commit(timepoint);
+        });
   }
+
+  DMAImpl(const DMAImpl &) = delete;
+  DMAImpl(DMAImpl &&) = delete;
+  DMAImpl &operator=(const DMAImpl &) = delete;
+  DMAImpl &operator=(DMAImpl &&) = delete;
+
   ~DMAImpl() noexcept {
     m_timeline.uninstall_commit();
-    std::lock_guard lock{m_mutex};
-    if (m_count != 0) {
-      end_cmd();
+    std::lock_guard commitLock{m_commitMutex};
+    Batch closed;
+    bool submitClosed = false;
+    {
+      std::lock_guard recordLock{m_recordMutex};
+      if (m_open.count != 0) {
+        m_open.cmd.end();
+        closed = std::move(m_open);
+        m_open = {};
+        submitClosed = true;
+      } else {
+        m_open.cmd.end();
+        m_open = {};
+      }
+      m_spare.cmd.end();
+      m_spare = {};
+    }
+    if (submitClosed) {
+      submit_closed(closed);
     }
   }
 
-  Timepoint async_copy(BufferOffset dst, BufferOffset src, uint64_t size) {
-    std::lock_guard lck{m_mutex};
-    m_cmd.copy_buffer(dst, src, size);
-    return step();
+  Timepoint async_copy(BufferOffset dst, BufferOffset src,
+                       uint64_t size) {
+    std::lock_guard recordLock{m_recordMutex};
+    m_open.cmd.copy_buffer(dst, src, size);
+    return step_locked();
   }
 
-  Timepoint async_upload(BufferOffset dst, void *src, uint64_t size) {
-    std::lock_guard lck{m_mutex};
-    m_cmd.update(dst, src, size);
-    return step();
+  Timepoint async_upload(BufferOffset dst, const void *src,
+                         uint64_t size) {
+    std::lock_guard recordLock{m_recordMutex};
+    m_open.cmd.update(dst, src, size);
+    return step_locked();
   }
 
 private:
-  // externally synchronized
-  Timepoint step() {
+  struct Batch {
+    CommandBuffer cmd{};
+    Timepoint last{};
+    uint32_t count = 0;
+  };
+
+  Batch make_recording_batch() {
+    Batch batch;
+    batch.cmd = m_cmdpool.alloc();
+    batch.cmd.begin();
+    return batch;
+  }
+
+  Timepoint step_locked() {
+    assert(m_open.count != UINT32_MAX);
     Timepoint timepoint = m_timeline.advance();
-    m_count += 1;
+    m_open.last = timepoint;
+    ++m_open.count;
     m_gc.retire(timepoint);
     return timepoint;
   }
-  // internally synchronized
-  void commit(const Timepoint &timepoint) noexcept {
-    std::lock_guard lck{m_mutex};
-    if (m_committed >= timepoint) {
-      return; // no need to submit this timepoint again.
+
+  // Serialized by m_commitMutex.
+  void commit(const Timepoint &requested) noexcept {
+    ZoneScopedN("dma/commit");
+    std::lock_guard commitLock{m_commitMutex};
+    if (m_committed >= requested) {
+      return;
     }
-    assert(m_count != 0);
-    assert(m_timeline.now() - 1 >= timepoint);
+    Batch closed;
+    {
+      ZoneScopedN("dma/rotate");
+      std::lock_guard recordLock{m_recordMutex};
+      assert(m_open.count != 0);
+      assert(m_open.last >= requested);
+      assert(m_spare.count == 0);
+      assert(!m_spare.last);
+      m_open.cmd.end();
+      closed = std::move(m_open);
+      m_open = std::move(m_spare);
+      m_spare = {};
+    }
 
-    end_cmd();
-    begin_cmd();
+    submit_closed(closed);
+
+    {
+      ZoneScopedN("dma/refill-spare");
+      std::lock_guard recordLock{m_recordMutex};
+      m_spare = make_recording_batch();
+    }
   }
 
-  void end_cmd() {
-    assert(m_count != 0);
-    m_committed = m_timeline.now() - 1;
-    m_cmd.end();
-    object_handle_ptr<QueueImpl>(m_queue)->signal_on_next_submit(
-        m_committed, PipelineStage::transfer);
-    m_queue.submit(&m_cmd);
+  void submit_closed(Batch &closed) noexcept {
+    assert(closed.count != 0);
+    assert(closed.last);
+    assert(m_committed < closed.last);
+    auto *queue = object_handle_ptr<QueueImpl>(m_queue);
+    queue->signal_on_next_submit(
+        closed.last, PipelineStage::transfer);
+    m_queue.submit(&closed.cmd);
     m_queue.flush();
-    m_count = 0;
+
+    m_committed = closed.last;
   }
 
-  void begin_cmd() {
-    m_cmd = m_cmdpool.alloc();
-    m_cmd.begin();
-  }
-
+private:
   Timeline m_timeline;
   GarbageCollector m_gc;
   Queue m_queue;
   CommandPool m_cmdpool;
-  uint32_t m_count = 0;
+
+  // open current begin recorded
+  Batch m_open;
+  // already allocated and begun, but constains no commands.
+  Batch m_spare;
+
   Timepoint m_committed;
 
-  CommandBuffer m_cmd{};
 #ifdef STROBE_RHI_TRACE_LOCKS
-  TracyLockableN(std::mutex, m_mutex, "DMA-mutex");
+  TracyLockableN(std::mutex, m_recordMutex, "DMA-record-mutex");
+  TracyLockableN(std::mutex, m_commitMutex, "DMA-commit-mutex");
 #else
-  std::mutex m_mutex{};
+  std::mutex m_recordMutex;
+  std::mutex m_commitMutex;
 #endif
 };
 

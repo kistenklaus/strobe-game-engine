@@ -2,6 +2,7 @@
 
 #include "strobe/rhi/objects/object.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
+#include "strobe/rhi/sync/timeline_notify_flag.hpp"
 #include "strobe/rhi/vulkan/timeline_semaphore.hpp"
 
 namespace strobe::rhi {
@@ -23,8 +24,8 @@ public:
     return lhs.m_handle != rhs.m_handle;
   }
 
-  static void notify(const Timepoint& timepoint) noexcept;
-  void notify(uint64_t serial) noexcept;
+  static void notify(const Timepoint& timepoint, TimelineNotifyFlag flag = TimelineNotifyFlag::block) noexcept;
+  void notify(uint64_t serial, TimelineNotifyFlag flag = TimelineNotifyFlag::block) noexcept;
 
   Timepoint now() noexcept;
   bool contains(Timepoint timepoint) const noexcept;
