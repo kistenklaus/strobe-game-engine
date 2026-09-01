@@ -4,7 +4,10 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <fmt/ostream.h>
+#include <tracy/Tracy.hpp>
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi::vulkan {
 
@@ -96,12 +99,15 @@ struct PNF_Functions {
   PFN_vkCmdSetColorWriteMaskEXT cmdSetColorWriteMask = nullptr;
   PFN_vkCmdSetAlphaToOneEnableEXT cmdSetAlphaToOneEnable = nullptr;
   PFN_vkCmdSetPatchControlPointsEXT cmdSetPatchControlPoints = nullptr;
+
+  PFN_vkReleaseSwapchainImagesKHR releaseSwapchainImages = nullptr;
 };
 
 [[nodiscard]]
 inline PNF_Functions
 load_pnf_functions(VkInstance instance, VkDevice device,
                    const ContextProperties &props) noexcept {
+  ZoneScopedN("context/load-pfn");
   assert(device != VK_NULL_HANDLE);
 
   PNF_Functions functions{};
@@ -315,6 +321,13 @@ load_pnf_functions(VkInstance instance, VkDevice device,
     functions.cmdSetPatchControlPoints =
         reinterpret_cast<PFN_vkCmdSetPatchControlPointsEXT>(
             vkGetDeviceProcAddr(device, "vkCmdSetPatchControlPointsEXT"));
+  }
+
+  if (props.swapchain) {
+    functions.releaseSwapchainImages =
+        reinterpret_cast<PFN_vkReleaseSwapchainImagesKHR>(
+            vkGetDeviceProcAddr(device, "vkReleaseSwapchainImagesKHR"));
+    assert(functions.releaseSwapchainImages);
   }
 
   return functions;
@@ -935,17 +948,19 @@ inline VkResult vk_get_calibrated_timestamps(
 // Descriptor heaps
 // -----------------------------------------------------------------------------
 
-inline void vk_cmd_bind_resource_heap(
-    const PNF_Functions *functions, VkCommandBuffer commandBuffer,
-    const VkBindHeapInfoEXT *bindInfo) noexcept {
+inline void
+vk_cmd_bind_resource_heap(const PNF_Functions *functions,
+                          VkCommandBuffer commandBuffer,
+                          const VkBindHeapInfoEXT *bindInfo) noexcept {
   assert(functions != nullptr);
   assert(functions->cmdBindResourceHeap != nullptr);
   functions->cmdBindResourceHeap(commandBuffer, bindInfo);
 }
 
-inline void vk_cmd_bind_sampler_heap(
-    const PNF_Functions *functions, VkCommandBuffer commandBuffer,
-    const VkBindHeapInfoEXT *bindInfo) noexcept {
+inline void
+vk_cmd_bind_sampler_heap(const PNF_Functions *functions,
+                         VkCommandBuffer commandBuffer,
+                         const VkBindHeapInfoEXT *bindInfo) noexcept {
   assert(functions != nullptr);
   assert(functions->cmdBindSamplerHeap != nullptr);
   functions->cmdBindSamplerHeap(commandBuffer, bindInfo);
@@ -964,8 +979,7 @@ inline VkResult vk_get_image_opaque_capture_data(
     const VkImage *images, VkHostAddressRangeEXT *data) noexcept {
   assert(functions != nullptr);
   assert(functions->getImageOpaqueCaptureData != nullptr);
-  return functions->getImageOpaqueCaptureData(device, imageCount, images,
-                                              data);
+  return functions->getImageOpaqueCaptureData(device, imageCount, images, data);
 }
 
 inline VkDeviceSize vk_get_physical_device_descriptor_size(
@@ -995,6 +1009,14 @@ inline VkResult vk_write_sampler_descriptors(
   assert(functions->writeSamplerDescriptors != nullptr);
   return functions->writeSamplerDescriptors(device, samplerCount, samplers,
                                             descriptors);
+}
+
+inline VkResult vk_release_swapchain_images(
+    const PNF_Functions *functions, VkDevice device,
+    const VkReleaseSwapchainImagesInfoKHR *pReleaseInfo) {
+  assert(functions != nullptr);
+  assert(functions->releaseSwapchainImages);
+  return functions->releaseSwapchainImages(device, pReleaseInfo);
 }
 
 } // namespace strobe::rhi::vulkan

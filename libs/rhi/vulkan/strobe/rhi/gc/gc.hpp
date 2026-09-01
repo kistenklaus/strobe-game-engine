@@ -3,6 +3,7 @@
 #include "strobe/rhi/gc/garbage_collector.hpp"
 #include "strobe/rhi/gc/garbage_collector_impl.hpp"
 #include "strobe/rhi/handle.hpp"
+
 namespace strobe::rhi::gc {
 
 struct handle_allocators {

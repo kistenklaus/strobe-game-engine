@@ -1,4 +1,5 @@
 #include "strobe/rhi/vulkan/image.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/vulkan/context/context.hpp"
 #include "strobe/rhi/vulkan/memory.hpp"
 #include <stdexcept>
@@ -38,7 +39,7 @@ Image create_image(Context *context, const ImageInfo &info) {
     const VkResult result = vkCreateImage(
         context->device(), &imageInfo, context->driver_alloc(), &image.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create vulkan image");
+      vulkan_error(result, "Failed to create vulkan image");
     }
   }
   return image;
@@ -98,7 +99,7 @@ void bind_image_memory(Context *context, const Memory &memory, Image image,
     VkResult result = vmaBindImageMemory2(context->vma(), memory.handle, offset,
                                           image.handle, nullptr);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to bind image memory");
+      vulkan_error(result, "Failed to bind image memory");
     }
   }
 }

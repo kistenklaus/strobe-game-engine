@@ -1,4 +1,5 @@
 #include "strobe/rhi/vulkan/shader_object.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/vulkan/context/pnf.hpp"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -33,7 +34,7 @@ ShaderObject create_shader_object(Context *context,
         vk_create_shaders(context->pnf(), context->device(), 1,
                           &createInfo, context->driver_alloc(), &obj.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create shader object");
+      vulkan_error(result, "Failed to create shader object");
     }
   }
   return obj;

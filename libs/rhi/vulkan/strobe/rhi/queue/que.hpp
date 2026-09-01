@@ -2,8 +2,9 @@
 
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/queue/queue.hpp"
+#include "strobe/rhi/objects/queue.hpp"
 #include "strobe/rhi/queue/queue_impl.hpp"
+
 namespace strobe::rhi::que {
 
 struct handle_allocators {

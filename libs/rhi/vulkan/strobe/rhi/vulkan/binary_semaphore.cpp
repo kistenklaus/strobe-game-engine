@@ -1,4 +1,5 @@
 #include "strobe/rhi/vulkan/binary_semaphore.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 
 namespace strobe::rhi::vulkan {
 
@@ -16,7 +17,7 @@ BinarySemaphore create_binary_semaphore(Context *context,
     VkResult result = vkCreateSemaphore(context->device(), &createInfo,
                                         context->driver_alloc(), &sem.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create semaphore");
+      vulkan_error(result, "Failed to create semaphore");
     }
   }
   return sem;

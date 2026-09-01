@@ -7,18 +7,20 @@
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/objects/command_buffer.hpp"
+#include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/sync/binary_semaphore.hpp"
 #include "strobe/rhi/sync/fence.hpp"
 #include "strobe/rhi/sync/timeline.hpp"
 #include "strobe/rhi/sync/timeline_barrier.hpp"
-#include "strobe/rhi/sync/timepoint.hpp"
+#include "strobe/rhi/sync/timeline_impl.hpp"
 #include <cassert>
+#include <common/TracySystem.hpp>
 #include <cstdint>
-#include <fmt/ostream.h>
 #include <limits>
 #include <mutex>
 #include <stop_token>
 #include <thread>
+#include <tracy/Tracy.hpp>
 
 namespace strobe::rhi {
 
@@ -46,6 +48,34 @@ struct GarbageCollectorImpl {
   GarbageCollectorImpl &operator=(GarbageCollectorImpl &&) = delete;
   ~GarbageCollectorImpl() noexcept = default;
 
+  void request_commit(Timepoint timepoint) noexcept {
+    uint32_t timelineIndex = std::numeric_limits<uint32_t>::max();
+    for (uint32_t i = 0; i < m_retireBuffers.size(); ++i) {
+      if (m_retireBuffers[i].timeline.contains(timepoint)) {
+        timelineIndex = i;
+        break;
+      }
+    }
+    assert(timelineIndex != std::numeric_limits<uint32_t>::max());
+    auto &buffer = m_retireBuffers[timelineIndex];
+
+    bool wake = false;
+    {
+      std::lock_guard lock{buffer.mutex};
+      if (timepoint <= buffer.completed) {
+        return;
+      }
+      if (!buffer.requestedCommit || buffer.requestedCommit < timepoint) {
+        buffer.requestedCommit = timepoint;
+        wake = true;
+      }
+    }
+    if (wake) {
+      ZoneScopedN("gc/request-commit");
+      m_barrier.notify();
+    }
+  }
+
   // Retire a timepoint, might initally feel weird, but essentially
   // registers the timepoint to the gc for backpressure.
   void retire(Timepoint timepoint) {
@@ -70,6 +100,7 @@ struct GarbageCollectorImpl {
       wake = pending <= BACKPRESSURE_THRESHOLD;
     }
     if (wake) {
+      ZoneScopedN("gc/wake");
       m_barrier.notify();
     }
   }
@@ -96,6 +127,7 @@ struct GarbageCollectorImpl {
       wake = pending <= BACKPRESSURE_THRESHOLD;
     }
     if (wake) {
+      ZoneScopedN("gc/wake");
       m_barrier.notify();
     }
   }
@@ -122,6 +154,7 @@ struct GarbageCollectorImpl {
       wake = pending <= BACKPRESSURE_THRESHOLD;
     }
     if (wake) {
+      ZoneScopedN("gc/wake");
       m_barrier.notify();
     }
   }
@@ -132,10 +165,13 @@ struct GarbageCollectorImpl {
   }
 
   void gc_main(std::stop_token st) {
+    tracy::SetThreadName("rhi-gc");
+
     std::stop_callback stop_callback(
         st, [barrier = &m_barrier] { barrier->notify(); });
 
     while (!st.stop_requested()) {
+      ZoneScopedN("gc-cycle");
       auto [timelineIndex, timepoint] = m_barrier.wait_any();
       if (st.stop_requested()) {
         break;
@@ -149,6 +185,9 @@ struct GarbageCollectorImpl {
         for (uint32_t i = 0; i < m_retireBuffers.size(); ++i) {
           backpressure(m_retireBuffers[i], m_retireBuffers[i].completed);
         }
+      }
+      for (auto &buffer : m_retireBuffers) {
+        commit_requested(buffer);
       }
       collect_fences();
     }
@@ -167,6 +206,8 @@ private:
     VectorDeque<Retire<BinarySemaphore>> retiredSems;
     Timepoint completed;
     Timepoint retired;
+
+    Timepoint requestedCommit{};
   };
 
   void collect(TimelineRetireBuffer &retireBuffer, Timepoint timepoint) {
@@ -174,15 +215,43 @@ private:
     collect_retired(retireBuffer.mutex, retireBuffer.retiredSems, timepoint);
   }
 
-  template <typename T>
-  void collect_retired(std::mutex &mutex, VectorDeque<Retire<T>> &retired,
+  void collect_retired(std::mutex &mutex,
+                       VectorDeque<Retire<CommandBuffer>> &retired,
                        Timepoint timepoint) {
     m_scratch.release();
-    Vector<T, scratch_allocator_ref> objects{&m_scratch};
+    Vector<CommandBuffer, scratch_allocator_ref> objects{&m_scratch};
+    objects.reserve(128);
     {
       std::lock_guard lck{mutex};
+      if (retired.empty()) {
+        return;
+      }
+      ZoneScopedN("gc/collect-cmds");
       while (!retired.empty()) {
-        Retire<T> &retire = retired.front();
+        Retire<CommandBuffer> &retire = retired.front();
+        if (retire.timepoint <= timepoint) {
+          objects.emplace_back(std::move(retired.front().object));
+          retired.pop_front();
+        } else {
+          break;
+        }
+      }
+    }
+  }
+  void collect_retired(std::mutex &mutex,
+                       VectorDeque<Retire<BinarySemaphore>> &retired,
+                       Timepoint timepoint) {
+    m_scratch.release();
+    Vector<BinarySemaphore, scratch_allocator_ref> objects{&m_scratch};
+    objects.reserve(128);
+    {
+      std::lock_guard lck{mutex};
+      if (retired.empty()) {
+        return;
+      }
+      ZoneScopedN("gc/collect-sems");
+      while (!retired.empty()) {
+        Retire<BinarySemaphore> &retire = retired.front();
         if (retire.timepoint <= timepoint) {
           objects.emplace_back(std::move(retired.front().object));
           retired.pop_front();
@@ -199,14 +268,19 @@ private:
       std::lock_guard lock{buffer.mutex};
       assert(buffer.completed <= completed);
       buffer.completed = completed;
-      assert(buffer.completed <= buffer.retired);
-      const uint64_t pending = buffer.retired - buffer.completed;
-      if (pending == 0) {
+      if (buffer.retired <= buffer.completed) {
         return;
       }
       target = buffer.completed + BACKPRESSURE_THRESHOLD;
       if (buffer.retired < target) {
         target = buffer.retired;
+      }
+      const uint64_t lastClosedSerial = buffer.timeline.serial() - 1;
+      if (TimelineImpl::get_timepoint_serial(target) > lastClosedSerial) {
+        target = buffer.timeline.from_serial(lastClosedSerial);
+      }
+      if (target <= buffer.completed) {
+        return;
       }
     }
     Timeline::notify(target);
@@ -214,19 +288,33 @@ private:
 
   void collect_fences() {
     m_scratch.release();
-    Vector<Fence, scratch_allocator_ref> retired{&m_scratch};
+    Vector<Fence, scratch_allocator_ref> objects{&m_scratch};
+    objects.reserve(128);
     {
       std::lock_guard lck{m_retiredFencesMutex};
       while (!m_retiredFences.empty()) {
-        auto &fence = retired.front();
+        auto &fence = m_retiredFences.front();
         if (fence.signaled()) {
-          retired.emplace_back(std::move(fence));
+          objects.emplace_back(std::move(fence));
           m_retiredFences.pop_front();
         } else {
           break;
         }
       }
     }
+  }
+  void commit_requested(TimelineRetireBuffer &buffer) {
+    Timepoint target;
+    {
+      std::lock_guard lock{buffer.mutex};
+      if (!buffer.requestedCommit) {
+        return;
+      }
+      target = buffer.requestedCommit;
+      buffer.requestedCommit = {};
+    }
+    ZoneScopedN("gc/commit-requested");
+    Timeline::notify(target);
   }
 
 private:

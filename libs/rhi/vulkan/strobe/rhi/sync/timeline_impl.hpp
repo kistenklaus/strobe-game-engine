@@ -2,7 +2,7 @@
 
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/sync/timepoint.hpp"
+#include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/vulkan/timeline_semaphore.hpp"
 #include <atomic>
 #include <cassert>
@@ -25,7 +25,8 @@ public:
 
   static vulkan::TimelineSemaphore
   get_timepoint_semaphore(Timepoint timepoint) {
-    return void_handle_ptr<TimelineImpl>(timepoint.m_handle)->m_timelineSemaphore;
+    return void_handle_ptr<TimelineImpl>(timepoint.m_handle)
+        ->m_timelineSemaphore;
   }
   static uint64_t get_timepoint_serial(Timepoint timepoint) {
     return timepoint.m_serial;
@@ -34,7 +35,7 @@ public:
   const Context context;
   const vulkan::TimelineSemaphore m_timelineSemaphore;
   std::mutex m_mutex{};
-  std::atomic<uint64_t> m_serial{0};
+  std::atomic<uint64_t> m_serial{1};
   std::atomic<uint64_t> m_completed{0};
 
   void *m_pUserData = nullptr;

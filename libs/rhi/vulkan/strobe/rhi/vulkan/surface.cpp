@@ -1,12 +1,11 @@
 #include "strobe/rhi/vulkan/surface.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include <stdexcept>
 
 namespace strobe::rhi::vulkan {
 
 Surface create_surface(Context *context, GLFWwindow *window) {
-  if (!context->properties().surface) {
-    throw std::runtime_error("surface is not supported by this context");
-  }
+  assert(context->properties().surface);
   assert(window != nullptr);
 
   Surface surface;
@@ -15,7 +14,7 @@ Surface create_surface(Context *context, GLFWwindow *window) {
     VkResult result = glfwCreateWindowSurface(
         context->instance(), window, context->driver_alloc(), &surface.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create glfw window surface");
+      vulkan_error(result, "Failed to create glfw window surface");
     }
   }
   return surface;
@@ -43,7 +42,7 @@ SurfaceCapabilities query_surface_capabilities(Context *context,
     const VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
         context->physicalDevice(), surface.handle, &caps);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to query Vulkan surface capabilities");
+      vulkan_error(result, "Failed to query Vulkan surface capabilities");
     }
   }
 

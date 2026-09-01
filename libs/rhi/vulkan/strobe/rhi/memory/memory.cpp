@@ -6,6 +6,7 @@ namespace strobe::rhi {
 
 MemoryPool mem::create_mem_pool(Context context,
                                 mem::handle_allocators *alloc) {
+  ZoneScopedN("mem/create-mem-pool");
   return MemoryPool{make_void_handle<MemoryPoolImpl>(
       &alloc->poolAlloc, std::move(context), alloc->alloc)};
 }

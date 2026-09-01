@@ -1,4 +1,5 @@
 #include "strobe/rhi/vulkan/buffer.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/vulkan/memory.hpp"
 
 #include <stdexcept>
@@ -39,7 +40,7 @@ Buffer create_buffer(Context *context, const BufferInfo &info) {
                        &buffer.handle);
 
     if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to create Vulkan buffer"};
+      vulkan_error(result, "Failed to create Vulkan buffer");
     }
   }
 
@@ -108,7 +109,7 @@ void bind_buffer_memory(Context *context, const Memory &memory, Buffer buffer,
     VkResult result = vmaBindBufferMemory2(context->vma(), memory.handle,
                                            offset, buffer.handle, nullptr);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to bind buffer memory");
+      vulkan_error(result, "Failed to bind buffer memory");
     }
   }
 }

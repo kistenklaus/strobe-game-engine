@@ -63,6 +63,7 @@ VmaDeviceMemoryTracker g_tracker;
 VmaAllocator create_vma(VkInstance instance, VkPhysicalDevice physicalDevice,
                         VkDevice device, uint32_t apiVersion,
                         const DriverAlloc *driverAlloc) {
+  ZoneScopedN("context/create-vma");
   const VmaDeviceMemoryCallbacks *deviceMemoryCallbacks = nullptr;
 #if defined(TRACY_ENABLE) && defined(STROBE_INSTRUMENT_VMA)
   g_tracker.reset();

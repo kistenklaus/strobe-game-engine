@@ -8,7 +8,7 @@
 #include "strobe/rhi/sync/fence_pool_impl.hpp"
 #include "strobe/rhi/sync/timeline.hpp"
 #include "strobe/rhi/sync/timeline_impl.hpp"
-#include "strobe/rhi/sync/timepoint.hpp"
+#include "strobe/rhi/objects/timepoint.hpp"
 
 namespace strobe::rhi::sync {
 

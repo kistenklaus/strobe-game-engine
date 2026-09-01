@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <fmt/ostream.h>
 #include <memory>
 #include <type_traits>
 
@@ -56,7 +57,8 @@ public:
       o.storage->refCount.fetch_add(1, std::memory_order_relaxed);
     }
     { // unpin
-      if (storage->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      if (storage != nullptr &&
+          storage->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
         upstream_alloc tmp = std::move(storage->upstream);
         std::destroy_at(storage);
         upstream_traits::template deallocate<Storage>(tmp, storage);
@@ -70,7 +72,8 @@ public:
       return *this;
     }
     { // unpin
-      if (storage->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      if (storage != nullptr &&
+          storage->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
         upstream_alloc tmp = std::move(storage->upstream);
         std::destroy_at(storage);
         upstream_traits::template deallocate<Storage>(tmp, storage);
@@ -83,7 +86,8 @@ public:
     if (storage == nullptr) {
       return;
     }
-    if (storage->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+    if (storage != nullptr &&
+        storage->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
       upstream_alloc tmp = std::move(storage->upstream);
       std::destroy_at(storage);
       upstream_traits::template deallocate<Storage>(tmp, storage);
@@ -125,9 +129,8 @@ template <typename T> struct handle_control_block {
   explicit handle_control_block(handle_allocator<T> *alloc, Args &&...args)
       : refCount{1}, value(std::forward<Args>(args)...),
         allocatorStorage(alloc->storage) {
-    static_assert(allocator::handle_size >= sizeof(decltype(*this)));
-    static_assert(allocator::handle_alignment >= alignof(decltype(*this)));
-    assert(allocatorStorage != 0);
+    assert(allocatorStorage != nullptr);
+    allocatorStorage->refCount.fetch_add(1, std::memory_order_relaxed);
   }
 
   std::atomic<uint64_t> refCount{1};
@@ -156,7 +159,12 @@ template <typename T> void pin_handle(handle<T> h) noexcept {
 }
 
 template <typename T> void unpin_handle(handle<T> h) noexcept {
-
+  if (h == nullptr) {
+    return;
+  }
+  if (h->refCount.fetch_sub(1, std::memory_order_acq_rel) != 1) {
+    return;
+  }
   using handle_alloc = handle_allocator<T>;
   using mpsc_alloc = handle_alloc::allocator;
   using mpsc_traits = AllocatorTraits<mpsc_alloc>;
@@ -165,25 +173,20 @@ template <typename T> void unpin_handle(handle<T> h) noexcept {
   using cb = handle_control_block<T>;
   using alloc_storage = handle_alloc::Storage;
 
-  if (h == nullptr) {
-    return;
-  }
-  if (h->refCount.fetch_sub(1, std::memory_order_acq_rel) != 1) {
-    return;
-  }
-  // pin allocator storage
+  // This pin is owned by the control block itself.
   alloc_storage *storage = h->allocatorStorage;
   assert(storage != nullptr);
-  storage->refCount.fetch_add(1, std::memory_order_relaxed);
-  // destroy control block
+
   std::destroy_at(h);
-  // deallocate control block
+
   mpsc_traits::template deallocate<cb>(storage->alloc, h);
-  // unpin allocator
+
+  // Release the control block's allocator-storage ownership.
   if (storage->refCount.fetch_sub(1, std::memory_order_acq_rel) != 1) {
     return;
   }
-  strobe::rhi::allocator_ref upstream = std::move(storage->upstream);
+
+  upstream_alloc upstream = std::move(storage->upstream);
   std::destroy_at(storage);
   upstream_traits::template deallocate<alloc_storage>(upstream, storage);
 }

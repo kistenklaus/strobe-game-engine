@@ -149,6 +149,7 @@ public:
 
 private:
   static void close_callback(GLFWwindow *window) {
+    fmt::println("close-callback");
     auto win = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
     win->m_state.should_close.store(true, std::memory_order_relaxed);
   }

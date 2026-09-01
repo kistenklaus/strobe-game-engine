@@ -1,4 +1,5 @@
 #include "strobe/rhi/vulkan/command_pool.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -19,7 +20,7 @@ CommandPool create_command_pool(Context *context, const CommandPoolInfo &info) {
         vkCreateCommandPool(context->device(), &createInfo,
                             context->driver_alloc(), &cmdpool.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create command buffer");
+      vulkan_error(result, "Failed to create command buffer");
     }
   }
   return cmdpool;
@@ -44,7 +45,7 @@ void reset_command_pool(Context *context, CommandPool cmdpool,
     VkResult result =
         vkResetCommandPool(context->device(), cmdpool.handle, flags);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to reset command pool");
+      vulkan_error(result, "Failed to reset command pool");
     }
   }
 }

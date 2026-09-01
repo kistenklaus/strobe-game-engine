@@ -151,7 +151,10 @@ DeviceFeatures details::query_device_features(
   const bool deferredHostOperationsExt = details::supports_extension(
       supportedExtensions, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
 
-  vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
+  {
+    ZoneScopedN("vkGetPhysicalDeviceFeatures2");
+    vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
+  }
 
   return DeviceFeatures{
       .robustBufferAccess = features2.features.robustBufferAccess,

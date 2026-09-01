@@ -1,7 +1,7 @@
 #pragma once
 
 #include "strobe/rhi/objects/object.hpp"
-#include "strobe/rhi/swapchain/swapchain_image.hpp"
+#include "strobe/rhi/objects/swapchain_image.hpp"
 
 namespace strobe::rhi {
 

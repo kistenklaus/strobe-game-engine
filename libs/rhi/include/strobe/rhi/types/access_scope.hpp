@@ -2,6 +2,7 @@
 
 #include "strobe/rhi/types/access.hpp"
 #include "strobe/rhi/types/pipeline_stage.hpp"
+
 namespace strobe::rhi {
 
 struct AccessScope {

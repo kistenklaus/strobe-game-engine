@@ -86,6 +86,7 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_pool.cpp
   # #strobe::rhi swapchain
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/surface.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swap.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain_generation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/swapchain/swapchain_image.cpp
@@ -111,8 +112,13 @@ target_link_libraries(strobe-rhi-vulkan
   PRIVATE strobe-core
   PRIVATE Vulkan::Vulkan
   PRIVATE strobe::vma
+  PRIVATE strobe::tracy
 )
 target_link_glfw(strobe-rhi-vulkan PRIVATE)
+
+if (STROBE_SAN)
+  target_link_libraries(strobe-rhi-vulkan PUBLIC strobe_sanitizers)
+endif()
 
 # Select RHI implementation:
 add_library(strobe::rhi ALIAS strobe-rhi-vulkan)
@@ -130,6 +136,6 @@ target_link_libraries(strobe-rhi-sandbox
   PRIVATE Vulkan::Vulkan
   PRIVATE strobe::vma
 )
-target_include_directories(strobe-rhi-sandbox
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/vulkan
-)
+# target_include_directories(strobe-rhi-sandbox
+#   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/vulkan
+# )

@@ -20,6 +20,7 @@ public:
   static DeviceInfo query(VkInstance instance, VkPhysicalDevice physicalDevice,
                           uint32_t apiVersion,
                           const strobe::rhi::allocator_ref &alloc) {
+    ZoneScopedN("context/query-physical-device-info");
     return DeviceInfo(instance, physicalDevice, apiVersion, alloc);
   }
 

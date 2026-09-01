@@ -101,7 +101,7 @@ void queue_submit(Queue queue, const SubmitInfo &info) {
     VkResult result =
         vkQueueSubmit2(queue.handle, 1, &submitInfo, info.fence.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to submit to queue");
+      vulkan_error(result, "Failed to submit to queue");
     }
   }
 }
@@ -160,7 +160,7 @@ PresentStatus queue_present(Queue queue, Swapchain swapchain,
   } else if (result == VK_ERROR_OUT_OF_DATE_KHR) {
     return PresentStatus::out_of_date;
   } else {
-    throw std::runtime_error("Failed to present to queue");
+    vulkan_error(result, "Failed to present to queue");
   }
 }
 

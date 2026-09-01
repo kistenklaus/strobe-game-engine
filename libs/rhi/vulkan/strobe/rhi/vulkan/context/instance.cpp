@@ -2,6 +2,8 @@
 #include "strobe/core/containers/vector.hpp"
 #include "strobe/core/memory/AllocatorReference.hpp"
 #include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi::vulkan {
 
@@ -32,9 +34,10 @@ check_instance_extension_support(span<const VkExtensionProperties> supported,
       });
   if (it == supported.end()) {
     if (request == required) {
-      throw std::runtime_error{fmt::format("Required Vulkan instance extension "
-                                           "'{}' is not supported",
-                                           extension_name)};
+      vulkan_error(VK_ERROR_EXTENSION_NOT_PRESENT,
+                   "Required Vulkan instance extension "
+                   "'{}' is not supported",
+                   extension_name);
     }
     return false;
   }
@@ -53,9 +56,10 @@ check_instance_layer_support(span<const VkLayerProperties> supported,
       });
   if (it == supported.end()) {
     if (request == required) {
-      throw std::runtime_error{fmt::format("Required Vulkan instance layer "
-                                           "'{}' is not supported",
-                                           layer_name)};
+      vulkan_error(VK_ERROR_LAYER_NOT_PRESENT,
+                   "Required Vulkan instance layer "
+                   "'{}' is not supported",
+                   layer_name);
     }
     return false;
   }
@@ -66,6 +70,7 @@ check_instance_layer_support(span<const VkLayerProperties> supported,
 
 VkInstance create_instance(const ContextCreateInfo *info,
                            ContextProperties *props, DriverAlloc *alloc) {
+  ZoneScopedN("context/create-instance");
   using scatch_allocator =
       InplaceMonotonicResource<strobe::Mallocator, 1 << 14>;
   using scatch_traits = AllocatorTraits<scatch_allocator>;
@@ -79,12 +84,13 @@ VkInstance create_instance(const ContextCreateInfo *info,
   Vector<VkExtensionProperties, scatch_allocator_ref> supported_extensions{
       &scatch};
   {
+    ZoneScopedN("vkEnumerateInstanceExtensionProperties");
     uint32_t extension_count = 0;
     VkResult result = vkEnumerateInstanceExtensionProperties(
         nullptr, &extension_count, nullptr);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error{
-          "Failed to query Vulkan instance extension count"};
+      vulkan_error(VK_ERROR_EXTENSION_NOT_PRESENT,
+                   "Failed to query Vulkan instance extension count");
     }
     do {
       supported_extensions.resize(extension_count);
@@ -92,17 +98,18 @@ VkInstance create_instance(const ContextCreateInfo *info,
           nullptr, &extension_count, supported_extensions.data());
     } while (result == VK_INCOMPLETE);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to query Vulkan instance extensions"};
+      vulkan_error(result, "Failed to query Vulkan instance extensions");
     }
     supported_extensions.resize(extension_count);
   }
   // query supported layers
   Vector<VkLayerProperties, scatch_allocator_ref> supported_layers{&scatch};
   {
+    ZoneScopedN("vkEnumerateInstanceLayerProperties");
     std::uint32_t layer_count = 0;
     VkResult result = vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to query Vulkan instance layer count."};
+      vulkan_error(result, "Failed to query Vulkan instance layer count.");
     }
     do {
       supported_layers.resize(layer_count);
@@ -110,7 +117,7 @@ VkInstance create_instance(const ContextCreateInfo *info,
                                                   supported_layers.data());
     } while (result == VK_INCOMPLETE);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to query Vulkan instance layers."};
+      vulkan_error(result, "Failed to query Vulkan instance layers.");
     }
     supported_layers.resize(layer_count);
   }
@@ -139,11 +146,15 @@ VkInstance create_instance(const ContextCreateInfo *info,
   }
   if (info->surface != disable) {
     std::uint32_t count = 0;
-    const char **requiredExtensions = glfwGetRequiredInstanceExtensions(&count);
+    const char **requiredExtensions;
+    {
+      ZoneScopedN("glfwGetRequiredInstanceExtensions");
+      requiredExtensions = glfwGetRequiredInstanceExtensions(&count);
+    }
     if (requiredExtensions == nullptr) {
       if (info->surface == required) {
-        throw std::runtime_error{
-            "GLFW could not provide Vulkan surface extensions"};
+        vulkan_error(VK_ERROR_EXTENSION_NOT_PRESENT,
+                     "GLFW could not provide Vulkan surface extensions");
       }
     } else {
       bool supported = true;
@@ -203,10 +214,13 @@ VkInstance create_instance(const ContextCreateInfo *info,
   };
 
   VkInstance instance = VK_NULL_HANDLE;
-  VkResult result =
-      vkCreateInstance(&createInfo, alloc->callbacks(), &instance);
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create vulkan instance");
+  {
+    ZoneScopedN("vkCreateInstance");
+    VkResult result =
+        vkCreateInstance(&createInfo, alloc->callbacks(), &instance);
+    if (result != VK_SUCCESS) {
+      vulkan_error(result, "Failed to create vulkan instance");
+    }
   }
   return instance;
 }

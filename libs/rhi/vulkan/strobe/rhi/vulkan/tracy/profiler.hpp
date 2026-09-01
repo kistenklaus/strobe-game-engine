@@ -56,6 +56,7 @@ public:
                                          })),
         m_tracyCtxId(::tracy::GetGpuCtxCounter().fetch_add(
             1, std::memory_order_relaxed)) {
+    assert(m_context != nullptr);
     assert(
         m_context->properties().calibratedTimestamps &&
         "strobe::tracy requires the VK_EXT_calibrated_timestamps extension!");

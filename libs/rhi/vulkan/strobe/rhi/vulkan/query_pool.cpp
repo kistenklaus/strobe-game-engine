@@ -1,8 +1,8 @@
 #include "strobe/rhi/vulkan/query_pool.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 
 #include <cassert>
 #include <limits>
-#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi::vulkan {
@@ -19,10 +19,11 @@ QueryPool create_query_pool(Context *context, const QueryPoolInfo &info) {
       .pipelineStatistics = info.pipeline_statistics,
   };
   QueryPool pool{};
+  assert(context->device());
   const VkResult result = vkCreateQueryPool(
       context->device(), &createInfo, context->driver_alloc(), &pool.handle);
   if (result != VK_SUCCESS) {
-    throw std::runtime_error{"Failed to create Vulkan query pool"};
+    vulkan_error(result, "Failed to create Vulkan query pool");
   }
   return pool;
 }
@@ -53,7 +54,7 @@ bool get_query_pool_results_u32(Context *context, QueryPool pool,
       static_cast<uint32_t>(queryCount), results.size_bytes(), results.data(),
       sizeof(uint32_t) * info.valuesPerQuery, flags);
   if (result != VK_SUCCESS && result != VK_NOT_READY) {
-    throw std::runtime_error("Failed to get query pool results");
+    vulkan_error(result, "Failed to get query pool results");
   }
   return result == VK_SUCCESS;
 }
@@ -78,7 +79,7 @@ bool get_query_pool_results_u64(Context *context, QueryPool pool,
       static_cast<uint32_t>(queryCount), results.size_bytes(), results.data(),
       sizeof(uint64_t) * info.valuesPerQuery, flags);
   if (result != VK_SUCCESS && result != VK_NOT_READY) {
-    throw std::runtime_error("Failed to get query pool results");
+    vulkan_error(result, "Failed to get query pool results");
   }
   return result == VK_SUCCESS;
 }

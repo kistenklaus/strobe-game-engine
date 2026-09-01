@@ -3,7 +3,9 @@
 #include "strobe/rhi/objects/command_buffer.hpp"
 #include "strobe/rhi/objects/object.hpp"
 #include "strobe/rhi/sync/binary_semaphore.hpp"
-#include "strobe/rhi/sync/timepoint.hpp"
+#include "strobe/rhi/objects/timepoint.hpp"
+#include "strobe/rhi/sync/fence.hpp"
+
 namespace strobe::rhi {
 
 class GarbageCollector : Object<GarbageCollector> {
@@ -25,8 +27,13 @@ public:
     return lhs.m_handle == rhs.m_handle;
   }
 
+  void request_commit(Timepoint timepoint) noexcept;
+
+  void retire(Timepoint timepoint) noexcept;
   void retire(Timepoint timepoint, span<const CommandBuffer> cmds);
   void retire(Timepoint timepoint, span<const BinarySemaphore> sems);
+  void retire(Fence fence) noexcept;
+
 };
 
 } // namespace strobe::rhi

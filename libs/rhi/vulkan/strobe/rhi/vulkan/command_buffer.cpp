@@ -1,4 +1,5 @@
 #include "strobe/rhi/vulkan/command_buffer.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -20,7 +21,7 @@ CommandBuffer alloc_command_buffer(Context *context,
     VkResult result =
         vkAllocateCommandBuffers(context->device(), &allocInfo, &cmd.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to allocate command buffer");
+      vulkan_error(result, "Failed to allocate command buffer");
     }
   }
   return cmd;
@@ -41,7 +42,7 @@ void reset_command_buffer(CommandBuffer cmd) {
     ZoneScopedN("vkResetCommandBuffer");
     VkResult result = vkResetCommandBuffer(cmd.handle, 0);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to reset command buffer");
+      vulkan_error(result, "Failed to reset command buffer");
     }
   }
 }
@@ -59,7 +60,7 @@ void begin_command_buffer(CommandBuffer cmd) {
     ZoneScopedN("vkBeginCommandBuffer");
     VkResult result = vkBeginCommandBuffer(cmd.handle, &beginInfo);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to begin command buffer");
+      vulkan_error(result, "Failed to begin command buffer");
     }
   }
 }
@@ -69,7 +70,7 @@ void end_command_buffer(CommandBuffer cmd) {
     ZoneScopedN("vkEndCommandBuffer");
     VkResult result = vkEndCommandBuffer(cmd.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to end command buffer");
+      vulkan_error(result, "Failed to end command buffer");
     }
   }
 }

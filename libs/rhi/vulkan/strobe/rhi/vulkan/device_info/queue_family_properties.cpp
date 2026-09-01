@@ -16,6 +16,7 @@ details::query_queue_family_properties(
   Vector<VkQueueFamilyProperties2, scratch_allocator_ref> native{&scratch};
 
   {
+    ZoneScopedN("vkGetPhysicalDeviceQueueFamilyProperties2");
     uint32_t queueFamilyCount = 0;
 
     vkGetPhysicalDeviceQueueFamilyProperties2(physicalDevice, &queueFamilyCount,
@@ -44,9 +45,12 @@ details::query_queue_family_properties(
   for (uint32_t qfi = 0; qfi < native.size(); ++qfi) {
     const auto &props = native[qfi];
 
-    const bool presentationSupport =
-        glfwGetPhysicalDevicePresentationSupport(instance, physicalDevice,
-                                                 qfi) == GLFW_TRUE;
+    bool presentationSupport;
+    {
+      ZoneScopedN("glfwGetPhysicalDevicePresentationSupport");
+      presentationSupport = glfwGetPhysicalDevicePresentationSupport(
+                                instance, physicalDevice, qfi) == GLFW_TRUE;
+    }
 
     queueFamilyProperties.push_back(QueueFamilyProperties{
         .queueFlags = props.queueFamilyProperties.queueFlags,

@@ -45,7 +45,7 @@ BinarySemaphorePool::~BinarySemaphorePool() noexcept {
 BinarySemaphore BinarySemaphorePool::allocate() noexcept {
   auto *impl = void_handle_ptr<BinarySemaphorePoolImpl>(m_handle);
   BinarySemaphoreNode *node = impl->alloc();
-  node->pool = this;
+  node->pool = m_handle;
   node->refCount.store(1, std::memory_order_relaxed);
   return BinarySemaphore{node};
 }

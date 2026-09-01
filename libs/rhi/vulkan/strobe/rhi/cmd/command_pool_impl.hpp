@@ -30,7 +30,7 @@ struct CommandPoolImpl {
       : context(std::move(context)), stagingPool(std::move(stagingPool)),
         queueFamily(queueFamily),
 #ifdef STROBE_TRACY
-        profilerContext(context.ctx()),
+        profilerContext(this->context.ctx()),
 #endif
         stateAlloc(stateAlloc), cmdAlloc(alloc), m_nodePool(alloc) {
   }

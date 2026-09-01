@@ -55,6 +55,7 @@ constexpr int queue_family_score(const QueueFamilyProperties &family,
 Vector<QueueLocation, strobe::rhi::allocator_ref>
 select_queues(const DeviceInfo *device_info, const ContextCreateInfo *info,
               const strobe::rhi::allocator_ref &alloc) {
+  ZoneScopedN("context/select-queues");
   assert(device_info != nullptr);
   assert(info != nullptr);
   assert(info->queue_count == 0 || info->pQueues != nullptr);

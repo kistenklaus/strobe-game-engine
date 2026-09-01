@@ -30,7 +30,8 @@ BinarySemaphore &BinarySemaphore::operator=(const BinarySemaphore &o) noexcept {
   }
   { // unpin
     auto *node = static_cast<BinarySemaphoreNode *>(m_handle);
-    if (node->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+    if (node != nullptr &&
+        node->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
       void_handle_ptr<BinarySemaphorePoolImpl>(node->pool)->recycle(node);
     }
   }
@@ -44,7 +45,8 @@ BinarySemaphore &BinarySemaphore::operator=(BinarySemaphore &&o) noexcept {
   }
   { // unpin
     auto *node = static_cast<BinarySemaphoreNode *>(m_handle);
-    if (node->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+    if (node != nullptr &&
+        node->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
       void_handle_ptr<BinarySemaphorePoolImpl>(node->pool)->recycle(node);
     }
   }
@@ -55,7 +57,8 @@ BinarySemaphore &BinarySemaphore::operator=(BinarySemaphore &&o) noexcept {
 BinarySemaphore::~BinarySemaphore() noexcept {
   { // unpin
     auto *node = static_cast<BinarySemaphoreNode *>(m_handle);
-    if (node->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+    if (node != nullptr &&
+        node->refCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
       void_handle_ptr<BinarySemaphorePoolImpl>(node->pool)->recycle(node);
     }
   }

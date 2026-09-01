@@ -1,7 +1,7 @@
 #pragma once
 
 #include "strobe/rhi/objects/object.hpp"
-#include "strobe/rhi/sync/timepoint.hpp"
+#include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/vulkan/timeline_semaphore.hpp"
 
 namespace strobe::rhi {

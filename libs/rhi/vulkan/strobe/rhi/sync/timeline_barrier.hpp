@@ -4,7 +4,7 @@
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/sync/timeline.hpp"
-#include "strobe/rhi/sync/timepoint.hpp"
+#include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/vulkan/timeline_semaphore.hpp"
 #include <limits>
 #include <mutex>
@@ -54,9 +54,9 @@ public:
     }
     m_values.back() = wake;
 
-    for (uint32_t i = 0; i < m_timelines.size(); ++i) {
-      m_timelines[i].notify(m_values[i]);
-    }
+    // for (uint32_t i = 0; i < m_timelines.size(); ++i) {
+    //   m_timelines[i].notify(m_values[i]);
+    // }
 
     VkSemaphoreWaitInfo waitInfo{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,

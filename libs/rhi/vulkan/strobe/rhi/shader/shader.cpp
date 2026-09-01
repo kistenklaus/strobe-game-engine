@@ -41,8 +41,9 @@ create_shader_object(const Context &context, ShaderStage stage,
       });
 }
 
-VertexShader create(Context context, const VertexShaderInfo &info,
+VertexShader create_vertex(Context context, const VertexShaderInfo &info,
                     handle_allocators *alloc) {
+  ZoneScopedN("shader/create-vertex");
   const vulkan::ShaderObject so =
       create_shader_object(context, ShaderStage::vertex, info.nextStage,
                            info.spirv, info.pushConstantRange);
@@ -50,8 +51,9 @@ VertexShader create(Context context, const VertexShaderInfo &info,
       &alloc->shaderAlloc, std::move(context), so)};
 }
 
-FragmentShader create(Context context, const FragmentShaderInfo &info,
+FragmentShader create_fragment(Context context, const FragmentShaderInfo &info,
                       handle_allocators *alloc) {
+  ZoneScopedN("shader/create-fragment");
   const vulkan::ShaderObject so =
       create_shader_object(context, ShaderStage::fragment, ShaderStage::none,
                            info.spirv, info.pushConstantRange);
@@ -59,10 +61,11 @@ FragmentShader create(Context context, const FragmentShaderInfo &info,
       &alloc->shaderAlloc, std::move(context), so)};
 }
 
-ComputeShader create(Context context, const ComputeShaderInfo &info,
+ComputeShader create_compute(Context context, const ComputeShaderInfo &info,
                      handle_allocators *alloc) {
+  ZoneScopedN("shader/create-compute");
   const vulkan::ShaderObject so =
-      create_shader_object(context, ShaderStage::fragment, ShaderStage::none,
+      create_shader_object(context, ShaderStage::compute, ShaderStage::none,
                            info.spirv, info.pushConstantRange);
   return ComputeShader{make_void_handle<ShaderObjectImpl>(
       &alloc->shaderAlloc, std::move(context), so)};

@@ -38,22 +38,21 @@ Timeline &Timeline::operator=(Timeline &&o) noexcept {
 Timeline::~Timeline() noexcept { unpin_void_handle<TimelineImpl>(m_handle); }
 
 void Timeline::notify(Timepoint timepoint) noexcept {
-  if (timepoint.relaxed_poll()) {
-    return;
-  }
+  ZoneScopedN("sync/timeline-notify");
   auto *timeline = void_handle_ptr<TimelineImpl>(timepoint.m_handle);
+  void *pUserData = nullptr;
+  void (*commit)(void *, Timepoint) = nullptr;
   {
     std::lock_guard lck{
         timeline->m_mutex}; // <- somehow this ends up beeing a deadlock
-
-    uint64_t serial = timeline->m_serial.load(std::memory_order_relaxed);
-    if (timepoint.m_serial < serial) {
-      return;
-    }
-    assert(timepoint.m_serial == serial);
-    if (timeline->m_commit) {
-      timeline->m_commit(timeline->m_pUserData, timepoint);
-    }
+    [[maybe_unused]] uint64_t serial =
+        timeline->m_serial.load(std::memory_order_relaxed);
+    assert(timepoint.m_serial < serial);
+    pUserData = timeline->m_pUserData;
+    commit = timeline->m_commit;
+  }
+  if (commit) {
+    commit(pUserData, timepoint);
   }
 }
 

@@ -9,13 +9,12 @@
 #include "strobe/rhi/gc/garbage_collector.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/objects/command_buffer.hpp"
+#include "strobe/rhi/objects/swapchain_image.hpp"
+#include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/swapchain/swapchain_generation_impl.hpp"
-#include "strobe/rhi/swapchain/swapchain_image.hpp"
 #include "strobe/rhi/swapchain/swapchain_image_impl.hpp"
-#include "strobe/rhi/sync/fence_impl.hpp"
 #include "strobe/rhi/sync/timeline.hpp"
 #include "strobe/rhi/sync/timeline_impl.hpp"
-#include "strobe/rhi/sync/timepoint.hpp"
 #include "strobe/rhi/types/queue_flags.hpp"
 #include "strobe/rhi/utils/pipeline_stage_utils.hpp"
 #include "strobe/rhi/vulkan/binary_semaphore.hpp"
@@ -23,8 +22,9 @@
 #include "strobe/rhi/vulkan/queue_type.hpp"
 #include <algorithm>
 #include <array>
-#include <fmt/ostream.h>
+#include <atomic>
 #include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -39,7 +39,6 @@ public:
     m_timeline.set_commit_callback(this, [](void *self, Timepoint tp) {
       static_cast<QueueImpl *>(self)->commit(tp);
     });
-    m_timeline.advance(); // inital step.
   }
   QueueImpl(const QueueImpl &) = delete;
   QueueImpl(QueueImpl &&) = delete;
@@ -52,8 +51,9 @@ public:
   }
 
   QueueFlags flags() const noexcept { return m_flags; }
+  uint32_t family() const noexcept { return m_queue.family; }
 
-  void wait(SwapchainImage image, PipelineStage stage) {
+  void wait(const SwapchainImage &image, PipelineStage stage) {
     auto *img = object_handle_ptr<SwapchainImageImpl>(image);
     SwapchainFrame &frame = img->generation.frame(img->index);
     BinarySemaphore imageAvailable = std::move(frame.imageAvailable);
@@ -118,24 +118,34 @@ public:
 
   void present(SwapchainImage image) noexcept {
     std::lock_guard lck{m_mutex};
+    if (m_pendingPresent) {
+      submit_all();
+    }
+
     auto *img = object_handle_ptr<SwapchainImageImpl>(image);
-    auto *gen = object_handle_ptr<SwapchainGenerationImpl>(img->generation);
     auto [presentReady, presentFence] = img->generation.present();
+    Timepoint presentDependency;
     if (m_submissions.empty()) {
-      auto &sub = m_submissions.emplace_back(m_timeline.now(), m_wait, &m_bump);
+      presentDependency = m_timeline.advance();
+      auto &sub =
+          m_submissions.emplace_back(presentDependency, m_wait, &m_bump);
       sub.signal = presentReady.signal();
       m_wait.clear();
     } else {
-      m_submissions.back().signal = presentReady.signal();
+      auto &sub = m_submissions.back();
+      sub.signal = presentReady.signal();
+      presentDependency = sub.timepoint;
     }
-    submit_all();
-    vulkan::queue_present(
-        m_queue, gen->swapchain, img->index,
-        {
-            .presentReady = presentReady.wait(),
-            .presentFence =
-                object_handle_ptr<FenceImpl>(presentFence)->node->fence,
-        });
+
+    assert(!m_pendingPresent);
+
+    m_pendingPresent = QueuePresentation{
+        .image = std::move(image),
+        .presentReady = std::move(presentReady),
+        .presentFence = std::move(presentFence),
+    };
+
+    m_gc.request_commit(presentDependency);
   }
 
 private:
@@ -155,15 +165,18 @@ private:
     Vector<VkSemaphoreSubmitInfo, bump_allocator_ref> wait;
     Vector<VkCommandBufferSubmitInfo, bump_allocator_ref> cmds;
 
-    vulkan::BinarySemaphore signal;
+    vulkan::BinarySemaphore signal{};
+  };
+
+  struct QueuePresentation {
+    SwapchainImage image;
+    BinarySemaphore presentReady;
+    Fence presentFence;
   };
 
   void commit(Timepoint timepoint) noexcept {
-    if (timepoint.relaxed_poll()) {
-      return;
-    }
     std::lock_guard lck{m_mutex};
-    if (m_submissions.empty()) {
+    if (m_submissions.empty() && !m_pendingPresent) {
       return;
     }
     if (timepoint < m_submissions.front().timepoint) {
@@ -172,63 +185,82 @@ private:
     submit_all();
   }
 
+  // externally synchronized!
   void submit_all() {
-    if (m_submissions.empty()) {
-      return;
-    }
-    std::array<VkSubmitInfo2, MAX_SUBMIT_BATCH_SIZE> submitInfos;
-    std::array<VkSemaphoreSubmitInfo, MAX_SUBMIT_BATCH_SIZE * 2> signalInfo;
-    for (uint32_t i = 0; i < m_submissions.size(); ++i) {
-      auto &submission = m_submissions[i];
+    ZoneScopedN("queue/submit");
+    if (!m_submissions.empty()) {
 
-      uint32_t signalCount = 1;
-      signalInfo[2 * i] = VkSemaphoreSubmitInfo{
-          .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-          .pNext = nullptr,
-          .semaphore =
-              TimelineImpl::get_timepoint_semaphore(submission.timepoint)
-                  .handle,
-          .value = TimelineImpl::get_timepoint_serial(submission.timepoint),
-          .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-          .deviceIndex = 0,
-      };
-      if (submission.signal) {
-        signalCount += 1;
-        signalInfo[2 * i + 1] = VkSemaphoreSubmitInfo{
+      std::array<VkSubmitInfo2, MAX_SUBMIT_BATCH_SIZE> submitInfos;
+      std::array<VkSemaphoreSubmitInfo, MAX_SUBMIT_BATCH_SIZE * 2> signalInfo;
+      for (uint32_t i = 0; i < m_submissions.size(); ++i) {
+        auto &submission = m_submissions[i];
+
+        uint32_t signalCount = 1;
+        signalInfo[2 * i] = VkSemaphoreSubmitInfo{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
             .pNext = nullptr,
-            .semaphore = submission.signal.handle,
-            .value = 0,
+            .semaphore =
+                TimelineImpl::get_timepoint_semaphore(submission.timepoint)
+                    .handle,
+            .value = TimelineImpl::get_timepoint_serial(submission.timepoint),
             .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
             .deviceIndex = 0,
         };
-      }
+        if (submission.signal) {
+          signalCount += 1;
+          signalInfo[2 * i + 1] = VkSemaphoreSubmitInfo{
+              .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+              .pNext = nullptr,
+              .semaphore = submission.signal.handle,
+              .value = 0,
+              .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+              .deviceIndex = 0,
+          };
+        }
 
-      submitInfos[i] = VkSubmitInfo2{
-          .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-          .pNext = nullptr,
-          .flags = 0,
-          .waitSemaphoreInfoCount =
-              static_cast<uint32_t>(submission.wait.size()),
-          .pWaitSemaphoreInfos = submission.wait.data(),
-          .commandBufferInfoCount =
-              static_cast<uint32_t>(submission.cmds.size()),
-          .pCommandBufferInfos = submission.cmds.data(),
-          .signalSemaphoreInfoCount = signalCount,
-          .pSignalSemaphoreInfos = signalInfo.data() + 2 * i,
-      };
-    }
-    {
-      ZoneScopedN("vkQueueSubmit2");
-      VkResult result = vkQueueSubmit2(m_queue.handle, m_submissions.size(),
-                                       submitInfos.data(), VK_NULL_HANDLE);
-      if (result != VK_SUCCESS) {
-        throw std::runtime_error("Failed to submit to queue");
+        submitInfos[i] = VkSubmitInfo2{
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+            .pNext = nullptr,
+            .flags = 0,
+            .waitSemaphoreInfoCount =
+                static_cast<uint32_t>(submission.wait.size()),
+            .pWaitSemaphoreInfos = submission.wait.data(),
+            .commandBufferInfoCount =
+                static_cast<uint32_t>(submission.cmds.size()),
+            .pCommandBufferInfos = submission.cmds.data(),
+            .signalSemaphoreInfoCount = signalCount,
+            .pSignalSemaphoreInfos = signalInfo.data() + 2 * i,
+        };
       }
+      {
+        ZoneScopedN("vkQueueSubmit2");
+        VkResult result = vkQueueSubmit2(m_queue.handle, m_submissions.size(),
+                                         submitInfos.data(), VK_NULL_HANDLE);
+        if (result != VK_SUCCESS) {
+          throw std::runtime_error("Failed to submit to queue");
+        }
+      }
+      m_submissions.clear();
+      m_bump.release();
     }
-    m_submissions.clear();
-    m_bump.release();
+
+    if (m_pendingPresent) {
+      auto *img =
+          object_handle_ptr<SwapchainImageImpl>(m_pendingPresent->image);
+      auto *gen = object_handle_ptr<SwapchainGenerationImpl>(img->generation);
+      gen->debugCounter.fetch_sub(1, std::memory_order_relaxed);
+      vulkan::queue_present(
+          m_queue, gen->swapchain, img->index,
+          {
+              .presentReady = m_pendingPresent->presentReady.wait(),
+              .presentFence = m_pendingPresent->presentFence.fence(),
+          });
+      m_gc.retire(m_pendingPresent->presentFence);
+      img->consume();
+      m_pendingPresent.reset();
+    }
   }
+
   Timeline m_timeline;
   GarbageCollector m_gc;
   vulkan::Queue m_queue;
@@ -237,6 +269,9 @@ private:
   Vector<VkSemaphoreSubmitInfo> m_wait;
   SmallVector<QueueSubmission, MAX_SUBMIT_BATCH_SIZE, strobe::NullAllocator>
       m_submissions;
+
+  std::optional<QueuePresentation> m_pendingPresent;
+
   std::mutex m_mutex;
 };
 

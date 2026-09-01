@@ -1,4 +1,4 @@
-#include "strobe/rhi/queue/queue.hpp"
+#include "strobe/rhi/objects/queue.hpp"
 #include "strobe/rhi/queue/queue_impl.hpp"
 #include "strobe/rhi/handle.hpp"
 
@@ -40,9 +40,23 @@ void Queue::wait(Timepoint timepoint, PipelineStage stage) noexcept {
   impl->wait(timepoint, stage);
 }
 
+void Queue::wait(const SwapchainImage &swapchainImage,
+                 PipelineStage stage) noexcept {
+  ZoneScopedN("Queue::wait");
+  auto* impl = void_handle_ptr<QueueImpl>(m_handle);
+  impl->wait(swapchainImage, stage);
+}
+
 void Queue::submit(span<const CommandBuffer> cmds) noexcept {
+  ZoneScopedN("Queue::submit");
   auto* impl = void_handle_ptr<QueueImpl>(m_handle);
   impl->submit(cmds);
+}
+
+void Queue::present(SwapchainImage swapchainImage) noexcept {
+  auto* impl = void_handle_ptr<QueueImpl>(m_handle);
+  ZoneScopedN("Queue::present");
+  impl->present(swapchainImage);
 }
 
 } // namespace strobe::rhi

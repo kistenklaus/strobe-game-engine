@@ -243,6 +243,7 @@ get_tlas_size(vulkan::Context *ctx, BuildFlags buildFlags,
 Blas create_blas(MemoryPool memoryPool, ScratchBuffer scratchBuffer,
                  const BlasInfo &info, const MemoryLifetime &lifetime,
                  handle_allocators *alloc) {
+  ZoneScopedN("bvh/create-blas");
   Context context = memoryPool.context();
   vulkan::Context *ctx = context.ctx();
 
@@ -294,6 +295,7 @@ Blas create_blas(MemoryPool memoryPool, ScratchBuffer scratchBuffer,
 Tlas create_tlas(MemoryPool memoryPool, ScratchBuffer scratchBuffer,
                  const TlasInfo &info, const MemoryLifetime &lifetime,
                  handle_allocators *alloc) {
+  ZoneScopedN("bvh/create-tlas");
   Context context = memoryPool.context();
   vulkan::Context *ctx = context.ctx();
 
@@ -327,6 +329,7 @@ Tlas create_tlas(MemoryPool memoryPool, ScratchBuffer scratchBuffer,
 }
 
 ScratchBuffer create_scratch(MemoryPool memoryPool, handle_allocators *alloc) {
+  ZoneScopedN("bvh/create-scratch");
   return ScratchBuffer{make_void_handle<ScratchBufferImpl>(
       &alloc->scratchAllocator, std::move(memoryPool), alloc->bufAllocators)};
 }

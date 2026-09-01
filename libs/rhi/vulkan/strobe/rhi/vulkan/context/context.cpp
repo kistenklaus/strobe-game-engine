@@ -37,7 +37,6 @@ Context::Context(const ContextCreateInfo &info,
 Context::~Context() noexcept {
 
   vkDeviceWaitIdle(m_device);
-
   vmaDestroyAllocator(m_vma);
 
   // logical device.

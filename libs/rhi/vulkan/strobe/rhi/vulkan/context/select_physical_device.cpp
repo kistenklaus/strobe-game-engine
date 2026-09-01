@@ -297,6 +297,7 @@ VkPhysicalDevice
 select_physical_device(VkInstance instance, const ContextCreateInfo *info,
                        const ContextProperties *props,
                        const strobe::rhi::allocator_ref alloc) {
+  ZoneScopedN("context/select-physical-device");
   using scratch_allocator =
       InplaceMonotonicResource<strobe::rhi::scratch_allocator, 1 << 14>;
   using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
@@ -304,19 +305,22 @@ select_physical_device(VkInstance instance, const ContextCreateInfo *info,
   scratch_allocator scratch{};
   Vector<VkPhysicalDevice, scratch_allocator_ref> devices{&scratch};
   std::uint32_t count = 0;
-  VkResult result = vkEnumeratePhysicalDevices(instance, &count, nullptr);
-  if (result != VK_SUCCESS || count == 0) {
-    throw std::runtime_error("Failed to enumerate physical devices");
-  }
-  while (true) {
-    devices.resize(static_cast<size_t>(count));
-    result = vkEnumeratePhysicalDevices(instance, &count, devices.data());
-    devices.resize(count);
-    if (result == VK_SUCCESS) {
-      break;
-    }
-    if (result != VK_INCOMPLETE) {
+  {
+    ZoneScopedN("vkEnumeratePhysicalDevices");
+    VkResult result = vkEnumeratePhysicalDevices(instance, &count, nullptr);
+    if (result != VK_SUCCESS || count == 0) {
       throw std::runtime_error("Failed to enumerate physical devices");
+    }
+    while (true) {
+      devices.resize(static_cast<size_t>(count));
+      result = vkEnumeratePhysicalDevices(instance, &count, devices.data());
+      devices.resize(count);
+      if (result == VK_SUCCESS) {
+        break;
+      }
+      if (result != VK_INCOMPLETE) {
+        throw std::runtime_error("Failed to enumerate physical devices");
+      }
     }
   }
 

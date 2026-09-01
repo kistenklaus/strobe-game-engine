@@ -4,16 +4,18 @@
 #include "strobe/rhi/memory/memory_granularity_class.hpp"
 #include "strobe/rhi/utils/buffer_usage_utils.hpp"
 #include "strobe/rhi/vulkan/buffer.hpp"
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi::buf {
 
 Buffer create_buffer(const MemoryPool &memoryPool, const BufferInfo &info,
                      const MemoryLifetime &lifetime, handle_allocators *alloc) {
+  ZoneScopedN("buf/create_buffer");
 
   Context context = memoryPool.context();
   vulkan::Context *ctx = context.ctx();
   vulkan::Buffer buffer = vulkan::create_buffer(
-      ctx, {.size = info.size, .usage = to_vk_buffer_usage(info.bufferUsage)});
+      ctx, {.size = info.size, .usage = to_vk_buffer_usage(info.bufferUsage) | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT});
 
   vulkan::MemoryRequirements requirements =
       vulkan::get_buffer_memory_requirements(ctx, buffer);

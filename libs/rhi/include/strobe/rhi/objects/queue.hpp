@@ -2,8 +2,10 @@
 
 #include "strobe/rhi/objects/command_buffer.hpp"
 #include "strobe/rhi/objects/object.hpp"
-#include "strobe/rhi/sync/timepoint.hpp"
+#include "strobe/rhi/objects/swapchain_image.hpp"
+#include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/types/pipeline_stage.hpp"
+
 namespace strobe::rhi {
 
 class Queue : Object<Queue> {
@@ -26,7 +28,12 @@ public:
   void wait(Timepoint timepoint,
             PipelineStage stage = PipelineStage::all_commands) noexcept;
 
+  void wait(const SwapchainImage &swapchainImage,
+            PipelineStage stage = PipelineStage::all_commands) noexcept;
+
   void submit(span<const CommandBuffer> cmds) noexcept;
+
+  void present(SwapchainImage swapchainImage) noexcept;
 };
 
 } // namespace strobe::rhi

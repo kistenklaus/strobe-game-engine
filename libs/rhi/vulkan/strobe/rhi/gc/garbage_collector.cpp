@@ -40,6 +40,16 @@ GarbageCollector::~GarbageCollector() noexcept {
   unpin_void_handle<GarbageCollectorImpl>(m_handle);
 }
 
+void GarbageCollector::request_commit(Timepoint timepoint) noexcept {
+  auto *impl = void_handle_ptr<GarbageCollectorImpl>(m_handle);
+  impl->request_commit(timepoint);
+}
+
+void GarbageCollector::retire(Timepoint timepoint) noexcept {
+  auto *impl = void_handle_ptr<GarbageCollectorImpl>(m_handle);
+  impl->retire(timepoint);
+}
+
 void GarbageCollector::retire(Timepoint timepoint,
                               span<const CommandBuffer> cmds) {
   auto *impl = void_handle_ptr<GarbageCollectorImpl>(m_handle);
@@ -50,6 +60,11 @@ void GarbageCollector::retire(Timepoint timepoint,
                               span<const BinarySemaphore> sems) {
   auto *impl = void_handle_ptr<GarbageCollectorImpl>(m_handle);
   impl->retire(timepoint, sems);
+}
+
+void GarbageCollector::retire(Fence fence) noexcept {
+  auto *impl = void_handle_ptr<GarbageCollectorImpl>(m_handle);
+  impl->retire(fence);
 }
 
 } // namespace strobe::rhi

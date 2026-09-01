@@ -1,9 +1,12 @@
 #include "strobe/rhi/vulkan/swapchain.hpp"
 #include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
+#include "strobe/rhi/vulkan/context/pnf.hpp"
 
 #include <cstring>
 #include <fmt/format.h>
 #include <stdexcept>
+#include <tracy/Tracy.hpp>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi::vulkan {
@@ -54,7 +57,7 @@ Swapchain create_swapchain(Context *context, const SwapchainInfo &info) {
         vkCreateSwapchainKHR(context->device(), &createInfo,
                              context->driver_alloc(), &swapchain.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create swapchain");
+      vulkan_error(result, "Failed to create swapchain");
     }
   }
 
@@ -82,7 +85,7 @@ uint32_t get_swapchain_images(Context *context, Swapchain swapchain,
     VkResult result = vkGetSwapchainImagesKHR(
         context->device(), swapchain.handle, &count, nullptr);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to get swapchain images");
+      vulkan_error(result, "Failed to get swapchain images");
     }
   }
   if (count > images.size()) {
@@ -100,7 +103,7 @@ uint32_t get_swapchain_images(Context *context, Swapchain swapchain,
     VkResult result = vkGetSwapchainImagesKHR(
         context->device(), swapchain.handle, &count, native.data());
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to get swapchain images");
+      vulkan_error(result, "Failed to get swapchain images");
     }
   }
   for (size_t i = 0; i < count; ++i) {
@@ -130,8 +133,10 @@ acquire_next_swapchain_image(Context *context, Swapchain swapchain,
   VkResult result;
   {
     ZoneScopedN("vkAcquireNextImage2KHR");
+    fmt::println("begin-acquire");
     result =
         vkAcquireNextImage2KHR(context->device(), &acquireInfo, imageIndex);
+    fmt::println("end-acquire");
   }
   if (result == VK_SUCCESS) {
     return SwapchainAcquireStatus::success;
@@ -144,7 +149,28 @@ acquire_next_swapchain_image(Context *context, Swapchain swapchain,
   } else if (result == VK_ERROR_OUT_OF_DATE_KHR) {
     return SwapchainAcquireStatus::out_of_date;
   } else {
-    throw std::runtime_error("Failed to acquire next swapchain image");
+    vulkan_error(result, "Failed to acquire next swapchain image");
+  }
+}
+
+void release_swapchain_image(Context *context, Swapchain swapchain,
+                             uint32_t imageIndex) noexcept {
+
+  VkReleaseSwapchainImagesInfoKHR releaseInfo{
+      .sType = VK_STRUCTURE_TYPE_RELEASE_SWAPCHAIN_IMAGES_INFO_KHR,
+      .pNext = nullptr,
+      .swapchain = swapchain.handle,
+      .imageIndexCount = 1,
+      .pImageIndices = &imageIndex,
+  };
+
+  {
+    ZoneScopedN("vkReleaseSwapchainImages");
+    const VkResult result = vulkan::vk_release_swapchain_images(
+        context->pnf(), context->device(), &releaseInfo);
+    if (result != VK_SUCCESS) {
+      vulkan_error(result, "Failed to release swapchain image");
+    }
   }
 }
 

@@ -17,6 +17,7 @@ namespace strobe::rhi::img {
 Image create_image(const MemoryPool &memoryPool, const ImageInfo &info,
                    const MemoryLifetime &lifetime,
                    handle_allocators* alloc) {
+  ZoneScopedN("img/create-image");
   Context context = memoryPool.context();
   vulkan::Context *ctx = context.ctx();
 
@@ -77,6 +78,7 @@ Image create_image(const MemoryPool &memoryPool, const ImageInfo &info,
 
 ImageView create_image_view(Image image, const ImageViewInfo &info,
                             handle_allocators *alloc) {
+  ZoneScopedN("img/create-image-view");
   auto *img_impl = object_handle_ptr<ImageImpl, Image>(image);
   Context context = img_impl->context;
   vulkan::Context *const ctx = context.ctx();

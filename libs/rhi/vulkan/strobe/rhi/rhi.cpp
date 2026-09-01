@@ -4,10 +4,12 @@
 #include "strobe/rhi/sync/sync.hpp"
 #include "strobe/rhi/types/device_info.hpp"
 #include "strobe/rhi/vulkan/context/create_info.hpp"
+#include <memory>
 
 namespace strobe::rhi {
 
 Device create_device(const DeviceInfo &info) {
+  ZoneScopedN("rhi/create_device");
   vulkan::ContextCreateInfo createInfo{};
   using vulkan::feature::disable;
   using vulkan::feature::optional;
@@ -60,13 +62,17 @@ Device create_device(const DeviceInfo &info) {
   auto *allocs =
       static_cast<handle_allocators *>(context.get_allocator().allocate(
           sizeof(handle_allocators), alignof(handle_allocators)));
-  std::construct_at(allocs, context.get_allocator());
-  context.delete_hook(allocs, [](void *ptr) noexcept {
-    auto *allocs = static_cast<handle_allocators *>(ptr);
-    auto alloc = allocs->alloc;
-    alloc.deallocate(allocs, sizeof(handle_allocators),
-                     alignof(handle_allocators));
-  });
+  {
+    ZoneScopedN("rhi/allocate-allocators");
+    std::construct_at(allocs, context.get_allocator());
+    context.delete_hook(allocs, [](void *ptr) noexcept {
+      auto *allocs = static_cast<handle_allocators *>(ptr);
+      auto alloc = allocs->alloc;
+      std::destroy_at(allocs);
+      alloc.deallocate(allocs, sizeof(handle_allocators),
+                       alignof(handle_allocators));
+    });
+  }
 
   // create pools
   FencePool fencePool = sync::create_fence_pool(context, &allocs->syncAlloc);
@@ -80,7 +86,7 @@ Device create_device(const DeviceInfo &info) {
   vulkan::Queue queue1 = context.ctx()->queue(1);
 
   Vector<Timeline, strobe::rhi::allocator_ref> timelines{allocs->alloc};
-  timelines.reserve(2);
+  timelines.reserve(1);
 
   Timeline universalTimeline =
       sync::create_timeline(context, &allocs->syncAlloc);
@@ -89,7 +95,7 @@ Device create_device(const DeviceInfo &info) {
   Timeline dmaTimeline;
   if (queue1) {
     dmaTimeline = sync::create_timeline(context, &allocs->syncAlloc);
-    timelines.push_back(dmaTimeline);
+  //   timelines.push_back(dmaTimeline);
   }
   assert(universalTimeline);
   assert(dmaTimeline);
@@ -117,6 +123,7 @@ Device create_device(const DeviceInfo &info) {
   return Device{make_void_handle<DeviceImpl>( //
       &allocs->deviceAlloc,                   //
       std::move(context),                     //
+      allocs,                                 //
       std::move(fencePool),                   //
       std::move(semPool),                     //
       std::move(memory),                      //

@@ -2,6 +2,7 @@
 #include "strobe/core/containers/vector.hpp"
 #include "strobe/core/memory/inplace_monotonic_resource.hpp"
 #include "strobe/rhi/allocator.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/vulkan/context/create_info.hpp"
 #include <fmt/format.h>
 #include <vulkan/vulkan_core.h>
@@ -14,6 +15,7 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
                                ContextProperties *properties,
                                const ContextCreateInfo *info,
                                DriverAlloc *driverAlloc) {
+  ZoneScopedN("context/create-logical-device");
   using scratch_allocator =
       InplaceMonotonicResource<strobe::rhi::scratch_allocator, 1 << 14>;
 
@@ -122,8 +124,8 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
   Vector<const char *, scratch_allocator_ref> extensions{&scratch};
 
   if (info->swapchain == required && !properties->surface) {
-    throw std::runtime_error{
-        "Vulkan swapchain support requires enabled surface support"};
+    vulkan_error(VK_ERROR_EXTENSION_NOT_PRESENT,
+                 "Vulkan swapchain support requires enabled surface support");
   }
   if (info->swapchain == required ||
       (info->swapchain == optional && properties->surface)) {
@@ -148,19 +150,21 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
       pNext = &swapchainMaintenance1;
     } else if (info->swapchain == required) {
       if (!swapchainSupported) {
-        throw std::runtime_error{"Required Vulkan device extension "
-                                 "VK_KHR_swapchain is not supported"};
+        vulkan_error(VK_ERROR_EXTENSION_NOT_PRESENT,
+                     "Required Vulkan device extension "
+                     "VK_KHR_swapchain is not supported");
       }
 
       if (!maintenance1ExtensionSupported) {
-        throw std::runtime_error{
-            "Required Vulkan device extension "
-            "VK_KHR_swapchain_maintenance1 is not supported"};
+        vulkan_error(VK_ERROR_EXTENSION_NOT_PRESENT,
+                     "Required Vulkan device extension "
+                     "VK_KHR_swapchain_maintenance1 is not supported");
       }
 
       if (!maintenance1FeatureSupported) {
-        throw std::runtime_error{"Required Vulkan feature "
-                                 "swapchainMaintenance1 is not supported"};
+        vulkan_error(VK_ERROR_EXTENSION_NOT_PRESENT,
+                     "Required Vulkan feature "
+                     "swapchainMaintenance1 is not supported");
       }
     }
   }
@@ -259,7 +263,8 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
     }
     const float priority = info->pQueues[i].priority;
     if (priority < 0.0f || priority > 1.0f) {
-      throw std::runtime_error{"Vulkan queue priority must be between 0 and 1"};
+      vulkan_error(VK_ERROR_UNKNOWN,
+                   "Vulkan queue priority must be between 0 and 1");
     }
     auto it = std::ranges::find_if(
         queueFamilyPlans,
@@ -294,7 +299,8 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
   }
 
   if (queueCreateInfos.empty()) {
-    throw std::runtime_error{"Cannot create a Vulkan device without queues"};
+    vulkan_error(VK_ERROR_UNKNOWN,
+                 "Cannot create a Vulkan device without queues");
   }
 
   VkPhysicalDeviceFeatures2 features2{
@@ -320,12 +326,14 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
 
   VkDevice device = VK_NULL_HANDLE;
 
-  const VkResult result = vkCreateDevice(physicalDevice, &createInfo,
-                                         driverAlloc->callbacks(), &device);
-
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error{fmt::format("Failed to create logical device : {}",
-                                         static_cast<int>(result))};
+  {
+    ZoneScopedN("vkCreateDevice");
+    const VkResult result = vkCreateDevice(physicalDevice, &createInfo,
+                                           driverAlloc->callbacks(), &device);
+    if (result != VK_SUCCESS) {
+      vulkan_error(result, "Failed to create logical device : {}",
+                   static_cast<int>(result));
+    }
   }
 
   return device;

@@ -1,4 +1,5 @@
 #include "strobe/rhi/vulkan/context/debug_utils.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi::vulkan {
@@ -58,13 +59,15 @@ void vk_destroy_debug_utils_messenger(
 VkDebugUtilsMessengerEXT
 create_debug_utils_messenger(VkInstance instance, ContextProperties *props,
                              DriverAlloc *alloc) {
+  ZoneScopedN("context/create-debug-utils-messenger");
   VkDebugUtilsMessengerCreateInfoEXT createInfo = debug_messenger_create_info();
   if (props->debug_utils) {
     VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
+    ZoneScopedN("vkCreateDebugUtilsMessenger");
     VkResult result = vk_create_debug_utils_messenger(
         instance, &createInfo, alloc->callbacks(), &messenger);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create debug utils messenger");
+      vulkan_error(result, "Failed to create debug utils messenger");
     }
     return messenger;
   } else {

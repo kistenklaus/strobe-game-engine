@@ -3,6 +3,7 @@
 #include "strobe/core/containers/vector.hpp"
 #include "strobe/core/memory/AllocatorReference.hpp"
 #include "strobe/rhi/allocator.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/vulkan/context/context_properties.hpp"
 #include "strobe/rhi/vulkan/context/create_info.hpp"
 #include "strobe/rhi/vulkan/context/driver_alloc.hpp"
@@ -64,8 +65,8 @@ public:
   void wait_idle() const {
     VkResult result = vkDeviceWaitIdle(m_device);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error(
-          "Failed to wait for device idle : device timed out.");
+      vulkan_error(result,
+                   "Failed to wait for device idle : device timed out.");
     }
   }
 

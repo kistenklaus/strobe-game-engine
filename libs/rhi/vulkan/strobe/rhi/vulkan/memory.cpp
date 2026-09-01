@@ -1,4 +1,5 @@
 #include "strobe/rhi/vulkan/memory.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/vulkan/context/context.hpp"
 #include "strobe/rhi/vulkan/memory_usage.hpp"
 #include <stdexcept>
@@ -7,9 +8,8 @@
 
 namespace strobe::rhi::vulkan {
 
-Memory allocate_memory(Context *context,
-                                                MemoryRequirements requirements,
-                                                MemoryUsage usage, bool alias) {
+Memory allocate_memory(Context *context, MemoryRequirements requirements,
+                       MemoryUsage usage, bool alias) {
   assert(requirements.requiresDedicated == false);
   VkMemoryRequirements req{
       .size = requirements.size,
@@ -22,9 +22,9 @@ Memory allocate_memory(Context *context,
   Memory memory{};
   ZoneScopedN("vmaAllocateMemory");
   VkResult result = vmaAllocateMemory(context->vma(), &req, &createInfo,
-                                      &memory.handle,nullptr);
+                                      &memory.handle, nullptr);
   if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate memory");
+    vulkan_error(result, "Failed to allocate memory");
   }
   return memory;
 }
@@ -52,7 +52,7 @@ Memory allocate_dedicated_memory(Context *context,
       vmaAllocateDedicatedMemory(context->vma(), &req, &allocInfo,
                                  &dedicatedInfo, &memory.handle, nullptr);
   if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate dedicated buffer memory");
+    vulkan_error(result, "Failed to allocate dedicated buffer memory");
   }
   return memory;
 }
@@ -79,7 +79,7 @@ Memory allocate_dedicated_memory(Context *context,
       vmaAllocateDedicatedMemory(context->vma(), &req, &allocInfo,
                                  &dedicatedInfo, &memory.handle, nullptr);
   if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate dedicated image memory");
+    vulkan_error(result, "Failed to allocate dedicated image memory");
   }
   return memory;
 }
@@ -119,7 +119,7 @@ allocate_buffer(Context *context, const BufferInfo &info,
                         details::get_auto_allocation_create_info(memoryUsage),
                         &buffer.handle, &memory.handle, &allocInfo);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create and allocate buffer");
+      vulkan_error(result, "Failed to create and allocate buffer");
     }
   }
   return std::make_tuple(memory, buffer, allocInfo.size);
@@ -181,7 +181,7 @@ allocate_image(Context *context, const ImageInfo &info,
         vmaCreateImage(context->vma(), &imageInfo, pVmaInfo, &image.handle,
                        &memory.handle, &allocInfo);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to create Vulkan image"};
+      vulkan_error(result, "Failed to create Vulkan image");
     }
   }
   return std::make_tuple(memory, image, allocInfo.size);
@@ -209,7 +209,7 @@ void *map_memory(Context *context, Memory memory) {
     ZoneScopedN("vmaMapMemory");
     VkResult result = vmaMapMemory(context->vma(), memory.handle, &mapped);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to map memory");
+      vulkan_error(result, "Failed to map memory");
     }
   }
   return mapped;
@@ -226,7 +226,7 @@ void flush_memory(Context *context, Memory memory, VkDeviceSize offset,
   VkResult result =
       vmaFlushAllocation(context->vma(), memory.handle, offset, size);
   if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to flush memory");
+    vulkan_error(result, "Failed to flush memory");
   }
 }
 
@@ -236,7 +236,7 @@ void invalidate_memory(Context *context, Memory memory, VkDeviceSize offset,
   VkResult result =
       vmaInvalidateAllocation(context->vma(), memory.handle, offset, size);
   if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to invalidate memory");
+    vulkan_error(result, "Failed to invalidate memory");
   }
 }
 

@@ -19,6 +19,7 @@
 #include "strobe/rhi/vulkan/cmd/transfer.hpp"
 #include "strobe/rhi/vulkan/command_buffer.hpp"
 #include "strobe/rhi/vulkan/context/pnf.hpp"
+#include <algorithm>
 #include <exception>
 #include <fmt/format.h>
 #include <limits>
@@ -220,9 +221,14 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
         std::min(minExtent.y(), attachment.view.image().extent().y());
   }
 
+  Rect renderArea = info.renderArea;
+  if (renderArea.extent == uvec2(0,0)) {
+    renderArea.extent = minExtent;
+  }
+
   vulkan::cmd_begin_rendering(impl->cmd,
                               {
-                                  .renderArea = info.renderArea,
+                                  .renderArea = renderArea,
                                   .layerCount = info.layerCount,
                                   .viewMask = info.viewMask,
                                   .colorAttachments = colorAttachments,
@@ -570,7 +576,7 @@ void CommandBuffer::bind_shader(const FragmentShader &shader) noexcept {
   impl->required |= CommandBufferRenderingState::fragment_shader_requirements;
   vulkan::cmd_bind_shader(impl->ctx, impl->cmd,
                           object_handle_ptr<ShaderObjectImpl>(shader)->shader,
-                          VK_SHADER_STAGE_COMPUTE_BIT);
+                          VK_SHADER_STAGE_FRAGMENT_BIT);
   impl->state.retain(shader);
 }
 

@@ -19,7 +19,7 @@ VertexShader create_vertex(Context context, const VertexShaderInfo &info,
                            handle_allocators *alloc);
 
 FragmentShader create_fragment(Context context, const FragmentShaderInfo &info,
-                               handle_allocators *alloc);
+                               shader::handle_allocators *alloc);
 
 ComputeShader create_compute(Context context, const ComputeShaderInfo &info,
                              handle_allocators *alloc);

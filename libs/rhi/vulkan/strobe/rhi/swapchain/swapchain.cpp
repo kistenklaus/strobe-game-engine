@@ -1,4 +1,4 @@
-#include "strobe/rhi/swapchain/swapchain.hpp"
+#include "strobe/rhi/objects/swapchain.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/swapchain/swapchain_impl.hpp"
 
@@ -37,6 +37,7 @@ Swapchain &Swapchain::operator=(Swapchain &&o) noexcept {
 Swapchain::~Swapchain() noexcept { unpin_void_handle<SwapchainImpl>(m_handle); }
 
 SwapchainImage Swapchain::acquire() {
+  ZoneScopedN("Swapchain::acquire");
   auto *impl = void_handle_ptr<SwapchainImpl>(m_handle);
   if (!impl->generation) {
     bool ok = impl->recreate();

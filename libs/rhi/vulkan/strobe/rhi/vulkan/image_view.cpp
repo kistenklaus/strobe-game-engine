@@ -1,4 +1,5 @@
 #include "strobe/rhi/vulkan/image_view.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 
 namespace strobe::rhi::vulkan {
 
@@ -25,7 +26,7 @@ ImageView create_image_view(Context *context, const ImageViewInfo &info) {
   const VkResult result = vkCreateImageView(
       context->device(), &createInfo, context->driver_alloc(), &view.handle);
   if (result != VK_SUCCESS) {
-    throw std::runtime_error{"Failed to create Vulkan image view"};
+    vulkan_error(result, "Failed to create Vulkan image view");
   }
   return view;
 }

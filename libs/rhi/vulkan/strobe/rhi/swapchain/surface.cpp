@@ -4,13 +4,13 @@
 
 namespace strobe::rhi {
 
-Surface::Surface(const Surface &other) noexcept : m_handle(other.m_handle) {
+Surface::Surface(const Surface &other) noexcept : Object(other.m_handle) {
   if (m_handle) {
     pin_void_handle<SurfaceImpl>(m_handle);
   }
 }
 
-Surface::Surface(Surface &&other) noexcept : m_handle(other.m_handle) {
+Surface::Surface(Surface &&other) noexcept : Object(other.m_handle) {
   other.m_handle = nullptr;
 }
 

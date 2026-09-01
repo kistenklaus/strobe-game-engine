@@ -31,8 +31,8 @@ struct SwapchainImpl {
         presentQueueFamilyIndicies(std::move(presentQueueFamilyIndicies)),
         m_alloc(alloc), m_imgAlloc(imgAlloc), m_generationAllocator(alloc),
         m_swapchainImageAllocator(alloc) {}
-  SwapchainImpl(const SwapchainImpl&) = delete;
-  SwapchainImpl(SwapchainImpl&&) = delete;
+  SwapchainImpl(const SwapchainImpl &) = delete;
+  SwapchainImpl(SwapchainImpl &&) = delete;
   ~SwapchainImpl() noexcept = default;
 
   void resize(uvec2 extent) noexcept {
@@ -40,6 +40,7 @@ struct SwapchainImpl {
   }
 
   bool recreate() {
+    ZoneScopedN("swap/recreate");
     const vulkan::SurfaceCapabilities capabilities =
         vulkan::query_surface_capabilities(m_surface.ctx(), m_surface.get());
 
@@ -139,6 +140,7 @@ struct SwapchainImpl {
                              .clipped = true,
                              .oldSwapchain = oldSwapchain,
                          });
+
     uint32_t count = vulkan::get_swapchain_images(m_surface.ctx(), swapchain);
     SmallVector<vulkan::Image, 8> nativeImages{count};
     vulkan::get_swapchain_images(m_surface.ctx(), swapchain, nativeImages);
@@ -150,7 +152,6 @@ struct SwapchainImpl {
           &m_imgAlloc->imageAllocator, m_surface.context(), MemoryAllocation{},
           nativeImages[i], ImageType::image_2d, from_vk_format(format.format),
           uvec3{extent.x(), extent.y(), 1}, 1, 1, SampleCount::x1)};
-
       frames[i].view =
           img::create_image_view(frames[i].image,
                                  {
@@ -161,11 +162,10 @@ struct SwapchainImpl {
                                  m_imgAlloc);
     }
 
-    generation =
-        SwapchainGeneration{make_void_handle<SwapchainGenerationImpl>(
-            &m_generationAllocator, m_surface, m_fencePool, m_semPool,
-            swapchain, std::move(frames), extent, from_vk_format(format.format),
-            &m_swapchainImageAllocator, m_alloc)};
+    generation = SwapchainGeneration{make_void_handle<SwapchainGenerationImpl>(
+        &m_generationAllocator, m_surface, m_fencePool, m_semPool, swapchain,
+        std::move(frames), extent, from_vk_format(format.format),
+        &m_swapchainImageAllocator, m_alloc)};
     return true;
   }
 

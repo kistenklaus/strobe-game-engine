@@ -1,4 +1,5 @@
 #include "strobe/rhi/vulkan/event.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 
 #include <cassert>
 #include <stdexcept>
@@ -18,7 +19,7 @@ Event create_event(Context *context, const EventInfo &info) {
     const VkResult result = vkCreateEvent(
         context->device(), &createInfo, context->driver_alloc(), &event.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to create Vulkan event"};
+      vulkan_error(result, "Failed to create Vulkan event");
     }
   }
   return event;
@@ -49,7 +50,7 @@ void set_event(Context *context, Event event) {
     ZoneScopedN("vkSetEvent");
     const VkResult result = vkSetEvent(context->device(), event.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to set Vulkan event"};
+      vulkan_error(result, "Failed to set Vulkan event");
     }
   }
 }
@@ -61,7 +62,7 @@ void reset_event(Context *context, Event event) {
     ZoneScopedN("vkResetEvent");
     const VkResult result = vkResetEvent(context->device(), event.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to reset Vulkan event"};
+      vulkan_error(result, "Failed to reset Vulkan event");
     }
   }
 }

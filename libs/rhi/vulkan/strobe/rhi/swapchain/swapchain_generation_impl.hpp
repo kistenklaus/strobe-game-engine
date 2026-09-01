@@ -2,8 +2,6 @@
 
 #include "strobe/core/containers/vector.hpp"
 #include "strobe/core/lina/vec.hpp"
-#include "strobe/core/memory/AllocatorReference.hpp"
-#include "strobe/core/memory/mpsc_monotonic_pool_resource.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/objects/image.hpp"
 #include "strobe/rhi/swapchain/surface.hpp"
@@ -33,6 +31,9 @@ struct SwapchainGenerationImpl {
         semPool(semPool), swapchain(swapchain), frames(std::move(frames)),
         extent(extent), format(format), m_presentFramePool(alloc),
         m_imageAlloc(swapchainImageHandleAllocator) {}
+  SwapchainGenerationImpl(const SwapchainGenerationImpl &) = delete;
+  SwapchainGenerationImpl(SwapchainGenerationImpl &&) = delete;
+
   ~SwapchainGenerationImpl() noexcept {
     vulkan::destroy_swapchain(surface.ctx(), swapchain);
   }
@@ -55,9 +56,11 @@ struct SwapchainGenerationImpl {
   Format format;
   bool suboptimal = false;
 
+  std::atomic<uint64_t> debugCounter{0};
+
 private:
   swapchain_present_frame_pool m_presentFramePool;
-  const handle_allocator_ref<SwapchainImageImpl> m_imageAlloc;
+  handle_allocator_ref<SwapchainImageImpl> m_imageAlloc;
 };
 
 } // namespace strobe::rhi

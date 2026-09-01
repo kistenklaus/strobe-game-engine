@@ -1,7 +1,7 @@
 #include "strobe/rhi/vulkan/acceleration_structure.hpp"
 
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/vulkan/context/pnf.hpp"
-#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi {
@@ -28,7 +28,7 @@ vulkan::create_acceleration_structure(Context *context,
         context->pnf(), context->device(), &createInfo, context->driver_alloc(),
         &accelerationStructure.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create acceleration structure");
+      vulkan_error(result, "Failed to create acceleration structure");
     }
   }
   return accelerationStructure;

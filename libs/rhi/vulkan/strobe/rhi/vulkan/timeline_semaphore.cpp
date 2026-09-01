@@ -1,6 +1,5 @@
 #include "strobe/rhi/vulkan/timeline_semaphore.hpp"
-#include "strobe/core/containers/small_vector.hpp"
-#include <stdexcept>
+#include "strobe/rhi/error/vulkan_error.hpp"
 
 namespace strobe::rhi::vulkan {
 
@@ -24,11 +23,11 @@ TimelineSemaphore create_timeline_semaphore(Context *context,
   };
   TimelineSemaphore sem;
   {
-    ZoneScopedN("vkCreateSemaphore");
+    ZoneScopedN("vkCreateSemaphore(timeline)");
     VkResult result = vkCreateSemaphore(context->device(), &createInfo,
                                         context->driver_alloc(), &sem.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create timeline semaphore");
+      vulkan_error(result, "Failed to create timeline semaphore");
     }
   }
   return sem;
@@ -49,12 +48,11 @@ uint64_t get_timeline_semaphore_value(Context *context, TimelineSemaphore sem) {
 
   uint64_t value = 0;
   {
-    ZoneScopedN("vkGetSemaphoreCounterValue");
+    ZoneScopedN("vkGetSemaphoreCounterValue(timeline)");
     VkResult result =
         vkGetSemaphoreCounterValue(context->device(), sem.handle, &value);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error(
-          "Failed to get timeline semaphore counter value");
+      vulkan_error(result, "Failed to get timeline semaphore counter value");
     }
   }
   return value;
@@ -72,10 +70,10 @@ void signal_timeline_semaphore(Context *context, TimelineSemaphore sem,
       .value = value,
   };
   {
-    ZoneScopedN("vkSignalSemaphore");
+    ZoneScopedN("vkSignalSemaphore(timeline)");
     VkResult result = vkSignalSemaphore(context->device(), &signalInfo);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to signal timeline semaphore");
+      vulkan_error(result, "Failed to signal timeline semaphore");
     }
   }
 }
@@ -93,14 +91,14 @@ bool wait_for_timeline_semaphore(Context *context, TimelineSemaphore sem,
 
   VkResult result;
   {
-    ZoneScopedN("vkWaitSemaphores");
+    ZoneScopedN("vkWaitSemaphores(timeline)");
     result = vkWaitSemaphores(context->device(), &waitInfo, timeout);
   }
   if (result == VK_TIMEOUT) {
     return false;
   }
   if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to wait for timeline semaphore");
+    vulkan_error(result, "Failed to wait for timeline semaphore");
   }
   return true;
 }

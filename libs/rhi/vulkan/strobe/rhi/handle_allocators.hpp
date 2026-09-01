@@ -20,7 +20,7 @@ struct handle_allocators {
   explicit handle_allocators(strobe::rhi::allocator_ref alloc)
       : alloc(alloc), shaderAlloc(alloc), syncAlloc(alloc), memAlloc(alloc),
         bufAlloc(alloc), imgAlloc(alloc), stageAlloc(alloc, &bufAlloc),
-        bvhAlloc(alloc, &bufAlloc), cmdAlloc(alloc), swapAlloc(alloc),
+        bvhAlloc(alloc, &bufAlloc), cmdAlloc(alloc), swapAlloc(alloc, &imgAlloc),
         gcAlloc(alloc), queAlloc(alloc), deviceAlloc(alloc) {}
 
   handle_allocators(const handle_allocators &) = delete;

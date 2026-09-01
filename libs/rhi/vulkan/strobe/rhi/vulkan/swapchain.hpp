@@ -53,7 +53,7 @@ struct SwapchainInfo {
 };
 
 struct SwapchainAcquireInfo {
-  uint64_t timeout = std::numeric_limits<uint64_t>::max();
+  uint64_t timeout = 1'000'000'000ull; // 60 second
   BinarySemaphore signalSemaphore = {};
   Fence fence = {};
 };
@@ -77,5 +77,8 @@ SwapchainAcquireStatus
 acquire_next_swapchain_image(Context *context, Swapchain swapchain,
                              const SwapchainAcquireInfo &info,
                              uint32_t *imageIndex);
+
+void release_swapchain_image(Context *context, Swapchain swapchain,
+                             uint32_t imageIndex) noexcept;
 
 } // namespace strobe::rhi::vulkan

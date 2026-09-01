@@ -12,7 +12,10 @@ MemoryProperties details::query_memory_properties(
       .pNext = nullptr,
       .memoryProperties = {},
   };
-  vkGetPhysicalDeviceMemoryProperties2(physicalDevice, &props2);
+  {
+    ZoneScopedN("vkGetPhysicalDeviceMemoryProperties2");
+    vkGetPhysicalDeviceMemoryProperties2(physicalDevice, &props2);
+  }
 
   return MemoryProperties{
       .memoryTypes =

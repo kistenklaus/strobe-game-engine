@@ -2,6 +2,7 @@
 
 #include "strobe/core/memory/AllocatorReference.hpp"
 #include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 
 namespace strobe::rhi::vulkan {
 
@@ -14,22 +15,25 @@ details::query_device_extensions(VkPhysicalDevice physicalDevice,
   scratch_allocator scratch{};
 
   Vector<VkExtensionProperties, scratch_allocator_ref> native{&scratch};
-  while (true) {
-    std::uint32_t count = 0;
-    VkResult result = vkEnumerateDeviceExtensionProperties(
-        physicalDevice, nullptr, &count, nullptr);
-    if (result != VK_SUCCESS) {
-      throw std::runtime_error{"Failed to enumerate device extensions"};
-    }
-    native.resize(count);
-    result = vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr,
-                                                  &count, native.data());
-    native.resize(count);
-    if (result == VK_SUCCESS) {
-      break;
-    }
-    if (result != VK_INCOMPLETE) {
-      throw std::runtime_error{"Failed to enumerate device extensions"};
+  {
+    ZoneScopedN("vkEnumerateDeviceExtensionProperties");
+    while (true) {
+      std::uint32_t count = 0;
+      VkResult result = vkEnumerateDeviceExtensionProperties(
+          physicalDevice, nullptr, &count, nullptr);
+      if (result != VK_SUCCESS) {
+        vulkan_error(result, "Failed to enumerate device extensions");
+      }
+      native.resize(count);
+      result = vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr,
+                                                    &count, native.data());
+      native.resize(count);
+      if (result == VK_SUCCESS) {
+        break;
+      }
+      if (result != VK_INCOMPLETE) {
+        vulkan_error(result, "Failed to enumerate device extensions");
+      }
     }
   }
   Vector<DeviceExtension, strobe::rhi::allocator_ref> extensions{alloc};

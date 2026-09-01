@@ -29,6 +29,7 @@ public:
   }
 
   FenceNode *allocate() {
+    ZoneScopedN("sync/allocate-fence");
     std::lock_guard lck{m_mutex};
     if (m_ready == nullptr) {
       m_ready = m_returned.exchange(nullptr, std::memory_order_acquire);

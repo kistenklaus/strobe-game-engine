@@ -78,11 +78,17 @@ constexpr std::string_view vulkan_result_name(VkResult result) noexcept {
 }
 
 template <typename... Args>
-[[noreturn]] void vulkan_error(VkResult result, fmt::format_string<Args...> format,
-                  Args &&...args) {
-  fmt::println("[{}]: {}", vulkan_result_name(result),
+[[noreturn]] void
+raise_vulkan_error(VkResult result, const char *filename, unsigned int line,
+                   fmt::format_string<Args...> format, Args &&...args) {
+  fmt::println("[{}:{} -> {}]: {}", filename, line,
+               vulkan_result_name(result),
                fmt::format(format, std::forward<Args>(args)...));
   std::terminate();
 }
+
+#define vulkan_error(result, ...)                                              \
+  ::strobe::rhi::raise_vulkan_error((result), __FILE_NAME__, __LINE__,         \
+                                    __VA_ARGS__)
 
 } // namespace strobe::rhi

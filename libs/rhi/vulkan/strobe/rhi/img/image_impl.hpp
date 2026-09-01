@@ -17,7 +17,8 @@ struct ImageImpl {
             uint32_t arrayLayers, SampleCount samples)
       : context(std::move(context)), allocation(std::move(allocation)),
         image(image), type(type), format(format), extent(extent),
-        mip_levels(mip_levels), arrayLayers(arrayLayers), samples(samples) {}
+        mip_levels(mip_levels), arrayLayers(arrayLayers), samples(samples) {
+  }
   ImageImpl(const ImageImpl &) = delete;
   ImageImpl(ImageImpl &&) = delete;
   ImageImpl &operator=(const ImageImpl &) = delete;

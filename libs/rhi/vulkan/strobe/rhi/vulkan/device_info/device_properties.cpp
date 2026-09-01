@@ -56,7 +56,10 @@ DeviceProperties details::query_device_properties(
       .pNext = pNext,
       .properties = {},
   };
-  vkGetPhysicalDeviceProperties2(physicalDevice, &props);
+  {
+    ZoneScopedN("vkGetPhysicalDeviceProperties2");
+    vkGetPhysicalDeviceProperties2(physicalDevice, &props);
+  }
 
   SmallVector<VkTimeDomainKHR, 4> timeDomains;
   if (features->calibratedTimestamps) {

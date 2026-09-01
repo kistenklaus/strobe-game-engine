@@ -38,8 +38,10 @@ void unpin_context(void *h) {
   delete impl;
 }
 
-Context::Context(const vulkan::ContextCreateInfo &info) noexcept
-    : m_handle(new ContextImpl(info)) {}
+Context::Context(const vulkan::ContextCreateInfo &info) noexcept : m_handle() {
+  ZoneScopedN("context/create");
+  m_handle = new ContextImpl(info);
+}
 
 Context::Context(const Context &o) noexcept : m_handle(o.m_handle) {
   if (m_handle != nullptr) {
@@ -74,6 +76,7 @@ Context &Context::operator=(Context &&o) noexcept {
 Context::~Context() noexcept { unpin_context(m_handle); }
 
 vulkan::Context *Context::ctx() const noexcept {
+  assert(m_handle);
   return &static_cast<ContextImpl *>(m_handle)->context;
 }
 

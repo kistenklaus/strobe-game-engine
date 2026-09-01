@@ -42,7 +42,7 @@ bool MemoryAllocationImpl::commit() {
     assert(binding);
     return true;
   }
-  return true;
+  return false;
 }
 
 } // namespace strobe::rhi

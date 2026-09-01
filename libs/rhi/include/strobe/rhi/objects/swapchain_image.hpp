@@ -3,6 +3,7 @@
 #include "strobe/rhi/objects/image.hpp"
 #include "strobe/rhi/objects/image_view.hpp"
 #include "strobe/rhi/objects/object.hpp"
+
 namespace strobe::rhi {
 
 class SwapchainImage : Object<SwapchainImage> {
@@ -26,6 +27,7 @@ public:
 
   const Image &image() const noexcept;
   const ImageView &view() const noexcept;
+  const uvec2 extent() const noexcept;
 };
 
 } // namespace strobe::rhi

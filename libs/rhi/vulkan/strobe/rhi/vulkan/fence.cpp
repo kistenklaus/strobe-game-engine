@@ -1,4 +1,5 @@
 #include "strobe/rhi/vulkan/fence.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include <stdexcept>
 
 namespace strobe::rhi::vulkan {
@@ -17,7 +18,7 @@ Fence create_fence(Context *context, const FenceInfo &info) {
     VkResult result = vkCreateFence(context->device(), &createInfo,
                                     context->driver_alloc(), &fence.handle);
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create fence");
+      vulkan_error(result, "Failed to create fence");
     }
   }
   return fence;
@@ -42,7 +43,7 @@ bool wait_for_fence(Context *context, Fence fence, uint64_t timeout) {
     return false;
   }
   if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to wait for fence");
+    vulkan_error(result,"Failed to wait for fence");
   }
   return true;
 }
@@ -51,7 +52,7 @@ void reset_fence(Context *context, Fence fence) {
   ZoneScopedN("vkResetFences");
   VkResult result = vkResetFences(context->device(), 1, &fence.handle);
   if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to reset fence");
+    vulkan_error(result, "Failed to reset fence");
   }
 }
 
@@ -67,7 +68,7 @@ bool is_fence_signaled(Context *context, Fence fence) {
   } else if (result == VK_NOT_READY) {
     return false;
   } else {
-    throw std::runtime_error("Failed to query vulkan fence status");
+    vulkan_error(result, "Failed to query vulkan fence status");
   }
 }
 
