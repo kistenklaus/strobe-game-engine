@@ -6,7 +6,7 @@
 #include <mutex>
 #include <ratio>
 
-namespace strobe::rhi {
+namespace strobe {
 
 template <std::size_t BlockSize, std::size_t BlockAlign, Allocator A,
           typename GrowthFactor = std::ratio<2, 1>>
@@ -19,7 +19,7 @@ public:
   using upstream_traits = AllocatorTraits<upstream_allocator>;
 
   using mpsc_pool =
-      MPSCMonotonicPoolResource<BlockSize, BlockAlign, upstream_allocator>;
+      MPSCMonotonicPoolResource<BlockSize, BlockAlign, upstream_allocator, GrowthFactor>;
 
   explicit SyncMonotonicPoolResource(const A &upstream) : m_mpsc(upstream) {}
 
