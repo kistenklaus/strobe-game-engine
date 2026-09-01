@@ -55,7 +55,7 @@ MemoryRequirements get_image_memory_requirements(Context *context,
   assert(context);
   assert(image);
   VkImageMemoryRequirementsInfo2 info{
-      .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2,
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2,
       .pNext = nullptr,
       .image = image.handle,
   };

@@ -25,13 +25,13 @@ public:
     return lhs.m_handle != rhs.m_handle;
   }
 
-  void wait(Timepoint timepoint,
+  void wait(const Timepoint& timepoint,
             PipelineStage stage = PipelineStage::all_commands) noexcept;
 
   void wait(const SwapchainImage &swapchainImage,
             PipelineStage stage = PipelineStage::all_commands) noexcept;
 
-  void submit(span<const CommandBuffer> cmds) noexcept;
+  Timepoint submit(span<const CommandBuffer> cmds) noexcept;
 
   void present(SwapchainImage swapchainImage) noexcept;
 };

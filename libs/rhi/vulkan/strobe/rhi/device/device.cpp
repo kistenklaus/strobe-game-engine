@@ -1,9 +1,11 @@
 #include "strobe/rhi/objects/device.hpp"
 #include "strobe/rhi/buf/buf.hpp"
+#include "strobe/rhi/bvh/bvh.hpp"
 #include "strobe/rhi/cmd/cmd.hpp"
 #include "strobe/rhi/device/device_impl.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/handle_allocators.hpp"
+#include "strobe/rhi/img/img.hpp"
 #include "strobe/rhi/shader/shader.hpp"
 #include "strobe/rhi/swapchain/swap.hpp"
 #include "strobe/rhi/types/queue_flags.hpp"
@@ -94,9 +96,36 @@ CommandPool Device::create_cmdpool() noexcept {
 }
 
 Buffer Device::create_buffer(const BufferInfo &info,
-                             const MemoryLifetime &lifetime) {
+                             const MemoryLifetime &lifetime) noexcept {
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
-  return buf::create_buffer(impl->memory, info, lifetime, &impl->allocs->bufAlloc);
+  return buf::create_buffer(impl->memory, info, lifetime,
+                            &impl->allocs->bufAlloc);
+}
+Image Device::create_image(const ImageInfo &info,
+                           const MemoryLifetime &lifetime) noexcept {
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  return img::create_image(impl->memory, info, lifetime, &impl->allocs->imgAlloc);
+}
+
+ImageView Device::create_image_view(const Image &image,
+                                    const ImageViewInfo &info
+                                    ) noexcept {
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  return img::create_image_view(image, info, &impl->allocs->imgAlloc);
+}
+
+Blas Device::create_blas(const BlasInfo &info,
+                         const MemoryLifetime &lifetime) noexcept {
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  return bvh::create_blas(impl->memory, impl->scratch, info, lifetime,
+                          &impl->allocs->bvhAlloc);
+}
+
+Tlas Device::create_tlas(const TlasInfo &info,
+                         const MemoryLifetime &lifetime) noexcept {
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  return bvh::create_tlas(impl->memory, impl->scratch, info, lifetime,
+                          &impl->allocs->bvhAlloc);
 }
 
 } // namespace strobe::rhi

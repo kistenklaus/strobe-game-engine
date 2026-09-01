@@ -23,6 +23,7 @@ Tlas &Tlas::operator=(const Tlas & o) noexcept {
     pin_void_handle<BvhImpl>(o.m_handle);
   }
   unpin_void_handle<BvhImpl>(m_handle);
+  m_handle = o.m_handle;
   return *this;
 }
 

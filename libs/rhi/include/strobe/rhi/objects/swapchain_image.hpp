@@ -10,11 +10,12 @@ class SwapchainImage : Object<SwapchainImage> {
 public:
   explicit SwapchainImage(void *handle) noexcept : Object(handle) {}
   SwapchainImage() noexcept : Object(nullptr) {}
-  SwapchainImage(const SwapchainImage &) noexcept;
+  SwapchainImage(const SwapchainImage &) = delete;
   SwapchainImage(SwapchainImage &&) noexcept;
-  SwapchainImage &operator=(const SwapchainImage &) noexcept;
+  SwapchainImage &operator=(const SwapchainImage &) = delete;
   SwapchainImage &operator=(SwapchainImage &&) noexcept;
   ~SwapchainImage() noexcept;
+
   explicit operator bool() const noexcept { return m_handle != nullptr; }
   friend bool operator==(const SwapchainImage &lhs,
                          const SwapchainImage &rhs) noexcept {

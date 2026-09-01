@@ -74,7 +74,7 @@ public:
     auto *head = m_returned.load(std::memory_order_relaxed);
     do {
       node->next = head;
-    } while (m_returned.compare_exchange_weak(
+    } while (!m_returned.compare_exchange_weak(
         head, node, std::memory_order_release, std::memory_order_relaxed));
   }
 

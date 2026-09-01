@@ -115,7 +115,7 @@ class LockFreeMonotonicForwardList {
     Node* head = m_head.load(std::memory_order_relaxed);
     do {
       node->m_next = head;
-    } while (m_head.compare_exchange_weak(head, node, std::memory_order_release,
+    } while (!m_head.compare_exchange_weak(head, node, std::memory_order_release,
                                           std::memory_order_relaxed));
   }
 

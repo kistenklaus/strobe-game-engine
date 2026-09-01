@@ -5,27 +5,9 @@
 
 namespace strobe::rhi {
 
-SwapchainImage::SwapchainImage(const SwapchainImage &o) noexcept
-    : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<SwapchainImageImpl>(m_handle);
-  }
-}
 
 SwapchainImage::SwapchainImage(SwapchainImage &&o) noexcept
     : Object(std::exchange(o.m_handle, nullptr)) {}
-
-SwapchainImage &SwapchainImage::operator=(const SwapchainImage &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<SwapchainImageImpl>(o.m_handle);
-  }
-  unpin_void_handle<SwapchainImageImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
-}
 
 SwapchainImage &SwapchainImage::operator=(SwapchainImage &&o) noexcept {
   if (this == &o) {

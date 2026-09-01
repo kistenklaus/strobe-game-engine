@@ -1,17 +1,25 @@
 #pragma once
 
+#include "strobe/rhi/objects/blas.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/command_pool.hpp"
 #include "strobe/rhi/objects/compute_shader.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
+#include "strobe/rhi/objects/image.hpp"
+#include "strobe/rhi/objects/image_view.hpp"
 #include "strobe/rhi/objects/object.hpp"
 #include "strobe/rhi/objects/queue.hpp"
 #include "strobe/rhi/objects/swapchain.hpp"
+#include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
+#include "strobe/rhi/types/blas_info.hpp"
 #include "strobe/rhi/types/buffer_info.hpp"
+#include "strobe/rhi/types/image_info.hpp"
+#include "strobe/rhi/types/image_view_info.hpp"
 #include "strobe/rhi/types/memory_lifetime.hpp"
 #include "strobe/rhi/types/queue_flags.hpp"
 #include "strobe/rhi/types/swapchain_info.hpp"
+#include "strobe/rhi/types/tlas_info.hpp"
 
 namespace strobe::rhi {
 
@@ -47,7 +55,19 @@ public:
   CommandPool create_cmdpool() noexcept;
 
   Buffer create_buffer(const BufferInfo &info,
-                       const MemoryLifetime &lifetime = {});
+                       const MemoryLifetime &lifetime = {}) noexcept;
+
+  Image create_image(const ImageInfo &info,
+                     const MemoryLifetime &lifetime = {}) noexcept;
+
+  ImageView create_image_view(const Image &image,
+                              const ImageViewInfo &info) noexcept;
+
+  Blas create_blas(const BlasInfo &info,
+                   const MemoryLifetime &lifetime = {}) noexcept;
+
+  Tlas create_tlas(const TlasInfo &info,
+                   const MemoryLifetime &lifetime = {}) noexcept;
 };
 
 } // namespace strobe::rhi

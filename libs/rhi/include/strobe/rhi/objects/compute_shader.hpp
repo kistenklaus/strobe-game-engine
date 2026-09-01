@@ -31,7 +31,7 @@ public:
   }
   friend bool operator!=(const ComputeShader &lhs,
                          const ComputeShader &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
+    return lhs.m_handle != rhs.m_handle;
   }
   void set_name(const char *name);
 };

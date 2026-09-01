@@ -24,13 +24,13 @@ using namespace std::chrono;
 using namespace std::chrono_literals;
 
 int main() {
-  // #ifdef STROBE_TRACY
-  //   fmt::println("waiting for tracy");
-  //   while (!TracyIsConnected) {
-  //     std::this_thread::yield();
-  //   }
-  //   fmt::println("tracy connected");
-  // #endif
+#ifdef STROBE_TRACY
+  fmt::println("waiting for tracy");
+  while (!TracyIsConnected) {
+    std::this_thread::yield();
+  }
+  fmt::println("tracy connected");
+#endif
   tracy::SetThreadName("platform");
   Platform::start([]() {
     tracy::SetThreadName("main");
@@ -69,7 +69,6 @@ int main() {
     while (!window.should_close()) {
       window.poll();
       rhi::SwapchainImage frame = swapchain.acquire();
-      fmt::println("post-acquire");
 
       // std::this_thread::sleep_for(10ms);
       rhi::CommandBuffer cmd = cmdpool.alloc();
@@ -118,9 +117,9 @@ int main() {
         cmd.bind_shader(fragment);
       }
       cmd.bind_vertex_buffer(vertex1);
-      // for (uint32_t i = 0; i < 10000; ++i) {
-      cmd.draw(3);
-      // }
+      for (uint32_t i = 0; i < 10000; ++i) {
+        cmd.draw(3);
+      }
       cmd.end_rendering();
 
       // std::this_thread::sleep_for(10us);
@@ -130,12 +129,8 @@ int main() {
       cmd.end();
 
       queue.wait(frame);
-      fmt::println("waited");
       queue.submit(&cmd);
-      fmt::println("submitted");
-      queue.present(frame);
-      fmt::println("presented");
-      fmt::println("{}", std::chrono::high_resolution_clock::now().time_since_epoch().count());
+      queue.present(std::move(frame));
 
       FrameMark;
     }

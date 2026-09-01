@@ -222,7 +222,7 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
   }
 
   Rect renderArea = info.renderArea;
-  if (renderArea.extent == uvec2(0,0)) {
+  if (renderArea.extent == uvec2(0, 0)) {
     renderArea.extent = minExtent;
   }
 
@@ -443,6 +443,7 @@ void CommandBuffer::set_vertex_input(
   ZoneScopedN("CommandBuffer::set_vertex_input");
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
   vulkan::cmd_set_vertex_input(impl->ctx, impl->cmd, bindings, attributes);
+  impl->uninitialized &= ~CommandBufferRenderingState::vertex_input;
 }
 
 void CommandBuffer::set_rasterization_samples(
@@ -633,8 +634,9 @@ void CommandBuffer::copy_buffer(BufferOffset dst, BufferOffset src,
   if (size == std::numeric_limits<uint64_t>::max()) {
     size = std::min(dst_impl->size - dst.offset, src_impl->size - src.offset);
   }
-  vulkan::cmd_copy_buffer(impl->cmd, {.buffer = dst_impl->buffer, .offset = 0},
-                          {.buffer = src_impl->buffer, .offset = 0}, size);
+  vulkan::cmd_copy_buffer(
+      impl->cmd, {.buffer = dst_impl->buffer, .offset = dst.offset},
+      {.buffer = src_impl->buffer, .offset = src.offset}, size);
   impl->state.retain(dst.buffer);
   impl->state.retain(src.buffer);
 }

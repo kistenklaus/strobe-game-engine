@@ -133,10 +133,8 @@ acquire_next_swapchain_image(Context *context, Swapchain swapchain,
   VkResult result;
   {
     ZoneScopedN("vkAcquireNextImage2KHR");
-    fmt::println("begin-acquire");
     result =
         vkAcquireNextImage2KHR(context->device(), &acquireInfo, imageIndex);
-    fmt::println("end-acquire");
   }
   if (result == VK_SUCCESS) {
     return SwapchainAcquireStatus::success;

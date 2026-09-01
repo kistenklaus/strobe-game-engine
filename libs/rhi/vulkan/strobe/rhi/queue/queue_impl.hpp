@@ -71,7 +71,7 @@ public:
     });
   }
 
-  void wait(Timepoint timepoint, PipelineStage stage) noexcept {
+  void wait(const Timepoint& timepoint, PipelineStage stage) noexcept {
     const vulkan::TimelineSemaphore timeline =
         TimelineImpl::get_timepoint_semaphore(timepoint);
     const uint64_t serial = TimelineImpl::get_timepoint_serial(timepoint);
@@ -94,7 +94,7 @@ public:
     });
   }
 
-  void submit(span<const CommandBuffer> cmds) noexcept {
+  Timepoint submit(span<const CommandBuffer> cmds) noexcept {
     std::lock_guard lck{m_mutex};
     if (m_submissions.size() == MAX_SUBMIT_BATCH_SIZE) {
       submit_all();
@@ -114,6 +114,7 @@ public:
     m_wait.clear();
     // Must copy/retain everything and preferably be noexcept.
     m_gc.retire(timepoint, cmds);
+    return timepoint;
   }
 
   void present(SwapchainImage image) noexcept {
