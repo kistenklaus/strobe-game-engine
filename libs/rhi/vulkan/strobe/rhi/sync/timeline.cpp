@@ -37,7 +37,7 @@ Timeline &Timeline::operator=(Timeline &&o) noexcept {
 
 Timeline::~Timeline() noexcept { unpin_void_handle<TimelineImpl>(m_handle); }
 
-void Timeline::notify(Timepoint timepoint) noexcept {
+void Timeline::notify(const Timepoint& timepoint) noexcept {
   ZoneScopedN("sync/timeline-notify");
   auto *timeline = void_handle_ptr<TimelineImpl>(timepoint.m_handle);
   void *pUserData = nullptr;

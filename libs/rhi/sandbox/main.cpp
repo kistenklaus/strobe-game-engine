@@ -27,8 +27,8 @@ using namespace strobe;
 
 namespace {
 
-constexpr uint32_t TRIANGLES_PER_BUFFER = 64;
-constexpr std::size_t MAX_PUBLISHED_BUFFERS = 64;
+constexpr uint32_t TRIANGLES_PER_BUFFER = 32;
+constexpr std::size_t MAX_PUBLISHED_BUFFERS = 32;
 
 struct PublishedTriangles {
   rhi::Buffer buffer;

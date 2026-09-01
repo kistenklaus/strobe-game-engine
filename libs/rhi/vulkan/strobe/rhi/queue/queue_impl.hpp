@@ -65,12 +65,20 @@ public:
   }
 
   void wait(const Timepoint &timepoint, PipelineStage stage) noexcept {
+    // currently we just leave it here, but it's not pretty,
+    // queue timelines already guarantee fwd progres and notifying here
+    // pushes a lot of work into the calling thread instead of
+    // deferring it to the background gc thread.
+    // m_gc.request_commit(timepoint);
+    Timeline::notify(timepoint);
+
     std::lock_guard lck{m_mutex};
     add_wait(timepoint, stage);
   }
 
   // internal!
-  void signal_on_next_submit(const Timepoint& timepoint, PipelineStage stage) noexcept {
+  void signal_on_next_submit(const Timepoint &timepoint,
+                             PipelineStage stage) noexcept {
     std::lock_guard lck{m_mutex};
     add_signal(timepoint, stage);
   }
@@ -192,7 +200,7 @@ private:
   };
 
   // externally synchronized
-  void add_wait(const Timepoint& timepoint,
+  void add_wait(const Timepoint &timepoint,
                 PipelineStage stage = PipelineStage::all_commands) noexcept {
     const vulkan::TimelineSemaphore sem =
         TimelineImpl::get_timepoint_semaphore(timepoint);
@@ -236,7 +244,7 @@ private:
   }
 
   // externally synchronized
-  void add_signal(const Timepoint& timepoint,
+  void add_signal(const Timepoint &timepoint,
                   PipelineStage stage = PipelineStage::all_commands) noexcept {
     const vulkan::TimelineSemaphore sem =
         TimelineImpl::get_timepoint_semaphore(timepoint);

@@ -56,18 +56,19 @@ private:
   // internally synchronized
   void commit(const Timepoint &timepoint) noexcept {
     std::lock_guard lck{m_mutex};
-    if (m_count == 0) {
-      return;
-    }
     if (m_committed >= timepoint) {
       return; // no need to submit this timepoint again.
     }
-    m_committed = timepoint;
+    assert(m_count != 0);
+    assert(m_timeline.now() - 1 >= timepoint);
+
     end_cmd();
     begin_cmd();
   }
 
   void end_cmd() {
+    assert(m_count != 0);
+    m_committed = m_timeline.now() - 1;
     m_cmd.end();
     object_handle_ptr<QueueImpl>(m_queue)->signal_on_next_submit(
         m_committed, PipelineStage::transfer);

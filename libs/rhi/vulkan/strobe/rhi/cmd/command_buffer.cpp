@@ -667,21 +667,22 @@ void CommandBuffer::update(BufferOffset dst, const void *src,
       mem_impl->flush();
     }
   } else {
-    constexpr size_t MAX_CMD_UPDATE = 128;
-    if (size <= MAX_CMD_UPDATE) { // only for really really small updates
-      vulkan::cmd_update_buffer(
-          impl->cmd, {.buffer = dst_impl->buffer, .offset = dst.offset}, src,
-          size);
-    } else {
-      StageBuffer stage = impl->localStage.alloc(size, 1);
-      assert(stage.ptr);
-      std::memcpy(stage.ptr, src, size);
-      vulkan::cmd_copy_buffer(
-          impl->cmd,                                          //
-          {.buffer = dst_impl->buffer, .offset = dst.offset}, //
-          stage.buffer,                                       //
-          size);
-    }
+  constexpr size_t MAX_CMD_UPDATE = 128;
+  if (size <= MAX_CMD_UPDATE) {
+    vulkan::cmd_update_buffer(
+        impl->cmd, {.buffer = dst_impl->buffer, .offset = dst.offset}, src,
+        size);
+  } else {
+    StageBuffer stage = impl->localStage.alloc(size, 1);
+    assert(stage.ptr);
+    std::memcpy(stage.ptr, src, size);
+    vulkan::cmd_copy_buffer(
+        impl->cmd,
+        {.buffer = dst_impl->buffer, .offset = dst.offset},
+        stage.buffer,
+        size);
+  }
+  impl->state.retain(dst.buffer);
   }
 };
 

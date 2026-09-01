@@ -2,7 +2,7 @@
 
 #include "strobe/core/memory/AllocatorTraits.hpp"
 #include "strobe/core/memory/align.hpp"
-#include "strobe/core/memory/mpsc_monotonic_pool_resource.hpp"
+#include "strobe/core/memory/sync_monotonic_pool_resource.hpp"
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/objects/object.hpp"
 #include <atomic>
@@ -35,7 +35,7 @@ public:
   using upstream_alloc = strobe::rhi::allocator_ref;
   using upstream_traits = AllocatorTraits<upstream_alloc>;
   using allocator =
-      MPSCMonotonicPoolResource<handle_size, handle_alignment, upstream_alloc>;
+      SyncMonotonicPoolResource<handle_size, handle_alignment, upstream_alloc>;
   using allocator_traits = AllocatorTraits<allocator>;
 
   handle_allocator(strobe::rhi::allocator_ref alloc)

@@ -23,7 +23,7 @@ public:
     return lhs.m_handle != rhs.m_handle;
   }
 
-  static void notify(Timepoint timepoint) noexcept;
+  static void notify(const Timepoint& timepoint) noexcept;
   void notify(uint64_t serial) noexcept;
 
   Timepoint now() noexcept;
