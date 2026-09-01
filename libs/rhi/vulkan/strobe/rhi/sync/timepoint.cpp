@@ -59,6 +59,9 @@ bool Timepoint::wait(uint64_t timeout) const noexcept {
 }
 
 bool Timepoint::poll() const noexcept {
+  if (m_handle == nullptr) {
+    return false;
+  }
   auto *timeline = void_handle_ptr<TimelineImpl>(m_handle);
   uint64_t completed = timeline->m_completed.load(std::memory_order_acquire);
   if (completed >= m_serial) {
@@ -70,6 +73,9 @@ bool Timepoint::poll() const noexcept {
 }
 
 bool Timepoint::relaxed_poll() const noexcept {
+  if (m_handle == nullptr) {
+    return false;
+  }
   auto *timeline = void_handle_ptr<TimelineImpl>(m_handle);
   uint64_t completed = timeline->m_completed.load(std::memory_order_relaxed);
   if (completed >= m_serial) {

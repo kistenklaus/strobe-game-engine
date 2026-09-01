@@ -19,15 +19,18 @@ public:
         m_queue(std::move(queue)), m_cmdpool(std::move(cmdpool)) {
 
     m_committed = m_timeline.epoch();
+    begin_cmd();
     m_timeline.install_commit(this,
                               [](void *ptr, Timepoint timepoint) noexcept {
                                 static_cast<DMAImpl *>(ptr)->commit(timepoint);
                               });
-    begin_cmd();
   }
   ~DMAImpl() noexcept {
     m_timeline.uninstall_commit();
-    end_cmd();
+    std::lock_guard lock{m_mutex};
+    if (m_count != 0) {
+      end_cmd();
+    }
   }
 
   Timepoint async_copy(BufferOffset dst, BufferOffset src, uint64_t size) {
