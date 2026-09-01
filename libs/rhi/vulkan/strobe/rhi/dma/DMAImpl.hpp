@@ -70,6 +70,7 @@ private:
         m_committed, PipelineStage::transfer);
     m_queue.submit(&m_cmd);
     m_queue.flush();
+    m_count = 0;
   }
 
   void begin_cmd() {

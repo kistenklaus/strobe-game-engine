@@ -88,17 +88,21 @@ Device create_device(const DeviceInfo &info) {
   vulkan::Queue queue1 = context.ctx()->queue(1);
 
   Vector<Timeline, strobe::rhi::allocator_ref> timelines{allocs->alloc};
-  timelines.reserve(1);
+  timelines.reserve(3);
 
   Timeline universalTimeline =
       sync::create_timeline(context, &allocs->syncAlloc);
   timelines.push_back(universalTimeline);
 
-  Timeline dmaTimeline;
+  Timeline dmaTimeline = sync::create_timeline(context, &allocs->syncAlloc);
+  timelines.push_back(dmaTimeline);
+
+  Timeline transferTimeline;
   if (queue1) {
-    dmaTimeline = sync::create_timeline(context, &allocs->syncAlloc);
-    //   timelines.push_back(dmaTimeline);
+    transferTimeline = sync::create_timeline(context, &allocs->syncAlloc);
+    timelines.push_back(transferTimeline);
   }
+
   assert(universalTimeline);
   assert(dmaTimeline);
 
@@ -113,16 +117,16 @@ Device create_device(const DeviceInfo &info) {
   Queue universalQueue = que::create_queue(
       universalTimeline, gc, queue0, universalQueueFlags, &allocs->queAlloc);
 
-  Queue dmaQueue;
+  Queue transferQueue;
   if (queue1) {
-    assert(dmaTimeline);
-    dmaQueue = que::create_queue(dmaTimeline, gc, queue1, QueueFlags::transfer,
-                                 &allocs->queAlloc);
+    assert(transferTimeline);
+    transferQueue = que::create_queue(transferTimeline, gc, queue1,
+                                 QueueFlags::transfer, &allocs->queAlloc);
   } else {
-    dmaQueue = universalQueue;
+    transferQueue = universalQueue;
   }
 
-  DMA dma = dma::create_dma(context, dmaTimeline, gc, dmaQueue, staging,
+  DMA dma = dma::create_dma(context, dmaTimeline, gc, transferQueue, staging,
                             &allocs->dmaAlloc);
 
   return Device{make_void_handle<DeviceImpl>( //
@@ -136,7 +140,7 @@ Device create_device(const DeviceInfo &info) {
       std::move(scratch),                     //
       std::move(gc),                          //
       std::move(universalQueue),              //
-      std::move(dmaQueue),                    //
+      std::move(transferQueue),                    //
       std::move(dma)                          //
       )};
 }

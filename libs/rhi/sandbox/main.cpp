@@ -49,17 +49,18 @@ int main() {
     rhi::Swapchain swapchain =
         device.create_swapchain({.window = window.ptr()});
 
-    rhi::Buffer vertex1 = device.create_buffer({
-        .size = 24,
-        .bufferUsage =
-            rhi::BufferUsage::transfer_dst | rhi::BufferUsage::vertex,
-    });
-
     vec2 v1[3] = {
         {-0.65f, 0.0f}, //
         {0.65f, 0.0f},  //
         {0.0f, 0.75f},  //
     };
+
+    rhi::Buffer vertex1 = device.create_buffer({
+        .size = sizeof(v1),
+        .bufferUsage =
+            rhi::BufferUsage::transfer_dst | rhi::BufferUsage::vertex,
+    });
+
     device.async_upload(vertex1, v1);
 
     window.show();

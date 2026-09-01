@@ -44,7 +44,7 @@ Timepoint DMA::async_copy(BufferOffset dst, BufferOffset src,
   auto *impl = void_handle_ptr<DMAImpl>(m_handle);
   if (size == std::numeric_limits<uint64_t>::max()) {
     size = std::min(dst.buffer.size() - dst.offset,
-                    src.buffer.size() - dst.offset);
+                    src.buffer.size() - src.offset);
   }
   return impl->async_copy(dst, src, size);
 }

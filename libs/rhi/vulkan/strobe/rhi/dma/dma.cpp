@@ -11,6 +11,7 @@ DMA dma::create_dma(Context context, Timeline timeline, GarbageCollector gc,
   CommandPool cmdpool = cmd::create_cmd_pool(
       context, staging, object_handle_ptr<QueueImpl>(queue)->family(),
       allocs->cmdAlloc);
+
   return DMA{make_void_handle<DMAImpl>(&allocs->dmaAlloc, std::move(timeline),
                                        std::move(gc), std::move(queue),
                                        std::move(cmdpool))};

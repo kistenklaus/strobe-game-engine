@@ -24,7 +24,7 @@ struct DeviceImpl {
         memory(std::move(memory)), staging(std::move(staging)),
         scratch(std::move(scratch)), gc(std::move(gc)),
         universalQueue(std::move(universalQueue)),
-        dmaQueue(std::move(dmaQueue)), dma(std::move(dma)) {}
+        transferQueue(std::move(dmaQueue)), dma(std::move(dma)) {}
 
   Context context;
   handle_allocators *allocs;
@@ -35,7 +35,7 @@ struct DeviceImpl {
   ScratchBuffer scratch;
   GarbageCollector gc;
   Queue universalQueue;
-  Queue dmaQueue;
+  Queue transferQueue;
   DMA dma;
 };
 

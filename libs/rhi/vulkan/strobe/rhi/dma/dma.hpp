@@ -12,7 +12,6 @@ struct handle_allocators {
   explicit handle_allocators(strobe::rhi::allocator_ref alloc,
                              cmd::handle_allocators *cmdAlloc)
       : dmaAlloc(alloc), cmdAlloc(cmdAlloc) {}
-
   handle_allocator<DMAImpl> dmaAlloc;
   cmd::handle_allocators *cmdAlloc;
 };
