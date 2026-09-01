@@ -65,11 +65,7 @@ public:
   }
 
   void wait(const Timepoint &timepoint, PipelineStage stage) noexcept {
-    // currently we just leave it here, but it's not pretty,
-    // queue timelines already guarantee fwd progres and notifying here
-    // pushes a lot of work into the calling thread instead of
-    // deferring it to the background gc thread.
-    // m_gc.request_commit(timepoint);
+    // Required because of presentation, binary semaphores.
     Timeline::notify(timepoint);
 
     std::lock_guard lck{m_mutex};

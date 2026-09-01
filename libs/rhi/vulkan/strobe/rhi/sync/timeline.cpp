@@ -49,7 +49,7 @@ void Timeline::notify(const Timepoint& timepoint) noexcept {
         timeline->m_serial.load(std::memory_order_relaxed);
     assert(timepoint.m_serial < serial);
 
-    if (serial < timeline->m_commited) {
+    if (timepoint.m_serial <= timeline->m_commited) {
       return;
     }
     timeline->m_commited = serial;
