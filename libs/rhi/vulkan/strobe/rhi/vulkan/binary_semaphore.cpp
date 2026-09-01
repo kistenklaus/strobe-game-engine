@@ -13,7 +13,9 @@ BinarySemaphore create_binary_semaphore(Context *context,
   };
   BinarySemaphore sem;
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCreateSemaphore")
+#endif
     VkResult result = vkCreateSemaphore(context->device(), &createInfo,
                                         context->driver_alloc(), &sem.handle);
     if (result != VK_SUCCESS) {
@@ -25,7 +27,9 @@ BinarySemaphore create_binary_semaphore(Context *context,
 void destroy_binary_semaphore(Context *context, BinarySemaphore sem) noexcept {
   assert(context != nullptr);
   assert(sem);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkDestroySemaphore");
+#endif
   vkDestroySemaphore(context->device(), sem.handle, context->driver_alloc());
 }
 

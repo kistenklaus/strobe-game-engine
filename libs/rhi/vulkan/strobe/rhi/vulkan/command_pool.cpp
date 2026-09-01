@@ -15,7 +15,9 @@ CommandPool create_command_pool(Context *context, const CommandPoolInfo &info) {
   };
   CommandPool cmdpool;
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCreateCommandPool");
+#endif
     VkResult result =
         vkCreateCommandPool(context->device(), &createInfo,
                             context->driver_alloc(), &cmdpool.handle);
@@ -30,7 +32,9 @@ void destroy_command_pool(Context *context, CommandPool cmdpool) noexcept {
   assert(context);
   assert(cmdpool);
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkDestroyCommandPool");
+#endif
     vkDestroyCommandPool(context->device(), cmdpool.handle,
                          context->driver_alloc());
   }
@@ -41,7 +45,9 @@ void reset_command_pool(Context *context, CommandPool cmdpool,
   assert(context != nullptr);
   assert(cmdpool);
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkResetCommandPool");
+#endif
     VkResult result =
         vkResetCommandPool(context->device(), cmdpool.handle, flags);
     if (result != VK_SUCCESS) {

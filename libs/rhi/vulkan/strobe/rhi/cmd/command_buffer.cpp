@@ -29,13 +29,13 @@
 #include <utility>
 #include <vulkan/vulkan_core.h>
 
-#ifdef STROBE_TRACY
+#ifdef STROBE_RHI_TRACE_DEVICE
 #include "strobe/rhi/vulkan/tracy/profiler.hpp"
 #endif
 
 namespace strobe::rhi {
 
-#ifdef STROBE_TRACY
+#ifdef STROBE_RHI_TRACE_DEVICE
 #define CmdZoneScopedN(impl, name)                                             \
   ZoneScopedN(name);                                                           \
   static constexpr tracy::SourceLocationData TracyConcat(                      \
@@ -46,7 +46,7 @@ namespace strobe::rhi {
       &TracyConcat(strobeRhiSourceLocation, TracyLine), (impl)->cmd,           \
       ((impl)->flags & strobe::rhi::CommandBufferFlags::reusable) == 0}
 #else
-#define CmdZoneScopedN(impl, name)
+#define CmdZoneScopedN(impl, name) ZoneScopedN(name);
 #endif
 
 CommandBuffer::CommandBuffer(const CommandBuffer &o) noexcept

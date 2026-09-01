@@ -117,7 +117,7 @@ public:
 
     // No queue timeline satisfied its target, so the wake semaphore must have
     // satisfied the VK_SEMAPHORE_WAIT_ANY_BIT wait.
-    const uint64_t wakeTarget = m_values.back();
+    [[maybe_unused]] const uint64_t wakeTarget = m_values.back();
     const uint64_t wakeValue = vulkan::get_timeline_semaphore_value(
         ctx, vulkan::TimelineSemaphore{.handle = m_semaphores.back()});
 

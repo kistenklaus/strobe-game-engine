@@ -15,7 +15,9 @@ Event create_event(Context *context, const EventInfo &info) {
   };
   Event event{};
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCreateEvent");
+#endif
     const VkResult result = vkCreateEvent(
         context->device(), &createInfo, context->driver_alloc(), &event.handle);
     if (result != VK_SUCCESS) {
@@ -29,7 +31,9 @@ void destroy_event(Context *context, Event event) noexcept {
   assert(context != nullptr);
   assert(event);
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkDestroyEvent");
+#endif
     vkDestroyEvent(context->device(), event.handle, context->driver_alloc());
   }
 }
@@ -37,7 +41,9 @@ void destroy_event(Context *context, Event event) noexcept {
 bool is_event_signaled(Context *context, Event event) noexcept {
   assert(context != nullptr);
   assert(event);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkGetEventStatus");
+#endif
   const VkResult result = vkGetEventStatus(context->device(), event.handle);
   assert(result == VK_EVENT_SET || result == VK_EVENT_RESET);
   return result == VK_EVENT_SET;
@@ -47,7 +53,9 @@ void set_event(Context *context, Event event) {
   assert(context != nullptr);
   assert(event);
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkSetEvent");
+#endif
     const VkResult result = vkSetEvent(context->device(), event.handle);
     if (result != VK_SUCCESS) {
       vulkan_error(result, "Failed to set Vulkan event");
@@ -59,7 +67,9 @@ void reset_event(Context *context, Event event) {
   assert(context != nullptr);
   assert(event);
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkResetEvent");
+#endif
     const VkResult result = vkResetEvent(context->device(), event.handle);
     if (result != VK_SUCCESS) {
       vulkan_error(result, "Failed to reset Vulkan event");

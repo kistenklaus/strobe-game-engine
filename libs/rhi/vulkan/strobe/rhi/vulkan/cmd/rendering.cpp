@@ -50,13 +50,17 @@ void cmd_begin_rendering(CommandBuffer cmd,
   };
 
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdBeginRendering");
+#endif
     vkCmdBeginRendering(cmd.handle, &renderingInfo);
   }
 }
 void cmd_end_rendering(CommandBuffer cmd) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdEndRendering");
+#endif
     vkCmdEndRendering(cmd.handle);
   }
 }
@@ -78,7 +82,9 @@ void cmd_set_viewports(CommandBuffer cmd,
 void cmd_set_viewports(CommandBuffer cmd,
                        span<const VkViewport> viewports) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetViewportWithCount");
+#endif
     vkCmdSetViewportWithCount(cmd.handle, viewports.size(), viewports.data());
   }
 }
@@ -96,7 +102,9 @@ void cmd_set_scissors(CommandBuffer cmd, span<const Rect> scissors) noexcept {
 void cmd_set_scissors(CommandBuffer cmd,
                       span<const VkRect2D> scissors) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetScissorWithCount");
+#endif
     vkCmdSetScissorWithCount(cmd.handle, scissors.size(), scissors.data());
   }
 }
@@ -104,7 +112,9 @@ void cmd_set_scissors(CommandBuffer cmd,
 void cmd_set_rasterizer_discard_enable(CommandBuffer cmd,
                                        bool discardEnable) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetRasterizerDiscardEnable");
+#endif
     vkCmdSetRasterizerDiscardEnable(cmd.handle, discardEnable);
   }
 }
@@ -115,14 +125,18 @@ void cmd_set_primitive_topology(CommandBuffer cmd,
 void cmd_set_primitive_topology(CommandBuffer cmd,
                                 VkPrimitiveTopology topology) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetPrimitiveTopology");
+#endif
     vkCmdSetPrimitiveTopology(cmd.handle, topology);
   }
 }
 
 void cmd_set_primitive_restart(CommandBuffer cmd, bool restartEnable) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetPrimitiveRestartEnable");
+#endif
     vkCmdSetPrimitiveRestartEnable(cmd.handle, restartEnable);
   }
 }
@@ -132,7 +146,9 @@ void cmd_set_cull_mode(CommandBuffer cmd, CullMode cullMode) noexcept {
 
 void cmd_set_cull_mode(CommandBuffer cmd, VkCullModeFlags cullMode) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetCullMode");
+#endif
     vkCmdSetCullMode(cmd.handle, cullMode);
   }
 }
@@ -143,7 +159,9 @@ void cmd_set_front_face(CommandBuffer cmd, FrontFace frontFace) noexcept {
 
 void cmd_set_front_face(CommandBuffer cmd, VkFrontFace frontFace) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetFrontFace");
+#endif
     vkCmdSetFrontFace(cmd.handle, frontFace);
   }
 }
@@ -151,21 +169,27 @@ void cmd_set_front_face(CommandBuffer cmd, VkFrontFace frontFace) noexcept {
 void cmd_set_depth_bias_enable(CommandBuffer cmd,
                                bool depthBiasEnable) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetDepthBiasEnable");
+#endif
     vkCmdSetDepthBiasEnable(cmd.handle, depthBiasEnable);
   }
 }
 void cmd_set_depth_test_enable(CommandBuffer cmd,
                                bool depthTestEnable) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetDepthTestEnable");
+#endif
     vkCmdSetDepthTestEnable(cmd.handle, depthTestEnable);
   }
 }
 void cmd_set_depth_write_enable(CommandBuffer cmd,
                                 bool depthWriteEnable) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetDepthWriteEnable");
+#endif
     vkCmdSetDepthWriteEnable(cmd.handle, depthWriteEnable);
   }
 }
@@ -174,14 +198,18 @@ void cmd_set_depth_compare_op(CommandBuffer cmd, CompareOp op) noexcept {
 }
 void cmd_set_depth_compare_op(CommandBuffer cmd, VkCompareOp op) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetDepthCompareOp");
+#endif
     vkCmdSetDepthCompareOp(cmd.handle, op);
   }
 }
 void cmd_set_depth_bounds_test_enable(CommandBuffer cmd,
                                       bool depthBoundsTestEnable) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetDepthBoundsTestEnable");
+#endif
     vkCmdSetDepthBoundsTestEnable(cmd.handle, depthBoundsTestEnable);
   }
 }
@@ -189,14 +217,18 @@ void cmd_set_depth_bounds_test_enable(CommandBuffer cmd,
 void cmd_set_depth_bounds(CommandBuffer cmd, float minDepthBound,
                           float maxDepthBound) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetDepthBounds");
+#endif
     vkCmdSetDepthBounds(cmd.handle, minDepthBound, maxDepthBound);
   }
 }
 void cmd_set_stencil_test_enable(CommandBuffer cmd,
                                  bool stencilTestEnable) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetStencilTestEnable");
+#endif
     vkCmdSetStencilTestEnable(cmd.handle, stencilTestEnable);
   }
 }
@@ -214,7 +246,9 @@ void cmd_set_stencil_op(CommandBuffer cmd, VkStencilFaceFlags faceMask,
                         VkStencilOp depthFailOp,
                         VkCompareOp compareOp) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetStencilOp");
+#endif
     vkCmdSetStencilOp(cmd.handle, faceMask, failOp, passOp, depthFailOp,
                       compareOp);
   }
@@ -223,7 +257,9 @@ void cmd_set_stencil_compare_mask(CommandBuffer cmd,
                                   VkStencilFaceFlags faceMask,
                                   uint32_t compareMask) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetStencilCompareMask");
+#endif
     vkCmdSetStencilCompareMask(cmd.handle, faceMask, compareMask);
   }
 }
@@ -234,7 +270,9 @@ void cmd_set_stencil_compare_mask(CommandBuffer cmd, StencilFace faceMask,
 void cmd_set_stencil_write_mask(CommandBuffer cmd, VkStencilFaceFlags faceMask,
                                 uint32_t writeMask) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetStencilWriteMask");
+#endif
     vkCmdSetStencilWriteMask(cmd.handle, faceMask, writeMask);
   }
 }
@@ -245,7 +283,9 @@ void cmd_set_stencil_write_mask(CommandBuffer cmd, StencilFace faceMask,
 void cmd_set_stencil_reference(CommandBuffer cmd, VkStencilFaceFlags faceMask,
                                uint32_t reference) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetStencilReference");
+#endif
     vkCmdSetStencilReference(cmd.handle, faceMask, reference);
   }
 }
@@ -262,13 +302,17 @@ void cmd_set_blend_constants(CommandBuffer cmd, vec4 constants) noexcept {
       constants.w(),
   };
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetBlendConstants");
+#endif
     vkCmdSetBlendConstants(cmd.handle, blendConstants);
   }
 }
 void cmd_set_line_width(CommandBuffer cmd, float lineWidth) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetLineWidth");
+#endif
     vkCmdSetLineWidth(cmd.handle, lineWidth);
   }
 }
@@ -285,7 +329,9 @@ void cmd_set_vertex_input(
     span<const VkVertexInputBindingDescription2EXT> bindings,
     span<const VkVertexInputAttributeDescription2EXT> attributes) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetVertexInput");
+#endif
     vulkan::vk_cmd_set_vertex_input(context->pnf(), cmd.handle, bindings.size(),
                                     bindings.data(), attributes.size(),
                                     attributes.data());
@@ -333,7 +379,9 @@ void cmd_set_vertex_input(const Context *context, CommandBuffer cmd,
 void cmd_set_rasterizer_samples(const Context *context, CommandBuffer cmd,
                                 VkSampleCountFlagBits samples) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetRasterizerSamples");
+#endif
     vulkan::vk_cmd_set_rasterization_samples(context->pnf(), cmd.handle,
                                              samples);
   }
@@ -358,7 +406,9 @@ void cmd_set_sample_mask(const Context *context, CommandBuffer cmd,
                          VkSampleCountFlagBits samples,
                          const VkSampleMask mask[2]) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetSampleMask");
+#endif
     vulkan::vk_cmd_set_sample_mask(context->pnf(), cmd.handle, samples, mask);
   }
 }
@@ -370,7 +420,9 @@ void cmd_set_sample_mask(const Context *context, CommandBuffer cmd,
       static_cast<uint32_t>(mask >> 32),
   };
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetSampleMask");
+#endif
     vulkan::vk_cmd_set_sample_mask(context->pnf(), cmd.handle, samples, masks);
   }
 }
@@ -378,7 +430,9 @@ void cmd_set_sample_mask(const Context *context, CommandBuffer cmd,
 void cmd_set_alpha_to_coverage_enable(const Context *context, CommandBuffer cmd,
                                       bool alphaToCoverage) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetAlphaToCoverageEnable");
+#endif
     vulkan::vk_cmd_set_alpha_to_coverage_enable(context->pnf(), cmd.handle,
                                                 alphaToCoverage);
   }
@@ -386,7 +440,9 @@ void cmd_set_alpha_to_coverage_enable(const Context *context, CommandBuffer cmd,
 void cmd_set_polygon_mode(const Context *context, CommandBuffer cmd,
                           VkPolygonMode polygonMode) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetPolygonMode");
+#endif
     vulkan::vk_cmd_set_polygon_mode(context->pnf(), cmd.handle, polygonMode);
   }
 }
@@ -399,7 +455,9 @@ void cmd_set_polygon_mode(const Context *context, CommandBuffer cmd,
 void cmd_set_depth_clamp_enable(const Context *context, CommandBuffer cmd,
                                 bool depthClampEnable) {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetDepthClampEnable");
+#endif
     vulkan::vk_cmd_set_depth_clamp_enable(context->pnf(), cmd.handle,
                                           depthClampEnable);
   }
@@ -407,7 +465,9 @@ void cmd_set_depth_clamp_enable(const Context *context, CommandBuffer cmd,
 void cmd_set_logic_op_enable(const Context *context, CommandBuffer cmd,
                              bool logicOpEnable) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetLogicOpEnable");
+#endif
     vulkan::vk_cmd_set_logic_op_enable(context->pnf(), cmd.handle,
                                        logicOpEnable);
   }
@@ -416,7 +476,9 @@ void cmd_set_logic_op_enable(const Context *context, CommandBuffer cmd,
 void cmd_set_logic_op(const Context *context, CommandBuffer cmd,
                       VkLogicOp logicOp) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetLogicOp");
+#endif
     vulkan::vk_cmd_set_logic_op(context->pnf(), cmd.handle, logicOp);
   }
 }
@@ -435,7 +497,9 @@ void cmd_set_color_blend_enable(const Context *context, CommandBuffer cmd,
     enable[i] = (bitmask & (uint32_t{1} << i)) ? VK_TRUE : VK_FALSE;
   }
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetColorBlendEnable");
+#endif
     vulkan::vk_cmd_set_color_blend_enable(
         context->pnf(), cmd.handle, firstAttachment, attachmentCount, enable);
   }
@@ -444,7 +508,9 @@ void cmd_set_color_blend_equation(
     const Context *context, CommandBuffer cmd, uint32_t firstAttachment,
     span<const VkColorBlendEquationEXT> colorBlendEquations) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetColorBlendEquation");
+#endif
     vulkan::vk_cmd_set_color_blend_equation(
         context->pnf(), cmd.handle, firstAttachment, colorBlendEquations.size(),
         colorBlendEquations.data());
@@ -471,7 +537,9 @@ void cmd_set_color_write_mask(
     const Context *context, CommandBuffer cmd, uint32_t firstAttachment,
     span<const VkColorComponentFlags> colorWriteMasks) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetColorWriteMask");
+#endif
     vulkan::vk_cmd_set_color_write_mask(context->pnf(), cmd.handle,
                                         firstAttachment, colorWriteMasks.size(),
                                         colorWriteMasks.data());
@@ -490,21 +558,27 @@ void cmd_set_color_write_mask(
 void cmd_set_alpha_to_one_enable(const Context *context, CommandBuffer cmd,
                                  bool alphaToOneEnable) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdSetAlphaToOneEnable");
+#endif
     vulkan::vk_cmd_set_alpha_to_one_enable(context->pnf(), cmd.handle,
                                            alphaToOneEnable);
   }
 }
 void cmd_set_patch_control_points(const Context *context, CommandBuffer cmd,
                                   uint32_t patchControlPoints) noexcept {
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkCmdSetPatchControlPoints");
+#endif
   vulkan::vk_cmd_set_patch_control_points(context->pnf(), cmd.handle,
                                           patchControlPoints);
 }
 void cmd_bind_vertex_buffer(CommandBuffer cmd,
                             BufferOffset verticies) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdBindVertexBuffers");
+#endif
     vkCmdBindVertexBuffers(cmd.handle, 0, 1, &verticies.buffer.handle,
                            &verticies.offset);
   }
@@ -514,7 +588,9 @@ void cmd_bind_shader(const Context *context, CommandBuffer cmd,
                      ShaderObject shader,
                      VkShaderStageFlagBits stage) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdBindShaders");
+#endif
     vulkan::vk_cmd_bind_shaders(context->pnf(), cmd.handle, 1, &stage,
                                 &shader.handle);
   }
@@ -584,7 +660,9 @@ void cmd_unbind_shaders(const Context *context, CommandBuffer cmd,
   }
 
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdBindShaders");
+#endif
     vulkan::vk_cmd_bind_shaders(context->pnf(), cmd.handle, stageCount,
                                 vkStages, nullptr);
   }
@@ -593,7 +671,9 @@ void cmd_unbind_shaders(const Context *context, CommandBuffer cmd,
 void cmd_draw(CommandBuffer cmd, uint32_t vertexCount, uint32_t instanceCount,
               uint32_t firstVertex, uint32_t firstInstance) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdDraw");
+#endif
     vkCmdDraw(cmd.handle, vertexCount, instanceCount, firstVertex,
               firstInstance);
   }
@@ -602,7 +682,9 @@ void cmd_draw_indexed(CommandBuffer cmd, uint32_t indexCount,
                       uint32_t instanceCount, uint32_t firstIndex,
                       uint32_t vertexOffset, uint32_t firstInstance) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdDrawIndexed");
+#endif
     vkCmdDrawIndexed(cmd.handle, indexCount, instanceCount, firstIndex,
                      vertexOffset, firstInstance);
   }

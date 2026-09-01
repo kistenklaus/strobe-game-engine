@@ -17,7 +17,9 @@ CommandBuffer alloc_command_buffer(Context *context,
 
   CommandBuffer cmd;
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkAllocateCommandBuffers");
+#endif
     VkResult result =
         vkAllocateCommandBuffers(context->device(), &allocInfo, &cmd.handle);
     if (result != VK_SUCCESS) {
@@ -32,14 +34,18 @@ void free_command_buffer(Context *context, CommandPool pool,
   assert(context != nullptr);
   assert(pool);
   assert(cmd);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkFreeCommandBuffers");
+#endif
   vkFreeCommandBuffers(context->device(), pool.handle, 1, &cmd.handle);
 }
 
 void reset_command_buffer(CommandBuffer cmd) {
   assert(cmd);
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkResetCommandBuffer");
+#endif
     VkResult result = vkResetCommandBuffer(cmd.handle, 0);
     if (result != VK_SUCCESS) {
       vulkan_error(result, "Failed to reset command buffer");
@@ -57,7 +63,9 @@ void begin_command_buffer(CommandBuffer cmd) {
       .pInheritanceInfo = &inheritance,
   };
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkBeginCommandBuffer");
+#endif
     VkResult result = vkBeginCommandBuffer(cmd.handle, &beginInfo);
     if (result != VK_SUCCESS) {
       vulkan_error(result, "Failed to begin command buffer");
@@ -67,7 +75,9 @@ void begin_command_buffer(CommandBuffer cmd) {
 
 void end_command_buffer(CommandBuffer cmd) {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkEndCommandBuffer");
+#endif
     VkResult result = vkEndCommandBuffer(cmd.handle);
     if (result != VK_SUCCESS) {
       vulkan_error(result, "Failed to end command buffer");

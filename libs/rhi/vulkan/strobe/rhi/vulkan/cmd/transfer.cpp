@@ -10,14 +10,18 @@ void cmd_copy_buffer(CommandBuffer cmd, BufferOffset dst, BufferOffset src,
       .size = size,
   };
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdCopyBuffer");
+#endif
     vkCmdCopyBuffer(cmd.handle, src.buffer.handle, dst.buffer.handle, 1, &copy);
   }
 }
 void cmd_update_buffer(CommandBuffer cmd, BufferOffset dst, const void *src,
                        VkDeviceSize size) noexcept {
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdUpdateBuffer");
+#endif
     vkCmdUpdateBuffer(cmd.handle, dst.buffer.handle, dst.offset, size, src);
   }
 }

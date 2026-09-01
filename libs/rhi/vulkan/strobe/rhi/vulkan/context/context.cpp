@@ -32,7 +32,8 @@ Context::Context(const ContextCreateInfo &info,
       m_queues(get_queues(m_device, m_queueLocations, m_alloc)),
       m_vma(create_vma(m_instance, m_physicalDevice, m_device,
                        m_props.api_version, &m_driverAlloc)),
-      m_pnf(load_pnf_functions(m_instance, m_device, m_props)) {}
+      m_pnf(load_pnf_functions(m_instance, m_device, m_props)) {
+}
 
 Context::~Context() noexcept {
 

@@ -9,6 +9,7 @@
 #include "strobe/rhi/shader/shader.hpp"
 #include "strobe/rhi/swapchain/swap.hpp"
 #include "strobe/rhi/types/queue_flags.hpp"
+#include <tracy/Tracy.hpp>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi {
@@ -88,6 +89,7 @@ Queue Device::get_queue([[maybe_unused]] QueueFlags flags) noexcept {
 }
 
 CommandPool Device::create_cmdpool() noexcept {
+  ZoneScopedN("Device::create_cmdpool");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return cmd::create_cmd_pool(
       impl->context, impl->staging,
@@ -97,25 +99,29 @@ CommandPool Device::create_cmdpool() noexcept {
 
 Buffer Device::create_buffer(const BufferInfo &info,
                              const MemoryLifetime &lifetime) noexcept {
+  ZoneScopedN("Device::create_buffer");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return buf::create_buffer(impl->memory, info, lifetime,
                             &impl->allocs->bufAlloc);
 }
 Image Device::create_image(const ImageInfo &info,
                            const MemoryLifetime &lifetime) noexcept {
+  ZoneScopedN("Device::create_image");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
-  return img::create_image(impl->memory, info, lifetime, &impl->allocs->imgAlloc);
+  return img::create_image(impl->memory, info, lifetime,
+                           &impl->allocs->imgAlloc);
 }
 
 ImageView Device::create_image_view(const Image &image,
-                                    const ImageViewInfo &info
-                                    ) noexcept {
+                                    const ImageViewInfo &info) noexcept {
+  ZoneScopedN("Device::create_image_view");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return img::create_image_view(image, info, &impl->allocs->imgAlloc);
 }
 
 Blas Device::create_blas(const BlasInfo &info,
                          const MemoryLifetime &lifetime) noexcept {
+  ZoneScopedN("Device::create_blas");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return bvh::create_blas(impl->memory, impl->scratch, info, lifetime,
                           &impl->allocs->bvhAlloc);
@@ -123,6 +129,7 @@ Blas Device::create_blas(const BlasInfo &info,
 
 Tlas Device::create_tlas(const TlasInfo &info,
                          const MemoryLifetime &lifetime) noexcept {
+  ZoneScopedN("Device::create_tlas");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return bvh::create_tlas(impl->memory, impl->scratch, info, lifetime,
                           &impl->allocs->bvhAlloc);
@@ -130,13 +137,15 @@ Tlas Device::create_tlas(const TlasInfo &info,
 
 Timepoint Device::async_copy(BufferOffset dst, BufferOffset src,
                              uint64_t size) noexcept {
-  auto* impl = void_handle_ptr<DeviceImpl>(m_handle);
+  ZoneScopedN("Device::async_copy");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->dma.async_copy(dst, src, size);
 }
 
 Timepoint Device::async_upload(BufferOffset dst, void *src,
                                uint64_t size) noexcept {
-  auto* impl = void_handle_ptr<DeviceImpl>(m_handle);
+  ZoneScopedN("Device::async_upload");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->dma.async_upload(dst, src, size);
 }
 

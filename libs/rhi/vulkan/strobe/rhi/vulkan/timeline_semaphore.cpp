@@ -23,7 +23,9 @@ TimelineSemaphore create_timeline_semaphore(Context *context,
   };
   TimelineSemaphore sem;
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCreateSemaphore(timeline)");
+#endif
     VkResult result = vkCreateSemaphore(context->device(), &createInfo,
                                         context->driver_alloc(), &sem.handle);
     if (result != VK_SUCCESS) {
@@ -37,7 +39,9 @@ void destroy_timeline_semaphore(Context *context, TimelineSemaphore sem) {
   assert(context != nullptr);
   assert(context->properties().timeline_semaphore);
   assert(sem);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkDestroySemaphore");
+#endif
   vkDestroySemaphore(context->device(), sem.handle, context->driver_alloc());
 }
 
@@ -48,7 +52,9 @@ uint64_t get_timeline_semaphore_value(Context *context, TimelineSemaphore sem) {
 
   uint64_t value = 0;
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkGetSemaphoreCounterValue(timeline)");
+#endif
     VkResult result =
         vkGetSemaphoreCounterValue(context->device(), sem.handle, &value);
     if (result != VK_SUCCESS) {
@@ -70,7 +76,9 @@ void signal_timeline_semaphore(Context *context, TimelineSemaphore sem,
       .value = value,
   };
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkSignalSemaphore(timeline)");
+#endif
     VkResult result = vkSignalSemaphore(context->device(), &signalInfo);
     if (result != VK_SUCCESS) {
       vulkan_error(result, "Failed to signal timeline semaphore");
@@ -91,7 +99,9 @@ bool wait_for_timeline_semaphore(Context *context, TimelineSemaphore sem,
 
   VkResult result;
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkWaitSemaphores(timeline)");
+#endif
     result = vkWaitSemaphores(context->device(), &waitInfo, timeout);
   }
   if (result == VK_TIMEOUT) {

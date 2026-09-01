@@ -48,9 +48,15 @@ void Timeline::notify(const Timepoint& timepoint) noexcept {
     [[maybe_unused]] uint64_t serial =
         timeline->m_serial.load(std::memory_order_relaxed);
     assert(timepoint.m_serial < serial);
+
+    if (serial < timeline->m_commited) {
+      return;
+    }
+    timeline->m_commited = serial;
     pUserData = timeline->m_pUserData;
     commit = timeline->m_commit;
   }
+
   if (commit) {
     commit(pUserData, timepoint);
   }

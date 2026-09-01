@@ -1,5 +1,9 @@
 include_guard(GLOBAL)
 
+option(STROBE_RHI_TRACE_DEVICE "Enable tracy gpu instrumentation for all commands" ON)
+option(STROBE_RHI_TRACE_VK "Enable tracy instrumentation for all vulkan calls" ON)
+option(STROBE_RHI_TRACE_LOCKS "Enable tracy instrumentation locks" ON)
+
 # Vulkan RHI:
 # sub components listed in dependency order
 # Later components may only list eariler components.
@@ -117,6 +121,16 @@ target_link_libraries(strobe-rhi-vulkan
   PRIVATE strobe::tracy
 )
 target_link_glfw(strobe-rhi-vulkan PRIVATE)
+
+if (STROBE_TRACY AND STROBE_RHI_TRACE_DEVICE) 
+  target_compile_definitions(strobe-rhi-vulkan PRIVATE STROBE_RHI_TRACE_DEVICE=ON)
+endif()
+if (STROBE_TRACY AND STROBE_RHI_TRACE_VK)
+  target_compile_definitions(strobe-rhi-vulkan PRIVATE STROBE_RHI_TRACE_VK=ON)
+endif()
+if (STROBE_TRACY AND STROBE_RHI_TRACE_LOCKS)
+  target_compile_definitions(strobe-rhi-vulkan PRIVATE STROBE_RHI_TRACE_LOCKS=ON)
+endif()
 
 if (STROBE_SAN)
   target_link_libraries(strobe-rhi-vulkan PUBLIC strobe_sanitizers)

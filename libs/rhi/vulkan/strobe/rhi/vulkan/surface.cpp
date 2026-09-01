@@ -10,7 +10,9 @@ Surface create_surface(Context *context, GLFWwindow *window) {
 
   Surface surface;
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("glfwCreateWindowSurface");
+#endif
     VkResult result = glfwCreateWindowSurface(
         context->instance(), window, context->driver_alloc(), &surface.handle);
     if (result != VK_SUCCESS) {
@@ -24,7 +26,9 @@ void destroy_surface(Context *context, Surface surface) {
   assert(context->instance());
   assert(surface);
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkDestroySurfaceKHR");
+#endif
     vkDestroySurfaceKHR(context->instance(), surface.handle,
                         context->driver_alloc());
   }
@@ -38,7 +42,9 @@ SurfaceCapabilities query_surface_capabilities(Context *context,
   VkSurfaceCapabilitiesKHR caps{};
 
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+#endif
     const VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
         context->physicalDevice(), surface.handle, &caps);
     if (result != VK_SUCCESS) {

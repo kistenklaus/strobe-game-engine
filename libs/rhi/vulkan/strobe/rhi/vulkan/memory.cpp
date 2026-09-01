@@ -20,7 +20,9 @@ Memory allocate_memory(Context *context, MemoryRequirements requirements,
       details::get_allocation_create_info(requirements, usage, alias);
 
   Memory memory{};
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vmaAllocateMemory");
+#endif
   VkResult result = vmaAllocateMemory(context->vma(), &req, &createInfo,
                                       &memory.handle, nullptr);
   if (result != VK_SUCCESS) {
@@ -47,7 +49,9 @@ Memory allocate_dedicated_memory(Context *context,
   };
 
   Memory memory{};
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vmaAllocateDedicatedMemory");
+#endif
   VkResult result =
       vmaAllocateDedicatedMemory(context->vma(), &req, &allocInfo,
                                  &dedicatedInfo, &memory.handle, nullptr);
@@ -74,7 +78,9 @@ Memory allocate_dedicated_memory(Context *context,
       .buffer = VK_NULL_HANDLE,
   };
   Memory memory{};
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vmaAllocateDedicatedMemory");
+#endif
   VkResult result =
       vmaAllocateDedicatedMemory(context->vma(), &req, &allocInfo,
                                  &dedicatedInfo, &memory.handle, nullptr);
@@ -87,7 +93,9 @@ Memory allocate_dedicated_memory(Context *context,
 void free_memory(Context *context, Memory memory) {
   assert(context);
   assert(memory);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vmaFreeMemory");
+#endif
   vmaFreeMemory(context->vma(), memory.handle);
 }
 
@@ -113,7 +121,9 @@ allocate_buffer(Context *context, const BufferInfo &info,
   Buffer buffer{};
   Memory memory{};
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vmaCreateBuffer");
+#endif
     VkResult result =
         vmaCreateBuffer(context->vma(), &bufferInfo,
                         details::get_auto_allocation_create_info(memoryUsage),
@@ -129,14 +139,18 @@ void free_allocated_buffer(Context *context, Memory memory, Buffer buffer) {
   assert(context);
   assert(buffer);
   assert(memory);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vmaDestroyBuffer");
+#endif
   vmaDestroyBuffer(context->vma(), buffer.handle, memory.handle);
 }
 
 void destroy_allocated_buffer(Context *context, Buffer buffer) {
   assert(context);
   assert(buffer);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vmaDestroyBuffer");
+#endif
   vmaDestroyBuffer(context->vma(), buffer.handle, VK_NULL_HANDLE);
 }
 
@@ -176,7 +190,9 @@ allocate_image(Context *context, const ImageInfo &info,
   Image image{};
   VmaAllocationInfo allocInfo{};
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vmaCreateImage");
+#endif
     const VkResult result =
         vmaCreateImage(context->vma(), &imageInfo, pVmaInfo, &image.handle,
                        &memory.handle, &allocInfo);
@@ -192,21 +208,27 @@ void free_allocated_image(Context *context, Memory memory,
   assert(context);
   assert(image);
   assert(memory);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vmaDestroyImage");
+#endif
   vmaDestroyImage(context->vma(), image.handle, memory.handle);
 }
 
 void destroy_allocated_image(Context *context, Image image) noexcept {
   assert(context);
   assert(image);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vmaDestroyImage");
+#endif
   vmaDestroyImage(context->vma(), image.handle, VK_NULL_HANDLE);
 }
 
 void *map_memory(Context *context, Memory memory) {
   void *mapped;
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vmaMapMemory");
+#endif
     VkResult result = vmaMapMemory(context->vma(), memory.handle, &mapped);
     if (result != VK_SUCCESS) {
       vulkan_error(result, "Failed to map memory");
@@ -216,13 +238,17 @@ void *map_memory(Context *context, Memory memory) {
 }
 
 void unmap_memory(Context *context, Memory memory) noexcept {
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vmaUnmapMemory");
+#endif
   vmaUnmapMemory(context->vma(), memory.handle);
 }
 
 void flush_memory(Context *context, Memory memory, VkDeviceSize offset,
                   VkDeviceSize size) {
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vmaFlushAllocation");
+#endif
   VkResult result =
       vmaFlushAllocation(context->vma(), memory.handle, offset, size);
   if (result != VK_SUCCESS) {
@@ -232,7 +258,9 @@ void flush_memory(Context *context, Memory memory, VkDeviceSize offset,
 
 void invalidate_memory(Context *context, Memory memory, VkDeviceSize offset,
                        VkDeviceSize size) {
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vmaInvalidateAllocation");
+#endif
   VkResult result =
       vmaInvalidateAllocation(context->vma(), memory.handle, offset, size);
   if (result != VK_SUCCESS) {

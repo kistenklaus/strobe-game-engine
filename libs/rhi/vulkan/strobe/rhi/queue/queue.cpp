@@ -37,13 +37,14 @@ Queue &Queue::operator=(Queue &&o) noexcept {
 Queue::~Queue() noexcept { unpin_void_handle<QueueImpl>(m_handle); }
 
 void Queue::wait(const Timepoint &timepoint, PipelineStage stage) noexcept {
+  ZoneScopedN("Queue::wait(Timepoint)");
   auto *impl = void_handle_ptr<QueueImpl>(m_handle);
   impl->wait(timepoint, stage);
 }
 
 void Queue::wait(const SwapchainImage &swapchainImage,
                  PipelineStage stage) noexcept {
-  ZoneScopedN("Queue::wait");
+  ZoneScopedN("Queue::wait(SwapchainImage)");
   auto *impl = void_handle_ptr<QueueImpl>(m_handle);
   impl->wait(swapchainImage, stage);
 }

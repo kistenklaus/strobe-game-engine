@@ -58,6 +58,7 @@ struct CommandBufferImpl {
 
   void
   set_default_rendering_state(CommandBufferRenderingState states) noexcept {
+    ZoneScopedN("cmd/set-default-state");
     auto mask =
         static_cast<std::underlying_type_t<CommandBufferRenderingState>>(
             states);

@@ -16,6 +16,8 @@ extern "C" [[gnu::used, gnu::visibility("default")]]
 const char *__lsan_default_suppressions() {
   return R"(
 leak:libnvidia-glcore.so
+leak:libcuda.so
+leak:libdbus-1.so
 leak:glfwInit
 leak:vkCreateInstance
 leak:pthread_once

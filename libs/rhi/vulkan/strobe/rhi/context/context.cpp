@@ -39,6 +39,7 @@ void unpin_context(void *h) {
 }
 
 Context::Context(const vulkan::ContextCreateInfo &info) noexcept : m_handle() {
+
   ZoneScopedN("context/create");
   m_handle = new ContextImpl(info);
 }

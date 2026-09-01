@@ -23,7 +23,9 @@ vulkan::create_acceleration_structure(Context *context,
 
   AccelerationStructure accelerationStructure{};
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCreateAccelerationStructure");
+#endif
     const VkResult result = vk_create_acceleration_structure(
         context->pnf(), context->device(), &createInfo, context->driver_alloc(),
         &accelerationStructure.handle);
@@ -37,7 +39,9 @@ void vulkan::destroy_acceleration_structure(
     Context *context, AccelerationStructure accelerationStructure) noexcept {
   assert(context);
   assert(accelerationStructure);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkDestroyAccelerationStructure");
+#endif
   vk_destroy_acceleration_structure(context->pnf(), context->device(),
                                     accelerationStructure.handle);
 }
@@ -49,7 +53,9 @@ VkDeviceAddress vulkan::get_acceleration_structure_device_address(
       .pNext = nullptr,
       .accelerationStructure = accelerationStructure.handle,
   };
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkGetAccelerationStructureDeviceAddress");
+#endif
   return vk_get_acceleration_structure_device_address(context->pnf(),
                                                       context->device(), &info);
 }

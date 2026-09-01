@@ -29,7 +29,9 @@ void cmd_pipeline_barrier(
       .pImageMemoryBarriers = imageMemoryBarriers.data(),
   };
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdPipelineBarrier2");
+#endif
     vkCmdPipelineBarrier2(cmd.handle, &depInfo);
   }
 }

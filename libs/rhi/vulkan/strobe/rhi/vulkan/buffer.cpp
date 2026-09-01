@@ -34,7 +34,9 @@ Buffer create_buffer(Context *context, const BufferInfo &info) {
   };
 
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCreateBuffer");
+#endif
     const VkResult result =
         vkCreateBuffer(context->device(), &bufferInfo, context->driver_alloc(),
                        &buffer.handle);
@@ -50,7 +52,9 @@ Buffer create_buffer(Context *context, const BufferInfo &info) {
 void destroy_buffer(Context *context, Buffer buffer) noexcept {
   assert(context != nullptr);
   assert(buffer);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkDestroyBuffer");
+#endif
   vkDestroyBuffer(context->device(), buffer.handle, context->driver_alloc());
 }
 
@@ -74,7 +78,9 @@ MemoryRequirements get_buffer_memory_requirements(Context *context,
       .memoryRequirements = {},
   };
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkGetBufferMemoryRequirements2");
+#endif
     vkGetBufferMemoryRequirements2(context->device(), &info, &req2);
   }
 
@@ -95,7 +101,9 @@ VkDeviceAddress get_buffer_device_address(Context *context, Buffer buffer) {
       .pNext = nullptr,
       .buffer = buffer.handle,
   };
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkGetBufferDeviceAddress");
+#endif
   return vkGetBufferDeviceAddress(context->device(), &info);
 }
 
@@ -105,7 +113,9 @@ void bind_buffer_memory(Context *context, const Memory &memory, Buffer buffer,
   assert(memory);
   assert(buffer);
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vmaBindBufferMemory2");
+#endif
     VkResult result = vmaBindBufferMemory2(context->vma(), memory.handle,
                                            offset, buffer.handle, nullptr);
     if (result != VK_SUCCESS) {

@@ -14,7 +14,9 @@ Fence create_fence(Context *context, const FenceInfo &info) {
   };
   Fence fence;
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCreateFence");
+#endif
     VkResult result = vkCreateFence(context->device(), &createInfo,
                                     context->driver_alloc(), &fence.handle);
     if (result != VK_SUCCESS) {
@@ -28,7 +30,9 @@ void destroy_fence(Context *context, Fence fence) noexcept {
   assert(context != nullptr);
   assert(fence);
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkDestroyFence");
+#endif
     vkDestroyFence(context->device(), fence.handle, context->driver_alloc());
   }
 }
@@ -36,7 +40,9 @@ void destroy_fence(Context *context, Fence fence) noexcept {
 bool wait_for_fence(Context *context, Fence fence, uint64_t timeout) {
   assert(timeout != 0);
 
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkWaitForFences");
+#endif
   VkResult result =
       vkWaitForFences(context->device(), 1, &fence.handle, true, timeout);
   if (result == VK_TIMEOUT) {
@@ -49,7 +55,9 @@ bool wait_for_fence(Context *context, Fence fence, uint64_t timeout) {
 }
 
 void reset_fence(Context *context, Fence fence) {
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkResetFences");
+#endif
   VkResult result = vkResetFences(context->device(), 1, &fence.handle);
   if (result != VK_SUCCESS) {
     vulkan_error(result, "Failed to reset fence");
@@ -60,7 +68,9 @@ bool is_fence_signaled(Context *context, Fence fence) {
   assert(context != nullptr);
   assert(fence);
 
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkGetFenceStatus");
+#endif
   VkResult result = vkGetFenceStatus(context->device(), fence.handle);
 
   if (result == VK_SUCCESS) {

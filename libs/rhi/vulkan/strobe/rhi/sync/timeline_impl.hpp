@@ -34,9 +34,14 @@ public:
 
   const Context context;
   const vulkan::TimelineSemaphore m_timelineSemaphore;
+#ifdef STROBE_RHI_TRACE_LOCKS
+  TracyLockableN(std::mutex, m_mutex, "Timeline-mutex");
+#else
   std::mutex m_mutex{};
+#endif
   std::atomic<uint64_t> m_serial{1};
   std::atomic<uint64_t> m_completed{0};
+  uint64_t m_commited{0};
 
   void *m_pUserData = nullptr;
   void (*m_commit)(void *, Timepoint) = nullptr;

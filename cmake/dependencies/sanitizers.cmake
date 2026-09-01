@@ -9,6 +9,10 @@ if (STROBE_SAN)
       "$<$<CONFIG:Debug>:-fno-omit-frame-pointer>"
   )
 
+  target_compile_definitions(strobe_sanitizer_flags
+    INTERFACE STROBE_SAN=1
+  )
+
   target_link_options(
     strobe_sanitizer_flags
     INTERFACE

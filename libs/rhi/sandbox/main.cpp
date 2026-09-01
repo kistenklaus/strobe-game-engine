@@ -27,8 +27,8 @@ using namespace strobe;
 
 namespace {
 
-constexpr uint32_t TRIANGLES_PER_BUFFER = 32;
-constexpr std::size_t MAX_PUBLISHED_BUFFERS = 32;
+constexpr uint32_t TRIANGLES_PER_BUFFER = 1;
+constexpr std::size_t MAX_PUBLISHED_BUFFERS = 4;
 
 struct PublishedTriangles {
   rhi::Buffer buffer;
@@ -53,9 +53,8 @@ std::vector<vec2> generate_triangles(std::mt19937 &rng) {
 
     for (uint32_t vertex = 0; vertex < 3; ++vertex) {
       const float angle =
-          rotation +
-          static_cast<float>(vertex) *
-              (2.0f * std::numbers::pi_v<float> / 3.0f);
+          rotation + static_cast<float>(vertex) *
+                         (2.0f * std::numbers::pi_v<float> / 3.0f);
 
       vertices.push_back(vec2{
           centerX + std::cos(angle) * radius,
@@ -70,6 +69,15 @@ std::vector<vec2> generate_triangles(std::mt19937 &rng) {
 } // namespace
 
 int main() {
+
+  // #ifdef STROBE_TRACY
+  //   fmt::println("waiting for tracy");
+  //   while (!TracyIsConnected) {
+  //     std::this_thread::yield();
+  //   }
+  //   fmt::println("tracy connected");
+  // #endif
+
   tracy::SetThreadName("platform");
 
   Platform::start([] {
@@ -78,7 +86,7 @@ int main() {
     window::WindowImpl window{uvec2{800, 600}, "strobe DMA benchmark"};
 
     rhi::Device device = rhi::create_device({
-        .debug_utils = true,
+        .debug_utils = false,
     });
 
     rhi::Queue queue = device.get_queue();
@@ -100,62 +108,59 @@ int main() {
     std::condition_variable publishedCv;
     std::deque<PublishedTriangles> published;
 
-    std::jthread generator{
-        [device, &publishedMutex, &publishedCv,
-         &published](std::stop_token stop) mutable {
-          tracy::SetThreadName("triangle-generator");
+    std::jthread generator{[device, &publishedMutex, &publishedCv,
+                            &published](std::stop_token stop) mutable {
+      tracy::SetThreadName("triangle-generator");
 
-          std::random_device randomDevice;
-          std::mt19937 rng{randomDevice()};
+      std::random_device randomDevice;
+      std::mt19937 rng{randomDevice()};
 
-          while (!stop.stop_requested()) {
-            // Keep the producer from consuming unbounded amounts of memory
-            // when rendering/acquire is temporarily stalled.
-            {
-              std::unique_lock lock{publishedMutex};
-              publishedCv.wait(lock, [&] {
-                return stop.stop_requested() ||
-                       published.size() < MAX_PUBLISHED_BUFFERS;
-              });
+      while (!stop.stop_requested()) {
+        // Keep the producer from consuming unbounded amounts of memory
+        // when rendering/acquire is temporarily stalled.
+        {
+          std::unique_lock lock{publishedMutex};
+          publishedCv.wait(lock, [&] {
+            return stop.stop_requested() ||
+                   published.size() < MAX_PUBLISHED_BUFFERS;
+          });
 
-              if (stop.stop_requested()) {
-                break;
-              }
-            }
-
-            std::vector<vec2> vertices = generate_triangles(rng);
-
-            const uint64_t size =
-                static_cast<uint64_t>(vertices.size() * sizeof(vec2));
-
-            rhi::Buffer buffer = device.create_buffer({
-                .size = size,
-                .bufferUsage =
-                    rhi::BufferUsage::transfer_dst |
-                    rhi::BufferUsage::vertex,
-            });
-
-            // async_upload copies the host data before returning, so the local
-            // vertices vector can immediately be destroyed/reused.
-            rhi::Timepoint ready =
-                device.async_upload(buffer, vertices.data(), size);
-
-            {
-              std::lock_guard lock{publishedMutex};
-
-              if (stop.stop_requested()) {
-                break;
-              }
-
-              published.push_back(PublishedTriangles{
-                  .buffer = std::move(buffer),
-                  .ready = std::move(ready),
-                  .vertexCount =
-                      static_cast<uint32_t>(vertices.size()),
-              });
-            }
+          if (stop.stop_requested()) {
+            break;
           }
-        }};
+        }
+
+        std::vector<vec2> vertices = generate_triangles(rng);
+
+        const uint64_t size =
+            static_cast<uint64_t>(vertices.size() * sizeof(vec2));
+
+        rhi::Buffer buffer = device.create_buffer({
+            .size = size,
+            .bufferUsage =
+                rhi::BufferUsage::transfer_dst | rhi::BufferUsage::vertex,
+        });
+
+        // async_upload copies the host data before returning, so the local
+        // vertices vector can immediately be destroyed/reused.
+        rhi::Timepoint ready =
+            device.async_upload(buffer, vertices.data(), size);
+
+        {
+          std::lock_guard lock{publishedMutex};
+
+          if (stop.stop_requested()) {
+            break;
+          }
+
+          published.push_back(PublishedTriangles{
+              .buffer = std::move(buffer),
+              .ready = std::move(ready),
+              .vertexCount = static_cast<uint32_t>(vertices.size()),
+          });
+        }
+      }
+    }};
 
     window.show();
 
@@ -217,15 +222,13 @@ int main() {
       cmd.bind_shader(fragmentShader);
 
       for (const PublishedTriangles &triangles : frameTriangles) {
-        // This is a GPU-side wait. It does not block the render thread.
-        //
-        // All batches use the same DMA timeline, so QueueImpl should coalesce
-        // these waits into the greatest required timeline value.
-        queue.wait(triangles.ready,
-                   rhi::PipelineStage::vertex_attribute_input);
+        if (true || triangles.ready.relaxed_poll()) {
+          queue.wait(triangles.ready,
+                     rhi::PipelineStage::vertex_attribute_input);
 
-        cmd.bind_vertex_buffer(triangles.buffer);
-        cmd.draw(triangles.vertexCount);
+          cmd.bind_vertex_buffer(triangles.buffer);
+          cmd.draw(triangles.vertexCount);
+        }
       }
 
       cmd.end_rendering();

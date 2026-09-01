@@ -288,6 +288,7 @@ private:
   }
 
   void commit(Timepoint timepoint) noexcept {
+    ZoneScopedN("queue/commit");
     std::lock_guard lck{m_mutex};
     if (m_submissions.empty() && !m_pendingPresent) {
       return;
@@ -364,7 +365,11 @@ private:
 
   std::optional<QueuePresentation> m_pendingPresent;
 
-  std::mutex m_mutex;
+#ifdef STROBE_RHI_TRACE_LOCKS
+  TracyLockableN(std::mutex, m_mutex, "Queue-mutex");
+#else
+  std::mutex m_mutex{};
+#endif
 };
 
 } // namespace strobe::rhi

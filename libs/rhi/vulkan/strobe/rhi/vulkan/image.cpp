@@ -35,7 +35,9 @@ Image create_image(Context *context, const ImageInfo &info) {
   };
   Image image{};
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCreateImage");
+#endif
     const VkResult result = vkCreateImage(
         context->device(), &imageInfo, context->driver_alloc(), &image.handle);
     if (result != VK_SUCCESS) {
@@ -48,7 +50,9 @@ Image create_image(Context *context, const ImageInfo &info) {
 void destroy_image(Context *context, Image image) noexcept {
   assert(context);
   assert(image);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkDestroyImage");
+#endif
   vkDestroyImage(context->device(), image.handle, context->driver_alloc());
 }
 MemoryRequirements get_image_memory_requirements(Context *context,
@@ -74,7 +78,9 @@ MemoryRequirements get_image_memory_requirements(Context *context,
   };
 
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkGetImageMemoryRequirements2");
+#endif
     vkGetImageMemoryRequirements2(context->device(), &info, &req2);
   }
 
@@ -95,7 +101,9 @@ void bind_image_memory(Context *context, const Memory &memory, Image image,
   assert(memory);
   assert(image);
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vmaBindImageMemory2");
+#endif
     VkResult result = vmaBindImageMemory2(context->vma(), memory.handle, offset,
                                           image.handle, nullptr);
     if (result != VK_SUCCESS) {

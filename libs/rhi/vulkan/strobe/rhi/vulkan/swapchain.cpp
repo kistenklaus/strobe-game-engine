@@ -52,7 +52,9 @@ Swapchain create_swapchain(Context *context, const SwapchainInfo &info) {
   Swapchain swapchain{};
 
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCreateSwapchainKHR");
+#endif
     const VkResult result =
         vkCreateSwapchainKHR(context->device(), &createInfo,
                              context->driver_alloc(), &swapchain.handle);
@@ -68,7 +70,9 @@ void destroy_swapchain(Context *context, Swapchain swapchain) noexcept {
   assert(context != nullptr);
   assert(context->properties().swapchain);
   assert(swapchain);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkDestroySwapchainKHR");
+#endif
   vkDestroySwapchainKHR(context->device(), swapchain.handle,
                         context->driver_alloc());
 }
@@ -81,7 +85,9 @@ uint32_t get_swapchain_images(Context *context, Swapchain swapchain,
 
   uint32_t count = 0;
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkGetSwapchainImagesKHR");
+#endif
     VkResult result = vkGetSwapchainImagesKHR(
         context->device(), swapchain.handle, &count, nullptr);
     if (result != VK_SUCCESS) {
@@ -99,7 +105,9 @@ uint32_t get_swapchain_images(Context *context, Swapchain swapchain,
 
   Vector<VkImage, scratch_allocator_ref> native{count, &scratch};
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkGetSwapchainImagesKHR");
+#endif
     VkResult result = vkGetSwapchainImagesKHR(
         context->device(), swapchain.handle, &count, native.data());
     if (result != VK_SUCCESS) {
@@ -132,7 +140,9 @@ acquire_next_swapchain_image(Context *context, Swapchain swapchain,
 
   VkResult result;
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkAcquireNextImage2KHR");
+#endif
     result =
         vkAcquireNextImage2KHR(context->device(), &acquireInfo, imageIndex);
   }
@@ -163,7 +173,9 @@ void release_swapchain_image(Context *context, Swapchain swapchain,
   };
 
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkReleaseSwapchainImages");
+#endif
     const VkResult result = vulkan::vk_release_swapchain_images(
         context->pnf(), context->device(), &releaseInfo);
     if (result != VK_SUCCESS) {

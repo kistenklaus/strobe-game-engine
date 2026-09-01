@@ -29,7 +29,9 @@ ShaderObject create_shader_object(Context *context,
   ShaderObject obj;
 
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCreateShadersEXT");
+#endif
     VkResult result =
         vk_create_shaders(context->pnf(), context->device(), 1,
                           &createInfo, context->driver_alloc(), &obj.handle);
@@ -42,7 +44,9 @@ ShaderObject create_shader_object(Context *context,
 
 void destroy_shader_object(Context *context, ShaderObject shader) noexcept {
   assert(shader);
+#ifdef STROBE_RHI_TRACE_VK
   ZoneScopedN("vkDestroyShaderEXT");
+#endif
   vk_destroy_shader(context->pnf(), context->device(), shader.handle);
 }
 

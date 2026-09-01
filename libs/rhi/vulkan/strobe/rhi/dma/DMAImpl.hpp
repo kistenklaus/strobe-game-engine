@@ -8,6 +8,7 @@
 #include "strobe/rhi/queue/queue_impl.hpp"
 #include "strobe/rhi/sync/timeline.hpp"
 #include "strobe/rhi/types/buffer_offset.hpp"
+#include <tracy/Tracy.hpp>
 
 namespace strobe::rhi {
 
@@ -90,7 +91,11 @@ private:
   Timepoint m_committed;
 
   CommandBuffer m_cmd{};
+#ifdef STROBE_RHI_TRACE_LOCKS
+  TracyLockableN(std::mutex, m_mutex, "DMA-mutex");
+#else
   std::mutex m_mutex{};
+#endif
 };
 
 } // namespace strobe::rhi

@@ -97,7 +97,9 @@ void queue_submit(Queue queue, const SubmitInfo &info) {
       .pSignalSemaphoreInfos = signalSemSubmitInfos.data(),
   };
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkQueueSubmit2");
+#endif
     VkResult result =
         vkQueueSubmit2(queue.handle, 1, &submitInfo, info.fence.handle);
     if (result != VK_SUCCESS) {
@@ -108,7 +110,9 @@ void queue_submit(Queue queue, const SubmitInfo &info) {
 void wait_queue_idle(Queue queue) {
   assert(queue);
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkQueueWaitIdle");
+#endif
     VkResult result = vkQueueWaitIdle(queue.handle);
     if (result != VK_SUCCESS) {
       vulkan_error(result, "Failed to wait for queue idle!");
@@ -150,7 +154,9 @@ PresentStatus queue_present(Queue queue, Swapchain swapchain,
   };
   VkResult result;
   {
+#ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkQueuePresentKHR");
+#endif
     result = vkQueuePresentKHR(queue.handle, &presentInfo);
   }
   if (result == VK_SUCCESS) {
