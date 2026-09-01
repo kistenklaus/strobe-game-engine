@@ -97,17 +97,18 @@ vulkan::TimelineSemaphore Timeline::timelineSemaphore() const noexcept {
   return impl->m_timelineSemaphore;
 }
 
-void Timeline::set_commit_callback(void *pUserData,
-                                   void (*commit)(void *, Timepoint)) noexcept {
+void Timeline::install_commit(void *pUserData,
+                              void (*commit)(void *, Timepoint)) noexcept {
   auto *impl = void_handle_ptr<TimelineImpl>(m_handle);
-
   std::lock_guard lck{impl->m_mutex};
+  assert(impl->m_commit == nullptr);
   impl->m_pUserData = pUserData;
   impl->m_commit = commit;
 }
-void Timeline::clear_callback() noexcept {
+void Timeline::uninstall_commit() noexcept {
   auto *impl = void_handle_ptr<TimelineImpl>(m_handle);
   std::lock_guard lck{impl->m_mutex};
+  assert(impl->m_commit != nullptr);
   impl->m_pUserData = nullptr;
   impl->m_commit = nullptr;
 }

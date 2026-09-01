@@ -20,6 +20,7 @@
 #include "strobe/rhi/types/queue_flags.hpp"
 #include "strobe/rhi/types/swapchain_info.hpp"
 #include "strobe/rhi/types/tlas_info.hpp"
+#include <limits>
 
 namespace strobe::rhi {
 
@@ -68,6 +69,13 @@ public:
 
   Tlas create_tlas(const TlasInfo &info,
                    const MemoryLifetime &lifetime = {}) noexcept;
+
+  Timepoint
+  async_copy(BufferOffset dst, BufferOffset src,
+             uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
+  Timepoint
+  async_upload(BufferOffset dst, void *src,
+               uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
 };
 
 } // namespace strobe::rhi

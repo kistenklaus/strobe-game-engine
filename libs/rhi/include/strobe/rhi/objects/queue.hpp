@@ -34,6 +34,8 @@ public:
   Timepoint submit(span<const CommandBuffer> cmds) noexcept;
 
   void present(SwapchainImage swapchainImage) noexcept;
+
+  void flush() noexcept;
 };
 
 } // namespace strobe::rhi

@@ -96,9 +96,11 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   # strobe::rhi queue
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/queue.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/que.cpp
+  # strobe::rhi dma
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/dma/DMA.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/dma/dma.cpp
   # strobe::rhi device
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/device/device.cpp
-
   # strobe::rhi 
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/rhi.cpp
 

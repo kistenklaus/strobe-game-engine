@@ -1,5 +1,7 @@
 #include "strobe/rhi/rhi.hpp"
 #include "strobe/rhi/context/context.hpp"
+#include "strobe/rhi/dma/DMA.hpp"
+#include "strobe/rhi/dma/dma.hpp"
 #include "strobe/rhi/handle_allocators.hpp"
 #include "strobe/rhi/sync/sync.hpp"
 #include "strobe/rhi/types/device_info.hpp"
@@ -95,7 +97,7 @@ Device create_device(const DeviceInfo &info) {
   Timeline dmaTimeline;
   if (queue1) {
     dmaTimeline = sync::create_timeline(context, &allocs->syncAlloc);
-  //   timelines.push_back(dmaTimeline);
+    //   timelines.push_back(dmaTimeline);
   }
   assert(universalTimeline);
   assert(dmaTimeline);
@@ -120,6 +122,9 @@ Device create_device(const DeviceInfo &info) {
     dmaQueue = universalQueue;
   }
 
+  DMA dma = dma::create_dma(context, dmaTimeline, gc, dmaQueue, staging,
+                            &allocs->dmaAlloc);
+
   return Device{make_void_handle<DeviceImpl>( //
       &allocs->deviceAlloc,                   //
       std::move(context),                     //
@@ -131,7 +136,8 @@ Device create_device(const DeviceInfo &info) {
       std::move(scratch),                     //
       std::move(gc),                          //
       std::move(universalQueue),              //
-      std::move(dmaQueue)                     //
+      std::move(dmaQueue),                    //
+      std::move(dma)                          //
       )};
 }
 

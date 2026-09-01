@@ -10,9 +10,6 @@
 #include "strobe/rhi/types/image_layout.hpp"
 #include "strobe/window/window_impl.hpp"
 #include <GLFW/glfw3.h>
-#include <chrono>
-#include <common/TracySystem.hpp>
-#include <thread>
 #include <tracy/Tracy.hpp>
 #include <unistd.h>
 #include <vulkan/vulkan_core.h>
@@ -24,20 +21,20 @@ using namespace std::chrono;
 using namespace std::chrono_literals;
 
 int main() {
-#ifdef STROBE_TRACY
-  fmt::println("waiting for tracy");
-  while (!TracyIsConnected) {
-    std::this_thread::yield();
-  }
-  fmt::println("tracy connected");
-#endif
+  // #ifdef STROBE_TRACY
+  //   fmt::println("waiting for tracy");
+  //   while (!TracyIsConnected) {
+  //     std::this_thread::yield();
+  //   }
+  //   fmt::println("tracy connected");
+  // #endif
   tracy::SetThreadName("platform");
   Platform::start([]() {
     tracy::SetThreadName("main");
     window::WindowImpl window{uvec2{800, 600}, "strobe"};
 
     rhi::Device device = strobe::rhi::create_device({
-        .debug_utils = false,
+        .debug_utils = true,
     });
     rhi::Queue queue = device.get_queue();
     rhi::CommandPool cmdpool = device.create_cmdpool();
@@ -58,11 +55,12 @@ int main() {
             rhi::BufferUsage::transfer_dst | rhi::BufferUsage::vertex,
     });
 
-    rhi::Buffer vertex2 = device.create_buffer({
-        .size = 24,
-        .bufferUsage =
-            rhi::BufferUsage::transfer_dst | rhi::BufferUsage::vertex,
-    });
+    vec2 v1[3] = {
+        {-0.65f, 0.0f}, //
+        {0.65f, 0.0f},  //
+        {0.0f, 0.75f},  //
+    };
+    device.async_upload(vertex1, v1);
 
     window.show();
 
@@ -77,11 +75,6 @@ int main() {
       cmd.transition_image(frame.image(), rhi::ImageLayout::undefined,
                            rhi::ImageLayout::general);
 
-      vec2 v1[3] = {
-          {-0.65f, 0.0f}, //
-          {0.65f, 0.0f},  //
-          {0.0f, 0.75f},  //
-      };
       cmd.update(vertex1, v1, sizeof(v1));
       cmd.memory_barrier(rhi::access::transfer_write,
                          rhi::access::vertex_attribute_read);
@@ -117,9 +110,9 @@ int main() {
         cmd.bind_shader(fragment);
       }
       cmd.bind_vertex_buffer(vertex1);
-      for (uint32_t i = 0; i < 10000; ++i) {
-        cmd.draw(3);
-      }
+      // for (uint32_t i = 0; i < 10000; ++i) {
+      cmd.draw(3);
+      // }
       cmd.end_rendering();
 
       // std::this_thread::sleep_for(10us);

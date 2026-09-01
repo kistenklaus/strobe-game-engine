@@ -128,4 +128,16 @@ Tlas Device::create_tlas(const TlasInfo &info,
                           &impl->allocs->bvhAlloc);
 }
 
+Timepoint Device::async_copy(BufferOffset dst, BufferOffset src,
+                             uint64_t size) noexcept {
+  auto* impl = void_handle_ptr<DeviceImpl>(m_handle);
+  return impl->dma.async_copy(dst, src, size);
+}
+
+Timepoint Device::async_upload(BufferOffset dst, void *src,
+                               uint64_t size) noexcept {
+  auto* impl = void_handle_ptr<DeviceImpl>(m_handle);
+  return impl->dma.async_upload(dst, src, size);
+}
+
 } // namespace strobe::rhi

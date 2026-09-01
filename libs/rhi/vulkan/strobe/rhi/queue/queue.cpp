@@ -60,4 +60,10 @@ void Queue::present(SwapchainImage swapchainImage) noexcept {
   impl->present(std::move(swapchainImage));
 }
 
+void Queue::flush() noexcept {
+  auto *impl = void_handle_ptr<QueueImpl>(m_handle);
+  ZoneScopedN("Queue::flush");
+  impl->flush();
+}
+
 } // namespace strobe::rhi

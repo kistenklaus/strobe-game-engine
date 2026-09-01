@@ -35,9 +35,9 @@ public:
   uint64_t completed_serial() const noexcept;
   vulkan::TimelineSemaphore timelineSemaphore() const noexcept;
 
-  void set_commit_callback(void *pUserData,
+  void install_commit(void *pUserData,
                            void (*commit)(void *, Timepoint)) noexcept;
-  void clear_callback() noexcept;
+  void uninstall_commit() noexcept;
 
   Timepoint from_serial(uint64_t serial) noexcept ;
 };

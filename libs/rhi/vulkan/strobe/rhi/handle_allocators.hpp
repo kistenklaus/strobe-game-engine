@@ -4,6 +4,7 @@
 #include "strobe/rhi/bvh/bvh.hpp"
 #include "strobe/rhi/cmd/cmd.hpp"
 #include "strobe/rhi/device/device_impl.hpp"
+#include "strobe/rhi/dma/dma.hpp"
 #include "strobe/rhi/gc/gc.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/img/img.hpp"
@@ -20,8 +21,9 @@ struct handle_allocators {
   explicit handle_allocators(strobe::rhi::allocator_ref alloc)
       : alloc(alloc), shaderAlloc(alloc), syncAlloc(alloc), memAlloc(alloc),
         bufAlloc(alloc), imgAlloc(alloc), stageAlloc(alloc, &bufAlloc),
-        bvhAlloc(alloc, &bufAlloc), cmdAlloc(alloc), swapAlloc(alloc, &imgAlloc),
-        gcAlloc(alloc), queAlloc(alloc), deviceAlloc(alloc) {}
+        bvhAlloc(alloc, &bufAlloc), cmdAlloc(alloc),
+        swapAlloc(alloc, &imgAlloc), gcAlloc(alloc), queAlloc(alloc),
+        dmaAlloc(alloc, &cmdAlloc), deviceAlloc(alloc) {}
 
   handle_allocators(const handle_allocators &) = delete;
   handle_allocators(handle_allocators &&) = delete;
@@ -40,6 +42,7 @@ struct handle_allocators {
   swap::handle_allocators swapAlloc;
   gc::handle_allocators gcAlloc;
   que::handle_allocators queAlloc;
+  dma::handle_allocators dmaAlloc;
   handle_allocator<DeviceImpl> deviceAlloc;
 };
 
