@@ -155,9 +155,9 @@ struct DescriptorHeapProperties {
   VkDeviceSize minSamplerHeapReservedRange;
   VkDeviceSize minSamplerHeapReservedRangeWithEmbedded;
   VkDeviceSize minResourceHeapReservedRange;
-  VkDeviceSize samplerDescriptorSize;
-  VkDeviceSize imageDescriptorSize;
-  VkDeviceSize bufferDescriptorSize;
+  uint32_t samplerDescriptorSize;
+  uint32_t imageDescriptorSize;
+  uint32_t bufferDescriptorSize;
   VkDeviceSize samplerDescriptorAlignment;
   VkDeviceSize imageDescriptorAlignment;
   VkDeviceSize bufferDescriptorAlignment;

@@ -395,9 +395,9 @@ DeviceProperties details::query_device_properties(
           .minResourceHeapReservedRange =
               descriptorHeapProperties.minResourceHeapReservedRange,
           .samplerDescriptorSize =
-              descriptorHeapProperties.samplerDescriptorSize,
-          .imageDescriptorSize = descriptorHeapProperties.imageDescriptorSize,
-          .bufferDescriptorSize = descriptorHeapProperties.bufferDescriptorSize,
+              static_cast<uint32_t>(descriptorHeapProperties.samplerDescriptorSize),
+          .imageDescriptorSize = static_cast<uint32_t>(descriptorHeapProperties.imageDescriptorSize),
+          .bufferDescriptorSize = static_cast<uint32_t>(descriptorHeapProperties.bufferDescriptorSize),
           .samplerDescriptorAlignment =
               descriptorHeapProperties.samplerDescriptorAlignment,
           .imageDescriptorAlignment =
