@@ -21,7 +21,8 @@ public:
       strobe::rhi::allocator_ref alloc) noexcept
       : m_buffer(std::move(buffer)),
         m_indexPool(this->m_buffer.size(), heapProperties, alloc),
-        m_bufferDescAlloc(alloc), m_bufferDescArrayAlloc(alloc) {}
+        m_alloc(alloc), m_bufferDescAlloc(m_alloc),
+        m_bufferDescArrayAlloc(m_alloc) {}
 
   ~ResourceDescriptorHeapImpl() noexcept {}
   ResourceDescriptorHeapImpl(const ResourceDescriptorHeapImpl &) = delete;
@@ -41,6 +42,7 @@ public:
   get_buffer_desc_array_allocator() {
     return &m_bufferDescArrayAlloc;
   }
+  strobe::rhi::allocator_ref alloc() const noexcept { return m_alloc; }
 
   // descriptor allocation machinery.
   uint32_t acquire_buffer_descriptor_index_range(uint32_t count) noexcept {
@@ -60,12 +62,12 @@ public:
   }
 
   // important for heapctrl:
-  auto lock() noexcept { return std::lock_guard{m_mutex}; } // URVO!
-                                                            //
+  auto lock() noexcept {
+    return std::lock_guard{m_mutex};
+  } // URVO!
+    //
   // lock must be help
-  void exchange(Buffer newBuffer, Timepoint ready) {
-
-  }
+  void exchange(Buffer newBuffer, Timepoint ready) {}
 
   Buffer buffer() const noexcept { return m_buffer; }
   // lock has to be held.
@@ -81,6 +83,8 @@ public:
 private:
   Buffer m_buffer;
   ResourceDescriptorHeapIndexPool m_indexPool;
+
+  [[no_unique_address]] strobe::rhi::allocator_ref m_alloc;
   handle_allocator<BufferDescriptorImpl> m_bufferDescAlloc;
   handle_allocator<BufferDescriptorArrayImpl> m_bufferDescArrayAlloc;
 

@@ -34,7 +34,6 @@ public:
     for (uint32_t i = 0; i < m_size; ++i) {
       std::construct_at(buffers + i, m_buffers[i].buffer); // copy constructor.
     }
-
     return BufferDescriptorArray{make_void_handle<BufferDescriptorArrayImpl>(
         impl->get_buffer_desc_array_allocator(), std::move(m_heap),
         std::exchange(m_index, std::numeric_limits<uint32_t>::max()),
@@ -45,6 +44,10 @@ public:
     if (m_index != std::numeric_limits<uint32_t>::max()) {
       m_heap.release_buffer_descriptor_index_range(m_index, m_size);
     }
+  }
+
+  explicit operator bool() const noexcept {
+    return m_index != std::numeric_limits<uint32_t>::max();
   }
 
 private:

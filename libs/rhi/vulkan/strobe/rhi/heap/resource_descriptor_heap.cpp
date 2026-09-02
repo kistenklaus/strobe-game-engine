@@ -45,19 +45,20 @@ ResourceDescriptorHeap::~ResourceDescriptorHeap() noexcept {
   unpin_void_handle<ResourceDescriptorHeapImpl>(m_handle);
 }
 
-BufferDescriptorWizard
-ResourceDescriptorHeap::create_buffer_descriptor_wizard() noexcept {
+BufferDescriptorWizard ResourceDescriptorHeap::create_buffer_descriptor_wizard(
+    BufferRange buffer) noexcept {
   auto *impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
   uint32_t index = impl->acquire_buffer_descriptor_index_range(1);
-  return BufferDescriptorWizard{*this, index};
+  return BufferDescriptorWizard{*this, index, buffer};
 }
 
 BufferDescriptorArrayWizard
 ResourceDescriptorHeap::create_buffer_descriptor_array_wizard(
-    uint32_t size) noexcept {
+    uint32_t size, span<const BufferRange> buffers) noexcept {
   auto *impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
   uint32_t index = impl->acquire_buffer_descriptor_index_range(size);
-  return BufferDescriptorArrayWizard{*this, index};
+  return BufferDescriptorArrayWizard{*this, index, size, buffers,
+                                     impl->alloc()};
 }
 
 void ResourceDescriptorHeap::release_buffer_descriptor_index_range(
