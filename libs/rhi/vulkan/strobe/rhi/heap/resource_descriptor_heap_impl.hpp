@@ -61,8 +61,12 @@ public:
 
   // important for heapctrl:
   auto lock() noexcept { return std::lock_guard{m_mutex}; } // URVO!
+                                                            //
   // lock must be help
-  void exchange(Buffer newBuffer, Timepoint ready) {}
+  void exchange(Buffer newBuffer, Timepoint ready) {
+
+  }
+
   Buffer buffer() const noexcept { return m_buffer; }
   // lock has to be held.
   DescriptorHeapBindInfo bindInfo() const noexcept {
