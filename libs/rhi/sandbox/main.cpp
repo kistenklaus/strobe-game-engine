@@ -28,7 +28,7 @@ using namespace strobe;
 
 namespace {
 
-constexpr uint32_t TRIANGLES_PER_BUFFER = 3;
+constexpr uint32_t TRIANGLES_PER_BUFFER = 8196;
 
 // Bounds publication latency and the number of individual Vulkan buffers.
 constexpr std::size_t MAX_PUBLISHED_BUFFERS = 64;
@@ -94,7 +94,7 @@ int main() {
     };
 
     rhi::Device device = rhi::create_device({
-        .debug_utils = true,
+        .debug_utils = false,
     });
 
     rhi::Queue queue = device.get_queue();
@@ -110,7 +110,7 @@ int main() {
         device.create_fragment_shader({.spirv = fragmentSpv});
 
     rhi::Swapchain swapchain =
-        device.create_swapchain({.window = window.ptr()});
+        device.create_swapchain({.window = window.ptr(), .vsync = false});
 
     PublicationQueue publication;
 
@@ -124,8 +124,8 @@ int main() {
           while (!stop.stop_requested()) {
             std::vector<vec2> vertices = generate_triangles(rng);
 
-            const uint64_t size = static_cast<uint64_t>(
-                vertices.size() * sizeof(vec2));
+            const uint64_t size =
+                static_cast<uint64_t>(vertices.size() * sizeof(vec2));
 
             assert(size <= MAX_PUBLISHED_BYTES);
 
@@ -139,10 +139,8 @@ int main() {
 
               publication.cv.wait(lock, [&] {
                 return stop.stop_requested() ||
-                       (publication.buffers.size() <
-                            MAX_PUBLISHED_BUFFERS &&
-                        publication.bytes + size <=
-                            MAX_PUBLISHED_BYTES);
+                       (publication.buffers.size() < MAX_PUBLISHED_BUFFERS &&
+                        publication.bytes + size <= MAX_PUBLISHED_BYTES);
               });
 
               if (stop.stop_requested()) {
@@ -153,8 +151,7 @@ int main() {
             rhi::Buffer buffer = device.create_buffer({
                 .size = size,
                 .bufferUsage =
-                    rhi::BufferUsage::transfer_dst |
-                    rhi::BufferUsage::vertex,
+                    rhi::BufferUsage::transfer_dst | rhi::BufferUsage::vertex,
             });
 
             /*
@@ -176,8 +173,7 @@ int main() {
               publication.buffers.push_back(PublishedTriangles{
                   .buffer = std::move(buffer),
                   .ready = std::move(ready),
-                  .vertexCount =
-                      static_cast<uint32_t>(vertices.size()),
+                  .vertexCount = static_cast<uint32_t>(vertices.size()),
                   .bytes = size,
               });
             }
@@ -186,8 +182,11 @@ int main() {
 
     window.show();
 
-    while (!window.should_close()) {
+    while (true) {
       window.poll();
+      if (window.should_close()) {
+        break;
+      }
 
       rhi::SwapchainImage frame = swapchain.acquire();
 
@@ -228,10 +227,8 @@ int main() {
       rhi::CommandBuffer cmd = cmdpool.alloc();
       cmd.begin();
 
-      cmd.transition_image(
-          frame.image(),
-          rhi::ImageLayout::undefined,
-          rhi::ImageLayout::general);
+      cmd.transition_image(frame.image(), rhi::ImageLayout::undefined,
+                           rhi::ImageLayout::general);
 
       rhi::Attachment colorAttachment{
           .view = frame.view(),
@@ -274,9 +271,7 @@ int main() {
          * The upload is known to be completed, so this records the GPU memory
          * dependency without forcing DMA to commit anything.
          */
-        queue.wait(
-            triangles.ready,
-            rhi::PipelineStage::vertex_attribute_input);
+        queue.wait(triangles.ready, rhi::PipelineStage::vertex_attribute_input);
 
         cmd.bind_vertex_buffer(triangles.buffer);
         cmd.draw(triangles.vertexCount);
@@ -284,10 +279,8 @@ int main() {
 
       cmd.end_rendering();
 
-      cmd.transition_image(
-          frame.image(),
-          rhi::ImageLayout::general,
-          rhi::ImageLayout::present);
+      cmd.transition_image(frame.image(), rhi::ImageLayout::general,
+                           rhi::ImageLayout::present);
 
       cmd.end();
 

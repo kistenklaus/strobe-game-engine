@@ -16,6 +16,7 @@
 #include "strobe/rhi/swapchain/swapchain_image_impl.hpp"
 #include "strobe/rhi/sync/timeline.hpp"
 #include "strobe/rhi/sync/timeline_impl.hpp"
+#include "strobe/rhi/sync/timeline_notify_flag.hpp"
 #include "strobe/rhi/types/pipeline_stage.hpp"
 #include "strobe/rhi/types/queue_flags.hpp"
 #include "strobe/rhi/utils/pipeline_stage_utils.hpp"
@@ -66,6 +67,7 @@ public:
 
   void wait(const Timepoint &timepoint, PipelineStage stage) noexcept {
     // Required because of presentation, binary semaphores.
+    // Timeline::notify(timepoint, TimelineNotifyFlag::block);
 
     std::lock_guard lck{m_mutex};
     add_wait(timepoint, stage);

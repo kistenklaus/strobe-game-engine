@@ -120,6 +120,11 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
       .descriptorHeap = deviceInfo->features.descriptorHeap,
       .descriptorHeapCaptureReplay = VK_FALSE,
   };
+  VkPhysicalDeviceMaintenance9FeaturesKHR maintenance9Features{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_9_FEATURES_KHR,
+      .pNext = nullptr,
+      .maintenance9 = deviceInfo->features.maintenance9,
+  };
 
   Vector<const char *, scratch_allocator_ref> extensions{&scratch};
 
@@ -252,6 +257,12 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
 
     // dependency
     vulkan14.maintenance5 = VK_TRUE;
+  }
+
+  if (deviceInfo->features.maintenance9) {
+    maintenance9Features.pNext = pNext;
+    pNext = &maintenance9Features;
+    extensions.emplace_back(VK_KHR_MAINTENANCE_9_EXTENSION_NAME);
   }
 
   Vector<QueueFamilyPlan, scratch_allocator_ref> queueFamilyPlans{&scratch};

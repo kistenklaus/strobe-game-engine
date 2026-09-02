@@ -112,7 +112,11 @@ private:
   pool_alloc m_pool;
   handle_allocator_ref<FenceImpl> m_fenceAlloc;
 
+#ifdef STROBE_RHI_TRACE_LOCKS
+  TracyLockableN(std::mutex, m_mutex, "FencePool-mutex");
+#else
   std::mutex m_mutex{};
+#endif
   FenceNode *m_ready = nullptr;
   std::atomic<FenceNode *> m_returned{nullptr};
 };

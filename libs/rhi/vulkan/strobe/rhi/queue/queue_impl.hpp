@@ -45,9 +45,10 @@ public:
                      vulkan::Queue queue, QueueFlags flags)
       : m_timeline(std::move(timeline)), m_gc(std::move(gc)), m_queue(queue),
         m_flags(flags), m_open(&m_batches[0]) {
-    m_timeline.install_commit(this, [](void *self, Timepoint timepoint) noexcept {
-      static_cast<QueueImpl *>(self)->commit(timepoint);
-    });
+    m_timeline.install_commit(
+        this, [](void *self, Timepoint timepoint) noexcept {
+          static_cast<QueueImpl *>(self)->commit(timepoint);
+        });
   }
 
   QueueImpl(const QueueImpl &) = delete;
@@ -56,17 +57,11 @@ public:
   QueueImpl &operator=(QueueImpl &&) = delete;
 
   ~QueueImpl() noexcept {
-    // Object destruction is still required to be externally synchronized with
-    // public Queue calls and timeline notification callbacks.
     flush();
-
     {
-      // vkQueueWaitIdle is externally synchronized with every operation on the
-      // same VkQueue, just like vkQueueSubmit2 and vkQueuePresentKHR.
       std::lock_guard submitLock{m_submitMutex};
       vulkan::wait_queue_idle(m_queue);
     }
-
     m_timeline.uninstall_commit();
   }
 
@@ -80,48 +75,35 @@ public:
     assert(imageAvailable);
 
     std::lock_guard recordLock{m_recordMutex};
-
-    // The semaphore is consumed by the next submission recorded in m_open.
-    // Retiring it at the queue's next serial keeps it alive through that wait.
     m_gc.retire(m_timeline.now(), &imageAvailable);
-    add_wait_locked(imageAvailable.wait(), stage);
+    add_wait(imageAvailable.wait(), stage);
   }
 
   void wait(const Timepoint &timepoint, PipelineStage stage) noexcept {
     std::lock_guard recordLock{m_recordMutex};
-    add_wait_locked(timepoint, stage);
+    add_wait(timepoint, stage);
   }
 
-  // Internal API. This has the same ordering contract as before: callers must
-  // prevent another thread from inserting a submit between this call and the
-  // submit that is intended to consume the signal.
   void signal_on_next_submit(const Timepoint &timepoint,
                              PipelineStage stage) noexcept {
     std::lock_guard recordLock{m_recordMutex};
-    add_signal_locked(timepoint, stage);
+    add_signal(timepoint, stage);
   }
 
   Timepoint submit(span<const CommandBuffer> cmds) noexcept {
-    for (;;) {
+    while (true) {
       std::unique_lock recordLock{m_recordMutex};
-
       if (m_open->submissions.size() == MAX_SUBMIT_BATCH_SIZE) {
         if (m_ready != nullptr) {
-          // Both slots are occupied. Do not hold the recording lock while
-          // waiting for dependency resolution or the Vulkan queue.
           recordLock.unlock();
           drain_ready_batch();
           continue;
         }
-
-        rotate_locked();
+        rotate();
       }
-
       Timepoint timepoint = m_timeline.advance();
-
       auto &submission = m_open->submissions.emplace_back(
           timepoint, m_wait, m_signal, m_dependencies, &m_open->bump);
-
       submission.cmds.resize(cmds.size());
       for (uint32_t i = 0; i < cmds.size(); ++i) {
         submission.cmds[i] = VkCommandBufferSubmitInfo{
@@ -145,29 +127,21 @@ public:
   void present(SwapchainImage image) noexcept {
     Timepoint presentDependency;
 
-    for (;;) {
+    while (true) {
       std::unique_lock recordLock{m_recordMutex};
-
-      // A presentation closes the current batch. With two fixed slots, the
-      // previous closed batch must be drained before another rotation.
       if (m_ready != nullptr) {
         recordLock.unlock();
         drain_ready_batch();
         continue;
       }
-
       assert(!m_open->presentation);
-
       auto *img = object_handle_ptr<SwapchainImageImpl>(image);
       auto [presentReady, presentFence] = img->generation.present();
-
       if (m_open->submissions.empty()) {
         presentDependency = m_timeline.advance();
-
-        add_signal_locked(presentReady.signal());
+        add_signal(presentReady.signal());
         m_open->submissions.emplace_back(presentDependency, m_wait, m_signal,
                                          m_dependencies, &m_open->bump);
-
         m_wait.clear();
         m_signal.clear();
         m_dependencies.clear();
@@ -176,20 +150,13 @@ public:
         submission.add_signal(presentReady.signal());
         presentDependency = submission.timepoint;
       }
-
       m_open->presentation = QueuePresentation{
           .image = std::move(image),
           .presentReady = std::move(presentReady),
           .presentFence = std::move(presentFence),
       };
-
-      // The closed batch becomes immutable here. Recording can immediately
-      // continue in the other fixed-address slot.
-      rotate_locked();
+      rotate();
       recordLock.unlock();
-
-      // request_commit may wake the GC immediately, so it must happen after
-      // publishing the closed batch and after releasing m_recordMutex.
       m_gc.request_commit(presentDependency);
       return;
     }
@@ -197,11 +164,8 @@ public:
 
   void flush() noexcept {
     Timepoint target;
-
     {
       std::lock_guard recordLock{m_recordMutex};
-
-      // m_open always contains newer queue serials than m_ready.
       if (!m_open->submissions.empty()) {
         target = m_open->submissions.back().timepoint;
       } else if (m_ready != nullptr) {
@@ -210,12 +174,8 @@ public:
         return;
       }
     }
-
     commit(target);
-
-    // commit(target) may legally return once target's signal operation has
-    // been submitted, while another drainer is still inside queue_present.
-    // flush() is the stronger barrier and waits for that CPU-side queue work.
+    // wait for completion, commit may complete on another thread.
     std::lock_guard submitBarrier{m_submitMutex};
   }
 
@@ -252,14 +212,12 @@ private:
     add_signal(vulkan::BinarySemaphore semaphore,
                PipelineStage stage = PipelineStage::all_commands) noexcept {
       const VkPipelineStageFlags2 stageMask = to_vk_pipeline_stage(stage);
-
       for (auto &signalInfo : signal) {
         if (signalInfo.semaphore == semaphore.handle) {
           signalInfo.stageMask |= stageMask;
           return;
         }
       }
-
       signal.push_back(VkSemaphoreSubmitInfo{
           .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
           .pNext = nullptr,
@@ -284,14 +242,6 @@ private:
   };
 
   struct QueueBatch {
-    // Must be declared before submissions so it is destroyed after every
-    // container whose allocator points into it.
-    bump_allocator bump;
-
-    SmallVector<QueueSubmission, MAX_SUBMIT_BATCH_SIZE, strobe::NullAllocator>
-        submissions;
-
-    std::optional<QueuePresentation> presentation;
 
     QueueBatch() = default;
     QueueBatch(const QueueBatch &) = delete;
@@ -314,15 +264,19 @@ private:
     }
 
     void reset() noexcept {
-      // Destroy allocator-aware vectors before releasing their storage.
       submissions.clear();
       presentation.reset();
       bump.release();
     }
+
+    bump_allocator bump;
+    SmallVector<QueueSubmission, MAX_SUBMIT_BATCH_SIZE, strobe::NullAllocator>
+        submissions;
+    std::optional<QueuePresentation> presentation;
   };
 
   // m_recordMutex must be held.
-  void rotate_locked() noexcept {
+  void rotate() noexcept {
     assert(m_ready == nullptr);
     assert(!m_open->submissions.empty());
 
@@ -337,17 +291,12 @@ private:
   }
 
   // m_recordMutex must be held.
-  void add_dependency_locked(const Timepoint &timepoint) noexcept {
-    // A queue never has to notify itself before submitting its own earlier
-    // work. Keeping the actual Vulkan wait is still valid and preserves the
-    // requested GPU dependency.
+  void add_dependency(const Timepoint &timepoint) noexcept {
     if (m_timeline.contains(timepoint)) {
       return;
     }
-
     const VkSemaphore semaphore =
         TimelineImpl::get_timepoint_semaphore(timepoint).handle;
-
     for (Timepoint &dependency : m_dependencies) {
       if (TimelineImpl::get_timepoint_semaphore(dependency).handle ==
           semaphore) {
@@ -357,22 +306,17 @@ private:
         return;
       }
     }
-
     m_dependencies.push_back(timepoint);
   }
 
   // m_recordMutex must be held.
-  void add_wait_locked(
-      const Timepoint &timepoint,
-      PipelineStage stage = PipelineStage::all_commands) noexcept {
-    // This must happen before the merge early return: the retained dependency
-    // has to track the same maximum value as the Vulkan semaphore wait.
-    add_dependency_locked(timepoint);
-
+  void
+  add_wait(const Timepoint &timepoint,
+                  PipelineStage stage = PipelineStage::all_commands) noexcept {
+    add_dependency(timepoint);
     const vulkan::TimelineSemaphore semaphore =
         TimelineImpl::get_timepoint_semaphore(timepoint);
-    const uint64_t serial =
-        TimelineImpl::get_timepoint_serial(timepoint);
+    const uint64_t serial = TimelineImpl::get_timepoint_serial(timepoint);
     const VkPipelineStageFlags2 stageMask = to_vk_pipeline_stage(stage);
 
     for (auto &waitInfo : m_wait) {
@@ -382,7 +326,6 @@ private:
         return;
       }
     }
-
     m_wait.push_back(VkSemaphoreSubmitInfo{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
         .pNext = nullptr,
@@ -394,18 +337,16 @@ private:
   }
 
   // m_recordMutex must be held.
-  void add_wait_locked(
-      vulkan::BinarySemaphore semaphore,
-      PipelineStage stage = PipelineStage::all_commands) noexcept {
+  void
+  add_wait(vulkan::BinarySemaphore semaphore,
+                  PipelineStage stage = PipelineStage::all_commands) noexcept {
     const VkPipelineStageFlags2 stageMask = to_vk_pipeline_stage(stage);
-
     for (auto &waitInfo : m_wait) {
       if (waitInfo.semaphore == semaphore.handle) {
         waitInfo.stageMask |= stageMask;
         return;
       }
     }
-
     m_wait.push_back(VkSemaphoreSubmitInfo{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
         .pNext = nullptr,
@@ -417,15 +358,13 @@ private:
   }
 
   // m_recordMutex must be held.
-  void add_signal_locked(
+  void add_signal(
       const Timepoint &timepoint,
       PipelineStage stage = PipelineStage::all_commands) noexcept {
     const vulkan::TimelineSemaphore semaphore =
         TimelineImpl::get_timepoint_semaphore(timepoint);
-    const uint64_t serial =
-        TimelineImpl::get_timepoint_serial(timepoint);
+    const uint64_t serial = TimelineImpl::get_timepoint_serial(timepoint);
     const VkPipelineStageFlags2 stageMask = to_vk_pipeline_stage(stage);
-
     for (auto &signalInfo : m_signal) {
       if (signalInfo.semaphore == semaphore.handle) {
         signalInfo.stageMask |= stageMask;
@@ -433,7 +372,6 @@ private:
         return;
       }
     }
-
     m_signal.push_back(VkSemaphoreSubmitInfo{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
         .pNext = nullptr,
@@ -445,18 +383,16 @@ private:
   }
 
   // m_recordMutex must be held.
-  void add_signal_locked(
+  void add_signal(
       vulkan::BinarySemaphore semaphore,
       PipelineStage stage = PipelineStage::all_commands) noexcept {
     const VkPipelineStageFlags2 stageMask = to_vk_pipeline_stage(stage);
-
     for (auto &signalInfo : m_signal) {
       if (signalInfo.semaphore == semaphore.handle) {
         signalInfo.stageMask |= stageMask;
         return;
       }
     }
-
     m_signal.push_back(VkSemaphoreSubmitInfo{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
         .pNext = nullptr,
@@ -469,44 +405,29 @@ private:
 
   void commit(const Timepoint &timepoint) noexcept {
     ZoneScopedN("queue/commit");
-
     assert(m_timeline.contains(timepoint));
-    const uint64_t target =
-        TimelineImpl::get_timepoint_serial(timepoint);
-
-    // Hot path: this is an actual submitted watermark, not merely a claimed
-    // or requested watermark.
+    const uint64_t target = TimelineImpl::get_timepoint_serial(timepoint);
     if (m_submitted.load(std::memory_order_acquire) >= target) {
       return;
     }
-
-    for (;;) {
+    while (true) {
       if (m_submitted.load(std::memory_order_acquire) >= target) {
         return;
       }
-
       {
         std::lock_guard recordLock{m_recordMutex};
-
         if (m_ready == nullptr) {
-          // If target has not been submitted and no closed batch exists, it
-          // must still be in the open batch.
           assert(!m_open->submissions.empty());
           assert(m_open->first_serial() <= target);
           assert(m_open->last_serial() >= target);
-          rotate_locked();
+          rotate();
         }
       }
-
-      // This function never holds m_recordMutex while waiting for another
-      // producer timeline, the driver, or the queue serialization lock.
       drain_ready_batch();
     }
   }
 
   void drain_ready_batch() noexcept {
-    // Vulkan requires host access to a VkQueue to be externally synchronized.
-    // This lock also makes closed batches drain in queue-timeline order.
     std::lock_guard submitLock{m_submitMutex};
 
     QueueBatch *batch = nullptr;
@@ -514,19 +435,12 @@ private:
       std::lock_guard recordLock{m_recordMutex};
       batch = m_ready;
     }
-
-    // Another drainer may have handled the batch while this thread waited for
-    // m_submitMutex.
     if (batch == nullptr) {
       return;
     }
 
     submit_batch(*batch);
-
-    // The batch remains published as m_ready during reset, so recording
-    // threads cannot rotate into and reuse its fixed slot prematurely.
     batch->reset();
-
     {
       std::lock_guard recordLock{m_recordMutex};
       assert(m_ready == batch);
@@ -534,23 +448,16 @@ private:
     }
   }
 
-  // m_submitMutex must be held. The batch is immutable and remains at a
-  // stable address for the duration of this function.
+  // m_submitMutex must be held. The batch is immutable and pined.
   void submit_batch(QueueBatch &batch) noexcept {
     ZoneScopedN("queue/submit");
     assert(!batch.submissions.empty());
-
     std::array<VkSubmitInfo2, MAX_SUBMIT_BATCH_SIZE> submitInfos{};
-
     for (uint32_t i = 0; i < batch.submissions.size(); ++i) {
       QueueSubmission &submission = batch.submissions[i];
-
-      // Resolve every producer signal before submitting a consumer wait. This
-      // is required for binary signals that are subsequently passed to WSI.
       for (const Timepoint &dependency : submission.dependencies) {
         Timeline::notify(dependency, TimelineNotifyFlag::block);
       }
-
       submitInfos[i] = VkSubmitInfo2{
           .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
           .pNext = nullptr,
@@ -566,39 +473,34 @@ private:
           .pSignalSemaphoreInfos = submission.signal.data(),
       };
     }
-
     {
+#ifdef STROBE_RHI_TRACE_VK
       ZoneScopedN("vkQueueSubmit2");
-      const VkResult result =
-          vkQueueSubmit2(m_queue.handle,
-                         static_cast<uint32_t>(batch.submissions.size()),
-                         submitInfos.data(), VK_NULL_HANDLE);
+#endif
+      const VkResult result = vkQueueSubmit2(
+          m_queue.handle, static_cast<uint32_t>(batch.submissions.size()),
+          submitInfos.data(), VK_NULL_HANDLE);
 
       if (result != VK_SUCCESS) {
         vulkan_error(result, "Failed to submit to queue");
       }
     }
-
-    // Publish only after vkQueueSubmit2 accepted the signal operation. This is
-    // the property Timeline::notify callers depend on before they may submit a
-    // dependent binary-semaphore signal/presentation chain.
     m_submitted.store(batch.last_serial(), std::memory_order_release);
-
     if (batch.presentation) {
       QueuePresentation &presentation = *batch.presentation;
       auto *img = object_handle_ptr<SwapchainImageImpl>(presentation.image);
       auto *generation =
           object_handle_ptr<SwapchainGenerationImpl>(img->generation);
-
       generation->debugCounter.fetch_sub(1, std::memory_order_relaxed);
-
-      vulkan::queue_present(
-          m_queue, generation->swapchain, img->index,
-          {
-              .presentReady = presentation.presentReady.wait(),
-              .presentFence = presentation.presentFence.fence(),
-          });
-
+      {
+        std::lock_guard lck{generation->mutex};
+        vulkan::queue_present(
+            m_queue, generation->swapchain, img->index,
+            {
+                .presentReady = presentation.presentReady.wait(),
+                .presentFence = presentation.presentFence.fence(),
+            });
+      }
       m_gc.retire(presentation.presentFence);
       img->consume();
     }
@@ -609,21 +511,14 @@ private:
   vulkan::Queue m_queue;
   QueueFlags m_flags;
 
-  // Fixed storage is essential: QueueSubmission's vectors retain allocator
-  // references into their containing QueueBatch::bump.
   std::array<QueueBatch, 2> m_batches{};
   QueueBatch *m_open = nullptr;
   QueueBatch *m_ready = nullptr;
 
-  // These describe the next logical submission and therefore deliberately do
-  // not live in either physical batch slot. A full-batch rotation must not
-  // strand a wait or signal in the batch that was just closed.
   Vector<VkSemaphoreSubmitInfo> m_wait;
   Vector<VkSemaphoreSubmitInfo> m_signal;
   Vector<Timepoint> m_dependencies;
 
-  // Highest queue timeline value whose signal operation has actually been
-  // accepted by vkQueueSubmit2.
   std::atomic<uint64_t> m_submitted{0};
 
 #ifdef STROBE_RHI_TRACE_LOCKS

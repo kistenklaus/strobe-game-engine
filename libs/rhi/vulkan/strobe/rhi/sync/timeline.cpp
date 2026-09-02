@@ -54,7 +54,7 @@ void Timeline::notify(const Timepoint &timepoint,
         timeline->m_serial.load(std::memory_order_relaxed);
     assert(timepoint.m_serial < serial);
 
-    if (flag != TimelineNotifyFlag::block &&
+    if (flag == TimelineNotifyFlag::backpressure &&
         timeline->m_commited >= timepoint.m_serial) {
       return;
     }
@@ -131,6 +131,11 @@ void Timeline::uninstall_commit() noexcept {
 
 Timepoint Timeline::from_serial(uint64_t serial) noexcept {
   return Timepoint{m_handle, serial};
+}
+
+vulkan::Context *Timeline::ctx() const noexcept {
+  auto *impl = void_handle_ptr<TimelineImpl>(m_handle);
+  return impl->context.ctx();
 }
 
 } // namespace strobe::rhi

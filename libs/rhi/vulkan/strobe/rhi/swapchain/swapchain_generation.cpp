@@ -56,6 +56,7 @@ SwapchainImage SwapchainGeneration::acquire() {
 
   uint32_t imageIndex;
 
+  std::lock_guard lck{impl->mutex};
   const auto result = vulkan::acquire_next_swapchain_image(
       ctx, impl->swapchain,
       {
@@ -122,8 +123,8 @@ SwapchainFrame &SwapchainGeneration::frame(uint32_t imageIndex) noexcept {
 }
 
 void SwapchainGeneration::release(uint32_t imageIndex) const noexcept {
-  vulkan_error(VK_SUCCESS, "testing stuff");
   auto *impl = void_handle_ptr<SwapchainGenerationImpl>(m_handle);
+  std::lock_guard lck{impl->mutex};
   vulkan::release_swapchain_image(impl->surface.ctx(), impl->swapchain,
                                   imageIndex);
 }

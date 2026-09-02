@@ -163,7 +163,6 @@ acquire_next_swapchain_image(Context *context, Swapchain swapchain,
 
 void release_swapchain_image(Context *context, Swapchain swapchain,
                              uint32_t imageIndex) noexcept {
-
   VkReleaseSwapchainImagesInfoKHR releaseInfo{
       .sType = VK_STRUCTURE_TYPE_RELEASE_SWAPCHAIN_IMAGES_INFO_KHR,
       .pNext = nullptr,

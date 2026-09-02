@@ -73,7 +73,11 @@ private:
                                                strobe::rhi::allocator_ref>;
   Context context;
   pool_alloc m_pool;
+#ifdef STROBE_RHI_TRACE_LOCKS
+  TracyLockableN(std::mutex, m_mutex, "SemPool-mutex");
+#else
   std::mutex m_mutex{};
+#endif
   BinarySemaphoreNode *m_ready = nullptr;
   std::atomic<BinarySemaphoreNode *> m_returned{nullptr};
 };

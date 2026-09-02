@@ -98,7 +98,11 @@ private:
   std::array<VkCommandBuffer, CAPACITY> m_cmds;
 
   std::atomic<uint32_t> m_live{0}; // <- amount of outstanding allocations.
-  std::mutex m_mutex;
+#ifdef STROBE_RHI_TRACE_LOCKS
+  TracyLockableN(std::mutex, m_mutex, "CmdPool-mutex");
+#else
+  std::mutex m_mutex{};
+#endif
 };
 
 } // namespace strobe::rhi

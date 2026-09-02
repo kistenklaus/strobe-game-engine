@@ -193,6 +193,9 @@ struct DeviceFeatures {
   // descriptor heaps
   VkBool32 descriptorHeap;
   VkBool32 descriptorHeapCaptureReplay;
+
+  // maintenance 9
+  VkBool32 maintenance9;
 };
 
 namespace details {

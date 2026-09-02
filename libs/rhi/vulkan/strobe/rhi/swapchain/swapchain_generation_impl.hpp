@@ -58,6 +58,8 @@ struct SwapchainGenerationImpl {
 
   std::atomic<uint64_t> debugCounter{0};
 
+  std::mutex mutex;
+
 private:
   swapchain_present_frame_pool m_presentFramePool;
   handle_allocator_ref<SwapchainImageImpl> m_imageAlloc;

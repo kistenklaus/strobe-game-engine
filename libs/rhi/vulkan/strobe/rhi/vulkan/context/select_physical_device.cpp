@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <bit>
 #include <cmath>
+#include <concepts>
 #include <limits>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -243,6 +244,10 @@ double get_device_score(VkInstance instance, VkPhysicalDevice device,
   }
 
   if (info->descriptorHeap == required && !deviceInfo.features.descriptorHeap) {
+    return unsuitable;
+  }
+
+  if (!deviceInfo.features.maintenance9) {
     return unsuitable;
   }
 

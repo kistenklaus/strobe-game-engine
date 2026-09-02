@@ -3,6 +3,7 @@
 #include "strobe/rhi/objects/object.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/sync/timeline_notify_flag.hpp"
+#include "strobe/rhi/vulkan/context/context.hpp"
 #include "strobe/rhi/vulkan/timeline_semaphore.hpp"
 
 namespace strobe::rhi {
@@ -41,6 +42,8 @@ public:
   void uninstall_commit() noexcept;
 
   Timepoint from_serial(uint64_t serial) noexcept ;
+
+  vulkan::Context *ctx() const noexcept;
 };
 
 } // namespace strobe::rhi

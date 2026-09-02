@@ -53,7 +53,8 @@ struct SwapchainInfo {
 };
 
 struct SwapchainAcquireInfo {
-  uint64_t timeout = 1'000'000'000ull; // 60 second
+  // uint64_t timeout = 1'000'000'000ull; // 60 second
+  uint64_t timeout = std::numeric_limits<uint64_t>::max();
   BinarySemaphore signalSemaphore = {};
   Fence fence = {};
 };

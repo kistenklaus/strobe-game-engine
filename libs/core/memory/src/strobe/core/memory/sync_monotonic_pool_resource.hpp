@@ -50,7 +50,7 @@ public:
   bool operator!=(const SyncMonotonicPoolResource &o) const noexcept = default;
 
 private:
-  std::mutex m_mutex{};
+  std::mutex m_mutex;
   mpsc_pool m_mpsc;
 };
 

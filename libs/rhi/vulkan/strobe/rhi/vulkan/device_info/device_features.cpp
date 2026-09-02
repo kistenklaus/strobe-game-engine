@@ -1,4 +1,6 @@
 #include "strobe/rhi/vulkan/device_info/device_features.hpp"
+#include "strobe/rhi/vulkan/device_info/device_extensions.hpp"
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi::vulkan {
 
@@ -140,6 +142,18 @@ DeviceFeatures details::query_device_features(
   if (descriptorHeapExt) {
     descriptorHeapFeatures.pNext = pNext;
     pNext = &descriptorHeapFeatures;
+  }
+
+  const bool main9Ext = details::supports_extension(
+      supportedExtensions, VK_KHR_MAINTENANCE_9_EXTENSION_NAME);
+  VkPhysicalDeviceMaintenance9FeaturesKHR maintenance9Features{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_9_FEATURES_KHR,
+      .pNext = nullptr,
+      .maintenance9 = VK_FALSE,
+  };
+  if (main9Ext) {
+    maintenance9Features.pNext = pNext;
+    pNext = &maintenance9Features;
   }
 
   VkPhysicalDeviceFeatures2 features2{
@@ -378,6 +392,7 @@ DeviceFeatures details::query_device_features(
       .descriptorHeap = descriptorHeapFeatures.descriptorHeap,
       .descriptorHeapCaptureReplay =
           descriptorHeapFeatures.descriptorHeapCaptureReplay,
+      .maintenance9 = maintenance9Features.maintenance9,
   };
 }
 } // namespace strobe::rhi::vulkan

@@ -146,7 +146,11 @@ private:
   MPSCMonotonicPoolResource<sizeof(StagingPage), alignof(StagingPage),
                             strobe::rhi::allocator_ref>
       m_pageAlloc;
+#ifdef STROBE_RHI_TRACE_LOCKS
+  TracyLockableN(std::mutex, m_mutex, "StagingPool-mutex");
+#else
   std::mutex m_mutex{};
+#endif
 
   std::array<StagingPage *, STAGING_CLASSES.size()> m_readyPages;
   std::atomic<StagingPage *> m_returnedPages = nullptr;
