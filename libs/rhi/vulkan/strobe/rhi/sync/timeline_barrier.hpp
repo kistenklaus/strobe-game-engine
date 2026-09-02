@@ -43,18 +43,31 @@ public:
 
   void notify() {
     std::lock_guard lock{m_wakeMutex};
-
-    const uint64_t value = ++m_wakeValue;
-
+    const uint64_t requested = ++m_wakeRequested;
+    if (!m_waiting) {
+      return;
+    }
+    assert(requested > m_wakeSignaled);
+    m_wakeSignaled = requested;
     vulkan::signal_timeline_semaphore(
         m_context.ctx(),
-        vulkan::TimelineSemaphore{.handle = m_semaphores.back()}, value);
+        vulkan::TimelineSemaphore{.handle = m_semaphores.back()}, requested);
   }
 
   std::pair<uint32_t, Timepoint>
   wait_any(uint64_t timeout = std::numeric_limits<uint64_t>::max()) {
     vulkan::Context *ctx = m_context.ctx();
     assert(ctx);
+    {
+      std::lock_guard lock{m_wakeMutex};
+      if (consume_wake_if_pending()) {
+        return {
+            std::numeric_limits<uint32_t>::max(),
+            Timepoint{},
+        };
+      }
+      m_waiting = true;
+    }
 
     VkSemaphoreWaitInfo waitInfo{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
@@ -71,6 +84,11 @@ public:
       result = vkWaitSemaphores(ctx->device(), &waitInfo, timeout);
     }
 
+    {
+      std::lock_guard lock{m_wakeMutex};
+      m_waiting = false;
+    }
+
     if (result == VK_TIMEOUT) {
       return {
           std::numeric_limits<uint32_t>::max(),
@@ -81,52 +99,31 @@ public:
     if (result != VK_SUCCESS) {
       vulkan_error(result, "Failed to wait for timeline semaphore");
     }
-
-    // Prefer returning queue progress if both a queue timeline and the wake
-    // semaphore became ready. The wake remains unconsumed and consequently
-    // makes the next wait return immediately.
     const uint32_t end = m_rr;
-
     do {
       Timeline timeline = m_timelines[m_rr];
       const uint64_t target = m_values[m_rr];
 
-      // Avoid querying values which have not even been closed/submitted yet.
       if (timeline.serial() > target) {
         const uint64_t value = vulkan::get_timeline_semaphore_value(
-            ctx,
-            vulkan::TimelineSemaphore{.handle = m_semaphores[m_rr]});
-
+            ctx, vulkan::TimelineSemaphore{.handle = m_semaphores[m_rr]});
         if (value >= target) {
           const uint32_t index = m_rr;
-
-          // Wait for the next value from this timeline.
           m_values[index] = value + 1;
-
           advance_round_robin();
-
           return {
               index,
               timeline.from_serial(value),
           };
         }
       }
-
       advance_round_robin();
     } while (m_rr != end);
-
-    // No queue timeline satisfied its target, so the wake semaphore must have
-    // satisfied the VK_SEMAPHORE_WAIT_ANY_BIT wait.
-    [[maybe_unused]] const uint64_t wakeTarget = m_values.back();
-    const uint64_t wakeValue = vulkan::get_timeline_semaphore_value(
-        ctx, vulkan::TimelineSemaphore{.handle = m_semaphores.back()});
-
-    assert(wakeValue >= wakeTarget);
-
-    // Coalesce every notification which has already been signaled. If another
-    // notification races this query, the next target will already be
-    // satisfied and wait_any() will immediately wake again.
-    m_values.back() = wakeValue + 1;
+    {
+      std::lock_guard lock{m_wakeMutex};
+      [[maybe_unused]] const bool consumed = consume_wake_if_pending();
+      assert(consumed);
+    }
 
     return {
         std::numeric_limits<uint32_t>::max(),
@@ -142,19 +139,29 @@ private:
     }
   }
 
+  // m_wakeMutex must be held.
+  bool consume_wake_if_pending() noexcept {
+    if (m_wakeConsumed == m_wakeRequested) {
+      return false;
+    }
+
+    ++m_wakeConsumed;
+    m_values.back() = m_wakeConsumed + 1;
+    return true;
+  }
+
   Context m_context;
   Vector<Timeline, strobe::rhi::allocator_ref> m_timelines;
   uint32_t m_rr;
 
-  // One target per queue timeline, plus the wake semaphore target.
-  // Only the wait/GC thread accesses this vector.
   Vector<uint64_t, strobe::rhi::allocator_ref> m_values;
   Vector<VkSemaphore, strobe::rhi::allocator_ref> m_semaphores;
 
-  // Serializes multiple concurrent producers so wake values are signaled in
-  // strictly increasing order.
   std::mutex m_wakeMutex;
-  uint64_t m_wakeValue{0};
+  uint64_t m_wakeRequested{0};
+  uint64_t m_wakeConsumed{0};
+  uint64_t m_wakeSignaled{0};
+  bool m_waiting{false};
 };
 
 } // namespace strobe::rhi

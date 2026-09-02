@@ -26,12 +26,14 @@
 
 using namespace strobe;
 
+using namespace std::chrono_literals;
+
 namespace {
 
-constexpr uint32_t TRIANGLES_PER_BUFFER = 8196;
+constexpr uint32_t TRIANGLES_PER_BUFFER = 1;
 
 // Bounds publication latency and the number of individual Vulkan buffers.
-constexpr std::size_t MAX_PUBLISHED_BUFFERS = 64;
+constexpr std::size_t MAX_PUBLISHED_BUFFERS = 8;
 
 // Also bound memory if buffers become variable-sized later.
 constexpr uint64_t MAX_PUBLISHED_BYTES = 16ull * 1024ull * 1024ull;
@@ -287,6 +289,8 @@ int main() {
       queue.wait(frame);
       queue.submit(&cmd);
       queue.present(std::move(frame));
+
+      // std::this_thread::sleep_for(1ms);
 
       /*
        * frameTriangles is destroyed here. The command buffer retains the

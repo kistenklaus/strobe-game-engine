@@ -176,7 +176,6 @@ struct GarbageCollectorImpl {
         st, [barrier = &m_barrier] { barrier->notify(); });
 
     while (!st.stop_requested()) {
-      ZoneScopedN("gc-cycle");
       auto [timelineIndex, timepoint] = m_barrier.wait_any();
       if (st.stop_requested()) {
         break;
@@ -293,7 +292,7 @@ private:
         return;
       }
     }
-    Timeline::notify(target, TimelineNotifyFlag::block);
+    Timeline::notify(target, TimelineNotifyFlag::backpressure);
   }
 
   void collect_fences() {
@@ -324,7 +323,7 @@ private:
       buffer.requestedCommit = {};
     }
     ZoneScopedN("gc/commit-requested");
-    Timeline::notify(target, TimelineNotifyFlag::block);
+    Timeline::notify(target, TimelineNotifyFlag::backpressure);
   }
 
 private:
