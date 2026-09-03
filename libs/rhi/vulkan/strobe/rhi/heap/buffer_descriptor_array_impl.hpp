@@ -5,7 +5,6 @@
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
-#include <limits>
 #include <memory>
 #include <utility>
 

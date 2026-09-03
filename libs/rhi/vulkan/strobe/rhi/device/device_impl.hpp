@@ -1,7 +1,7 @@
 #pragma once
 #include "strobe/rhi/bvh/scratch_buffer.hpp"
 #include "strobe/rhi/context/context.hpp"
-#include "strobe/rhi/dma/DMA.hpp"
+#include "strobe/rhi/dma/async_copy_engine.hpp"
 #include "strobe/rhi/gc/garbage_collector.hpp"
 #include "strobe/rhi/memory/memory_pool.hpp"
 #include "strobe/rhi/objects/queue.hpp"
@@ -18,7 +18,8 @@ struct DeviceImpl {
                       FencePool fencePool, BinarySemaphorePool semPool,
                       MemoryPool memory, StagingPool staging,
                       ScratchBuffer scratch, GarbageCollector gc,
-                      Queue universalQueue, Queue dmaQueue, DMA dma) noexcept
+                      Queue universalQueue, Queue dmaQueue,
+                      AsyncCopyEngine dma) noexcept
       : context(std::move(context)), allocs(allocs),
         fencePool(std::move(fencePool)), semPool(std::move(semPool)),
         memory(std::move(memory)), staging(std::move(staging)),
@@ -36,7 +37,7 @@ struct DeviceImpl {
   GarbageCollector gc;
   Queue universalQueue;
   Queue transferQueue;
-  DMA dma;
+  AsyncCopyEngine dma;
 };
 
 } // namespace strobe::rhi

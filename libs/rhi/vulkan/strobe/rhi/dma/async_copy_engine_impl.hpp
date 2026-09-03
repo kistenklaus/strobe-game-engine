@@ -1,44 +1,53 @@
 #pragma once
 
+#include "strobe/rhi/dma/async_transfer_cmd.hpp"
+#include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/objects/command_buffer.hpp"
 #include "strobe/rhi/objects/command_pool.hpp"
 #include "strobe/rhi/objects/queue.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/queue/queue_impl.hpp"
+#include "strobe/rhi/stage/stage_arena.hpp"
 #include "strobe/rhi/sync/timeline.hpp"
+#include "strobe/rhi/types/buffer_descriptor_info.hpp"
 #include "strobe/rhi/types/buffer_offset.hpp"
+#include "strobe/rhi/utils/descriptor_type_utils.hpp"
+#include "strobe/rhi/vulkan/cmd/transfer.hpp"
+#include "strobe/rhi/vulkan/context/pnf.hpp"
 
 #include <cassert>
 #include <mutex>
 #include <tracy/Tracy.hpp>
 #include <utility>
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi {
 
-struct DMAImpl {
+struct AsyncCopyEngineImpl {
+  friend class AsyncTransferCmd;
+
 public:
-  explicit DMAImpl(Timeline timeline, GarbageCollector gc, Queue queue,
-                   CommandPool cmdpool) noexcept
-      : m_timeline(std::move(timeline)),
-        m_gc(std::move(gc)),
-        m_queue(std::move(queue)),
-        m_cmdpool(std::move(cmdpool)),
-        m_committed(m_timeline.epoch()) {
+  explicit AsyncCopyEngineImpl(Timeline timeline, GarbageCollector gc,
+                               Queue queue, CommandPool cmdpool,
+                               strobe::rhi::allocator_ref alloc) noexcept
+      : m_timeline(std::move(timeline)), m_gc(std::move(gc)),
+        m_queue(std::move(queue)), m_cmdpool(std::move(cmdpool)),
+        m_committed(m_timeline.epoch()), m_alloc(alloc) {
     m_open = make_recording_batch();
     m_spare = make_recording_batch();
     m_timeline.install_commit(
         this, [](void *ptr, Timepoint timepoint) noexcept {
-          static_cast<DMAImpl *>(ptr)->commit(timepoint);
+          static_cast<AsyncCopyEngineImpl *>(ptr)->commit(timepoint);
         });
   }
 
-  DMAImpl(const DMAImpl &) = delete;
-  DMAImpl(DMAImpl &&) = delete;
-  DMAImpl &operator=(const DMAImpl &) = delete;
-  DMAImpl &operator=(DMAImpl &&) = delete;
+  AsyncCopyEngineImpl(const AsyncCopyEngineImpl &) = delete;
+  AsyncCopyEngineImpl(AsyncCopyEngineImpl &&) = delete;
+  AsyncCopyEngineImpl &operator=(const AsyncCopyEngineImpl &) = delete;
+  AsyncCopyEngineImpl &operator=(AsyncCopyEngineImpl &&) = delete;
 
-  ~DMAImpl() noexcept {
+  ~AsyncCopyEngineImpl() noexcept {
     m_timeline.uninstall_commit();
     std::lock_guard commitLock{m_commitMutex};
     Batch closed;
@@ -62,18 +71,8 @@ public:
     }
   }
 
-  Timepoint async_copy(BufferOffset dst, BufferOffset src,
-                       uint64_t size) {
-    std::lock_guard recordLock{m_recordMutex};
-    m_open.cmd.copy_buffer(dst, src, size);
-    return step_locked();
-  }
-
-  Timepoint async_upload(BufferOffset dst, const void *src,
-                         uint64_t size) {
-    std::lock_guard recordLock{m_recordMutex};
-    m_open.cmd.update(dst, src, size);
-    return step_locked();
+  AsyncTransferCmd async_cmd() {
+    return AsyncTransferCmd{std::unique_lock{m_recordMutex}, this};
   }
 
 private:
@@ -134,8 +133,7 @@ private:
     assert(closed.last);
     assert(m_committed < closed.last);
     auto *queue = object_handle_ptr<QueueImpl>(m_queue);
-    queue->signal_on_next_submit(
-        closed.last, PipelineStage::transfer);
+    queue->signal_on_next_submit(closed.last, PipelineStage::transfer);
     m_queue.submit(&closed.cmd);
     m_queue.flush();
 
@@ -162,6 +160,8 @@ private:
   std::mutex m_recordMutex;
   std::mutex m_commitMutex;
 #endif
+
+  [[no_unique_address]] strobe::rhi::allocator_ref m_alloc;
 };
 
 } // namespace strobe::rhi

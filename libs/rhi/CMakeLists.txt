@@ -83,6 +83,10 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/bvh/bvh.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/bvh/scratch_buffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/bvh/tlas.cpp
+  # strobe::rhi heap
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/buffer_descriptor.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/buffer_descriptor_array.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/resource_descriptor_heap.cpp
   # strobe::rhi command
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/cmd.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_buffer.cpp
@@ -101,7 +105,8 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/queue.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/queue/que.cpp
   # strobe::rhi dma
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/dma/DMA.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/dma/async_copy_engine.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/dma/async_transfer_cmd.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/dma/dma.cpp
   # strobe::rhi device
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/device/device.cpp

@@ -673,15 +673,17 @@ void CommandBuffer::update(BufferOffset dst, const void *src,
           impl->cmd, {.buffer = dst_impl->buffer, .offset = dst.offset}, src,
           size);
     } else {
-      StageBuffer stage = impl->localStage.alloc(size, 1);
-      assert(stage.ptr);
-      {
-        ZoneScopedN("memcpy");
-      std::memcpy(stage.ptr, src, size);
-      }
-      vulkan::cmd_copy_buffer(
-          impl->cmd, {.buffer = dst_impl->buffer, .offset = dst.offset},
-          stage.buffer, size);
+      impl->staged_upload(
+          [&](vulkan::CommandBuffer cmd, StageBuffer stage) {
+            {
+              ZoneScopedN("memcpy");
+              std::memcpy(stage.ptr, src, size);
+            }
+            vulkan::cmd_copy_buffer(
+                cmd, {.buffer = dst_impl->buffer, .offset = dst.offset},
+                stage.buffer, size);
+          },
+          size, 1);
     }
     impl->state.retain(dst.buffer);
   }

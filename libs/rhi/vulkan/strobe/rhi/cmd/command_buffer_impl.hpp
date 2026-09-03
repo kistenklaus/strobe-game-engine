@@ -56,6 +56,16 @@ struct CommandBufferImpl {
   CommandBufferRenderingState required =
       CommandBufferRenderingState::graphics_pipeline_requirements;
 
+  template <typename Fn>
+    requires std::is_invocable_v<Fn, vulkan::CommandBuffer,
+             StageBuffer>
+  void staged_upload(Fn &&fn, size_t size,
+                     size_t alignment = 1) {
+    StageBuffer stage = localStage.alloc(size, alignment);
+    assert(stage.ptr);
+    fn(cmd, stage);
+  }
+
   void
   set_default_rendering_state(CommandBufferRenderingState states) noexcept {
     ZoneScopedN("cmd/set-default-state");

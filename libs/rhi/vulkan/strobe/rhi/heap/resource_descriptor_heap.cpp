@@ -3,6 +3,7 @@
 #include "strobe/rhi/heap/buffer_descriptor_array_wizard.hpp"
 #include "strobe/rhi/heap/buffer_descriptor_wizard.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap_impl.hpp"
+#include "strobe/rhi/types/buffer_descriptor_info.hpp"
 
 namespace strobe::rhi {
 
@@ -46,7 +47,7 @@ ResourceDescriptorHeap::~ResourceDescriptorHeap() noexcept {
 }
 
 BufferDescriptorWizard ResourceDescriptorHeap::create_buffer_descriptor_wizard(
-    BufferRange buffer) noexcept {
+    const BufferDescriptorInfo &buffer) noexcept {
   auto *impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
   uint32_t index = impl->acquire_buffer_descriptor_index_range(1);
   return BufferDescriptorWizard{*this, index, buffer};
@@ -54,11 +55,11 @@ BufferDescriptorWizard ResourceDescriptorHeap::create_buffer_descriptor_wizard(
 
 BufferDescriptorArrayWizard
 ResourceDescriptorHeap::create_buffer_descriptor_array_wizard(
-    uint32_t size, span<const BufferRange> buffers) noexcept {
+    span<const BufferDescriptorInfo> infos) noexcept {
+
   auto *impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
-  uint32_t index = impl->acquire_buffer_descriptor_index_range(size);
-  return BufferDescriptorArrayWizard{*this, index, size, buffers,
-                                     impl->alloc()};
+  uint32_t index = impl->acquire_buffer_descriptor_index_range(infos.size());
+  return BufferDescriptorArrayWizard{*this, index, infos, impl->alloc()};
 }
 
 void ResourceDescriptorHeap::release_buffer_descriptor_index_range(
@@ -81,6 +82,15 @@ Buffer ResourceDescriptorHeap::buffer() const noexcept {
 DescriptorHeapBindInfo ResourceDescriptorHeap::bindInfo() const noexcept {
   auto *impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
   return impl->bindInfo();
+}
+
+vulkan::Context *ResourceDescriptorHeap::ctx() const noexcept {
+  return context().ctx();
+}
+
+Context ResourceDescriptorHeap::context() const noexcept {
+  auto *impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
+  return impl->context;
 }
 
 } // namespace strobe::rhi

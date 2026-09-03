@@ -30,10 +30,10 @@ using namespace std::chrono_literals;
 
 namespace {
 
-constexpr uint32_t TRIANGLES_PER_BUFFER = 1;
+constexpr uint32_t TRIANGLES_PER_BUFFER = 4096;
 
 // Bounds publication latency and the number of individual Vulkan buffers.
-constexpr std::size_t MAX_PUBLISHED_BUFFERS = 8;
+constexpr std::size_t MAX_PUBLISHED_BUFFERS = 8 * 1024;
 
 // Also bound memory if buffers become variable-sized later.
 constexpr uint64_t MAX_PUBLISHED_BYTES = 16ull * 1024ull * 1024ull;
@@ -85,6 +85,13 @@ std::vector<vec2> generate_triangles(std::mt19937 &rng) {
 } // namespace
 
 int main() {
+  // #ifdef STROBE_TRACY
+  //   fmt::println("waiting for tracy");
+  //   while (!TracyIsConnected) {
+  //     std::this_thread::yield();
+  //   }
+  //   fmt::println("tracy connected");
+  // #endif
   tracy::SetThreadName("platform");
 
   Platform::start([] {
@@ -190,6 +197,8 @@ int main() {
         break;
       }
 
+      std::this_thread::sleep_for(1ms);
+
       rhi::SwapchainImage frame = swapchain.acquire();
 
       /*
@@ -290,7 +299,6 @@ int main() {
       queue.submit(&cmd);
       queue.present(std::move(frame));
 
-      // std::this_thread::sleep_for(1ms);
 
       /*
        * frameTriangles is destroyed here. The command buffer retains the

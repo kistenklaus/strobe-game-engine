@@ -1,5 +1,6 @@
 #pragma once
 
+#include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/heap/buffer_descriptor_array_impl.hpp"
 #include "strobe/rhi/heap/buffer_descriptor_impl.hpp"
@@ -17,9 +18,11 @@ namespace strobe::rhi {
 struct ResourceDescriptorHeapImpl {
 public:
   explicit ResourceDescriptorHeapImpl(
-      Buffer buffer, const vulkan::DescriptorHeapProperties &heapProperties,
+      Context context, Buffer buffer, Timepoint ready,
+      const vulkan::DescriptorHeapProperties &heapProperties,
       strobe::rhi::allocator_ref alloc) noexcept
-      : m_buffer(std::move(buffer)),
+      : context(std::move(context)), m_buffer(std::move(buffer)),
+        m_ready(ready),
         m_indexPool(this->m_buffer.size(), heapProperties, alloc),
         m_alloc(alloc), m_bufferDescAlloc(m_alloc),
         m_bufferDescArrayAlloc(m_alloc) {}
@@ -33,6 +36,10 @@ public:
     return m_indexPool.buffer_stride();
   }
   uint64_t image_stride() const noexcept { return m_indexPool.image_stride(); }
+
+  uint64_t heap_size() const noexcept {
+    return m_indexPool.descriptor_region_size();
+  }
 
   // handle allocators. (those are thread-safe)
   handle_allocator_ref<BufferDescriptorImpl> get_buffer_desc_allocator() {
@@ -67,7 +74,10 @@ public:
   } // URVO!
     //
   // lock must be help
-  void exchange(Buffer newBuffer, Timepoint ready) {}
+  void exchange(Buffer newBuffer, Timepoint ready) {
+    m_ready = ready;
+    m_buffer = newBuffer;
+  }
 
   Buffer buffer() const noexcept { return m_buffer; }
   // lock has to be held.
@@ -80,8 +90,11 @@ public:
     };
   }
 
+  const Context context;
+
 private:
   Buffer m_buffer;
+  Timepoint m_ready;
   ResourceDescriptorHeapIndexPool m_indexPool;
 
   [[no_unique_address]] strobe::rhi::allocator_ref m_alloc;

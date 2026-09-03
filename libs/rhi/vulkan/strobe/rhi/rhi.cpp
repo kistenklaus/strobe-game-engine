@@ -1,6 +1,5 @@
 #include "strobe/rhi/rhi.hpp"
 #include "strobe/rhi/context/context.hpp"
-#include "strobe/rhi/dma/DMA.hpp"
 #include "strobe/rhi/dma/dma.hpp"
 #include "strobe/rhi/handle_allocators.hpp"
 #include "strobe/rhi/sync/sync.hpp"
@@ -121,13 +120,13 @@ Device create_device(const DeviceInfo &info) {
   if (queue1) {
     assert(transferTimeline);
     transferQueue = que::create_queue(transferTimeline, gc, queue1,
-                                 QueueFlags::transfer, &allocs->queAlloc);
+                                      QueueFlags::transfer, &allocs->queAlloc);
   } else {
     transferQueue = universalQueue;
   }
 
-  DMA dma = dma::create_dma(context, dmaTimeline, gc, transferQueue, staging,
-                            &allocs->dmaAlloc);
+  AsyncCopyEngine dma = dma::create_dma(context, dmaTimeline, gc, transferQueue,
+                                        staging, &allocs->dmaAlloc);
 
   return Device{make_void_handle<DeviceImpl>( //
       &allocs->deviceAlloc,                   //
@@ -140,7 +139,7 @@ Device create_device(const DeviceInfo &info) {
       std::move(scratch),                     //
       std::move(gc),                          //
       std::move(universalQueue),              //
-      std::move(transferQueue),                    //
+      std::move(transferQueue),               //
       std::move(dma)                          //
       )};
 }
