@@ -29,7 +29,7 @@ struct CommandBufferState {
       : m_boundVertexShaders(alloc), m_boundFragmentShaders(alloc),
         m_boundComputeShaders(alloc), m_boundBuffers(alloc),
         m_boundImages(alloc), m_boundBlas(alloc),
-        m_boundBufferDescriptors(alloc) {}
+        m_boundBufferDescriptors(alloc), m_boundBufferDescriptorArrays(alloc) {}
 
   void retain(const VertexShader &obj) {
     auto &bindings = m_boundVertexShaders;

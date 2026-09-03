@@ -4,6 +4,8 @@
 #include "strobe/rhi/cmd/command_buffer_rendering_state.hpp"
 #include "strobe/rhi/cmd/command_buffer_state.hpp"
 #include "strobe/rhi/cmd/native_command_pool.hpp"
+#include "strobe/rhi/heap/descriptor_heap_bind_info.hpp"
+#include "strobe/rhi/heap/resource_descriptor_heap.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/command_buffer.hpp"
 #include "strobe/rhi/objects/command_pool.hpp"
@@ -53,6 +55,7 @@ struct CommandBufferImpl {
   uint32_t pushDirtyEnd = 0;
 
   Timepoint dma_ready{};
+  Buffer bound_resource_heap{};
 
   // profiling
 #ifdef STROBE_TRACY
@@ -74,6 +77,35 @@ struct CommandBufferImpl {
   }
 
   void flush_pc() noexcept;
+
+  void bind_resource_heap(const ResourceDescriptorHeap &heap,
+                          const Timepoint &descriptorReady) noexcept {
+    if (bound_resource_heap && descriptorReady <= dma_ready) {
+      return;
+    }
+    const DescriptorHeapBindInfo heapInfo = heap.bindInfo();
+    if (bound_resource_heap != heapInfo.buffer) {
+      auto *buffer = object_handle_ptr<BufferImpl>(heapInfo.buffer);
+      const VkBindHeapInfoEXT bindInfo{
+          .sType = VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT,
+          .pNext = nullptr,
+          .heapRange =
+              {
+                  .address = buffer->address,
+                  .size = heapInfo.size,
+              },
+          .reservedRangeOffset = heapInfo.reservedOffset,
+          .reservedRangeSize = heapInfo.reservedSize,
+      };
+#ifdef STROBE_RHI_TRACE_VK
+      ZoneScopedN("vkCmdBindResourceHeap");
+#endif
+      vulkan::vk_cmd_bind_resource_heap(ctx->pnf(), cmd.handle, &bindInfo);
+      state.retain(heapInfo.buffer);
+      bound_resource_heap = heapInfo.buffer;
+    }
+    dma_ready &= heapInfo.ready;
+  }
 
   void
   set_default_rendering_state(CommandBufferRenderingState states) noexcept {

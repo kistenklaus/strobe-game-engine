@@ -85,7 +85,7 @@ Timepoint Timeline::now() noexcept {
 bool Timeline::contains(Timepoint timepoint) const noexcept {
   return timepoint.m_handle == m_handle;
 }
-Timepoint Timeline::epoch() const noexcept { return Timepoint{m_handle, 0}; }
+
 
 void Timeline::complete(Timepoint timepoint) noexcept {
   auto *impl = void_handle_ptr<TimelineImpl>(m_handle);
@@ -130,6 +130,9 @@ void Timeline::uninstall_commit() noexcept {
 }
 
 Timepoint Timeline::from_serial(uint64_t serial) noexcept {
+  if (serial == 0) {
+    return {};
+  }
   return Timepoint{m_handle, serial};
 }
 

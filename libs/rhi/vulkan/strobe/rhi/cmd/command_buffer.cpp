@@ -697,7 +697,7 @@ void CommandBuffer::draw(uint32_t vertexCount, uint32_t instanceCount,
   if (auto missing = impl->required & impl->uninitialized; missing != 0) {
     impl->set_default_rendering_state(missing);
   }
-  impl->flush_pc();
+  // impl->flush_pc();
   vulkan::cmd_draw(impl->cmd, vertexCount, instanceCount, firstVertex,
                    firstInstance);
 }
@@ -834,6 +834,7 @@ void CommandBuffer::push(uint32_t offset,
   auto *desc = object_handle_ptr<BufferDescriptorImpl>(descriptor);
   push(offset, &desc->index, sizeof(uint32_t));
   impl->state.retain(descriptor);
+  impl->bind_resource_heap(desc->heap, desc->ready);
   impl->dma_ready &= desc->ready;
 }
 
@@ -843,6 +844,7 @@ void CommandBuffer::push(uint32_t offset,
   auto *desc = object_handle_ptr<BufferDescriptorImpl>(descriptor);
   push(offset, &desc->index, sizeof(uint32_t));
   impl->state.retain(descriptor);
+  impl->bind_resource_heap(desc->heap, desc->ready);
   impl->dma_ready &= desc->ready;
 }
 

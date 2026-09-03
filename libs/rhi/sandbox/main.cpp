@@ -30,10 +30,10 @@ using namespace std::chrono_literals;
 
 namespace {
 
-constexpr uint32_t TRIANGLES_PER_BUFFER = 4096;
+constexpr uint32_t TRIANGLES_PER_BUFFER = 1;
 
 // Bounds publication latency and the number of individual Vulkan buffers.
-constexpr std::size_t MAX_PUBLISHED_BUFFERS = 8 * 1024;
+constexpr std::size_t MAX_PUBLISHED_BUFFERS = 1024;
 
 // Also bound memory if buffers become variable-sized later.
 constexpr uint64_t MAX_PUBLISHED_BYTES = 16ull * 1024ull * 1024ull;
@@ -85,13 +85,13 @@ std::vector<vec2> generate_triangles(std::mt19937 &rng) {
 } // namespace
 
 int main() {
-  // #ifdef STROBE_TRACY
-  //   fmt::println("waiting for tracy");
-  //   while (!TracyIsConnected) {
-  //     std::this_thread::yield();
-  //   }
-  //   fmt::println("tracy connected");
-  // #endif
+  #ifdef STROBE_TRACY
+    fmt::println("waiting for tracy");
+    while (!TracyIsConnected) {
+      std::this_thread::yield();
+    }
+    fmt::println("tracy connected");
+  #endif
   tracy::SetThreadName("platform");
 
   Platform::start([] {
@@ -285,14 +285,6 @@ int main() {
         queue.wait(triangles.ready, rhi::PipelineStage::vertex_attribute_input);
 
         cmd.bind_vertex_buffer(triangles.buffer);
-
-        struct PushData {
-          rhi::BufferDescriptor buffer;
-          uint32_t index;
-        };
-        PushData x;
-
-        cmd.push(x);
         cmd.draw(triangles.vertexCount);
       }
 
@@ -304,7 +296,7 @@ int main() {
       cmd.end();
 
       queue.wait(frame);
-      rhi::Timepoint timepoint = queue.submit(&cmd);
+      queue.submit(&cmd);
       queue.present(std::move(frame));
 
 

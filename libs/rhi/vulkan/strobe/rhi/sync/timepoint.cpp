@@ -8,6 +8,7 @@ namespace strobe::rhi {
 
 Timepoint::Timepoint(void *handle, uint64_t serial) noexcept
     : m_handle(handle), m_serial(serial) {
+  assert((m_handle == nullptr) == (m_serial == 0));
   pin_void_handle<TimelineImpl>(m_handle);
 }
 
