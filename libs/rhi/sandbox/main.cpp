@@ -285,6 +285,14 @@ int main() {
         queue.wait(triangles.ready, rhi::PipelineStage::vertex_attribute_input);
 
         cmd.bind_vertex_buffer(triangles.buffer);
+
+        struct PushData {
+          rhi::BufferDescriptor buffer;
+          uint32_t index;
+        };
+        PushData x;
+
+        cmd.push(x);
         cmd.draw(triangles.vertexCount);
       }
 
@@ -296,7 +304,7 @@ int main() {
       cmd.end();
 
       queue.wait(frame);
-      queue.submit(&cmd);
+      rhi::Timepoint timepoint = queue.submit(&cmd);
       queue.present(std::move(frame));
 
 

@@ -3,8 +3,8 @@
 #include "strobe/rhi/buf/buf.hpp"
 #include "strobe/rhi/dma/async_copy_engine.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/heap/buffer_descriptor.hpp"
-#include "strobe/rhi/heap/buffer_descriptor_array.hpp"
+#include "strobe/rhi/objects/buffer_descriptor.hpp"
+#include "strobe/rhi/objects/buffer_descriptor_array.hpp"
 #include "strobe/rhi/heap/buffer_descriptor_array_wizard.hpp"
 #include "strobe/rhi/heap/buffer_descriptor_wizard.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
@@ -13,14 +13,16 @@
 
 namespace strobe::rhi {
 
-struct HeapController {
+struct HeapControllerImpl {
+  static constexpr size_t RESOURCE_DESCRIPTOR_HEAP_SIZE = 1024;
+  static constexpr size_t SAMPLER_DESCRIPTOR_HEAP_SIZE = 1024;
 
   BufferDescriptor create_buffer_descriptor(const BufferDescriptorInfo &info) {
-    std::lock_guard lck{m_mutex};
+
     while (true) {
-      // Let's be precise here:
-      // do we have to serialize across grow and wizard completion right?
       auto wizard = m_resourceHeap.create_buffer_descriptor_wizard(info);
+
+      std::lock_guard lck{m_mutex};
       if (!wizard) {
         grow_resource_heap();
         continue;
@@ -38,11 +40,10 @@ struct HeapController {
 
   BufferDescriptorArray
   create_buffer_descriptor_array(span<const BufferDescriptorInfo> infos) {
-    std::lock_guard lck{m_mutex};
     while (true) {
-      // Let's be precise here:
-      // do we have to serialize across grow and wizard completion right?
       auto wizard = m_resourceHeap.create_buffer_descriptor_array_wizard(infos);
+
+      std::lock_guard lck{m_mutex};
       if (!wizard) {
         grow_resource_heap();
         continue;
@@ -59,18 +60,20 @@ struct HeapController {
   }
 
 private:
+  // m_mutex must be held!
   void grow_resource_heap() {
     auto *heap = object_handle_ptr<ResourceDescriptorHeapImpl>(m_resourceHeap);
+    uint64_t newSize = heap->buffer().size() + RESOURCE_DESCRIPTOR_HEAP_SIZE;
     Buffer newBuffer =
         buf::create_buffer(m_memoryPool,
                            {
-                               .size = 0,
+                               .size = newSize,
                                .bufferUsage = BufferUsage::descriptor_heap,
                                .memoryUsage = MemoryUsage::device,
                            },
                            {}, m_bufAlloc);
-    Timepoint ready =
-        m_dma.async_copy(newBuffer, heap->buffer(), heap->heap_size());
+    Timepoint ready = m_dma.async_copy(newBuffer, heap->buffer(),
+                                       heap->layout.descriptor_region_size());
     object_handle_ptr<ResourceDescriptorHeapImpl>(m_resourceHeap)
         ->exchange(newBuffer, ready);
   }

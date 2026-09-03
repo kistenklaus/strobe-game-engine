@@ -21,87 +21,64 @@ public:
       Context context, Buffer buffer, Timepoint ready,
       const vulkan::DescriptorHeapProperties &heapProperties,
       strobe::rhi::allocator_ref alloc) noexcept
-      : context(std::move(context)), m_buffer(std::move(buffer)),
-        m_ready(ready),
-        m_indexPool(this->m_buffer.size(), heapProperties, alloc),
-        m_alloc(alloc), m_bufferDescAlloc(m_alloc),
-        m_bufferDescArrayAlloc(m_alloc) {}
+      : context(std::move(context)),
+        layout(buffer.size(), heapProperties, alloc), alloc(alloc),
+        bufferDescAlloc(alloc), bufferDescArrayAlloc(alloc),
+        m_buffer(std::move(buffer)), m_ready(ready),
+        m_reservedOffset(layout.reserved_range_offset()),
+        m_reservedSize(layout.reserved_range_size()) {}
 
   ~ResourceDescriptorHeapImpl() noexcept {}
   ResourceDescriptorHeapImpl(const ResourceDescriptorHeapImpl &) = delete;
   ResourceDescriptorHeapImpl(ResourceDescriptorHeapImpl &&) = delete;
 
-  // constants.
-  uint64_t buffer_stride() const noexcept {
-    return m_indexPool.buffer_stride();
-  }
-  uint64_t image_stride() const noexcept { return m_indexPool.image_stride(); }
-
-  uint64_t heap_size() const noexcept {
-    return m_indexPool.descriptor_region_size();
-  }
-
-  // handle allocators. (those are thread-safe)
-  handle_allocator_ref<BufferDescriptorImpl> get_buffer_desc_allocator() {
-    return &m_bufferDescAlloc;
-  }
-  handle_allocator_ref<BufferDescriptorArrayImpl>
-  get_buffer_desc_array_allocator() {
-    return &m_bufferDescArrayAlloc;
-  }
-  strobe::rhi::allocator_ref alloc() const noexcept { return m_alloc; }
-
-  // descriptor allocation machinery.
-  uint32_t acquire_buffer_descriptor_index_range(uint32_t count) noexcept {
-    return m_indexPool.alloc_buffer(count);
-  }
-  uint32_t acquire_image_descriptor_index_range(uint32_t count) noexcept {
-    return m_indexPool.alloc_image(count);
-  }
-  // called by destructors of the descriptor handles.
-  void release_buffer_descriptor_index_range(uint32_t index,
-                                             uint32_t count) noexcept {
-    return m_indexPool.free_buffer(index, count);
-  }
-  void release_image_descriptor_index_range(uint32_t index,
-                                            uint32_t count) noexcept {
-    return m_indexPool.free_image(index, count);
-  }
-
-  // important for heapctrl:
-  auto lock() noexcept {
-    return std::lock_guard{m_mutex};
-  } // URVO!
-    //
-  // lock must be help
   void exchange(Buffer newBuffer, Timepoint ready) {
+    std::lock_guard lck{m_mutex};
+    layout.grow(newBuffer.size(),
+                context.ctx()->deviceInfo().properties.descriptorHeap);
     m_ready = ready;
     m_buffer = newBuffer;
+    m_reservedOffset = layout.reserved_range_offset();
+    m_reservedSize = layout.reserved_range_size();
   }
 
-  Buffer buffer() const noexcept { return m_buffer; }
-  // lock has to be held.
+  Buffer buffer() const noexcept {
+    std::lock_guard lck{m_mutex};
+    return m_buffer;
+  }
+
   DescriptorHeapBindInfo bindInfo() const noexcept {
+    std::lock_guard lck{m_mutex};
     return {
         .buffer = m_buffer,
         .size = m_buffer.size(),
-        .reservedOffset = m_indexPool.reserved_range_offset(),
-        .reservedSize = m_indexPool.reserved_range_size(),
+        .reservedOffset = m_reservedOffset,
+        .reservedSize = m_reservedSize,
+        .ready = m_ready,
     };
   }
 
   const Context context;
+  ResourceDescriptorHeapIndexPool layout; // <- internally synchronized.
+
+  [[no_unique_address]] strobe::rhi::allocator_ref alloc;
+  handle_allocator<BufferDescriptorImpl> bufferDescAlloc;
+  handle_allocator<BufferDescriptorArrayImpl> bufferDescArrayAlloc;
 
 private:
+  // Synchronized by mutex.
+  // NOTE: We will have to see how much
+  // contension we get on this lock for
+  // heavy parallel recording.
   Buffer m_buffer;
   Timepoint m_ready;
-  ResourceDescriptorHeapIndexPool m_indexPool;
-
-  [[no_unique_address]] strobe::rhi::allocator_ref m_alloc;
-  handle_allocator<BufferDescriptorImpl> m_bufferDescAlloc;
-  handle_allocator<BufferDescriptorArrayImpl> m_bufferDescArrayAlloc;
-
-  std::mutex m_mutex{};
+  uint64_t m_reservedOffset;
+  uint64_t m_reservedSize;
+#ifdef STROBE_RHI_TRACE_LOCKS
+  mutable TracyLockableN(std::mutex, m_mutex, "rheap-mutex");
+#else
+  mutable std::mutex m_mutex{};
+#endif
 };
 
 } // namespace strobe::rhi

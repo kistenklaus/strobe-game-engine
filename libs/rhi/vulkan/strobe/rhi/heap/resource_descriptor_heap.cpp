@@ -49,7 +49,7 @@ ResourceDescriptorHeap::~ResourceDescriptorHeap() noexcept {
 BufferDescriptorWizard ResourceDescriptorHeap::create_buffer_descriptor_wizard(
     const BufferDescriptorInfo &buffer) noexcept {
   auto *impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
-  uint32_t index = impl->acquire_buffer_descriptor_index_range(1);
+  uint32_t index = impl->layout.alloc_buffer(1);
   return BufferDescriptorWizard{*this, index, buffer};
 }
 
@@ -58,20 +58,20 @@ ResourceDescriptorHeap::create_buffer_descriptor_array_wizard(
     span<const BufferDescriptorInfo> infos) noexcept {
 
   auto *impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
-  uint32_t index = impl->acquire_buffer_descriptor_index_range(infos.size());
-  return BufferDescriptorArrayWizard{*this, index, infos, impl->alloc()};
+  uint32_t index = impl->layout.alloc_buffer(infos.size());
+  return BufferDescriptorArrayWizard{*this, index, infos, impl->alloc};
 }
 
 void ResourceDescriptorHeap::release_buffer_descriptor_index_range(
     uint32_t index, uint32_t count) const noexcept {
   auto *impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
-  impl->release_buffer_descriptor_index_range(index, count);
+  impl->layout.free_buffer(index, count);
 }
 
 void ResourceDescriptorHeap::release_image_descriptor_index_range(
     uint32_t index, uint32_t count) const noexcept {
   auto *impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
-  impl->release_image_descriptor_index_range(index, count);
+  impl->layout.free_buffer(index, count);
 }
 
 Buffer ResourceDescriptorHeap::buffer() const noexcept {

@@ -4,7 +4,7 @@
 #include "strobe/core/memory/AllocatorTraits.hpp"
 #include "strobe/rhi/buf/buffer_impl.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/heap/buffer_descriptor_array.hpp"
+#include "strobe/rhi/objects/buffer_descriptor_array.hpp"
 #include "strobe/rhi/heap/buffer_descriptor_array_impl.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap_impl.hpp"
@@ -22,19 +22,19 @@ public:
   using descriptor = BufferDescriptorArray;
   uint64_t size() const noexcept {
     const auto *impl = object_handle_ptr<ResourceDescriptorHeapImpl>(m_heap);
-    const uint64_t stride = impl->buffer_stride();
+    const uint64_t stride = impl->layout.buffer_stride();
     return stride * m_infos.size();
   }
   uint64_t alignment() const noexcept {
     const auto *impl = object_handle_ptr<ResourceDescriptorHeapImpl>(m_heap);
-    return impl->buffer_stride();
+    return impl->layout.buffer_stride();
   }
 
   template <typename Fn>
     requires std::is_invocable_r_v<Timepoint, Fn, BufferRange>
   descriptor complete(void *dst, Fn &&fn) noexcept {
     auto *impl = object_handle_ptr<ResourceDescriptorHeapImpl>(m_heap);
-    const uint64_t stride = impl->buffer_stride();
+    const uint64_t stride = impl->layout.buffer_stride();
     const uint64_t offset = stride * static_cast<uint64_t>(m_index);
     vulkan::Context *ctx = m_heap.ctx();
     Buffer buffer = m_heap.buffer();
@@ -89,7 +89,7 @@ public:
     });
 
     return BufferDescriptorArray{make_void_handle<BufferDescriptorArrayImpl>(
-        impl->get_buffer_desc_array_allocator(), std::move(m_heap),
+        &impl->bufferDescArrayAlloc, std::move(m_heap),
         std::exchange(m_index, 0), m_infos.size(), std::move(ready), buffers,
         m_alloc)};
   }

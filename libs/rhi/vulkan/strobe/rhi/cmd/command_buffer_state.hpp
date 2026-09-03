@@ -5,6 +5,8 @@
 #include "strobe/rhi/cmd/command_buffer_state_alloctor.hpp"
 #include "strobe/rhi/objects/blas.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
+#include "strobe/rhi/objects/buffer_descriptor.hpp"
+#include "strobe/rhi/objects/buffer_descriptor_array.hpp"
 #include "strobe/rhi/objects/compute_shader.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
 #include "strobe/rhi/objects/image.hpp"
@@ -26,7 +28,8 @@ struct CommandBufferState {
   CommandBufferState(const allocator &alloc) noexcept
       : m_boundVertexShaders(alloc), m_boundFragmentShaders(alloc),
         m_boundComputeShaders(alloc), m_boundBuffers(alloc),
-        m_boundImages(alloc), m_boundBlas(alloc) {}
+        m_boundImages(alloc), m_boundBlas(alloc),
+        m_boundBufferDescriptors(alloc) {}
 
   void retain(const VertexShader &obj) {
     auto &bindings = m_boundVertexShaders;
@@ -154,6 +157,48 @@ struct CommandBufferState {
     bindings.push_back(obj);
   }
 
+  void retain(const BufferDescriptor &obj) {
+    auto &bindings = m_boundBufferDescriptors;
+    if (bindings.size() > SEARCH_WINDOW_SIZE) {
+      auto it = bindings.end();
+      STROBE_UNROLL(SEARCH_WINDOW_SIZE)
+      for (size_t i = 0; i < SEARCH_WINDOW_SIZE; ++i) {
+        --it;
+        if (obj == *it) {
+          return;
+        }
+      }
+    } else {
+      for (const auto &bound : bindings) {
+        if (obj == bound) {
+          return;
+        }
+      }
+    }
+    bindings.push_back(obj);
+  }
+
+  void retain(const BufferDescriptorArray &obj) {
+    auto &bindings = m_boundBufferDescriptorArrays;
+    if (bindings.size() > SEARCH_WINDOW_SIZE) {
+      auto it = bindings.end();
+      STROBE_UNROLL(SEARCH_WINDOW_SIZE)
+      for (size_t i = 0; i < SEARCH_WINDOW_SIZE; ++i) {
+        --it;
+        if (obj == *it) {
+          return;
+        }
+      }
+    } else {
+      for (const auto &bound : bindings) {
+        if (obj == bound) {
+          return;
+        }
+      }
+    }
+    bindings.push_back(obj);
+  }
+
 private:
   Vector<VertexShader, allocator> m_boundVertexShaders;
   Vector<FragmentShader, allocator> m_boundFragmentShaders;
@@ -161,6 +206,8 @@ private:
   Vector<Buffer, allocator> m_boundBuffers;
   Vector<Image, allocator> m_boundImages;
   Vector<Blas, allocator> m_boundBlas;
+  Vector<BufferDescriptor, allocator> m_boundBufferDescriptors;
+  Vector<BufferDescriptorArray, allocator> m_boundBufferDescriptorArrays;
 };
 
 } // namespace strobe::rhi

@@ -5,6 +5,7 @@
 #include "strobe/rhi/cmd/command_buffer_impl.hpp"
 #include "strobe/rhi/cmd/command_buffer_rendering_state.hpp"
 #include "strobe/rhi/handle.hpp"
+#include "strobe/rhi/heap/buffer_descriptor_impl.hpp"
 #include "strobe/rhi/img/image_view_impl.hpp"
 #include "strobe/rhi/memory/memory_allocation_impl.hpp"
 #include "strobe/rhi/shader/shader_object_impl.hpp"
@@ -20,10 +21,8 @@
 #include "strobe/rhi/vulkan/command_buffer.hpp"
 #include "strobe/rhi/vulkan/context/pnf.hpp"
 #include <algorithm>
-#include <exception>
 #include <fmt/format.h>
 #include <limits>
-#include <stdexcept>
 #include <tracy/Tracy.hpp>
 #include <tracy/TracyVulkan.hpp>
 #include <utility>
@@ -698,6 +697,7 @@ void CommandBuffer::draw(uint32_t vertexCount, uint32_t instanceCount,
   if (auto missing = impl->required & impl->uninitialized; missing != 0) {
     impl->set_default_rendering_state(missing);
   }
+  impl->flush_pc();
   vulkan::cmd_draw(impl->cmd, vertexCount, instanceCount, firstVertex,
                    firstInstance);
 }
@@ -710,6 +710,7 @@ void CommandBuffer::draw_indexed(uint32_t indexCount, uint32_t instanceCount,
   if (auto missing = impl->required & impl->uninitialized; missing != 0) {
     impl->set_default_rendering_state(missing);
   }
+  impl->flush_pc();
   vulkan::cmd_draw_indexed(impl->cmd, indexCount, instanceCount, firstIndex,
                            vertexOffset, firstInstance);
 }
@@ -813,9 +814,36 @@ void CommandBuffer::build(
       impl->ctx->pnf(), impl->cmd.handle, 1, buildInfo, &buildRange);
 }
 
-void CommandBuffer::build(const Tlas &blas, BufferOffset instanceBuffer,
-                          uint32_t count) noexcept {
+void CommandBuffer::build([[maybe_unused]] const Tlas &blas,
+                          [[maybe_unused]] BufferOffset instanceBuffer,
+                          [[maybe_unused]] uint32_t count) noexcept {
   std::unreachable();
+}
+
+void CommandBuffer::push(uint32_t offset, void *data, uint32_t size) noexcept {
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  std::byte *dst = &impl->pushData[offset];
+  std::memcpy(dst, data, size);
+  impl->pushDirtyBegin = std::min(impl->pushDirtyBegin, offset);
+  impl->pushDirtyEnd = std::max(impl->pushDirtyEnd, offset + size);
+}
+
+void CommandBuffer::push(uint32_t offset,
+                         const BufferDescriptor &descriptor) noexcept {
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  auto *desc = object_handle_ptr<BufferDescriptorImpl>(descriptor);
+  push(offset, &desc->index, sizeof(uint32_t));
+  impl->state.retain(descriptor);
+  impl->dma_ready &= desc->ready;
+}
+
+void CommandBuffer::push(uint32_t offset,
+                         const BufferDescriptorArray &descriptor) noexcept {
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  auto *desc = object_handle_ptr<BufferDescriptorImpl>(descriptor);
+  push(offset, &desc->index, sizeof(uint32_t));
+  impl->state.retain(descriptor);
+  impl->dma_ready &= desc->ready;
 }
 
 } // namespace strobe::rhi

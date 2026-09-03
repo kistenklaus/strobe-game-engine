@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 
@@ -64,6 +65,31 @@ public:
   }
   friend Timepoint operator+(const Timepoint &lhs, uint64_t rhs) noexcept {
     return Timepoint{lhs.m_handle, lhs.m_serial + rhs};
+  }
+
+  friend Timepoint operator&(const Timepoint &lhs,
+                             const Timepoint &rhs) noexcept {
+    assert(lhs.m_handle != nullptr || rhs.m_handle != nullptr);
+    assert(lhs.m_handle == nullptr || rhs.m_handle == nullptr ||
+           lhs.m_handle == rhs.m_handle);
+    return Timepoint{
+        reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(lhs.m_handle) |
+                                 reinterpret_cast<uintptr_t>(rhs.m_handle)),
+        std::max(lhs.m_serial, rhs.m_serial),
+    };
+  }
+
+  Timepoint &operator&=(const Timepoint &o) noexcept {
+    assert(m_handle != nullptr || o.m_handle != nullptr);
+    assert(m_handle == nullptr || o.m_handle == nullptr ||
+           m_handle == o.m_handle);
+
+    if (m_handle == nullptr) {
+      *this = o;
+    } else if (o.m_handle != nullptr) {
+      m_serial = std::max(m_serial, o.m_serial);
+    }
+    return *this;
   }
 
   bool wait(uint64_t timeout) const noexcept;

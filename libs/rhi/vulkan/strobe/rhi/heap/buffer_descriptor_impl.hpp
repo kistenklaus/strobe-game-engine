@@ -4,7 +4,6 @@
 #include "strobe/rhi/objects/timepoint.hpp"
 #include <cassert>
 #include <cstdint>
-#include <limits>
 #include <utility>
 
 namespace strobe::rhi {

@@ -2,6 +2,8 @@
 
 #include "strobe/rhi/objects/blas.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
+#include "strobe/rhi/objects/buffer_descriptor.hpp"
+#include "strobe/rhi/objects/buffer_descriptor_array.hpp"
 #include "strobe/rhi/objects/compute_shader.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
 #include "strobe/rhi/objects/tlas.hpp"
@@ -172,7 +174,16 @@ public:
   void build(const Tlas &blas, BufferOffset instanceBuffer,
              uint32_t count) noexcept;
 
+  // ====== push-constants =======
+  void push(uint32_t offset, void *data, uint32_t size) noexcept;
+
+  void push(uint32_t offset, const BufferDescriptor &descriptor) noexcept;
+
+  void push(uint32_t offset, const BufferDescriptorArray &descriptor) noexcept;
+
   explicit CommandBuffer(void *handle) noexcept : Object(handle) {}
+
+private:
 };
 
 } // namespace strobe::rhi

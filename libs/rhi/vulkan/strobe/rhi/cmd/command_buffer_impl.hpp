@@ -7,11 +7,14 @@
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/command_buffer.hpp"
 #include "strobe/rhi/objects/command_pool.hpp"
+#include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/stage/stage_arena.hpp"
 #include "strobe/rhi/types/color_component.hpp"
 #include "strobe/rhi/types/command_buffer_type.hpp"
 #include "strobe/rhi/vulkan/cmd/rendering.hpp"
 #include "strobe/rhi/vulkan/command_buffer.hpp"
+#include "strobe/rhi/vulkan/context/pnf.hpp"
+#include <cstddef>
 #include <limits>
 #include <type_traits>
 #include <utility>
@@ -45,6 +48,12 @@ struct CommandBufferImpl {
 
   StageArena localStage;
 
+  std::byte pushData[128];
+  uint32_t pushDirtyBegin = 128;
+  uint32_t pushDirtyEnd = 0;
+
+  Timepoint dma_ready{};
+
   // profiling
 #ifdef STROBE_TRACY
   [[maybe_unused]] profiler::CommandBufferScope m_profilerScope;
@@ -57,14 +66,14 @@ struct CommandBufferImpl {
       CommandBufferRenderingState::graphics_pipeline_requirements;
 
   template <typename Fn>
-    requires std::is_invocable_v<Fn, vulkan::CommandBuffer,
-             StageBuffer>
-  void staged_upload(Fn &&fn, size_t size,
-                     size_t alignment = 1) {
+    requires std::is_invocable_v<Fn, vulkan::CommandBuffer, StageBuffer>
+  void staged_upload(Fn &&fn, size_t size, size_t alignment = 1) {
     StageBuffer stage = localStage.alloc(size, alignment);
     assert(stage.ptr);
     fn(cmd, stage);
   }
+
+  void flush_pc() noexcept;
 
   void
   set_default_rendering_state(CommandBufferRenderingState states) noexcept {

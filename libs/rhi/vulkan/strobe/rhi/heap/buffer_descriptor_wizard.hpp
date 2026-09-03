@@ -2,7 +2,7 @@
 
 #include "strobe/rhi/buf/buffer_impl.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/heap/buffer_descriptor.hpp"
+#include "strobe/rhi/objects/buffer_descriptor.hpp"
 #include "strobe/rhi/heap/buffer_descriptor_impl.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap_impl.hpp"
@@ -23,7 +23,7 @@ public:
 
   uint64_t size() const noexcept {
     auto *impl = object_handle_ptr<ResourceDescriptorHeapImpl>(m_heap);
-    return impl->buffer_stride();
+    return impl->layout.buffer_stride();
   }
   uint64_t alignment() const noexcept {
     return size(); // may be a tigher but this still definitely be fine.
@@ -33,7 +33,7 @@ public:
     requires std::is_invocable_r_v<Timepoint, Fn, BufferRange>
   descriptor complete(void *dst, Fn &&fn) noexcept {
     auto *impl = object_handle_ptr<ResourceDescriptorHeapImpl>(m_heap);
-    const uint64_t stride = impl->buffer_stride();
+    const uint64_t stride = impl->layout.buffer_stride();
     const uint64_t offset = stride * static_cast<uint64_t>(m_index);
     vulkan::Context *ctx = m_heap.ctx();
     Buffer buffer = m_heap.buffer();
@@ -72,7 +72,7 @@ public:
         .size = stride,
     });
     return BufferDescriptor{make_void_handle<BufferDescriptorImpl>(
-        impl->get_buffer_desc_allocator(), std::move(m_heap),
+        &impl->bufferDescAlloc, std::move(m_heap),
         std::exchange(m_index, std::numeric_limits<uint32_t>::max()),
         std::move(ready), m_info.buffer)};
   }

@@ -2,6 +2,8 @@
 #include "strobe/rhi/cmd/command_pool_impl.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/types/command_buffer_type.hpp"
+#include "strobe/rhi/vulkan/context/pnf.hpp"
+#include <vulkan/vulkan_core.h>
 
 strobe::rhi::CommandBufferImpl::CommandBufferImpl(
     CommandPool pool, StagingPool stagePool, NativeCommandPool *nativePool,
@@ -22,4 +24,24 @@ strobe::rhi::CommandBufferImpl::CommandBufferImpl(
 strobe::rhi::CommandBufferImpl::~CommandBufferImpl() noexcept {
   auto *pool_impl = void_handle_ptr<CommandPoolImpl>(pool.m_handle);
   pool_impl->recycle(nativePool);
+}
+
+void strobe::rhi::CommandBufferImpl::flush_pc() noexcept {
+  if (pushDirtyBegin < pushDirtyEnd) {
+    auto *pool_impl = void_handle_ptr<CommandPoolImpl>(pool.m_handle);
+    vulkan::Context *ctx = pool_impl->context.ctx();
+
+    VkPushDataInfoEXT info{
+        .sType = VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT,
+        .pNext = nullptr,
+        .offset = pushDirtyBegin,
+        .data =
+            VkHostAddressRangeConstEXT{
+                .address = &pushData[pushDirtyBegin],
+                .size = pushDirtyEnd - pushDirtyBegin,
+            },
+    };
+    ZoneScopedN("vkCmdPushData");
+    vulkan::vk_cmd_push_data(ctx->pnf(), cmd.handle, &info);
+  }
 }

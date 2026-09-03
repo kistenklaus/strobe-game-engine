@@ -1,4 +1,4 @@
-#include "strobe/rhi/heap/buffer_descriptor_array.hpp"
+#include "strobe/rhi/objects/buffer_descriptor_array.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/heap/buffer_descriptor_array_impl.hpp"
 
