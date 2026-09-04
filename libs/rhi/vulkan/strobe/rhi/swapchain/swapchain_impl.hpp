@@ -41,6 +41,17 @@ struct SwapchainImpl {
 
   bool recreate() {
     ZoneScopedN("swap/recreate");
+
+    if (generation) {
+      auto* gen = object_handle_ptr<SwapchainGenerationImpl>(generation);
+      std::lock_guard lck{gen->mutex};
+      fmt::println("going in");
+      for (uint32_t i = 0; i < gen->frames.size(); ++i) {
+        gen->frames[i].presentFence.wait();
+      }
+      fmt::println("coming out");
+    }
+
     const vulkan::SurfaceCapabilities capabilities =
         vulkan::query_surface_capabilities(m_surface.ctx(), m_surface.get());
 
@@ -146,7 +157,6 @@ struct SwapchainImpl {
           object_handle_ptr<SwapchainGenerationImpl>(generation);
 
       std::lock_guard lock{oldGeneration->mutex};
-
       createInfo.oldSwapchain = oldGeneration->swapchain;
       swapchain = vulkan::create_swapchain(m_surface.ctx(), createInfo);
     } else {

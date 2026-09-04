@@ -34,7 +34,7 @@ public:
   SwapchainImage acquire();
 
   // Afterwards vkQueuePresentKHR must be called!
-  std::pair<BinarySemaphore, Fence> present();
+  std::pair<BinarySemaphore, Fence> present(uint32_t index);
 
   bool suboptimal() const noexcept;
 

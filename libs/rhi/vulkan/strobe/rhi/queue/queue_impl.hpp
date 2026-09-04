@@ -147,7 +147,7 @@ public:
       }
       assert(!m_open->presentation);
       auto *img = object_handle_ptr<SwapchainImageImpl>(image);
-      auto [presentReady, presentFence] = img->generation.present();
+      auto [presentReady, presentFence] = img->generation.present(img->index);
       if (m_open->submissions.empty()) {
         presentDependency = m_timeline.advance();
         add_signal(presentReady.signal());

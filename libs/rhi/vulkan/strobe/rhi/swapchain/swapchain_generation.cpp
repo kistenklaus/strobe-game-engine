@@ -91,8 +91,11 @@ SwapchainImage SwapchainGeneration::acquire() {
   std::unreachable();
 }
 
-std::pair<BinarySemaphore, Fence> SwapchainGeneration::present() {
+std::pair<BinarySemaphore, Fence> SwapchainGeneration::present(uint32_t index) {
   auto *impl = void_handle_ptr<SwapchainGenerationImpl>(m_handle);
+  assert(impl);
+  // Fence fence = impl->fences[index];
+  // fence.wait();
 
   auto *presentFrame = static_cast<SwapchainPresentFrame *>(
       impl->get_present_frame_allocator().allocate(
@@ -109,6 +112,7 @@ std::pair<BinarySemaphore, Fence> SwapchainGeneration::present() {
         ->get_present_frame_allocator()
         .deallocate(presentFrame);
   });
+  impl->frames[index].presentFence = presentFence;
   return {presentFrame->presentReady, std::move(presentFence)};
 }
 

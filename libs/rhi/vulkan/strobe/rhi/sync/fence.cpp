@@ -34,14 +34,20 @@ Fence &Fence::operator=(Fence &&o) noexcept {
 Fence::~Fence() noexcept { unpin_void_handle<FenceImpl>(m_handle); }
 
 bool Fence::wait(uint64_t timeout) const noexcept {
-  assert(m_handle);
+  if (m_handle == nullptr) {
+    return true;
+  }
   auto *impl = void_handle_ptr<FenceImpl>(m_handle);
   if (impl->node == nullptr) {
     return true;
   }
+  std::lock_guard lck{impl->node->mutex};
   auto *pool_impl = object_handle_ptr<FencePoolImpl>(impl->pool);
   bool signaled =
       vulkan::wait_for_fence(pool_impl->ctx(), impl->node->fence, timeout);
+  if (!signaled) {
+    return false;
+  }
   if (impl->callback != nullptr) {
     impl->callback(impl->pUserData);
   }
@@ -56,6 +62,7 @@ bool Fence::signaled() const noexcept {
   if (impl->node == nullptr) {
     return true;
   }
+  std::lock_guard lck{impl->node->mutex};
   auto *pool_impl = object_handle_ptr<FencePoolImpl>(impl->pool);
   bool signaled =
       vulkan::is_fence_signaled(pool_impl->ctx(), impl->node->fence);

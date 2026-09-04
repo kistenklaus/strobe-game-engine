@@ -31,6 +31,7 @@ struct SwapchainGenerationImpl {
         semPool(semPool), swapchain(swapchain), frames(std::move(frames)),
         extent(extent), format(format), m_presentFramePool(alloc),
         m_imageAlloc(swapchainImageHandleAllocator) {}
+
   SwapchainGenerationImpl(const SwapchainGenerationImpl &) = delete;
   SwapchainGenerationImpl(SwapchainGenerationImpl &&) = delete;
 
