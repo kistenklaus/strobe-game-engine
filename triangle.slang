@@ -8,15 +8,15 @@ struct VertexOutput
     float4 position : SV_Position;
 };
 
-struct ColorUniform
-{
-    // Using float4 avoids float3 host-layout ambiguity.
-    float4 color;
-};
-
-// Byte offset 0 in push data.
-[vk::push_constant]
-uint colorDescriptorIndex;
+// struct ColorUniform
+// {
+//     // Using float4 avoids float3 host-layout ambiguity.
+//     float4 color;
+// };
+//
+// // Byte offset 0 in push data.
+// [vk::push_constant]
+// uint colorDescriptorIndex;
 
 [shader("vertex")]
 VertexOutput vertexMain(VertexInput input)
@@ -29,8 +29,9 @@ VertexOutput vertexMain(VertexInput input)
 [shader("fragment")]
 float4 fragmentMain() : SV_Target
 {
-    ConstantBuffer<ColorUniform> colorBuffer =
-        ResourceDescriptorHeap[colorDescriptorIndex];
+    // ConstantBuffer<ColorUniform> colorBuffer =
+    //     ResourceDescriptorHeap[colorDescriptorIndex];
 
-    return colorBuffer.color;
+    // return colorBuffer.color;
+    return float4(1,0,0,1);
 }

@@ -25,10 +25,6 @@
 
 namespace strobe::rhi {
 
-// TODO: coaless barrier notifications.
-// we spend a bit too much time signaling
-// the barrier timeline semaphore.
-
 struct GarbageCollectorImpl {
   // If the amount of pending timepoints falls below this
   // threshold the timeline is shall be notified in timely manner.

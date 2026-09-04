@@ -64,7 +64,7 @@ bool Fence::signaled() const noexcept {
   }
   std::lock_guard lck{impl->node->mutex};
   auto *pool_impl = object_handle_ptr<FencePoolImpl>(impl->pool);
-  bool signaled =
+  const bool signaled =
       vulkan::is_fence_signaled(pool_impl->ctx(), impl->node->fence);
   if (signaled) {
     if (impl->callback) {

@@ -39,15 +39,13 @@ Swapchain::~Swapchain() noexcept { unpin_void_handle<SwapchainImpl>(m_handle); }
 SwapchainImage Swapchain::acquire() {
   ZoneScopedN("Swapchain::acquire");
   auto *impl = void_handle_ptr<SwapchainImpl>(m_handle);
-
   if (!impl->generation && !impl->recreate()) {
     return {};
   }
-
   assert(impl->generation);
-  if (impl->generation.suboptimal()) {
-    impl->recreate();
-  }
+  // if (impl->generation.suboptimal()) {
+  //   impl->recreate();
+  // }
   while (true) {
     SwapchainImage image = impl->generation.acquire();
     if (image) {

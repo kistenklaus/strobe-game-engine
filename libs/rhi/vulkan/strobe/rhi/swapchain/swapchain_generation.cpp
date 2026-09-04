@@ -51,9 +51,7 @@ SwapchainImage SwapchainGeneration::acquire() {
   ZoneScopedN("swap/acquire");
   auto *impl = void_handle_ptr<SwapchainGenerationImpl>(m_handle);
   vulkan::Context *ctx = impl->surface.ctx();
-
   BinarySemaphore imageAvailable = impl->semPool.allocate();
-
   uint32_t imageIndex;
 
   std::lock_guard lck{impl->mutex};
@@ -74,6 +72,7 @@ SwapchainImage SwapchainGeneration::acquire() {
     return SwapchainImage{ptr};
   }
   case vulkan::SwapchainAcquireStatus::suboptimal:
+    fmt::println("suboptimal");
     impl->debugCounter.fetch_add(1, std::memory_order_relaxed);
     impl->frames[imageIndex].imageAvailable = std::move(imageAvailable);
     impl->suboptimal = true;
@@ -81,6 +80,7 @@ SwapchainImage SwapchainGeneration::acquire() {
         impl->get_swapchain_image_handle_allocator(), //
         *this, imageIndex)};
   case vulkan::SwapchainAcquireStatus::out_of_date:
+    fmt::println("out-of-date");
     return {};
   case vulkan::SwapchainAcquireStatus::timeout:
     vulkan_error(VK_TIMEOUT, "unexpected swapchain acquire result: {}",
@@ -94,8 +94,6 @@ SwapchainImage SwapchainGeneration::acquire() {
 std::pair<BinarySemaphore, Fence> SwapchainGeneration::present(uint32_t index) {
   auto *impl = void_handle_ptr<SwapchainGenerationImpl>(m_handle);
   assert(impl);
-  // Fence fence = impl->fences[index];
-  // fence.wait();
 
   auto *presentFrame = static_cast<SwapchainPresentFrame *>(
       impl->get_present_frame_allocator().allocate(
