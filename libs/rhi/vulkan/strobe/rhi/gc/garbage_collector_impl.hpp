@@ -167,6 +167,7 @@ struct GarbageCollectorImpl {
   void retire(Fence fence) {
     std::lock_guard lck{m_retiredFencesMutex};
     m_retiredFences.emplace_back(std::move(fence));
+    m_barrier.notify();
   }
 
   void gc_main(std::stop_token st) {

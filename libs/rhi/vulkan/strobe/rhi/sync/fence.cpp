@@ -53,6 +53,7 @@ bool Fence::wait(uint64_t timeout) const noexcept {
   }
   pool_impl->recycle(impl->node);
   impl->node = nullptr;
+  impl->callback = nullptr;
   return signaled;
 }
 
@@ -72,6 +73,7 @@ bool Fence::signaled() const noexcept {
     }
     pool_impl->recycle(impl->node);
     impl->node = nullptr;
+    impl->callback = nullptr;
   }
   return signaled;
 }

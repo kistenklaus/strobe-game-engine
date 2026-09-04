@@ -80,7 +80,6 @@ SwapchainImage SwapchainGeneration::acquire() {
         impl->get_swapchain_image_handle_allocator(), //
         *this, imageIndex)};
   case vulkan::SwapchainAcquireStatus::out_of_date:
-    fmt::println("out-of-date");
     return {};
   case vulkan::SwapchainAcquireStatus::timeout:
     vulkan_error(VK_TIMEOUT, "unexpected swapchain acquire result: {}",
@@ -91,7 +90,7 @@ SwapchainImage SwapchainGeneration::acquire() {
   std::unreachable();
 }
 
-std::pair<BinarySemaphore, Fence> SwapchainGeneration::present(uint32_t index) {
+std::pair<BinarySemaphore, Fence> SwapchainGeneration::present([[maybe_unused]] uint32_t index) {
   auto *impl = void_handle_ptr<SwapchainGenerationImpl>(m_handle);
   assert(impl);
 
@@ -110,7 +109,6 @@ std::pair<BinarySemaphore, Fence> SwapchainGeneration::present(uint32_t index) {
         ->get_present_frame_allocator()
         .deallocate(presentFrame);
   });
-  impl->frames[index].presentFence = presentFence;
   return {presentFrame->presentReady, std::move(presentFence)};
 }
 

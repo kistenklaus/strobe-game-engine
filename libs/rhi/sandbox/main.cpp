@@ -1,24 +1,93 @@
-
 #include "io.hpp"
 #include "strobe/core/lina/vec.hpp"
+#include "strobe/rhi/objects/buffer_descriptor.hpp"
 #include "strobe/rhi/objects/command_pool.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
 #include "strobe/rhi/objects/queue.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
 #include "strobe/rhi/types/buffer_usage.hpp"
+#include "strobe/rhi/types/descriptor_type.hpp"
 #include "strobe/rhi/types/image_layout.hpp"
 #include "strobe/window/window_impl.hpp"
+
 #include <GLFW/glfw3.h>
-#include <thread>
 #include <tracy/Tracy.hpp>
-#include <unistd.h>
-#include <vulkan/vulkan_core.h>
+
+#include <algorithm>
+#include <cmath>
+#include <condition_variable>
+#include <cstdint>
+#include <deque>
+#include <mutex>
+#include <numbers>
+#include <random>
+#include <thread>
+#include <vector>
 
 #include <strobe/rhi/rhi.hpp>
 
 using namespace strobe;
-using namespace std::chrono;
+
 using namespace std::chrono_literals;
+
+namespace {
+
+constexpr uint32_t TRIANGLES_PER_BUFFER = 1024;
+
+// Maximum number of FIFO entries rendered by each frame. If fewer are
+// available, the frame consumes all available entries after waiting for one.
+constexpr std::size_t BUFFERS_PER_FRAME = 64;
+
+// Capacity of the producer-to-renderer FIFO.
+constexpr std::size_t MAX_PUBLISHED_BUFFERS = 1024;
+
+static_assert(BUFFERS_PER_FRAME > 0);
+static_assert(MAX_PUBLISHED_BUFFERS > 0);
+
+struct PublishedTriangles {
+  rhi::BufferDescriptor colorDesc;
+  rhi::Buffer buffer;
+  rhi::Timepoint ready;
+  uint32_t vertexCount;
+};
+
+struct PublicationQueue {
+  std::mutex mutex;
+  std::condition_variable cv;
+  std::deque<PublishedTriangles> buffers;
+};
+
+std::vector<vec2> generate_triangles(std::mt19937 &rng) {
+  std::uniform_real_distribution<float> centerDistribution{-0.85f, 0.85f};
+  std::uniform_real_distribution<float> radiusDistribution{0.01f, 0.10f};
+  std::uniform_real_distribution<float> rotationDistribution{
+      0.0f, 2.0f * std::numbers::pi_v<float>};
+
+  std::vector<vec2> vertices;
+  vertices.reserve(TRIANGLES_PER_BUFFER * 3);
+
+  for (uint32_t triangle = 0; triangle < TRIANGLES_PER_BUFFER; ++triangle) {
+    const float centerX = centerDistribution(rng);
+    const float centerY = centerDistribution(rng);
+    const float radius = radiusDistribution(rng);
+    const float rotation = rotationDistribution(rng);
+
+    for (uint32_t vertex = 0; vertex < 3; ++vertex) {
+      const float angle =
+          rotation + static_cast<float>(vertex) *
+                         (2.0f * std::numbers::pi_v<float> / 3.0f);
+
+      vertices.push_back(vec2{
+          centerX + std::cos(angle) * radius,
+          centerY + std::sin(angle) * radius,
+      });
+    }
+  }
+
+  return vertices;
+}
+
+} // namespace
 
 int main() {
   // #ifdef STROBE_TRACY
@@ -29,37 +98,230 @@ int main() {
   //   fmt::println("tracy connected");
   // #endif
   tracy::SetThreadName("platform");
-  Platform::start([]() {
-    tracy::SetThreadName("main");
-    window::WindowImpl window{uvec2{800, 600}, "FLOATING"};
+
+  Platform::start([] {
+    tracy::SetThreadName("render");
+
+    window::WindowImpl window{
+        uvec2{800, 600},
+        "FLOATING",
+    };
     window.resizable(true);
 
-    rhi::Device device = strobe::rhi::create_device({
-        .debug_utils = false,
+    rhi::Device device = rhi::create_device({
+        .debug_utils = true,
     });
+
     rhi::Queue queue = device.get_queue();
     rhi::CommandPool cmdpool = device.create_cmdpool();
 
-    rhi::Swapchain swapchain =
-        device.create_swapchain({.window = window.ptr(),.vsync = false});
+    const auto vertexSpv = utility::read_spirv("./vertex.spv");
+    const auto fragmentSpv = utility::read_spirv("./fragment.spv");
 
+    rhi::VertexShader vertexShader =
+        device.create_vertex_shader({.spirv = vertexSpv});
+
+    rhi::FragmentShader fragmentShader =
+        device.create_fragment_shader({.spirv = fragmentSpv});
+
+    rhi::Swapchain swapchain =
+        device.create_swapchain({.window = window.ptr(), .vsync = false});
+
+    PublicationQueue publication;
+
+    std::jthread generator{[&, device](std::stop_token stop) mutable {
+      tracy::SetThreadName("triangle-generator");
+
+      std::mt19937 prng{42};
+      std::uniform_real_distribution<float> dist{0.25, 1};
+
+      std::random_device randomDevice;
+      std::mt19937 rng{randomDevice()};
+
+      while (!stop.stop_requested()) {
+        std::vector<vec2> vertices = generate_triangles(rng);
+
+        const uint64_t size =
+            static_cast<uint64_t>(vertices.size() * sizeof(vec2));
+
+        /*
+         * There is one producer, so checking capacity before creating the
+         * buffer is sufficient. With multiple producers, capacity would
+         * need to be reserved while holding the mutex.
+         */
+        {
+          std::unique_lock lock{publication.mutex};
+
+          publication.cv.wait(lock, [&] {
+            return stop.stop_requested() ||
+                   publication.buffers.size() < MAX_PUBLISHED_BUFFERS;
+          });
+
+          if (stop.stop_requested()) {
+            break;
+          }
+        }
+
+        rhi::Buffer buffer = device.create_buffer({
+            .size = size,
+            .bufferUsage =
+                rhi::BufferUsage::transfer_dst | rhi::BufferUsage::vertex,
+        });
+
+        /*
+         * async_upload copies the host data before returning. The local
+         * vertices vector can therefore be reused immediately.
+         */
+        rhi::Timepoint ready =
+            device.async_upload(buffer, vertices.data(), size);
+
+        vec4 color{dist(prng), dist(prng), dist(prng), 1};
+        rhi::Buffer colorBuf = device.create_buffer({
+            .size = sizeof(color),
+            .bufferUsage =
+                rhi::BufferUsage::transfer_dst | rhi::BufferUsage::uniform,
+        });
+        ready &= device.async_upload(colorBuf, &color, sizeof(color));
+
+        rhi::BufferDescriptor colorDesc = device.create_buffer_descriptor({
+            .buffer = colorBuf,
+            .offset = 0,
+            .type = rhi::DescriptorType::uniform_buffer,
+        });
+
+        {
+          std::lock_guard lock{publication.mutex};
+
+          if (stop.stop_requested()) {
+            break;
+          }
+
+          publication.buffers.push_back(PublishedTriangles{
+              .colorDesc = std::move(colorDesc),
+              .buffer = std::move(buffer),
+              .ready = std::move(ready),
+              .vertexCount = static_cast<uint32_t>(vertices.size()),
+          });
+        }
+
+        publication.cv.notify_one();
+      }
+    }};
 
     window.show();
 
-    while (!window.should_close()) {
+    while (true) {
       window.poll();
+      if (window.should_close()) {
+        break;
+      }
+
+      // std::this_thread::sleep_for(1ms);
+
+      /*
+       * Block until the FIFO contains work, then consume up to the configured
+       * number of buffers. DMA completion remains asynchronous and is added to
+       * the graphics submission below.
+       */
+      std::deque<PublishedTriangles> frameTriangles;
+
+      {
+        std::unique_lock lock{publication.mutex};
+        publication.cv.wait(lock, [&] { return !publication.buffers.empty(); });
+
+        const std::size_t count =
+            std::min(BUFFERS_PER_FRAME, publication.buffers.size());
+
+        for (std::size_t i = 0; i < count; ++i) {
+          frameTriangles.push_back(std::move(publication.buffers.front()));
+          publication.buffers.pop_front();
+        }
+      }
+
+      publication.cv.notify_one();
+
       rhi::SwapchainImage frame = swapchain.acquire();
+      assert(frame);
 
       rhi::CommandBuffer cmd = cmdpool.alloc();
       cmd.begin();
+
       cmd.transition_image(frame.image(), rhi::ImageLayout::undefined,
+                           rhi::ImageLayout::general);
+
+      rhi::Attachment colorAttachment{
+          .view = frame.view(),
+          .loadOp = rhi::AttachmentLoadOp::clear,
+          .storeOp = rhi::AttachmentStoreOp::store,
+      };
+
+      cmd.begin_rendering({
+          .colorAttachments = &colorAttachment,
+      });
+
+      const uvec2 extent = frame.extent();
+
+      cmd.set_viewport({
+          .extent = extent,
+      });
+
+      cmd.set_scissor({
+          .extent = extent,
+      });
+
+      rhi::VertexBinding binding{
+          .binding = 0,
+          .stride = sizeof(vec2),
+      };
+
+      rhi::VertexAttribute attribute{
+          .location = 0,
+          .binding = 0,
+          .format = rhi::Format::rg32_float,
+          .offset = 0,
+      };
+
+      cmd.set_vertex_input(&binding, &attribute);
+      cmd.bind_shader(vertexShader);
+      cmd.bind_shader(fragmentShader);
+
+      rhi::Timepoint ready{};
+      for (const PublishedTriangles &triangles : frameTriangles) {
+        ready &= triangles.ready;
+
+        cmd.bind_vertex_buffer(triangles.buffer);
+
+        cmd.push(0, triangles.colorDesc);
+        cmd.draw(triangles.vertexCount);
+      }
+
+      cmd.end_rendering();
+
+      cmd.transition_image(frame.image(), rhi::ImageLayout::general,
                            rhi::ImageLayout::present);
+
       cmd.end();
+
+      queue.wait(ready, rhi::PipelineStage::vertex_attribute_input);
+
       queue.wait(frame);
       queue.submit(&cmd);
       queue.present(std::move(frame));
 
+      /*
+       * frameTriangles is destroyed here. The command buffer retains the
+       * buffers until the graphics submission completes.
+       */
       FrameMark;
     }
+
+    generator.request_stop();
+    publication.cv.notify_all();
+    generator.join();
+
+    /*
+     * Anything still queued is dropped. DMA command-buffer retention keeps
+     * resources referenced by an in-flight upload alive.
+     */
   });
 }

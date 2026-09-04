@@ -501,15 +501,24 @@ private:
       generation->debugCounter.fetch_sub(1, std::memory_order_relaxed);
       {
         std::lock_guard lck{generation->mutex};
-        // std::lock_guard lck2{object_handle_ptr<FenceImpl>(presentation.presentFence)->node->mutex};
-        vulkan::queue_present(
+        assert(presentation.presentReady);
+        assert(presentation.presentFence.fence());
+        auto status = vulkan::queue_present(
             m_queue, generation->swapchain, img->index,
             {
                 .presentReady = presentation.presentReady.wait(),
                 .presentFence = presentation.presentFence.fence(),
             });
+        switch (status) {
+        case vulkan::PresentStatus::success:
+        case vulkan::PresentStatus::suboptimal:
+          m_gc.retire(presentation.presentFence);
+          break;
+        case vulkan::PresentStatus::out_of_date:
+          // presentation.presentFence.wait();
+          break;
+        }
       }
-      m_gc.retire(presentation.presentFence);
       img->consume();
     }
   }

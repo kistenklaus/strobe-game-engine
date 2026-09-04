@@ -1,0 +1,65 @@
+
+#include "io.hpp"
+#include "strobe/core/lina/vec.hpp"
+#include "strobe/rhi/objects/command_pool.hpp"
+#include "strobe/rhi/objects/fragment_shader.hpp"
+#include "strobe/rhi/objects/queue.hpp"
+#include "strobe/rhi/objects/vertex_shader.hpp"
+#include "strobe/rhi/types/buffer_usage.hpp"
+#include "strobe/rhi/types/image_layout.hpp"
+#include "strobe/window/window_impl.hpp"
+#include <GLFW/glfw3.h>
+#include <thread>
+#include <tracy/Tracy.hpp>
+#include <unistd.h>
+#include <vulkan/vulkan_core.h>
+
+#include <strobe/rhi/rhi.hpp>
+
+using namespace strobe;
+using namespace std::chrono;
+using namespace std::chrono_literals;
+
+int main() {
+  // #ifdef STROBE_TRACY
+  //   fmt::println("waiting for tracy");
+  //   while (!TracyIsConnected) {
+  //     std::this_thread::yield();
+  //   }
+  //   fmt::println("tracy connected");
+  // #endif
+  tracy::SetThreadName("platform");
+  Platform::start([]() {
+    tracy::SetThreadName("main");
+    window::WindowImpl window{uvec2{800, 600}, "FLOATING"};
+    window.resizable(true);
+
+    rhi::Device device = strobe::rhi::create_device({
+        .debug_utils = true,
+    });
+    rhi::Queue queue = device.get_queue();
+    rhi::CommandPool cmdpool = device.create_cmdpool();
+
+    rhi::Swapchain swapchain =
+        device.create_swapchain({.window = window.ptr(), .vsync = false});
+
+    window.show();
+
+    while (!window.should_close()) {
+      window.poll();
+      rhi::SwapchainImage frame = swapchain.acquire();
+      assert(frame);
+
+      rhi::CommandBuffer cmd = cmdpool.alloc();
+      cmd.begin();
+      cmd.transition_image(frame.image(), rhi::ImageLayout::undefined,
+                           rhi::ImageLayout::present);
+      cmd.end();
+      queue.wait(frame);
+      queue.submit(&cmd);
+      queue.present(std::move(frame));
+
+      FrameMark;
+    }
+  });
+}

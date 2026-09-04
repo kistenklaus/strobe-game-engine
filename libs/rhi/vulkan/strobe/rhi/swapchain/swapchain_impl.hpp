@@ -41,7 +41,6 @@ struct SwapchainImpl {
 
   bool recreate() {
     ZoneScopedN("swap/recreate");
-    fmt::println("recreate");
 
     // if (generation) {
     //   auto* gen = object_handle_ptr<SwapchainGenerationImpl>(generation);
