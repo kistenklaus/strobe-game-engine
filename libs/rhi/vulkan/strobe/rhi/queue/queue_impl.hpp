@@ -512,12 +512,12 @@ private:
         switch (status) {
         case vulkan::PresentStatus::success:
         case vulkan::PresentStatus::suboptimal:
-          m_gc.retire(presentation.presentFence);
           break;
         case vulkan::PresentStatus::out_of_date:
           // presentation.presentFence.wait();
           break;
         }
+        m_gc.retire(presentation.presentFence);
       }
       img->consume();
     }
