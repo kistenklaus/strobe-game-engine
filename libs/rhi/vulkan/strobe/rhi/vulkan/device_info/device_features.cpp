@@ -1,5 +1,6 @@
 #include "strobe/rhi/vulkan/device_info/device_features.hpp"
 #include "strobe/rhi/vulkan/device_info/device_extensions.hpp"
+#include <fmt/base.h>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi::vulkan {
@@ -154,6 +155,19 @@ DeviceFeatures details::query_device_features(
   if (main9Ext) {
     maintenance9Features.pNext = pNext;
     pNext = &maintenance9Features;
+  }
+
+  const bool shaderUntypedPointersExt = details::supports_extension(
+      supportedExtensions, VK_KHR_SHADER_UNTYPED_POINTERS_EXTENSION_NAME);
+  VkPhysicalDeviceShaderUntypedPointersFeaturesKHR shaderUntypedPointersFeatures{
+      .sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_UNTYPED_POINTERS_FEATURES_KHR,
+      .pNext = nullptr,
+      .shaderUntypedPointers = VK_FALSE,
+  };
+  if (shaderUntypedPointersExt) {
+    shaderUntypedPointersFeatures.pNext = pNext;
+    pNext = &shaderUntypedPointersFeatures;
   }
 
   VkPhysicalDeviceFeatures2 features2{
@@ -393,6 +407,8 @@ DeviceFeatures details::query_device_features(
       .descriptorHeapCaptureReplay =
           descriptorHeapFeatures.descriptorHeapCaptureReplay,
       .maintenance9 = maintenance9Features.maintenance9,
+      .shaderUntypedPointers =
+          shaderUntypedPointersFeatures.shaderUntypedPointers,
   };
 }
 } // namespace strobe::rhi::vulkan

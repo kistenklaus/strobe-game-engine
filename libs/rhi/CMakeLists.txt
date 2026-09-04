@@ -86,6 +86,7 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   # strobe::rhi heap
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/buffer_descriptor.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/buffer_descriptor_array.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/heap.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/resource_descriptor_heap.cpp
   # strobe::rhi command
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/cmd.cpp
@@ -108,9 +109,12 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/dma/async_copy_engine.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/dma/async_transfer_cmd.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/dma/dma.cpp
+  # strobe::rhi heapctrl
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heapctrl/heap_controller.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heapctrl/heapctrl.cpp
   # strobe::rhi device
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/device/device.cpp
-  # strobe::rhi 
+  # strobe::rhi
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/rhi.cpp
 
 
@@ -127,7 +131,7 @@ target_link_libraries(strobe-rhi-vulkan
 )
 target_link_glfw(strobe-rhi-vulkan PRIVATE)
 
-if (STROBE_TRACY AND STROBE_RHI_TRACE_DEVICE) 
+if (STROBE_TRACY AND STROBE_RHI_TRACE_DEVICE)
   target_compile_definitions(strobe-rhi-vulkan PRIVATE STROBE_RHI_TRACE_DEVICE=ON)
 endif()
 if (STROBE_TRACY AND STROBE_RHI_TRACE_VK)

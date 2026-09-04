@@ -611,7 +611,7 @@ void CommandBuffer::bind_vertex_buffer(const Buffer &buffer,
                                        uint64_t offset) noexcept {
   assert(m_handle);
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
-  CmdZoneScopedN(impl, "CommandBuffer::bind_vertex_buffer");
+  ZoneScopedN("CommandBuffer::bind_vertex_buffer");
   auto *buf_impl = object_handle_ptr<BufferImpl>(buffer);
   buf_impl->commit();
   vulkan::cmd_bind_vertex_buffer(
@@ -697,7 +697,7 @@ void CommandBuffer::draw(uint32_t vertexCount, uint32_t instanceCount,
   if (auto missing = impl->required & impl->uninitialized; missing != 0) {
     impl->set_default_rendering_state(missing);
   }
-  // impl->flush_pc();
+  impl->flush_pc();
   vulkan::cmd_draw(impl->cmd, vertexCount, instanceCount, firstVertex,
                    firstInstance);
 }
@@ -821,6 +821,7 @@ void CommandBuffer::build([[maybe_unused]] const Tlas &blas,
 }
 
 void CommandBuffer::push(uint32_t offset, void *data, uint32_t size) noexcept {
+  ZoneScopedN("CommandBuffer::push(data)");
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
   std::byte *dst = &impl->pushData[offset];
   std::memcpy(dst, data, size);

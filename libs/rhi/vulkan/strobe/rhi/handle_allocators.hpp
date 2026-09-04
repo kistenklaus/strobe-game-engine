@@ -7,6 +7,8 @@
 #include "strobe/rhi/dma/dma.hpp"
 #include "strobe/rhi/gc/gc.hpp"
 #include "strobe/rhi/handle.hpp"
+#include "strobe/rhi/heap/heap.hpp"
+#include "strobe/rhi/heapctrl/heapctrl.hpp"
 #include "strobe/rhi/img/img.hpp"
 #include "strobe/rhi/memory/memory.hpp"
 #include "strobe/rhi/queue/que.hpp"
@@ -21,8 +23,10 @@ struct handle_allocators {
   explicit handle_allocators(strobe::rhi::allocator_ref alloc)
       : alloc(alloc), shaderAlloc(alloc), syncAlloc(alloc), memAlloc(alloc),
         bufAlloc(alloc), imgAlloc(alloc), stageAlloc(alloc, &bufAlloc),
-        bvhAlloc(alloc, &bufAlloc), cmdAlloc(alloc), swapAlloc(alloc, &imgAlloc),
-        gcAlloc(alloc), queAlloc(alloc), dmaAlloc(alloc, &cmdAlloc), deviceAlloc(alloc) {}
+        bvhAlloc(alloc, &bufAlloc), cmdAlloc(alloc),
+        swapAlloc(alloc, &imgAlloc), gcAlloc(alloc), queAlloc(alloc),
+        dmaAlloc(alloc, &cmdAlloc), heapAlloc(alloc),
+        heapCtrlAlloc(alloc, &heapAlloc, &bufAlloc), deviceAlloc(alloc) {}
 
   handle_allocators(const handle_allocators &) = delete;
   handle_allocators(handle_allocators &&) = delete;
@@ -42,6 +46,8 @@ struct handle_allocators {
   gc::handle_allocators gcAlloc;
   que::handle_allocators queAlloc;
   dma::handle_allocators dmaAlloc;
+  heap::handle_allocators heapAlloc;
+  heapctrl::handle_allocators heapCtrlAlloc;
   handle_allocator<DeviceImpl> deviceAlloc;
 };
 

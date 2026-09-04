@@ -2,13 +2,12 @@
 
 #include "strobe/core/containers/span.hpp"
 #include "strobe/rhi/objects/object.hpp"
-#include "strobe/rhi/types/push_constant_range.hpp"
+#include <cstdint>
 
 namespace strobe::rhi {
 
 struct ComputeShaderInfo {
   span<const uint32_t> spirv = {};
-  span<const PushConstantRange> pushConstantRange = {};
 };
 
 class ComputeShader : Object<ComputeShader> {

@@ -2,6 +2,7 @@
 
 #include "strobe/rhi/objects/blas.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
+#include "strobe/rhi/objects/buffer_descriptor.hpp"
 #include "strobe/rhi/objects/command_pool.hpp"
 #include "strobe/rhi/objects/compute_shader.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
@@ -13,6 +14,7 @@
 #include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
 #include "strobe/rhi/types/blas_info.hpp"
+#include "strobe/rhi/types/buffer_descriptor_info.hpp"
 #include "strobe/rhi/types/buffer_info.hpp"
 #include "strobe/rhi/types/image_info.hpp"
 #include "strobe/rhi/types/image_view_info.hpp"
@@ -70,12 +72,16 @@ public:
   Tlas create_tlas(const TlasInfo &info,
                    const MemoryLifetime &lifetime = {}) noexcept;
 
+
   Timepoint
   async_copy(BufferOffset dst, BufferOffset src,
              uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
   Timepoint
   async_upload(BufferOffset dst, void *src,
                uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
+
+  BufferDescriptor
+  create_buffer_descriptor(const BufferDescriptorInfo &info) noexcept;
 };
 
 } // namespace strobe::rhi

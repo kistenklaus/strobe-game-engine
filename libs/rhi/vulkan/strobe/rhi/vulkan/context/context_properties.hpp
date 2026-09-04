@@ -31,6 +31,7 @@ struct ContextProperties {
   uint32_t rayQuery : 1 = false;
 
   uint32_t descriptorHeap : 1 = false;
+  uint32_t shaderUntypedPointers : 1 = false;
 };
 
 } // namespace strobe::rhi::vulkan

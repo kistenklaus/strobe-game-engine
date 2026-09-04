@@ -37,6 +37,9 @@ Queue &Queue::operator=(Queue &&o) noexcept {
 Queue::~Queue() noexcept { unpin_void_handle<QueueImpl>(m_handle); }
 
 void Queue::wait(const Timepoint &timepoint, PipelineStage stage) noexcept {
+  if (!timepoint) {
+    return;
+  }
   ZoneScopedN("Queue::wait(Timepoint)");
   auto *impl = void_handle_ptr<QueueImpl>(m_handle);
   impl->wait(timepoint, stage);

@@ -196,6 +196,9 @@ struct DeviceFeatures {
 
   // maintenance 9
   VkBool32 maintenance9;
+  
+  // shader untyped pointers
+  VkBool32 shaderUntypedPointers;
 };
 
 namespace details {

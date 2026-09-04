@@ -17,14 +17,13 @@ namespace strobe::rhi {
 
 struct ResourceDescriptorHeapImpl {
 public:
-  explicit ResourceDescriptorHeapImpl(
-      Context context, Buffer buffer, Timepoint ready,
-      const vulkan::DescriptorHeapProperties &heapProperties,
-      strobe::rhi::allocator_ref alloc) noexcept
+  explicit ResourceDescriptorHeapImpl(Context context, Buffer buffer,
+                                      strobe::rhi::allocator_ref alloc) noexcept
       : context(std::move(context)),
-        layout(buffer.size(), heapProperties, alloc), alloc(alloc),
-        bufferDescAlloc(alloc), bufferDescArrayAlloc(alloc),
-        m_buffer(std::move(buffer)), m_ready(ready),
+        layout(buffer.size(),
+               this->context.ctx()->deviceInfo().properties.descriptorHeap, alloc),
+        alloc(alloc), bufferDescAlloc(alloc), bufferDescArrayAlloc(alloc),
+        m_buffer(std::move(buffer)), m_ready({}),
         m_reservedOffset(layout.reserved_range_offset()),
         m_reservedSize(layout.reserved_range_size()) {}
 

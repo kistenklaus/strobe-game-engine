@@ -2,6 +2,7 @@
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/dma/dma.hpp"
 #include "strobe/rhi/handle_allocators.hpp"
+#include "strobe/rhi/heapctrl/heapctrl.hpp"
 #include "strobe/rhi/sync/sync.hpp"
 #include "strobe/rhi/types/device_info.hpp"
 #include "strobe/rhi/vulkan/context/create_info.hpp"
@@ -128,6 +129,9 @@ Device create_device(const DeviceInfo &info) {
   AsyncCopyEngine dma = dma::create_dma(context, dmaTimeline, gc, transferQueue,
                                         staging, &allocs->dmaAlloc);
 
+  HeapController heapctrl =
+      heapctrl::create_heapctrl(memory, dma, &allocs->heapCtrlAlloc);
+
   return Device{make_void_handle<DeviceImpl>( //
       &allocs->deviceAlloc,                   //
       std::move(context),                     //
@@ -140,7 +144,8 @@ Device create_device(const DeviceInfo &info) {
       std::move(gc),                          //
       std::move(universalQueue),              //
       std::move(transferQueue),               //
-      std::move(dma)                          //
+      std::move(dma),                         //
+      std::move(heapctrl)                     //
       )};
 }
 

@@ -10,7 +10,6 @@ struct ShaderObjectCreateInfo {
   VkShaderCreateFlagsEXT flags = 0;
   VkShaderStageFlags nextStage = 0;
   span<const uint32_t> spirv = {};
-  span<const VkPushConstantRange> pushConstantRange = {};
   const VkSpecializationInfo *specInfo = nullptr;
 };
 

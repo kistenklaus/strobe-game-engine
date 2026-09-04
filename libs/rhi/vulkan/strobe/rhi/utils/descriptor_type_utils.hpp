@@ -12,6 +12,8 @@ to_vk_descriptor_type(DescriptorType type) noexcept {
   switch (type) {
   case DescriptorType::storage_buffer:
     return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  case DescriptorType::uniform_buffer:
+    return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   }
   std::unreachable();
 }
@@ -19,15 +21,16 @@ to_vk_descriptor_type(DescriptorType type) noexcept {
 static inline DescriptorType
 from_vk_descriptor_type(VkDescriptorType type) noexcept {
   switch (type) {
-  case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+  case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
     return DescriptorType::storage_buffer;
+  case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+    return DescriptorType::uniform_buffer;
+  case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
   case VK_DESCRIPTOR_TYPE_SAMPLER:
   case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
   case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
   case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
   case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-  case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-  case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
   case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
   case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
   case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:

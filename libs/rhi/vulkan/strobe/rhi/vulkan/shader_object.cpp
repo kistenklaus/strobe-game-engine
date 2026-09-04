@@ -1,7 +1,6 @@
 #include "strobe/rhi/vulkan/shader_object.hpp"
 #include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/vulkan/context/pnf.hpp"
-#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi::vulkan {
@@ -12,7 +11,7 @@ ShaderObject create_shader_object(Context *context,
   VkShaderCreateInfoEXT createInfo{
       .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO_EXT,
       .pNext = nullptr,
-      .flags = info.flags,
+      .flags = info.flags | VK_SHADER_CREATE_DESCRIPTOR_HEAP_BIT_EXT,
       .stage = info.stage,
       .nextStage = info.nextStage,
       .codeType = VK_SHADER_CODE_TYPE_SPIRV_EXT,
@@ -21,9 +20,8 @@ ShaderObject create_shader_object(Context *context,
       .pName = "main",
       .setLayoutCount = 0,
       .pSetLayouts = nullptr,
-      .pushConstantRangeCount =
-          static_cast<uint32_t>(info.pushConstantRange.size()),
-      .pPushConstantRanges = info.pushConstantRange.data(),
+      .pushConstantRangeCount = 0,
+      .pPushConstantRanges = nullptr,
       .pSpecializationInfo = info.specInfo,
   };
   ShaderObject obj;

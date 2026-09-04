@@ -2,7 +2,6 @@
 
 #include "strobe/core/containers/span.hpp"
 #include "strobe/rhi/objects/object.hpp"
-#include "strobe/rhi/types/push_constant_range.hpp"
 #include "strobe/rhi/types/shader_stage.hpp"
 
 namespace strobe::rhi {
@@ -10,7 +9,6 @@ namespace strobe::rhi {
 struct VertexShaderInfo {
   span<const uint32_t> spirv = {};
   ShaderStage nextStage = ShaderStage::fragment;
-  span<const PushConstantRange> pushConstantRange = {};
 };
 
 struct VertexShader : Object<VertexShader> {

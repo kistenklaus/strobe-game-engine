@@ -246,6 +246,9 @@ double get_device_score(VkInstance instance, VkPhysicalDevice device,
   if (info->descriptorHeap == required && !deviceInfo.features.descriptorHeap) {
     return unsuitable;
   }
+  if (info->shader_untyped_pointers == required && !deviceInfo.features.shaderUntypedPointers) {
+    return unsuitable;
+  }
 
   if (!deviceInfo.features.maintenance9) {
     return unsuitable;

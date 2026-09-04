@@ -51,6 +51,35 @@ DeviceProperties details::query_device_properties(
     pNext = &rtProps;
   }
 
+  VkPhysicalDeviceDescriptorHeapPropertiesEXT descriptorHeapProperties{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_PROPERTIES_EXT,
+      .pNext = nullptr,
+      .samplerHeapAlignment = 0,
+      .resourceHeapAlignment = 0,
+      .maxSamplerHeapSize = 0,
+      .maxResourceHeapSize = 0,
+      .minSamplerHeapReservedRange = 0,
+      .minSamplerHeapReservedRangeWithEmbedded = 0,
+      .minResourceHeapReservedRange = 0,
+      .samplerDescriptorSize = 0,
+      .imageDescriptorSize = 0,
+      .bufferDescriptorSize = 0,
+      .samplerDescriptorAlignment = 0,
+      .imageDescriptorAlignment = 0,
+      .bufferDescriptorAlignment = 0,
+      .maxPushDataSize = 0,
+      .imageCaptureReplayOpaqueDataSize = 0,
+      .maxDescriptorHeapEmbeddedSamplers = 0,
+      .samplerYcbcrConversionCount = 0,
+      .sparseDescriptorHeaps = VK_FALSE,
+      .protectedDescriptorHeaps = VK_FALSE,
+  };
+  if (features->descriptorHeap) {
+    descriptorHeapProperties.pNext = pNext;
+    pNext = &descriptorHeapProperties;
+  }
+
+
   VkPhysicalDeviceProperties2 props{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
       .pNext = pNext,
@@ -86,33 +115,7 @@ DeviceProperties details::query_device_properties(
     assert(result == VK_SUCCESS);
   }
 
-  VkPhysicalDeviceDescriptorHeapPropertiesEXT descriptorHeapProperties{
-      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_PROPERTIES_EXT,
-      .pNext = nullptr,
-      .samplerHeapAlignment = 0,
-      .resourceHeapAlignment = 0,
-      .maxSamplerHeapSize = 0,
-      .maxResourceHeapSize = 0,
-      .minSamplerHeapReservedRange = 0,
-      .minSamplerHeapReservedRangeWithEmbedded = 0,
-      .minResourceHeapReservedRange = 0,
-      .samplerDescriptorSize = 0,
-      .imageDescriptorSize = 0,
-      .bufferDescriptorSize = 0,
-      .samplerDescriptorAlignment = 0,
-      .imageDescriptorAlignment = 0,
-      .bufferDescriptorAlignment = 0,
-      .maxPushDataSize = 0,
-      .imageCaptureReplayOpaqueDataSize = 0,
-      .maxDescriptorHeapEmbeddedSamplers = 0,
-      .samplerYcbcrConversionCount = 0,
-      .sparseDescriptorHeaps = VK_FALSE,
-      .protectedDescriptorHeaps = VK_FALSE,
-  };
-  if (features->descriptorHeap) {
-    descriptorHeapProperties.pNext = pNext;
-    pNext = &descriptorHeapProperties;
-  }
+
 
   return DeviceProperties{
       .apiVersion = props.properties.apiVersion,

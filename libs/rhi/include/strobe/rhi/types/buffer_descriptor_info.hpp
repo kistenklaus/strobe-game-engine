@@ -6,7 +6,7 @@ namespace strobe::rhi {
 
 struct BufferDescriptorInfo {
   Buffer buffer;
-  uint64_t offset;
+  uint64_t offset = 0;
   DescriptorType type = DescriptorType::storage_buffer;
 };
 

@@ -4,6 +4,7 @@
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/vulkan/context/create_info.hpp"
+#include <fmt/base.h>
 #include <fmt/format.h>
 #include <vulkan/vulkan_core.h>
 
@@ -124,6 +125,12 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_9_FEATURES_KHR,
       .pNext = nullptr,
       .maintenance9 = deviceInfo->features.maintenance9,
+  };
+  VkPhysicalDeviceShaderUntypedPointersFeaturesKHR shaderUntypedPointersFeatures{
+      .sType =
+          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_UNTYPED_POINTERS_FEATURES_KHR,
+      .pNext = nullptr,
+      .shaderUntypedPointers = deviceInfo->features.shaderUntypedPointers,
   };
 
   Vector<const char *, scratch_allocator_ref> extensions{&scratch};
@@ -254,7 +261,6 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
     descriptorHeapFeatures.pNext = pNext;
     pNext = &descriptorHeapFeatures;
     extensions.emplace_back(VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME);
-
     // dependency
     vulkan14.maintenance5 = VK_TRUE;
   }
@@ -263,6 +269,14 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
     maintenance9Features.pNext = pNext;
     pNext = &maintenance9Features;
     extensions.emplace_back(VK_KHR_MAINTENANCE_9_EXTENSION_NAME);
+  }
+
+  if (info->shader_untyped_pointers != disable &&
+      deviceInfo->features.shaderUntypedPointers) {
+    properties->shaderUntypedPointers = true;
+    shaderUntypedPointersFeatures.pNext = pNext;
+    pNext = &shaderUntypedPointersFeatures;
+    extensions.emplace_back(VK_KHR_SHADER_UNTYPED_POINTERS_EXTENSION_NAME);
   }
 
   Vector<QueueFamilyPlan, scratch_allocator_ref> queueFamilyPlans{&scratch};

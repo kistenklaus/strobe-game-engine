@@ -40,9 +40,10 @@ struct ContextCreateInfo {
   feature rayQuery = required;
 
   feature descriptorHeap = required;
+  feature shader_untyped_pointers = required;
 
   uint32_t queue_count = 0;
   const QueueDescription *pQueues;
 };
 
-} 
+} // namespace strobe::rhi::vulkan

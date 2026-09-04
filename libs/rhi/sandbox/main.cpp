@@ -1,10 +1,12 @@
 #include "io.hpp"
 #include "strobe/core/lina/vec.hpp"
+#include "strobe/rhi/objects/buffer_descriptor.hpp"
 #include "strobe/rhi/objects/command_pool.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
 #include "strobe/rhi/objects/queue.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
 #include "strobe/rhi/types/buffer_usage.hpp"
+#include "strobe/rhi/types/descriptor_type.hpp"
 #include "strobe/rhi/types/image_layout.hpp"
 #include "strobe/window/window_impl.hpp"
 
@@ -30,15 +32,16 @@ using namespace std::chrono_literals;
 
 namespace {
 
-constexpr uint32_t TRIANGLES_PER_BUFFER = 1;
+constexpr uint32_t TRIANGLES_PER_BUFFER = 16;
 
 // Bounds publication latency and the number of individual Vulkan buffers.
-constexpr std::size_t MAX_PUBLISHED_BUFFERS = 1024;
+constexpr std::size_t MAX_PUBLISHED_BUFFERS = 64;
 
 // Also bound memory if buffers become variable-sized later.
-constexpr uint64_t MAX_PUBLISHED_BYTES = 16ull * 1024ull;
+constexpr uint64_t MAX_PUBLISHED_BYTES = 16ull * 1024ull * 1024ull;
 
 struct PublishedTriangles {
+  rhi::BufferDescriptor colorDesc;
   rhi::Buffer buffer;
   rhi::Timepoint ready;
   uint32_t vertexCount;
@@ -103,7 +106,7 @@ int main() {
     };
 
     rhi::Device device = rhi::create_device({
-        .debug_utils = false,
+        .debug_utils = true,
     });
 
     rhi::Queue queue = device.get_queue();
@@ -123,71 +126,89 @@ int main() {
 
     PublicationQueue publication;
 
-    std::jthread generator{
-        [device, &publication](std::stop_token stop) mutable {
-          tracy::SetThreadName("triangle-generator");
+    std::mt19937 prng{42};
+    std::uniform_real_distribution<float> dist{0.25, 1};
 
-          std::random_device randomDevice;
-          std::mt19937 rng{randomDevice()};
+    std::jthread generator{[&, device](std::stop_token stop) mutable {
+      tracy::SetThreadName("triangle-generator");
 
-          while (!stop.stop_requested()) {
-            std::vector<vec2> vertices = generate_triangles(rng);
+      std::random_device randomDevice;
+      std::mt19937 rng{randomDevice()};
 
-            const uint64_t size =
-                static_cast<uint64_t>(vertices.size() * sizeof(vec2));
+      while (!stop.stop_requested()) {
+        std::vector<vec2> vertices = generate_triangles(rng);
 
-            assert(size <= MAX_PUBLISHED_BYTES);
+        const uint64_t size =
+            static_cast<uint64_t>(vertices.size() * sizeof(vec2));
 
-            /*
-             * There is one producer, so checking capacity before creating the
-             * buffer is sufficient. With multiple producers, capacity would
-             * need to be reserved while holding the mutex.
-             */
-            {
-              std::unique_lock lock{publication.mutex};
+        assert(size <= MAX_PUBLISHED_BYTES);
 
-              publication.cv.wait(lock, [&] {
-                return stop.stop_requested() ||
-                       (publication.buffers.size() < MAX_PUBLISHED_BUFFERS &&
-                        publication.bytes + size <= MAX_PUBLISHED_BYTES);
-              });
+        /*
+         * There is one producer, so checking capacity before creating the
+         * buffer is sufficient. With multiple producers, capacity would
+         * need to be reserved while holding the mutex.
+         */
+        {
+          std::unique_lock lock{publication.mutex};
 
-              if (stop.stop_requested()) {
-                break;
-              }
-            }
+          publication.cv.wait(lock, [&] {
+            return stop.stop_requested() ||
+                   (publication.buffers.size() < MAX_PUBLISHED_BUFFERS &&
+                    publication.bytes + size <= MAX_PUBLISHED_BYTES);
+          });
 
-            rhi::Buffer buffer = device.create_buffer({
-                .size = size,
-                .bufferUsage =
-                    rhi::BufferUsage::transfer_dst | rhi::BufferUsage::vertex,
-            });
-
-            /*
-             * async_upload copies the host data before returning. The local
-             * vertices vector can therefore be reused immediately.
-             */
-            rhi::Timepoint ready =
-                device.async_upload(buffer, vertices.data(), size);
-
-            {
-              std::lock_guard lock{publication.mutex};
-
-              if (stop.stop_requested()) {
-                break;
-              }
-
-              publication.bytes += size;
-
-              publication.buffers.push_back(PublishedTriangles{
-                  .buffer = std::move(buffer),
-                  .ready = std::move(ready),
-                  .vertexCount = static_cast<uint32_t>(vertices.size()),
-                  .bytes = size,
-              });
-            }
+          if (stop.stop_requested()) {
+            break;
           }
-        }};
+        }
+
+        rhi::Buffer buffer = device.create_buffer({
+            .size = size,
+            .bufferUsage =
+                rhi::BufferUsage::transfer_dst | rhi::BufferUsage::vertex,
+        });
+
+        /*
+         * async_upload copies the host data before returning. The local
+         * vertices vector can therefore be reused immediately.
+         */
+        rhi::Timepoint ready =
+            device.async_upload(buffer, vertices.data(), size);
+
+        vec3 color{dist(prng), dist(prng), dist(prng)};
+
+        rhi::Buffer colorBuf = device.create_buffer({
+            .size = sizeof(vec3),
+            .bufferUsage =
+                rhi::BufferUsage::transfer_dst | rhi::BufferUsage::uniform,
+        });
+        ready &= device.async_upload(colorBuf, &color, sizeof(color));
+
+        rhi::BufferDescriptor colorDesc = device.create_buffer_descriptor({
+            .buffer = colorBuf,
+            .offset = 0,
+            .type = rhi::DescriptorType::uniform_buffer,
+        });
+
+        {
+          std::lock_guard lock{publication.mutex};
+
+          if (stop.stop_requested()) {
+            break;
+          }
+
+          publication.bytes += size;
+
+          publication.buffers.push_back(PublishedTriangles{
+              .colorDesc = std::move(colorDesc),
+              .buffer = std::move(buffer),
+              .ready = std::move(ready),
+              .vertexCount = static_cast<uint32_t>(vertices.size()),
+              .bytes = size,
+          });
+        }
+      }
+    }};
 
     window.show();
 
@@ -277,14 +298,21 @@ int main() {
       cmd.bind_shader(vertexShader);
       cmd.bind_shader(fragmentShader);
 
+      rhi::Timepoint ready{};
       for (const PublishedTriangles &triangles : frameTriangles) {
         /*
          * The upload is known to be completed, so this records the GPU memory
          * dependency without forcing DMA to commit anything.
          */
-        queue.wait(triangles.ready, rhi::PipelineStage::vertex_attribute_input);
+        ready = ready & triangles.ready;
+        // queue.wait(triangles.ready,
+        // rhi::PipelineStage::vertex_attribute_input);
 
         cmd.bind_vertex_buffer(triangles.buffer);
+
+        vec3 color{dist(prng), dist(prng), dist(prng)};
+        cmd.push(0, triangles.colorDesc);
+        // cmd.push(0, &color, sizeof(color));
         cmd.draw(triangles.vertexCount);
       }
 
@@ -295,10 +323,11 @@ int main() {
 
       cmd.end();
 
+      queue.wait(ready, rhi::PipelineStage::vertex_attribute_input);
+
       queue.wait(frame);
       queue.submit(&cmd);
       queue.present(std::move(frame));
-
 
       /*
        * frameTriangles is destroyed here. The command buffer retains the
