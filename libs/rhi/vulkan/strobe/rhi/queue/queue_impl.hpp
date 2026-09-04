@@ -38,7 +38,6 @@
 #include <tracy/Tracy.hpp>
 
 namespace strobe::rhi {
-
 struct QueueImpl {
 public:
   explicit QueueImpl(Timeline timeline, GarbageCollector gc,
@@ -80,6 +79,9 @@ public:
   }
 
   void wait(const Timepoint &timepoint, PipelineStage stage) noexcept {
+    if (!timepoint) {
+      return;
+    }
     std::lock_guard recordLock{m_recordMutex};
     add_wait(timepoint, stage);
   }
@@ -91,6 +93,12 @@ public:
   }
 
   Timepoint submit(span<const CommandBuffer> cmds) noexcept {
+    Timepoint dma_ready{};
+    for (auto &cmd : cmds) {
+      dma_ready &= object_handle_ptr<CommandBufferImpl>(cmd)->dma_ready;
+    }
+    wait(dma_ready, PipelineStage::transfer);
+
     while (true) {
       std::unique_lock recordLock{m_recordMutex};
       if (m_open->submissions.size() == MAX_SUBMIT_BATCH_SIZE) {
@@ -242,7 +250,6 @@ private:
   };
 
   struct QueueBatch {
-
     QueueBatch() = default;
     QueueBatch(const QueueBatch &) = delete;
     QueueBatch(QueueBatch &&) = delete;
@@ -310,9 +317,8 @@ private:
   }
 
   // m_recordMutex must be held.
-  void
-  add_wait(const Timepoint &timepoint,
-                  PipelineStage stage = PipelineStage::all_commands) noexcept {
+  void add_wait(const Timepoint &timepoint,
+                PipelineStage stage = PipelineStage::all_commands) noexcept {
     add_dependency(timepoint);
     const vulkan::TimelineSemaphore semaphore =
         TimelineImpl::get_timepoint_semaphore(timepoint);
@@ -337,9 +343,8 @@ private:
   }
 
   // m_recordMutex must be held.
-  void
-  add_wait(vulkan::BinarySemaphore semaphore,
-                  PipelineStage stage = PipelineStage::all_commands) noexcept {
+  void add_wait(vulkan::BinarySemaphore semaphore,
+                PipelineStage stage = PipelineStage::all_commands) noexcept {
     const VkPipelineStageFlags2 stageMask = to_vk_pipeline_stage(stage);
     for (auto &waitInfo : m_wait) {
       if (waitInfo.semaphore == semaphore.handle) {
@@ -358,9 +363,8 @@ private:
   }
 
   // m_recordMutex must be held.
-  void add_signal(
-      const Timepoint &timepoint,
-      PipelineStage stage = PipelineStage::all_commands) noexcept {
+  void add_signal(const Timepoint &timepoint,
+                  PipelineStage stage = PipelineStage::all_commands) noexcept {
     const vulkan::TimelineSemaphore semaphore =
         TimelineImpl::get_timepoint_semaphore(timepoint);
     const uint64_t serial = TimelineImpl::get_timepoint_serial(timepoint);
@@ -383,9 +387,8 @@ private:
   }
 
   // m_recordMutex must be held.
-  void add_signal(
-      vulkan::BinarySemaphore semaphore,
-      PipelineStage stage = PipelineStage::all_commands) noexcept {
+  void add_signal(vulkan::BinarySemaphore semaphore,
+                  PipelineStage stage = PipelineStage::all_commands) noexcept {
     const VkPipelineStageFlags2 stageMask = to_vk_pipeline_stage(stage);
     for (auto &signalInfo : m_signal) {
       if (signalInfo.semaphore == semaphore.handle) {
@@ -529,5 +532,4 @@ private:
   std::mutex m_submitMutex{};
 #endif
 };
-
 } // namespace strobe::rhi

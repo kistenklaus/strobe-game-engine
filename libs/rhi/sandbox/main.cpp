@@ -126,11 +126,11 @@ int main() {
 
     PublicationQueue publication;
 
-    std::mt19937 prng{42};
-    std::uniform_real_distribution<float> dist{0.25, 1};
-
     std::jthread generator{[&, device](std::stop_token stop) mutable {
       tracy::SetThreadName("triangle-generator");
+
+      std::mt19937 prng{42};
+      std::uniform_real_distribution<float> dist{0.25, 1};
 
       std::random_device randomDevice;
       std::mt19937 rng{randomDevice()};
@@ -175,10 +175,9 @@ int main() {
         rhi::Timepoint ready =
             device.async_upload(buffer, vertices.data(), size);
 
-        vec3 color{dist(prng), dist(prng), dist(prng)};
-
+        vec4 color{dist(prng), dist(prng), dist(prng), 1};
         rhi::Buffer colorBuf = device.create_buffer({
-            .size = sizeof(vec3),
+            .size = sizeof(color),
             .bufferUsage =
                 rhi::BufferUsage::transfer_dst | rhi::BufferUsage::uniform,
         });
@@ -310,7 +309,6 @@ int main() {
 
         cmd.bind_vertex_buffer(triangles.buffer);
 
-        vec3 color{dist(prng), dist(prng), dist(prng)};
         cmd.push(0, triangles.colorDesc);
         // cmd.push(0, &color, sizeof(color));
         cmd.draw(triangles.vertexCount);

@@ -54,8 +54,10 @@ public:
             m_alloc, m_infos.size());
 
     for (uint32_t i = 0; i < m_infos.size(); ++i) {
+      auto* resource_buf_impl = object_handle_ptr<BufferImpl>(m_infos[i].buffer);
+      resource_buf_impl->commit();
       addresses[i] = VkDeviceAddressRangeKHR{
-          .address = buffer_impl->address + offset + i * stride,
+          .address = resource_buf_impl->address + offset + i * stride,
           .size = stride,
       };
       resources[i] = VkResourceDescriptorInfoEXT{
@@ -85,12 +87,12 @@ public:
     Timepoint ready = fn(BufferRange{
         .buffer = buffer,
         .offset = offset,
-        .size = stride,
+        .size = m_infos.size() * stride,
     });
 
     return BufferDescriptorArray{make_void_handle<BufferDescriptorArrayImpl>(
         &impl->bufferDescArrayAlloc, std::move(m_heap),
-        std::exchange(m_index, 0), m_infos.size(), std::move(ready), buffers,
+        std::exchange(m_index, std::numeric_limits<uint32_t>::max()), m_infos.size(), std::move(ready), buffers,
         m_alloc)};
   }
 

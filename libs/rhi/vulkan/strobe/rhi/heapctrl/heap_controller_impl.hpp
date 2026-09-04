@@ -33,7 +33,7 @@ struct HeapControllerImpl {
           buf::create_buffer(m_memoryPool,
                              {
                                  .size = size,
-                                 .bufferUsage = BufferUsage::descriptor_heap,
+                                 .bufferUsage = BufferUsage::descriptor_heap | BufferUsage::transfer_dst | BufferUsage::transfer_src,
                                  .memoryUsage = MemoryUsage::automatic,
                              },
                              {}, bufAlloc);
@@ -93,7 +93,7 @@ private:
         buf::create_buffer(m_memoryPool,
                            {
                                .size = newSize,
-                               .bufferUsage = BufferUsage::descriptor_heap,
+                               .bufferUsage = BufferUsage::descriptor_heap | BufferUsage::transfer_dst | BufferUsage::transfer_src,
                                .memoryUsage = MemoryUsage::device,
                            },
                            {}, m_bufAlloc);

@@ -2,10 +2,11 @@
 
 #include "strobe/rhi/buf/buffer_impl.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/objects/buffer_descriptor.hpp"
 #include "strobe/rhi/heap/buffer_descriptor_impl.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap_impl.hpp"
+#include "strobe/rhi/objects/buffer.hpp"
+#include "strobe/rhi/objects/buffer_descriptor.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/types/buffer_range.hpp"
 #include "strobe/rhi/utils/descriptor_type_utils.hpp"
@@ -36,12 +37,17 @@ public:
     const uint64_t stride = impl->layout.buffer_stride();
     const uint64_t offset = stride * static_cast<uint64_t>(m_index);
     vulkan::Context *ctx = m_heap.ctx();
-    Buffer buffer = m_heap.buffer();
-    auto *buffer_impl = object_handle_ptr<BufferImpl>(buffer);
-    buffer_impl->commit();
+    Buffer heap_buf = m_heap.buffer();
+    auto *heapbuf_impl = object_handle_ptr<BufferImpl>(heap_buf);
+    heapbuf_impl->commit();
+
+    auto *resource_buf_impl = object_handle_ptr<BufferImpl>(m_info.buffer);
+    resource_buf_impl->commit();
+
+    assert(m_info.offset < resource_buf_impl->size);
 
     VkDeviceAddressRangeKHR address{
-        .address = buffer_impl->address,
+        .address = resource_buf_impl->address,
         .size = stride,
     };
     VkResourceDescriptorInfoEXT resource{
@@ -67,7 +73,7 @@ public:
     }
 
     Timepoint ready = fn(BufferRange{
-        .buffer = buffer,
+        .buffer = heap_buf,
         .offset = offset,
         .size = stride,
     });

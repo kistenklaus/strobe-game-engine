@@ -5,6 +5,7 @@
 #include "strobe/rhi/cmd/command_buffer_impl.hpp"
 #include "strobe/rhi/cmd/command_buffer_rendering_state.hpp"
 #include "strobe/rhi/handle.hpp"
+#include "strobe/rhi/heap/buffer_descriptor_array_impl.hpp"
 #include "strobe/rhi/heap/buffer_descriptor_impl.hpp"
 #include "strobe/rhi/img/image_view_impl.hpp"
 #include "strobe/rhi/memory/memory_allocation_impl.hpp"
@@ -842,7 +843,7 @@ void CommandBuffer::push(uint32_t offset,
 void CommandBuffer::push(uint32_t offset,
                          const BufferDescriptorArray &descriptor) noexcept {
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
-  auto *desc = object_handle_ptr<BufferDescriptorImpl>(descriptor);
+  auto *desc = object_handle_ptr<BufferDescriptorArrayImpl>(descriptor);
   push(offset, &desc->index, sizeof(uint32_t));
   impl->state.retain(descriptor);
   impl->bind_resource_heap(desc->heap, desc->ready);
