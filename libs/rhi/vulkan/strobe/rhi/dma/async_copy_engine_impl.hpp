@@ -1,20 +1,13 @@
 #pragma once
 
 #include "strobe/rhi/dma/async_transfer_cmd.hpp"
-#include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/objects/command_buffer.hpp"
 #include "strobe/rhi/objects/command_pool.hpp"
 #include "strobe/rhi/objects/queue.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/queue/queue_impl.hpp"
-#include "strobe/rhi/stage/stage_arena.hpp"
 #include "strobe/rhi/sync/timeline.hpp"
-#include "strobe/rhi/types/buffer_descriptor_info.hpp"
-#include "strobe/rhi/types/buffer_offset.hpp"
-#include "strobe/rhi/utils/descriptor_type_utils.hpp"
-#include "strobe/rhi/vulkan/cmd/transfer.hpp"
-#include "strobe/rhi/vulkan/context/pnf.hpp"
 
 #include <cassert>
 #include <mutex>
@@ -33,7 +26,7 @@ public:
                                strobe::rhi::allocator_ref alloc) noexcept
       : m_timeline(std::move(timeline)), m_gc(std::move(gc)),
         m_queue(std::move(queue)), m_cmdpool(std::move(cmdpool)),
-        m_committed(m_timeline.epoch()), m_alloc(alloc) {
+        m_committed({}), m_alloc(alloc) {
     m_open = make_recording_batch();
     m_spare = make_recording_batch();
     m_timeline.install_commit(

@@ -26,14 +26,14 @@
 namespace strobe::rhi {
 
 // TODO: coaless barrier notifications.
-// we spend a bit too much time signaling 
+// we spend a bit too much time signaling
 // the barrier timeline semaphore.
 
 struct GarbageCollectorImpl {
   // If the amount of pending timepoints falls below this
   // threshold the timeline is shall be notified in timely manner.
   // " we call retired but not yet completed timepoints pending.
-  static constexpr uint32_t BACKPRESSURE_THRESHOLD = 2;
+  static constexpr uint64_t BACKPRESSURE_THRESHOLD = 2;
 
   explicit GarbageCollectorImpl(Context context, span<Timeline> timelines,
                                 strobe::rhi::allocator_ref alloc)
@@ -41,8 +41,8 @@ struct GarbageCollectorImpl {
         m_barrier(m_context, timelines, alloc) {
     for (uint32_t i = 0; i < timelines.size(); ++i) {
       m_retireBuffers[i].timeline = timelines[i];
-      m_retireBuffers[i].completed = timelines[i].epoch();
-      m_retireBuffers[i].retired = timelines[i].epoch();
+      m_retireBuffers[i].completed = {};
+      m_retireBuffers[i].retired = {};
     }
     m_thread = std::jthread(&GarbageCollectorImpl::gc_main, this);
   }
@@ -63,15 +63,16 @@ struct GarbageCollectorImpl {
     }
     assert(timelineIndex != std::numeric_limits<uint32_t>::max());
     auto &buffer = m_retireBuffers[timelineIndex];
+    const uint64_t serial = TimelineImpl::get_timepoint_serial(timepoint);
 
     bool wake = false;
     {
       std::lock_guard lock{buffer.mutex};
-      if (timepoint <= buffer.completed) {
+      if (serial <= buffer.completed) {
         return;
       }
-      if (!buffer.requestedCommit || buffer.requestedCommit < timepoint) {
-        buffer.requestedCommit = timepoint;
+      if (!buffer.requestedCommit || buffer.requestedCommit < serial) {
+        buffer.requestedCommit = serial;
         wake = true;
       }
     }
@@ -93,14 +94,15 @@ struct GarbageCollectorImpl {
     }
     assert(timelineIndex != std::numeric_limits<uint32_t>::max());
     auto &buffer = m_retireBuffers[timelineIndex];
+    const uint64_t serial = TimelineImpl::get_timepoint_serial(timepoint);
     bool wake;
     {
       std::lock_guard lock{buffer.mutex};
-      assert(buffer.retired <= timepoint);
-      if (buffer.retired == timepoint) {
+      assert(buffer.retired <= serial);
+      if (buffer.retired == serial) {
         return;
       }
-      buffer.retired = timepoint;
+      buffer.retired = serial;
       const uint64_t pending = buffer.retired - buffer.completed;
       wake = pending <= BACKPRESSURE_THRESHOLD;
     }
@@ -120,14 +122,15 @@ struct GarbageCollectorImpl {
     }
     assert(timelineIndex != std::numeric_limits<uint32_t>::max());
     auto &buffer = m_retireBuffers[timelineIndex];
+    const uint64_t serial = TimelineImpl::get_timepoint_serial(timepoint);
     bool wake;
     {
       std::lock_guard lock{buffer.mutex};
-      assert(buffer.retired <= timepoint);
+      assert(buffer.retired <= serial);
       for (const BinarySemaphore &sem : sems) {
-        buffer.retiredSems.emplace_back(timepoint, sem);
+        buffer.retiredSems.emplace_back(serial, sem);
       }
-      buffer.retired = timepoint;
+      buffer.retired = serial;
       const uint64_t pending = buffer.retired - buffer.completed;
       wake = pending <= BACKPRESSURE_THRESHOLD;
     }
@@ -147,14 +150,15 @@ struct GarbageCollectorImpl {
     }
     assert(timelineIndex != std::numeric_limits<uint32_t>::max());
     auto &buffer = m_retireBuffers[timelineIndex];
+    const uint64_t serial = TimelineImpl::get_timepoint_serial(timepoint);
     bool wake;
     {
       std::lock_guard lock{buffer.mutex};
-      assert(buffer.retired <= timepoint);
+      assert(buffer.retired <= serial);
       for (const CommandBuffer &cmd : cmds) {
-        buffer.retiredCmds.emplace_back(timepoint, cmd);
+        buffer.retiredCmds.emplace_back(serial, cmd);
       }
-      buffer.retired = timepoint;
+      buffer.retired = serial;
       const uint64_t pending = buffer.retired - buffer.completed;
       wake = pending <= BACKPRESSURE_THRESHOLD;
     }
@@ -181,10 +185,11 @@ struct GarbageCollectorImpl {
         break;
       }
       if (timepoint) {
+        const uint64_t serial = TimelineImpl::get_timepoint_serial(timepoint);
         auto &retireBuffer = m_retireBuffers[timelineIndex];
-        collect(retireBuffer, timepoint);
+        collect(retireBuffer, serial);
         retireBuffer.timeline.complete(timepoint);
-        backpressure(retireBuffer, timepoint);
+        backpressure(retireBuffer, serial);
       } else { // invalid timepoint; just apply backpressure to all timelines
         for (uint32_t i = 0; i < m_retireBuffers.size(); ++i) {
           backpressure(m_retireBuffers[i], m_retireBuffers[i].completed);
@@ -199,7 +204,7 @@ struct GarbageCollectorImpl {
 
 private:
   template <typename T> struct Retire {
-    Timepoint timepoint;
+    uint64_t serial;
     T object;
   };
 
@@ -213,20 +218,19 @@ private:
 #endif
     VectorDeque<Retire<CommandBuffer>> retiredCmds;
     VectorDeque<Retire<BinarySemaphore>> retiredSems;
-    Timepoint completed;
-    Timepoint retired;
+    uint64_t completed;
+    uint64_t retired;
 
-    Timepoint requestedCommit{};
+    uint64_t requestedCommit;
   };
 
-  void collect(TimelineRetireBuffer &retireBuffer, Timepoint timepoint) {
-    collect_retired(retireBuffer.mutex, retireBuffer.retiredCmds, timepoint);
-    collect_retired(retireBuffer.mutex, retireBuffer.retiredSems, timepoint);
+  void collect(TimelineRetireBuffer &retireBuffer, uint64_t serial) {
+    collect_retired(retireBuffer.mutex, retireBuffer.retiredCmds, serial);
+    collect_retired(retireBuffer.mutex, retireBuffer.retiredSems, serial);
   }
 
-  void collect_retired(auto &mutex,
-                       VectorDeque<Retire<CommandBuffer>> &retired,
-                       Timepoint timepoint) {
+  void collect_retired(auto &mutex, VectorDeque<Retire<CommandBuffer>> &retired,
+                       uint64_t serial) {
     m_scratch.release();
     Vector<CommandBuffer, scratch_allocator_ref> objects{&m_scratch};
     objects.reserve(128);
@@ -238,7 +242,7 @@ private:
       ZoneScopedN("gc/collect-cmds");
       while (!retired.empty()) {
         Retire<CommandBuffer> &retire = retired.front();
-        if (retire.timepoint <= timepoint) {
+        if (retire.serial <= serial) {
           objects.emplace_back(std::move(retired.front().object));
           retired.pop_front();
         } else {
@@ -249,7 +253,7 @@ private:
   }
   void collect_retired(auto &mutex,
                        VectorDeque<Retire<BinarySemaphore>> &retired,
-                       Timepoint timepoint) {
+                       uint64_t serial) {
     m_scratch.release();
     Vector<BinarySemaphore, scratch_allocator_ref> objects{&m_scratch};
     objects.reserve(128);
@@ -261,7 +265,7 @@ private:
       ZoneScopedN("gc/collect-sems");
       while (!retired.empty()) {
         Retire<BinarySemaphore> &retire = retired.front();
-        if (retire.timepoint <= timepoint) {
+        if (retire.serial <= serial) {
           objects.emplace_back(std::move(retired.front().object));
           retired.pop_front();
         } else {
@@ -271,8 +275,8 @@ private:
     }
   }
 
-  void backpressure(TimelineRetireBuffer &buffer, Timepoint completed) {
-    Timepoint target;
+  void backpressure(TimelineRetireBuffer &buffer, uint64_t completed) {
+    uint64_t target;
     {
       std::lock_guard lock{buffer.mutex};
       assert(buffer.completed <= completed);
@@ -285,14 +289,14 @@ private:
         target = buffer.retired;
       }
       const uint64_t lastClosedSerial = buffer.timeline.serial() - 1;
-      if (TimelineImpl::get_timepoint_serial(target) > lastClosedSerial) {
-        target = buffer.timeline.from_serial(lastClosedSerial);
+      if (target > lastClosedSerial) {
+        target = lastClosedSerial;
       }
       if (target <= buffer.completed) {
         return;
       }
     }
-    Timeline::notify(target, TimelineNotifyFlag::backpressure);
+    buffer.timeline.notify(target, TimelineNotifyFlag::backpressure);
   }
 
   void collect_fences() {
@@ -313,7 +317,7 @@ private:
     }
   }
   void commit_requested(TimelineRetireBuffer &buffer) {
-    Timepoint target;
+    uint64_t target;
     {
       std::lock_guard lock{buffer.mutex};
       if (!buffer.requestedCommit) {
@@ -323,7 +327,7 @@ private:
       buffer.requestedCommit = {};
     }
     ZoneScopedN("gc/commit-requested");
-    Timeline::notify(target, TimelineNotifyFlag::backpressure);
+    buffer.timeline.notify(target, TimelineNotifyFlag::backpressure);
   }
 
 private:

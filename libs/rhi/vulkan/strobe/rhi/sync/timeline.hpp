@@ -30,8 +30,6 @@ public:
 
   Timepoint now() noexcept;
   bool contains(Timepoint timepoint) const noexcept;
-  [[deprecated("use default constructor instead")]]
-  constexpr Timepoint epoch() const noexcept {return {};}
   void complete(Timepoint timepoint) noexcept;
   Timepoint advance() noexcept;
   uint64_t serial() const noexcept;

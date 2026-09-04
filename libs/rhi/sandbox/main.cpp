@@ -36,7 +36,7 @@ constexpr uint32_t TRIANGLES_PER_BUFFER = 1;
 constexpr std::size_t MAX_PUBLISHED_BUFFERS = 1024;
 
 // Also bound memory if buffers become variable-sized later.
-constexpr uint64_t MAX_PUBLISHED_BYTES = 16ull * 1024ull * 1024ull;
+constexpr uint64_t MAX_PUBLISHED_BYTES = 16ull * 1024ull;
 
 struct PublishedTriangles {
   rhi::Buffer buffer;
@@ -85,13 +85,13 @@ std::vector<vec2> generate_triangles(std::mt19937 &rng) {
 } // namespace
 
 int main() {
-  #ifdef STROBE_TRACY
-    fmt::println("waiting for tracy");
-    while (!TracyIsConnected) {
-      std::this_thread::yield();
-    }
-    fmt::println("tracy connected");
-  #endif
+  // #ifdef STROBE_TRACY
+  //   fmt::println("waiting for tracy");
+  //   while (!TracyIsConnected) {
+  //     std::this_thread::yield();
+  //   }
+  //   fmt::println("tracy connected");
+  // #endif
   tracy::SetThreadName("platform");
 
   Platform::start([] {
@@ -197,7 +197,7 @@ int main() {
         break;
       }
 
-      std::this_thread::sleep_for(1ms);
+      // std::this_thread::sleep_for(1ms);
 
       rhi::SwapchainImage frame = swapchain.acquire();
 
