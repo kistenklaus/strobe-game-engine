@@ -218,10 +218,10 @@ private:
 #endif
     VectorDeque<Retire<CommandBuffer>> retiredCmds;
     VectorDeque<Retire<BinarySemaphore>> retiredSems;
-    uint64_t completed;
-    uint64_t retired;
+    uint64_t completed = 0;
+    uint64_t retired = 0;
 
-    uint64_t requestedCommit;
+    uint64_t requestedCommit = 0;
   };
 
   void collect(TimelineRetireBuffer &retireBuffer, uint64_t serial) {

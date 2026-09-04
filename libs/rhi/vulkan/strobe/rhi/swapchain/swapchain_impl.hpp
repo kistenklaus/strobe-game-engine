@@ -126,20 +126,32 @@ struct SwapchainImpl {
       oldSwapchain = gen->swapchain;
     }
 
-    const vulkan::Swapchain swapchain = vulkan::create_swapchain(
-        m_surface.ctx(), vulkan::SwapchainInfo{
-                             .surface = m_surface.get(),
-                             .minImageCount = minImageCount,
-                             .format = format,
-                             .extent = extent,
-                             .usage = to_vk_image_usage(m_imageUsage),
-                             .queueFamilyIndicies = presentQueueFamilyIndicies,
-                             .preTransform = capabilities.currentTransform,
-                             .compositeAlpha = compositeAlpha,
-                             .presentMode = presentMode,
-                             .clipped = true,
-                             .oldSwapchain = oldSwapchain,
-                         });
+    vulkan::SwapchainInfo createInfo{
+        .surface = m_surface.get(),
+        .minImageCount = minImageCount,
+        .format = format,
+        .extent = extent,
+        .usage = to_vk_image_usage(m_imageUsage),
+        .queueFamilyIndicies = presentQueueFamilyIndicies,
+        .preTransform = capabilities.currentTransform,
+        .compositeAlpha = compositeAlpha,
+        .presentMode = presentMode,
+        .clipped = true,
+    };
+
+    vulkan::Swapchain swapchain;
+
+    if (generation) {
+      auto *oldGeneration =
+          object_handle_ptr<SwapchainGenerationImpl>(generation);
+
+      std::lock_guard lock{oldGeneration->mutex};
+
+      createInfo.oldSwapchain = oldGeneration->swapchain;
+      swapchain = vulkan::create_swapchain(m_surface.ctx(), createInfo);
+    } else {
+      swapchain = vulkan::create_swapchain(m_surface.ctx(), createInfo);
+    }
 
     uint32_t count = vulkan::get_swapchain_images(m_surface.ctx(), swapchain);
     SmallVector<vulkan::Image, 8> nativeImages{count};

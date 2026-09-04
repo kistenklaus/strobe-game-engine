@@ -49,7 +49,7 @@ public:
     const uint64_t resourceSize = resource_buf_impl->size - m_info.offset;
 
     VkDeviceAddressRangeKHR address{
-        .address = resource_buf_impl->address,
+        .address = resource_buf_impl->address + m_info.offset,
         .size = resourceSize,
     };
     VkResourceDescriptorInfoEXT resource{

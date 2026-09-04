@@ -61,11 +61,11 @@ private:
       return {};
     }
 
-    void *ptr = m_page->buffer.ptr();
+    auto *base = static_cast<std::byte *>(m_page->buffer.ptr());
     vulkan::Buffer buffer =
         object_handle_ptr<BufferImpl>(m_page->buffer)->buffer;
     m_top = offset + size;
-    return StageBuffer{{buffer, offset}, ptr};
+    return StageBuffer{{buffer, offset}, base + offset};
   }
 
   StagingPool m_pool;

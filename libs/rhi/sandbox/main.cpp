@@ -13,7 +13,7 @@
 #include <GLFW/glfw3.h>
 #include <tracy/Tracy.hpp>
 
-#include <cassert>
+#include <algorithm>
 #include <cmath>
 #include <condition_variable>
 #include <cstdint>
@@ -32,27 +32,29 @@ using namespace std::chrono_literals;
 
 namespace {
 
-constexpr uint32_t TRIANGLES_PER_BUFFER = 16;
+constexpr uint32_t TRIANGLES_PER_BUFFER = 1024;
 
-// Bounds publication latency and the number of individual Vulkan buffers.
-constexpr std::size_t MAX_PUBLISHED_BUFFERS = 64;
+// Maximum number of FIFO entries rendered by each frame. If fewer are
+// available, the frame consumes all available entries after waiting for one.
+constexpr std::size_t BUFFERS_PER_FRAME = 64;
 
-// Also bound memory if buffers become variable-sized later.
-constexpr uint64_t MAX_PUBLISHED_BYTES = 16ull * 1024ull * 1024ull;
+// Capacity of the producer-to-renderer FIFO.
+constexpr std::size_t MAX_PUBLISHED_BUFFERS = 1024;
+
+static_assert(BUFFERS_PER_FRAME > 0);
+static_assert(MAX_PUBLISHED_BUFFERS > 0);
 
 struct PublishedTriangles {
   rhi::BufferDescriptor colorDesc;
   rhi::Buffer buffer;
   rhi::Timepoint ready;
   uint32_t vertexCount;
-  uint64_t bytes;
 };
 
 struct PublicationQueue {
   std::mutex mutex;
   std::condition_variable cv;
   std::deque<PublishedTriangles> buffers;
-  uint64_t bytes = 0;
 };
 
 std::vector<vec2> generate_triangles(std::mt19937 &rng) {
@@ -102,11 +104,12 @@ int main() {
 
     window::WindowImpl window{
         uvec2{800, 600},
-        "strobe DMA benchmark",
+        "FLOATING",
     };
+    window.resizable(true);
 
     rhi::Device device = rhi::create_device({
-        .debug_utils = true,
+        .debug_utils = false,
     });
 
     rhi::Queue queue = device.get_queue();
@@ -122,7 +125,7 @@ int main() {
         device.create_fragment_shader({.spirv = fragmentSpv});
 
     rhi::Swapchain swapchain =
-        device.create_swapchain({.window = window.ptr(), .vsync = true});
+        device.create_swapchain({.window = window.ptr(), .vsync = false});
 
     PublicationQueue publication;
 
@@ -141,8 +144,6 @@ int main() {
         const uint64_t size =
             static_cast<uint64_t>(vertices.size() * sizeof(vec2));
 
-        assert(size <= MAX_PUBLISHED_BYTES);
-
         /*
          * There is one producer, so checking capacity before creating the
          * buffer is sufficient. With multiple producers, capacity would
@@ -153,8 +154,7 @@ int main() {
 
           publication.cv.wait(lock, [&] {
             return stop.stop_requested() ||
-                   (publication.buffers.size() < MAX_PUBLISHED_BUFFERS &&
-                    publication.bytes + size <= MAX_PUBLISHED_BYTES);
+                   publication.buffers.size() < MAX_PUBLISHED_BUFFERS;
           });
 
           if (stop.stop_requested()) {
@@ -196,16 +196,15 @@ int main() {
             break;
           }
 
-          publication.bytes += size;
-
           publication.buffers.push_back(PublishedTriangles{
               .colorDesc = std::move(colorDesc),
               .buffer = std::move(buffer),
               .ready = std::move(ready),
               .vertexCount = static_cast<uint32_t>(vertices.size()),
-              .bytes = size,
           });
         }
+
+        publication.cv.notify_one();
       }
     }};
 
@@ -219,41 +218,29 @@ int main() {
 
       // std::this_thread::sleep_for(1ms);
 
-      rhi::SwapchainImage frame = swapchain.acquire();
-
       /*
-       * Move only completed DMA uploads into this frame. All uploads use the
-       * same monotonically increasing DMA timeline, so if the front is not
-       * complete, no later entry can be complete either.
-       *
-       * relaxed_poll() may give a false negative when the GC cache is slightly
-       * behind. That only delays the triangles by one frame.
+       * Block until the FIFO contains work, then consume up to the configured
+       * number of buffers. DMA completion remains asynchronous and is added to
+       * the graphics submission below.
        */
       std::deque<PublishedTriangles> frameTriangles;
-      bool releasedCapacity = false;
 
       {
-        std::lock_guard lock{publication.mutex};
+        std::unique_lock lock{publication.mutex};
+        publication.cv.wait(lock, [&] { return !publication.buffers.empty(); });
 
-        while (!publication.buffers.empty()) {
-          PublishedTriangles &front = publication.buffers.front();
+        const std::size_t count =
+            std::min(BUFFERS_PER_FRAME, publication.buffers.size());
 
-          if (!front.ready.relaxed_poll()) {
-            break;
-          }
-
-          assert(publication.bytes >= front.bytes);
-          publication.bytes -= front.bytes;
-
-          frameTriangles.push_back(std::move(front));
+        for (std::size_t i = 0; i < count; ++i) {
+          frameTriangles.push_back(std::move(publication.buffers.front()));
           publication.buffers.pop_front();
-          releasedCapacity = true;
         }
       }
 
-      if (releasedCapacity) {
-        publication.cv.notify_one();
-      }
+      publication.cv.notify_one();
+
+      rhi::SwapchainImage frame = swapchain.acquire();
 
       rhi::CommandBuffer cmd = cmdpool.alloc();
       cmd.begin();
@@ -299,18 +286,11 @@ int main() {
 
       rhi::Timepoint ready{};
       for (const PublishedTriangles &triangles : frameTriangles) {
-        /*
-         * The upload is known to be completed, so this records the GPU memory
-         * dependency without forcing DMA to commit anything.
-         */
-        ready = ready & triangles.ready;
-        // queue.wait(triangles.ready,
-        // rhi::PipelineStage::vertex_attribute_input);
+        ready &= triangles.ready;
 
         cmd.bind_vertex_buffer(triangles.buffer);
 
         cmd.push(0, triangles.colorDesc);
-        // cmd.push(0, &color, sizeof(color));
         cmd.draw(triangles.vertexCount);
       }
 
