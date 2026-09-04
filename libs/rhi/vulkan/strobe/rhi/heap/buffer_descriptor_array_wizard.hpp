@@ -4,14 +4,15 @@
 #include "strobe/core/memory/AllocatorTraits.hpp"
 #include "strobe/rhi/buf/buffer_impl.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/objects/buffer_descriptor_array.hpp"
 #include "strobe/rhi/heap/buffer_descriptor_array_impl.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap_impl.hpp"
+#include "strobe/rhi/objects/buffer_descriptor_array.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/types/buffer_range.hpp"
 #include "strobe/rhi/utils/descriptor_type_utils.hpp"
 #include <limits>
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -54,11 +55,17 @@ public:
             m_alloc, m_infos.size());
 
     for (uint32_t i = 0; i < m_infos.size(); ++i) {
-      auto* resource_buf_impl = object_handle_ptr<BufferImpl>(m_infos[i].buffer);
+
+      std::construct_at(buffers + i, m_infos[i].buffer);
+      auto *resource_buf_impl =
+          object_handle_ptr<BufferImpl>(m_infos[i].buffer);
       resource_buf_impl->commit();
+      assert(m_infos[i].offset < resource_buf_impl->size);
+
+
       addresses[i] = VkDeviceAddressRangeKHR{
-          .address = resource_buf_impl->address + offset + i * stride,
-          .size = stride,
+          .address = resource_buf_impl->address + m_infos[i].offset,
+          .size = resource_buf_impl->size - m_infos[i].offset,
       };
       resources[i] = VkResourceDescriptorInfoEXT{
           .sType = VK_STRUCTURE_TYPE_RESOURCE_DESCRIPTOR_INFO_EXT,
@@ -92,8 +99,8 @@ public:
 
     return BufferDescriptorArray{make_void_handle<BufferDescriptorArrayImpl>(
         &impl->bufferDescArrayAlloc, std::move(m_heap),
-        std::exchange(m_index, std::numeric_limits<uint32_t>::max()), m_infos.size(), std::move(ready), buffers,
-        m_alloc)};
+        std::exchange(m_index, std::numeric_limits<uint32_t>::max()),
+        m_infos.size(), std::move(ready), buffers, m_alloc)};
   }
 
   ~BufferDescriptorArrayWizard() noexcept {

@@ -122,7 +122,7 @@ int main() {
         device.create_fragment_shader({.spirv = fragmentSpv});
 
     rhi::Swapchain swapchain =
-        device.create_swapchain({.window = window.ptr(), .vsync = false});
+        device.create_swapchain({.window = window.ptr(), .vsync = true});
 
     PublicationQueue publication;
 

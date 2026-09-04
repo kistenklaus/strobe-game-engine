@@ -46,9 +46,11 @@ public:
 
     assert(m_info.offset < resource_buf_impl->size);
 
+    const uint64_t resourceSize = resource_buf_impl->size - m_info.offset;
+
     VkDeviceAddressRangeKHR address{
         .address = resource_buf_impl->address,
-        .size = stride,
+        .size = resourceSize,
     };
     VkResourceDescriptorInfoEXT resource{
         .sType = VK_STRUCTURE_TYPE_RESOURCE_DESCRIPTOR_INFO_EXT,

@@ -93,11 +93,10 @@ public:
   }
 
   Timepoint submit(span<const CommandBuffer> cmds) noexcept {
-    Timepoint dma_ready{};
+    Timepoint dmaReady{};
     for (auto &cmd : cmds) {
-      dma_ready &= object_handle_ptr<CommandBufferImpl>(cmd)->dma_ready;
+      dmaReady &= object_handle_ptr<CommandBufferImpl>(cmd)->dma_ready;
     }
-    wait(dma_ready, PipelineStage::transfer);
 
     while (true) {
       std::unique_lock recordLock{m_recordMutex};
@@ -109,6 +108,10 @@ public:
         }
         rotate();
       }
+      if (dmaReady) {
+        add_wait(dmaReady, PipelineStage::all_commands);
+      }
+
       Timepoint timepoint = m_timeline.advance();
       auto &submission = m_open->submissions.emplace_back(
           timepoint, m_wait, m_signal, m_dependencies, &m_open->bump);
