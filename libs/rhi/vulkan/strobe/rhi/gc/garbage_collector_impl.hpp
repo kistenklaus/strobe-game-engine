@@ -302,15 +302,36 @@ private:
     objects.reserve(128);
     {
       std::lock_guard lck{m_retiredFencesMutex};
+      // NOTE: debugging replacement! collect all fences instead of
+      // just the first fence.
+      // THIS IS STILL A LEAK, we collect fences in m_retiredFences with 
+      // every other resize (i.e. we retire fences which will never be 
+      // signaled and then just end up beeing stuck here)
+      VectorDeque<Fence> tmp;
       while (!m_retiredFences.empty()) {
         auto &fence = m_retiredFences.front();
         if (fence.signaled()) {
           objects.emplace_back(std::move(fence));
-          m_retiredFences.pop_front();
         } else {
-          break;
+          tmp.emplace_back(std::move(fence));
         }
+        m_retiredFences.pop_front();
       }
+      m_retiredFences = tmp;
+
+      // NOTE: below is the proper implementation!
+      // Completion order doesn't matter, we only want to guarantee that
+      // fences will eventually be collected, not that they are collected in
+      // completion order!
+      // while (!m_retiredFences.empty()) {
+      //   auto &fence = m_retiredFences.front();
+      //   if (fence.signaled()) {
+      //     objects.emplace_back(std::move(fence));
+      //     m_retiredFences.pop_front();
+      //   } else {
+      //     break;
+      //   }
+      // }
     }
   }
   void commit_requested(TimelineRetireBuffer &buffer) {

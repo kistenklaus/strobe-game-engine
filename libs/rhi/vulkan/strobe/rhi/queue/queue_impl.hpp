@@ -503,22 +503,20 @@ private:
         std::lock_guard lck{generation->mutex};
         assert(presentation.presentReady);
         assert(presentation.presentFence.fence());
-        auto status = vulkan::queue_present(
+        // NOTE: present status is intentially disabled,
+        // we will recreate on the next acquire.
+        // This is based on the assumption that if we get
+        // success, suboptimal from acquire, then queue present will
+        // always work, iam not sure if this is correct because
+        // we do in fact sometimes see out of date returned here.
+        vulkan::queue_present(
             m_queue, generation->swapchain, img->index,
             {
                 .presentReady = presentation.presentReady.wait(),
                 .presentFence = presentation.presentFence.fence(),
             });
-        switch (status) {
-        case vulkan::PresentStatus::success:
-        case vulkan::PresentStatus::suboptimal:
-          m_gc.retire(presentation.presentFence);
-          break;
-        case vulkan::PresentStatus::out_of_date:
-          // presentation.presentFence.wait();
-          break;
-        }
       }
+      m_gc.retire(presentation.presentFence);
       img->consume();
     }
   }
