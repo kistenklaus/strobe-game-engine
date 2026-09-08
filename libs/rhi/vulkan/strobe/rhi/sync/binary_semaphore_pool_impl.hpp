@@ -42,6 +42,10 @@ public:
   void recycle(BinarySemaphoreNode *node) {
     assert(node);
     assert(node->next == nullptr);
+    if (node->signaled) {
+      destroy_nodes(node);
+      return;
+    }
     // lockfree push to returend
     auto *head = m_returned.load(std::memory_order_relaxed);
     do {

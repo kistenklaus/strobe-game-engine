@@ -7,6 +7,7 @@ namespace strobe::rhi {
 struct BinarySemaphoreNode {
   void *pool = nullptr;
   std::atomic<uint32_t> refCount{0};
+  bool signaled = false;
   vulkan::BinarySemaphore semaphore{};
   BinarySemaphoreNode *next = nullptr;
 };

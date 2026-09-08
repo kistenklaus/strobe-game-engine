@@ -161,6 +161,22 @@ target_link_libraries(strobe-rhi-sandbox
   PRIVATE Vulkan::Vulkan
   PRIVATE strobe::vma
 )
-# target_include_directories(strobe-rhi-sandbox
-#   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/vulkan
-# )
+
+
+add_executable(strobe-rhi-rep EXCLUDE_FROM_ALL
+  ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/rep.cpp
+)
+
+target_link_libraries(strobe-rhi-rep
+  PRIVATE strobe::rhi
+  PRIVATE strobe-platform
+  PRIVATE strobe-window
+  PRIVATE strobe::tracy
+
+  PRIVATE Vulkan::Vulkan
+  PRIVATE strobe::vma
+)
+
+target_include_directories(strobe-rhi-rep
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/vulkan
+)

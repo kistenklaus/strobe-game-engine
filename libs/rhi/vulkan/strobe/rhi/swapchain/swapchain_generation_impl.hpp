@@ -56,6 +56,7 @@ struct SwapchainGenerationImpl {
   uvec2 extent;
   Format format;
   bool suboptimal = false;
+  bool dead = false;
 
   std::atomic<uint64_t> debugCounter{0};
 

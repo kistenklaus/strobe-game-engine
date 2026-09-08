@@ -2,6 +2,7 @@
 
 #include "strobe/rhi/objects/object.hpp"
 #include "strobe/rhi/sync/fence.hpp"
+#include "strobe/rhi/sync/fence_callback_flag.hpp"
 
 namespace strobe::rhi {
 
@@ -22,7 +23,9 @@ public:
     return lhs.m_handle != rhs.m_handle;
   }
 
-  Fence allocate(void *pUserData, void (*callback)(void*)) noexcept;
+  Fence allocate(void *pUserData = nullptr,
+                 void (*callback)(void *,
+                                  FenceCallbackFlag) = nullptr) noexcept;
 };
 
 } // namespace strobe::rhi

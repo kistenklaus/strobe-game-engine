@@ -1,5 +1,6 @@
 #include "strobe/rhi/sync/fence_pool.hpp"
 #include "strobe/rhi/handle.hpp"
+#include "strobe/rhi/sync/fence_callback_flag.hpp"
 #include "strobe/rhi/sync/fence_pool_impl.hpp"
 
 namespace strobe::rhi {
@@ -36,7 +37,9 @@ FencePool &FencePool::operator=(FencePool &&o) noexcept {
 
 FencePool::~FencePool() noexcept { unpin_void_handle<FencePoolImpl>(m_handle); }
 
-Fence FencePool::allocate(void *pUserData, void (*callback)(void *)) noexcept {
+Fence FencePool::allocate(void *pUserData,
+                          void (*callback)(void *,
+                                           FenceCallbackFlag)) noexcept {
   auto *impl = void_handle_ptr<FencePoolImpl>(m_handle);
   FenceNode *node = impl->allocate();
   return Fence{make_void_handle<FenceImpl>(impl->get_fence_handle_alloc(),

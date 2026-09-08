@@ -66,12 +66,14 @@ BinarySemaphore::~BinarySemaphore() noexcept {
 vulkan::BinarySemaphore BinarySemaphore::signal() const noexcept {
   assert(m_handle);
   auto *node = static_cast<BinarySemaphoreNode *>(m_handle);
+  node->signaled = true;
   return node->semaphore;
 }
 
 vulkan::BinarySemaphore BinarySemaphore::wait() const noexcept {
   assert(m_handle);
   auto *node = static_cast<BinarySemaphoreNode *>(m_handle);
+  node->signaled = false;
   return node->semaphore;
 }
 

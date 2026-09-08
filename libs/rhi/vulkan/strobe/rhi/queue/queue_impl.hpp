@@ -14,7 +14,6 @@
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/swapchain/swapchain_generation_impl.hpp"
 #include "strobe/rhi/swapchain/swapchain_image_impl.hpp"
-#include "strobe/rhi/sync/fence_impl.hpp"
 #include "strobe/rhi/sync/timeline.hpp"
 #include "strobe/rhi/sync/timeline_impl.hpp"
 #include "strobe/rhi/sync/timeline_notify_flag.hpp"
@@ -164,12 +163,12 @@ public:
       }
       m_open->presentation = QueuePresentation{
           .image = std::move(image),
-          .presentReady = std::move(presentReady),
+          .presentReady = presentReady,
           .presentFence = std::move(presentFence),
       };
       rotate();
       recordLock.unlock();
-      m_gc.request_commit(presentDependency);
+      m_gc.retire(presentDependency, &presentReady);
       return;
     }
   }
@@ -503,21 +502,21 @@ private:
         std::lock_guard lck{generation->mutex};
         assert(presentation.presentReady);
         assert(presentation.presentFence.fence());
-        // NOTE: present status is intentially disabled,
-        // we will recreate on the next acquire.
-        // This is based on the assumption that if we get
-        // success, suboptimal from acquire, then queue present will
-        // always work, iam not sure if this is correct because
-        // we do in fact sometimes see out of date returned here.
-        vulkan::queue_present(
-            m_queue, generation->swapchain, img->index,
-            {
-                .presentReady = presentation.presentReady.wait(),
-                .presentFence = presentation.presentFence.fence(),
-            });
+
+        if (!generation->dead) {
+          auto status = vulkan::queue_present(
+              m_queue, generation->swapchain, img->index,
+              {
+                  .presentReady = presentation.presentReady.wait(),
+                  .presentFence = presentation.presentFence.fence(),
+              });
+          if (status == vulkan::PresentStatus::out_of_date) {
+            generation->dead = true;
+          }
+          m_gc.retire(presentation.presentFence);
+        }
+        img->consume();
       }
-      m_gc.retire(presentation.presentFence);
-      img->consume();
     }
   }
 

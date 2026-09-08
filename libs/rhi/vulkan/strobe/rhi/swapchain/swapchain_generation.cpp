@@ -3,6 +3,7 @@
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/swapchain/swapchain_generation_impl.hpp"
 #include "strobe/rhi/swapchain/swapchain_image_impl.hpp"
+#include "strobe/rhi/sync/fence_callback_flag.hpp"
 #include "strobe/rhi/vulkan/swapchain.hpp"
 #include <atomic>
 #include <memory>
@@ -100,7 +101,7 @@ std::pair<BinarySemaphore, Fence> SwapchainGeneration::present([[maybe_unused]] 
 
   std::construct_at(presentFrame, *this, impl->semPool.allocate());
 
-  Fence presentFence = impl->fencePool.allocate(presentFrame, [](void *ptr) {
+  Fence presentFence = impl->fencePool.allocate(presentFrame, [](void *ptr, FenceCallbackFlag) {
     auto *presentFrame = static_cast<SwapchainPresentFrame *>(ptr);
     // the generations own the backing allocator so we have to be careful here.
     SwapchainGeneration generation = std::move(presentFrame->generation);

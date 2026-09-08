@@ -1,5 +1,6 @@
 #include "strobe/rhi/sync/fence.hpp"
 #include "strobe/rhi/handle.hpp"
+#include "strobe/rhi/sync/fence_callback_flag.hpp"
 #include "strobe/rhi/sync/fence_impl.hpp"
 #include "strobe/rhi/sync/fence_pool_impl.hpp"
 #include "strobe/rhi/vulkan/fence.hpp"
@@ -38,10 +39,10 @@ bool Fence::wait(uint64_t timeout) const noexcept {
     return true;
   }
   auto *impl = void_handle_ptr<FenceImpl>(m_handle);
+  std::lock_guard lck{impl->mutex};
   if (impl->node == nullptr) {
     return true;
   }
-  std::lock_guard lck{impl->node->mutex};
   auto *pool_impl = object_handle_ptr<FencePoolImpl>(impl->pool);
   bool signaled =
       vulkan::wait_for_fence(pool_impl->ctx(), impl->node->fence, timeout);
@@ -49,7 +50,7 @@ bool Fence::wait(uint64_t timeout) const noexcept {
     return false;
   }
   if (impl->callback != nullptr) {
-    impl->callback(impl->pUserData);
+    impl->callback(impl->pUserData, FenceCallbackFlag::signaled);
   }
   pool_impl->recycle(impl->node);
   impl->node = nullptr;
@@ -60,16 +61,16 @@ bool Fence::wait(uint64_t timeout) const noexcept {
 bool Fence::signaled() const noexcept {
   assert(m_handle);
   auto *impl = void_handle_ptr<FenceImpl>(m_handle);
+  std::lock_guard lck{impl->mutex};
   if (impl->node == nullptr) {
     return true;
   }
-  std::lock_guard lck{impl->node->mutex}; 
   auto *pool_impl = object_handle_ptr<FencePoolImpl>(impl->pool);
   const bool signaled =
       vulkan::is_fence_signaled(pool_impl->ctx(), impl->node->fence);
   if (signaled) {
     if (impl->callback) {
-      impl->callback(impl->pUserData);
+      impl->callback(impl->pUserData, FenceCallbackFlag::signaled);
     }
     pool_impl->recycle(impl->node);
     impl->node = nullptr;
@@ -81,6 +82,7 @@ bool Fence::signaled() const noexcept {
 vulkan::Fence Fence::fence() const noexcept {
   assert(m_handle);
   auto *impl = void_handle_ptr<FenceImpl>(m_handle);
+  std::lock_guard lck{impl->mutex};
   if (impl->node == nullptr) {
     return {};
   }
