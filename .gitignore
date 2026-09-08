@@ -13,3 +13,6 @@ deprecated
 vgcore**
 *.spv
 *.png
+*.sh
+*.puml
+TODO
