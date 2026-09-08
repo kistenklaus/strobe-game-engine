@@ -49,44 +49,27 @@ public:
   explicit ResourceDescriptorHeapIndexPool(
       uint64_t bufferSize, const vulkan::DescriptorHeapProperties &properties,
       strobe::rhi::allocator_ref alloc) noexcept
-      : m_stride(unified_stride(properties)),
-        m_minReservedRange(properties.minResourceHeapReservedRange),
-        m_maxBufferSize(properties.maxResourceHeapSize),
-        m_bufferSize(bufferSize),
+      : m_stride(unified_stride(properties)), m_bufferSize(bufferSize),
         m_descriptorCount(slot_count(bufferSize, properties)),
         m_indexPool(m_descriptorCount, alloc) {
-    assert(bufferSize <= m_maxBufferSize);
     assert((descriptor_region_size_unlocked() %
             properties.bufferDescriptorAlignment) == 0);
     assert((descriptor_region_size_unlocked() %
             properties.imageDescriptorAlignment) == 0);
   }
 
-  uint32_t alloc_buffer(uint32_t count = 1) noexcept {
+  uint32_t alloc_range(uint32_t count = 1) noexcept {
     std::lock_guard lock{m_mutex};
     return alloc_unlocked(count);
   }
 
-  uint32_t alloc_image(uint32_t count = 1) noexcept {
-    std::lock_guard lock{m_mutex};
-    return alloc_unlocked(count);
-  }
-
-  void free_buffer(uint32_t index, uint32_t count = 1) noexcept {
+  void free_range(uint32_t index, uint32_t count = 1) noexcept {
     std::lock_guard lock{m_mutex};
     assert(index != INVALID_INDEX);
     m_indexPool.free(index, count);
   }
 
-  void free_image(uint32_t index, uint32_t count = 1) noexcept {
-    std::lock_guard lock{m_mutex};
-    assert(index != INVALID_INDEX);
-    m_indexPool.free(index, count);
-  }
-
-  uint64_t buffer_stride() const noexcept { return m_stride; }
-
-  uint64_t image_stride() const noexcept { return m_stride; }
+  uint64_t descriptor_stride() const noexcept { return m_stride; }
 
   uint64_t reserved_range_offset() const noexcept {
     std::lock_guard lock{m_mutex};
@@ -112,10 +95,7 @@ public:
             const vulkan::DescriptorHeapProperties &properties) noexcept {
     std::lock_guard lock{m_mutex};
     assert(unified_stride(properties) == m_stride);
-    assert(properties.minResourceHeapReservedRange == m_minReservedRange);
-    assert(properties.maxResourceHeapSize == m_maxBufferSize);
     assert(newBufferSize >= m_bufferSize);
-    assert(newBufferSize <= m_maxBufferSize);
     const uint32_t newDescriptorCount = slot_count(newBufferSize, properties);
     assert(newDescriptorCount >= m_descriptorCount);
     m_indexPool.resize(newDescriptorCount);
@@ -140,8 +120,6 @@ private:
   }
 
   const uint64_t m_stride;
-  const uint64_t m_minReservedRange;
-  const uint64_t m_maxBufferSize;
 
   uint64_t m_bufferSize;
   uint32_t m_descriptorCount;

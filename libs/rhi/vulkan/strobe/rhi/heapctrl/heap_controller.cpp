@@ -39,16 +39,16 @@ HeapController::~HeapController() noexcept {
   unpin_void_handle<HeapControllerImpl>(m_handle);
 }
 
-BufferDescriptor HeapController::create_buffer_descriptor(
-    const BufferDescriptorInfo &info) noexcept {
+ResourceDescriptor HeapController::create_resource_descriptor(
+    const ResourceDescriptorInfo &info) noexcept {
   auto *impl = void_handle_ptr<HeapControllerImpl>(m_handle);
-  return impl->create_buffer_descriptor(info);
+  return impl->create_resource_descriptor(info);
 }
 
-BufferDescriptorArray HeapController::create_buffer_descriptor_array(
-    span<const BufferDescriptorInfo> infos) noexcept {
+ResourceDescriptorArray HeapController::create_resource_descriptor_array(
+    span<const ResourceDescriptorInfo> infos) noexcept {
   auto *impl = void_handle_ptr<HeapControllerImpl>(m_handle);
-  return impl->create_buffer_descriptor_array(infos);
+  return impl->create_resource_descriptor_array(infos);
 }
 
 } // namespace strobe::rhi

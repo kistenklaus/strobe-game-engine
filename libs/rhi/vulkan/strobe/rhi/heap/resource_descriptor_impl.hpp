@@ -1,5 +1,6 @@
 #pragma once
 
+#include "strobe/rhi/heap/resource.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
 #include <cassert>
@@ -8,26 +9,23 @@
 
 namespace strobe::rhi {
 
-struct BufferDescriptorImpl {
+struct ResourceDescriptorImpl {
 
-  explicit BufferDescriptorImpl(ResourceDescriptorHeap heap, uint32_t index,
-                                Timepoint ready, Buffer buffer) noexcept
+  explicit ResourceDescriptorImpl(ResourceDescriptorHeap heap, uint32_t index,
+                                  Timepoint ready, Resource resource) noexcept
       : heap(std::move(heap)), index(index), ready(std::move(ready)),
-        m_buffer(std::move(buffer)) {
+        m_resource(std::move(resource)) {
     assert(index != std::numeric_limits<uint32_t>::max());
   }
 
-  ~BufferDescriptorImpl() noexcept {
-    assert(index != std::numeric_limits<uint32_t>::max());
-    heap.release_buffer_descriptor_index_range(index, 1);
-  }
+  ~ResourceDescriptorImpl() noexcept;
 
   ResourceDescriptorHeap heap;
   uint32_t index;
   Timepoint ready;
 
 private:
-  Buffer m_buffer;
+  Resource m_resource;
 };
 
 } // namespace strobe::rhi

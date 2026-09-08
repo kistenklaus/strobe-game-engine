@@ -14,12 +14,12 @@
 #include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
 #include "strobe/rhi/types/blas_info.hpp"
-#include "strobe/rhi/types/buffer_descriptor_info.hpp"
 #include "strobe/rhi/types/buffer_info.hpp"
 #include "strobe/rhi/types/image_info.hpp"
 #include "strobe/rhi/types/image_view_info.hpp"
 #include "strobe/rhi/types/memory_lifetime.hpp"
 #include "strobe/rhi/types/queue_flags.hpp"
+#include "strobe/rhi/types/resource_descriptor_info.hpp"
 #include "strobe/rhi/types/swapchain_info.hpp"
 #include "strobe/rhi/types/tlas_info.hpp"
 #include <limits>
@@ -72,7 +72,6 @@ public:
   Tlas create_tlas(const TlasInfo &info,
                    const MemoryLifetime &lifetime = {}) noexcept;
 
-
   Timepoint
   async_copy(BufferOffset dst, BufferOffset src,
              uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
@@ -80,8 +79,38 @@ public:
   async_upload(BufferOffset dst, void *src,
                uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
 
-  BufferDescriptor
-  create_buffer_descriptor(const BufferDescriptorInfo &info) noexcept;
+  ResourceDescriptor
+  create_resource_descriptor(const ResourceDescriptorInfo &info) noexcept;
+
+  inline ResourceDescriptor create_storage_buffer_descriptor(
+      const StorageBufferDescriptorInfo &info) noexcept {
+    return create_resource_descriptor(info);
+  }
+
+  inline ResourceDescriptor create_storage_texel_buffer_descriptor(
+      const StorageTexelBufferDescriptorInfo &info) noexcept {
+    return create_resource_descriptor(info);
+  }
+
+  inline ResourceDescriptor create_uniform_buffer_descriptor(
+      const UniformBufferDescriptorInfo &info) noexcept {
+    return create_resource_descriptor(info);
+  }
+
+  inline ResourceDescriptor create_uniform_texel_buffer_descriptor(
+      const UniformTexelBufferDescriptorInfo &info) noexcept {
+    return create_resource_descriptor(info);
+  }
+
+  inline ResourceDescriptor create_sampled_image_descriptor(
+      const SampledImageDescriptorInfo &info) noexcept {
+    return create_resource_descriptor(info);
+  }
+
+  inline ResourceDescriptor create_storage_image_descriptor(
+      const StorageImageDescriptorInfo &info) noexcept {
+    return create_resource_descriptor(info);
+  }
 };
 
 } // namespace strobe::rhi

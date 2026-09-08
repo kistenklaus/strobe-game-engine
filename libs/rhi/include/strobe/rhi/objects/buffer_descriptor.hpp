@@ -4,23 +4,23 @@
 
 namespace strobe::rhi {
 
-class BufferDescriptor : Object<BufferDescriptor> {
+class ResourceDescriptor : Object<ResourceDescriptor> {
 public:
-  explicit BufferDescriptor(void *handle) noexcept : Object(handle) {}
-  BufferDescriptor() noexcept : Object(nullptr) {}
-  BufferDescriptor(const BufferDescriptor &) noexcept;
-  BufferDescriptor(BufferDescriptor &&) noexcept;
-  BufferDescriptor &operator=(const BufferDescriptor &) noexcept;
-  BufferDescriptor &operator=(BufferDescriptor &&) noexcept;
-  ~BufferDescriptor() noexcept;
+  explicit ResourceDescriptor(void *handle) noexcept : Object(handle) {}
+  ResourceDescriptor() noexcept : Object(nullptr) {}
+  ResourceDescriptor(const ResourceDescriptor &) noexcept;
+  ResourceDescriptor(ResourceDescriptor &&) noexcept;
+  ResourceDescriptor &operator=(const ResourceDescriptor &) noexcept;
+  ResourceDescriptor &operator=(ResourceDescriptor &&) noexcept;
+  ~ResourceDescriptor() noexcept;
 
   explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const BufferDescriptor &lhs,
-                         const BufferDescriptor &rhs) noexcept {
+  friend bool operator==(const ResourceDescriptor &lhs,
+                         const ResourceDescriptor &rhs) noexcept {
     return lhs.m_handle == rhs.m_handle;
   }
-  friend bool operator!=(const BufferDescriptor &lhs,
-                         const BufferDescriptor &rhs) noexcept {
+  friend bool operator!=(const ResourceDescriptor &lhs,
+                         const ResourceDescriptor &rhs) noexcept {
     return lhs.m_handle != rhs.m_handle;
   }
 };

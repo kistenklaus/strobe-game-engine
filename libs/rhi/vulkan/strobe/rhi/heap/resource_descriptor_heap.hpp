@@ -5,16 +5,15 @@
 #include "strobe/rhi/heap/descriptor_heap_bind_info.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/object.hpp"
-#include "strobe/rhi/types/buffer_descriptor_info.hpp"
 #include "strobe/rhi/types/buffer_range.hpp"
+#include "strobe/rhi/types/resource_descriptor_info.hpp"
 #include "strobe/rhi/vulkan/context/context.hpp"
-#include <cstdint>
 
 namespace strobe::rhi {
 
 // fwd declarations.
-class BufferDescriptorWizard;
-class BufferDescriptorArrayWizard;
+class ResourceDescriptorWizard;
+class ResourceDescriptorArrayWizard;
 
 class ResourceDescriptorHeap : Object<ResourceDescriptorHeap> {
 public:
@@ -35,16 +34,11 @@ public:
     return lhs.m_handle != rhs.m_handle;
   }
 
-  BufferDescriptorWizard
-  create_buffer_descriptor_wizard(const BufferDescriptorInfo &info) noexcept;
+  ResourceDescriptorWizard
+  create_descriptor_wizard(const ResourceDescriptorInfo &info) noexcept;
 
-  BufferDescriptorArrayWizard create_buffer_descriptor_array_wizard(
-      span<const BufferDescriptorInfo> infos) noexcept;
-
-  void release_buffer_descriptor_index_range(uint32_t index,
-                                             uint32_t count) const noexcept;
-  void release_image_descriptor_index_range(uint32_t index,
-                                            uint32_t count) const noexcept;
+  ResourceDescriptorArrayWizard create_descriptor_array_wizard(
+      span<const ResourceDescriptorInfo> infos) noexcept;
 
   Buffer buffer() const noexcept;
 

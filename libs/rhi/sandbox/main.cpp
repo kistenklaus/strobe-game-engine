@@ -6,7 +6,6 @@
 #include "strobe/rhi/objects/queue.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
 #include "strobe/rhi/types/buffer_usage.hpp"
-#include "strobe/rhi/types/descriptor_type.hpp"
 #include "strobe/rhi/types/image_layout.hpp"
 #include "strobe/window/window_impl.hpp"
 
@@ -45,7 +44,7 @@ static_assert(BUFFERS_PER_FRAME > 0);
 static_assert(MAX_PUBLISHED_BUFFERS > 0);
 
 struct PublishedTriangles {
-  rhi::BufferDescriptor colorDesc;
+  rhi::ResourceDescriptor colorDesc;
   rhi::Buffer buffer;
   rhi::Timepoint ready;
   uint32_t vertexCount;
@@ -183,11 +182,11 @@ int main() {
         });
         ready &= device.async_upload(colorBuf, &color, sizeof(color));
 
-        rhi::BufferDescriptor colorDesc = device.create_buffer_descriptor({
-            .buffer = colorBuf,
-            .offset = 0,
-            .type = rhi::DescriptorType::uniform_buffer,
-        });
+        rhi::ResourceDescriptor colorDesc =
+            device.create_storage_buffer_descriptor({
+                .buffer = colorBuf,
+                .offset = 0,
+            });
 
         {
           std::lock_guard lock{publication.mutex};

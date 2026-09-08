@@ -176,8 +176,8 @@ public:
 
   // ====== push-constants =======
   void push(uint32_t offset, void *data, uint32_t size) noexcept;
-  void push(uint32_t offset, const BufferDescriptor &descriptor) noexcept;
-  void push(uint32_t offset, const BufferDescriptorArray &descriptor) noexcept;
+  void push(uint32_t offset, const ResourceDescriptor &descriptor) noexcept;
+  void push(uint32_t offset, const ResourceDescriptorArray &descriptor) noexcept;
 
   explicit CommandBuffer(void *handle) noexcept : Object(handle) {}
 

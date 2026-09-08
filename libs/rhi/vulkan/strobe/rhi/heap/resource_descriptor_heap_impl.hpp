@@ -2,8 +2,8 @@
 
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/heap/buffer_descriptor_array_impl.hpp"
-#include "strobe/rhi/heap/buffer_descriptor_impl.hpp"
+#include "strobe/rhi/heap/resource_descriptor_array_impl.hpp"
+#include "strobe/rhi/heap/resource_descriptor_impl.hpp"
 #include "strobe/rhi/heap/descriptor_heap_bind_info.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap_index_pool.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
@@ -61,8 +61,8 @@ public:
   ResourceDescriptorHeapIndexPool layout; // <- internally synchronized.
 
   [[no_unique_address]] strobe::rhi::allocator_ref alloc;
-  handle_allocator<BufferDescriptorImpl> bufferDescAlloc;
-  handle_allocator<BufferDescriptorArrayImpl> bufferDescArrayAlloc;
+  handle_allocator<ResourceDescriptorImpl> bufferDescAlloc;
+  handle_allocator<ResourceDescriptorArrayImpl> bufferDescArrayAlloc;
 
 private:
   // Synchronized by mutex.

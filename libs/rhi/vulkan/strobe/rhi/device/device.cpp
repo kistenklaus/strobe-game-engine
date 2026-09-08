@@ -149,11 +149,11 @@ Timepoint Device::async_upload(BufferOffset dst, void *src,
   return impl->dma.async_upload(dst, src, size);
 }
 
-BufferDescriptor
-Device::create_buffer_descriptor(const BufferDescriptorInfo &info) noexcept {
+ResourceDescriptor
+Device::create_resource_descriptor(const ResourceDescriptorInfo &info) noexcept {
   ZoneScopedN("Device::create_buffer_descriptor");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
-  return impl->heapctrl.create_buffer_descriptor(info);
+  return impl->heapctrl.create_resource_descriptor(info);
 }
 
 } // namespace strobe::rhi

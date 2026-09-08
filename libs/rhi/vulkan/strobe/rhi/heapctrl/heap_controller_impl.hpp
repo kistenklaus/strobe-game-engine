@@ -4,10 +4,10 @@
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/dma/async_copy_engine.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/heap/buffer_descriptor_array_wizard.hpp"
-#include "strobe/rhi/heap/buffer_descriptor_wizard.hpp"
 #include "strobe/rhi/heap/heap.hpp"
+#include "strobe/rhi/heap/resource_descriptor_array_wizard.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
+#include "strobe/rhi/heap/resource_descriptor_wizard.hpp"
 #include "strobe/rhi/memory/memory_pool.hpp"
 #include "strobe/rhi/objects/buffer_descriptor.hpp"
 #include "strobe/rhi/objects/buffer_descriptor_array.hpp"
@@ -33,7 +33,9 @@ struct HeapControllerImpl {
           buf::create_buffer(m_memoryPool,
                              {
                                  .size = size,
-                                 .bufferUsage = BufferUsage::descriptor_heap | BufferUsage::transfer_dst | BufferUsage::transfer_src,
+                                 .bufferUsage = BufferUsage::descriptor_heap |
+                                                BufferUsage::transfer_dst |
+                                                BufferUsage::transfer_src,
                                  .memoryUsage = MemoryUsage::automatic,
                              },
                              {}, bufAlloc);
@@ -42,12 +44,11 @@ struct HeapControllerImpl {
     }
   }
 
-  BufferDescriptor create_buffer_descriptor(const BufferDescriptorInfo &info) {
-    assert(info.buffer);
+  ResourceDescriptor
+  create_resource_descriptor(const ResourceDescriptorInfo &info) {
     while (true) {
-      auto wizard = m_rHeap.create_buffer_descriptor_wizard(info);
-
       std::lock_guard lck{m_mutex};
+      auto wizard = m_rHeap.create_descriptor_wizard(info);
       if (!wizard) {
         grow_resource_heap();
         continue;
@@ -63,12 +64,13 @@ struct HeapControllerImpl {
     }
   }
 
-  BufferDescriptorArray
-  create_buffer_descriptor_array(span<const BufferDescriptorInfo> infos) {
+  ResourceDescriptorArray
+  create_resource_descriptor_array(span<const ResourceDescriptorInfo> infos) {
     while (true) {
-      auto wizard = m_rHeap.create_buffer_descriptor_array_wizard(infos);
 
       std::lock_guard lck{m_mutex};
+      auto wizard = m_rHeap.create_descriptor_array_wizard(infos);
+
       if (!wizard) {
         grow_resource_heap();
         continue;
@@ -93,7 +95,9 @@ private:
         buf::create_buffer(m_memoryPool,
                            {
                                .size = newSize,
-                               .bufferUsage = BufferUsage::descriptor_heap | BufferUsage::transfer_dst | BufferUsage::transfer_src,
+                               .bufferUsage = BufferUsage::descriptor_heap |
+                                              BufferUsage::transfer_dst |
+                                              BufferUsage::transfer_src,
                                .memoryUsage = MemoryUsage::device,
                            },
                            {}, m_bufAlloc);

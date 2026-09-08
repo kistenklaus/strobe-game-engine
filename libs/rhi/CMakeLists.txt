@@ -84,9 +84,13 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/bvh/scratch_buffer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/bvh/tlas.cpp
   # strobe::rhi heap
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/buffer_descriptor.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/buffer_descriptor_array.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/resource_descriptor.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/resource_descriptor_array.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/resource_descriptor_array_impl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/resource_descriptor_array_wizard.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/heap.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/resource_descriptor_impl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/resource_descriptor_wizard.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/resource_descriptor_heap.cpp
   # strobe::rhi command
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/cmd.cpp

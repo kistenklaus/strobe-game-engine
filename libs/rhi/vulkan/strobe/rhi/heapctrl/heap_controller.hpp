@@ -4,7 +4,7 @@
 #include "strobe/rhi/objects/buffer_descriptor.hpp"
 #include "strobe/rhi/objects/buffer_descriptor_array.hpp"
 #include "strobe/rhi/objects/object.hpp"
-#include "strobe/rhi/types/buffer_descriptor_info.hpp"
+#include "strobe/rhi/types/resource_descriptor_info.hpp"
 
 namespace strobe::rhi {
 
@@ -27,11 +27,11 @@ public:
     return lhs.m_handle != rhs.m_handle;
   }
 
-  BufferDescriptor
-  create_buffer_descriptor(const BufferDescriptorInfo &info) noexcept;
+  ResourceDescriptor
+  create_resource_descriptor(const ResourceDescriptorInfo &info) noexcept;
 
-  BufferDescriptorArray create_buffer_descriptor_array(
-      span<const BufferDescriptorInfo> infos) noexcept;
+  ResourceDescriptorArray create_resource_descriptor_array(
+      span<const ResourceDescriptorInfo> infos) noexcept;
 };
 
 } // namespace strobe::rhi

@@ -157,7 +157,7 @@ struct CommandBufferState {
     bindings.push_back(obj);
   }
 
-  void retain(const BufferDescriptor &obj) {
+  void retain(const ResourceDescriptor &obj) {
     auto &bindings = m_boundBufferDescriptors;
     if (bindings.size() > SEARCH_WINDOW_SIZE) {
       auto it = bindings.end();
@@ -178,7 +178,7 @@ struct CommandBufferState {
     bindings.push_back(obj);
   }
 
-  void retain(const BufferDescriptorArray &obj) {
+  void retain(const ResourceDescriptorArray &obj) {
     auto &bindings = m_boundBufferDescriptorArrays;
     if (bindings.size() > SEARCH_WINDOW_SIZE) {
       auto it = bindings.end();
@@ -206,8 +206,8 @@ private:
   Vector<Buffer, allocator> m_boundBuffers;
   Vector<Image, allocator> m_boundImages;
   Vector<Blas, allocator> m_boundBlas;
-  Vector<BufferDescriptor, allocator> m_boundBufferDescriptors;
-  Vector<BufferDescriptorArray, allocator> m_boundBufferDescriptorArrays;
+  Vector<ResourceDescriptor, allocator> m_boundBufferDescriptors;
+  Vector<ResourceDescriptorArray, allocator> m_boundBufferDescriptorArrays;
 };
 
 } // namespace strobe::rhi
