@@ -1,0 +1,49 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{strobe}
+
+\RequirePackage{xparse}
+\RequirePackage{fancyhdr}
+
+% Page header and footer.
+\pagestyle{fancy}
+\fancyhf{}
+
+\fancyhead[L]{Strobe}
+\fancyhead[R]{\nouppercase{\leftmark}}
+\fancyfoot[C]{\thepage}
+
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Rename Doxygen's generated wrapper chapter.
+\ExplSyntaxOn
+
+\cs_new_eq:NN \strobe_original_chapter \chapter
+
+\cs_new_protected:Npn \strobe_call_chapter:nnn #1#2#3
+{
+  \IfBooleanTF{#1}
+  {
+    \IfNoValueTF{#2}
+      { \strobe_original_chapter*{#3} }
+      { \strobe_original_chapter*[#2]{#3} }
+  }
+  {
+    \IfNoValueTF{#2}
+      { \strobe_original_chapter{#3} }
+      { \strobe_original_chapter[#2]{#3} }
+  }
+}
+
+\RenewDocumentCommand \chapter { s o m }
+{
+  \str_if_eq:nnTF {#3} {Topic Documentation}
+    {
+      \strobe_call_chapter:nnn {#1}{#2}{Libraries}
+    }
+    {
+      \strobe_call_chapter:nnn {#1}{#2}{#3}
+    }
+}
+
+\ExplSyntaxOff

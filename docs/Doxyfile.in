@@ -1,0 +1,47 @@
+PROJECT_NAME           = "Strobe"
+PROJECT_BRIEF          = "A Vulkan-based game engine and renderer"
+
+OUTPUT_DIRECTORY       = "@CMAKE_CURRENT_BINARY_DIR@/strobe"
+
+INPUT                  = "@PROJECT_SOURCE_DIR@/README.md" \
+                         "@PROJECT_SOURCE_DIR@/docs/libs" \
+                         "@PROJECT_SOURCE_DIR@/libs/rhi/include"
+
+RECURSIVE              = YES
+FILE_PATTERNS          = *.md *.h *.hh *.hpp *.hxx *.inl
+
+USE_MDFILE_AS_MAINPAGE = "@PROJECT_SOURCE_DIR@/README.md"
+
+GENERATE_HTML          = NO
+GENERATE_LATEX         = YES
+LATEX_OUTPUT           = latex
+USE_PDFLATEX           = YES
+PDF_HYPERLINKS         = YES
+LATEX_BATCHMODE        = NO
+
+# Removes Topic Index, Hierarchical Index, Class Index,
+# File Index, and the final alphabetical Index.
+LATEX_HIDE_INDICES     = YES
+LATEX_EXTRA_STYLESHEET = "@PROJECT_SOURCE_DIR@/docs/latex/strobe.sty"
+
+# Place grouped classes and structs inside their group pages.
+INLINE_GROUPED_CLASSES = YES
+SEPARATE_MEMBER_PAGES  = NO
+
+EXTRACT_ALL            = NO
+HIDE_UNDOC_CLASSES     = YES
+HIDE_UNDOC_MEMBERS     = YES
+
+SHOW_FILES             = NO
+SHOW_INCLUDE_FILES     = NO
+SHOW_USED_FILES        = NO
+SOURCE_BROWSER         = NO
+VERBATIM_HEADERS       = NO
+
+SORT_GROUP_NAMES       = NO
+SORT_MEMBER_DOCS       = NO
+GROUP_NESTED_COMPOUNDS = YES
+
+HAVE_DOT               = NO
+
+LAYOUT_FILE            = "@CMAKE_CURRENT_SOURCE_DIR@/DoxygenLayout.xml"

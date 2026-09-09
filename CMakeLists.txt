@@ -25,6 +25,7 @@ option(STROBE_WARNINGS_AS_ERRORS
        OFF)
 
 option(STROBE_SAN "Enable sanitizers in debug builds" ON)
+option(STROBE_BUILD_DOCS "Enable documentation generation" OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(cmake/colorful.cmake)
@@ -44,6 +45,9 @@ add_subdirectory(subsystems/ecs)
 # add_subdirectory(subsystems/assets)
 
 add_subdirectory(sandbox)
+if (STROBE_BUILD_DOCS)
+  add_subdirectory(docs)
+endif()
 
 
 
