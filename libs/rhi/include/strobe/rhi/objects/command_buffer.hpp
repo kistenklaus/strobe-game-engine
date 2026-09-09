@@ -11,6 +11,7 @@
 #include "strobe/rhi/types/aabb_geometry_data.hpp"
 #include "strobe/rhi/types/access_scope.hpp"
 #include "strobe/rhi/types/blend_equation.hpp"
+#include "strobe/rhi/types/buffer_offset.hpp"
 #include "strobe/rhi/types/color_component.hpp"
 #include "strobe/rhi/types/compare_op.hpp"
 #include "strobe/rhi/types/cull_mode.hpp"
@@ -152,9 +153,8 @@ public:
   void update(BufferOffset dst, const void *src, uint64_t size) noexcept;
 
   template <typename T>
-  inline void update(const Buffer &dst, span<const T> src,
-                     uint64_t dstOffset = 0) {
-    update(dst, src.data(), src.size_bytes(), dstOffset);
+  inline void update(BufferOffset dst, span<const T> src) {
+    update(std::move(dst), src.data(), src.size_bytes());
   }
 
   // ====== draw-calls ==========
@@ -177,7 +177,8 @@ public:
   // ====== push-constants =======
   void push(uint32_t offset, void *data, uint32_t size) noexcept;
   void push(uint32_t offset, const ResourceDescriptor &descriptor) noexcept;
-  void push(uint32_t offset, const ResourceDescriptorArray &descriptor) noexcept;
+  void push(uint32_t offset,
+            const ResourceDescriptorArray &descriptor) noexcept;
 
   explicit CommandBuffer(void *handle) noexcept : Object(handle) {}
 

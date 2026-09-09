@@ -1,7 +1,6 @@
 #pragma once
 
 #include "strobe/rhi/objects/object.hpp"
-#include "strobe/rhi/types/buffer_offset.hpp"
 #include <cassert>
 #include <cstdint>
 
@@ -27,9 +26,6 @@ public:
   }
   friend bool operator!=(const Buffer &lhs, const Buffer &rhs) noexcept {
     return lhs.m_handle != rhs.m_handle;
-  }
-  operator BufferOffset() const noexcept {
-    return BufferOffset{.buffer = *this, .offset = 0};
   }
 
   uint64_t size() const noexcept;

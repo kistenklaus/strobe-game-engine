@@ -145,36 +145,35 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
       info.colorAttachments.size()};
   uvec2 minExtent = uvec2(std::numeric_limits<unsigned int>::max());
   for (uint32_t i = 0; i < colorAttachments.size(); ++i) {
-    for (uint32_t i = 0; i < info.colorAttachments.size(); ++i) {
-      const auto &attachment = info.colorAttachments[i];
-      impl->state.retain(attachment.view);
-      colorAttachments[i] = VkRenderingAttachmentInfo{
-          .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-          .pNext = nullptr,
-          .imageView = void_handle_ptr<ImageViewImpl>(attachment.view.m_handle)
-                           ->imageView.handle,
-          .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-          .resolveMode = to_vk_resolve_mode(attachment.resolveMode),
-          .resolveImageView = attachment.resolveView
-                                  ? (void_handle_ptr<ImageViewImpl>(
-                                         attachment.resolveView.m_handle)
-                                         ->imageView.handle)
-                                  : VK_NULL_HANDLE,
-          .resolveImageLayout = VK_IMAGE_LAYOUT_GENERAL,
-          .loadOp = to_vk_attachment_load_op(attachment.loadOp),
-          .storeOp = to_vk_attachment_store_op(attachment.storeOp),
-          .clearValue = to_vk_clear_value(attachment.clearValue),
-      };
-      minExtent.x() =
-          std::min(minExtent.x(), attachment.view.image().extent().x());
-      minExtent.y() =
-          std::min(minExtent.y(), attachment.view.image().extent().y());
-    }
+    const auto &attachment = info.colorAttachments[i];
+    impl->state.retain(attachment.view);
+    colorAttachments[i] = VkRenderingAttachmentInfo{
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .pNext = nullptr,
+        .imageView = void_handle_ptr<ImageViewImpl>(attachment.view.m_handle)
+                         ->imageView.handle,
+        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .resolveMode = to_vk_resolve_mode(attachment.resolveMode),
+        .resolveImageView = attachment.resolveView
+                                ? (void_handle_ptr<ImageViewImpl>(
+                                       attachment.resolveView.m_handle)
+                                       ->imageView.handle)
+                                : VK_NULL_HANDLE,
+        .resolveImageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .loadOp = to_vk_attachment_load_op(attachment.loadOp),
+        .storeOp = to_vk_attachment_store_op(attachment.storeOp),
+        .clearValue = to_vk_clear_value(attachment.clearValue),
+    };
+    minExtent.x() =
+        std::min(minExtent.x(), attachment.view.image().extent().x());
+    minExtent.y() =
+        std::min(minExtent.y(), attachment.view.image().extent().y());
   }
 
   std::optional<VkRenderingAttachmentInfo> depthAttachment{};
   if (info.depthAttachment.has_value()) {
     const auto &attachment = info.depthAttachment.value();
+    impl->state.retain(attachment.view);
     depthAttachment = VkRenderingAttachmentInfo{
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .pNext = nullptr,
@@ -201,6 +200,7 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
   std::optional<VkRenderingAttachmentInfo> stencilAttachment{};
   if (info.stencilAttachment.has_value()) {
     const auto &attachment = info.stencilAttachment.value();
+    impl->state.retain(attachment.view);
     stencilAttachment = VkRenderingAttachmentInfo{
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .pNext = nullptr,

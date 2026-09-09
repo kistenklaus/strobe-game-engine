@@ -30,7 +30,10 @@ struct ImageImpl {
     }
   }
 
-  bool commit() {
+  bool commit() const {
+    if (!allocation) {
+      return true; // externally owned image
+    }
     if (allocation.commit()) {
       vulkan::bind_image_memory(context.ctx(), allocation.binding().memory,
                                 image, allocation.binding().offset);

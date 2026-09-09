@@ -172,7 +172,7 @@ int main() {
          * vertices vector can therefore be reused immediately.
          */
         rhi::Timepoint ready =
-            device.async_upload(buffer, vertices.data(), size);
+            device.async_upload({buffer}, vertices.data(), size);
 
         vec4 color{dist(prng), dist(prng), dist(prng), 1};
         rhi::Buffer colorBuf = device.create_buffer({
@@ -180,7 +180,7 @@ int main() {
             .bufferUsage =
                 rhi::BufferUsage::transfer_dst | rhi::BufferUsage::uniform,
         });
-        ready &= device.async_upload(colorBuf, &color, sizeof(color));
+        ready &= device.async_upload({colorBuf}, &color, sizeof(color));
 
         rhi::ResourceDescriptor colorDesc =
             device.create_storage_buffer_descriptor({

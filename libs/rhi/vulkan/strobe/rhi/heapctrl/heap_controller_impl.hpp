@@ -101,7 +101,7 @@ private:
                                .memoryUsage = MemoryUsage::device,
                            },
                            {}, m_bufAlloc);
-    Timepoint ready = m_dma.async_copy(newBuffer, heap->buffer(),
+    Timepoint ready = m_dma.async_copy({newBuffer}, {heap->buffer()},
                                        heap->layout.descriptor_region_size());
     object_handle_ptr<ResourceDescriptorHeapImpl>(m_rHeap)->exchange(newBuffer,
                                                                      ready);
