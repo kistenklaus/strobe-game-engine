@@ -191,17 +191,17 @@ foreach(_page IN LISTS _strobe_docs_order)
     list(LENGTH _directory_parts _directory_depth)
   endif()
 
-  # index.md names the directory node. A normal page is one level below it;
-  # root-level normal pages are chapters beside top-level directories.
-  if("${_page_name}" STREQUAL "index.md")
-    set(_level ${_directory_depth})
-  elseif("${_page_dir}" STREQUAL "")
+  if("${_page_dir}" STREQUAL "")
+    # docs/overview.md and a hypothetical docs/index.md
     set(_level 0)
+  elseif("${_page_name}" STREQUAL "index.md")
+    # docs/libs/index.md -> chapter
+    # docs/libs/rhi/index.md -> section
+    math(EXPR _level "${_directory_depth} - 1")
   else()
-    math(EXPR _level "${_directory_depth} + 1")
-  endif()
-  if(_level GREATER 4)
-    message(FATAL_ERROR "${_page} is nested too deeply for the report LaTeX class.")
+    # docs/libs/foo.md -> section
+    # docs/libs/rhi/barriers.md -> subsection
+    set(_level "${_directory_depth}")
   endif()
 
   set(_heading_commands chapter section subsection subsubsection paragraph)

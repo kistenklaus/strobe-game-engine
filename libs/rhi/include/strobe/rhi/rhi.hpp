@@ -4,11 +4,7 @@
 #include "strobe/rhi/types/device_info.hpp"
 
 /**
- * \defgroup rhi Rendering Hardware Interface
- * \brief Strobe's low-level explicit graphics API.
- *
- * The RHI owns Vulkan object wrappers, command submission,
- * synchronization, and resource interfaces.
+ * \defgroup rhi Api Reference
  */
 namespace strobe::rhi {
 

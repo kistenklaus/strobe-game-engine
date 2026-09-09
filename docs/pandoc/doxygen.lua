@@ -6,8 +6,11 @@
 --   :::
 --
 -- Group names are intentionally restricted to Doxygen's stable group__<name>
--- filename convention.  Keep them semantic and declare them in code with
+-- filename convention. Keep them semantic and declare them in code with
 -- \defgroup rhi ... and \ingroup rhi.
+--
+-- The LaTeX environment shifts Doxygen's standalone sectioning down so a group
+-- nests correctly below its surrounding Markdown page.
 
 function Div(div)
   if not div.classes:includes("doxygen") then
@@ -16,11 +19,17 @@ function Div(div)
 
   local group = div.attributes["group"]
   if group == nil or not group:match("^[A-Za-z0-9_]+$") then
-    error("A doxygen div requires group=\"[A-Za-z0-9_]+\".")
+    error('A doxygen div requires group="[A-Za-z0-9_]+".')
   end
   if #div.content ~= 0 then
     error("A doxygen div is an insertion marker and must be empty.")
   end
 
-  return pandoc.RawBlock("latex", "\\input{doxygen/latex/group__" .. group .. ".tex}")
+  local latex = table.concat({
+    "\\begin{DoxygenGroupReference}",
+    "\\input{doxygen/latex/group__" .. group .. ".tex}",
+    "\\end{DoxygenGroupReference}",
+  }, "\n")
+
+  return pandoc.RawBlock("latex", latex)
 end

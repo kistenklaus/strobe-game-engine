@@ -34,6 +34,9 @@ public:
     return lhs.m_handle != rhs.m_handle;
   }
 
+  /**
+   * \brief Returns the buffer size in bytes.
+   */
   uint64_t size() const noexcept;
 
   void *ptr() const;

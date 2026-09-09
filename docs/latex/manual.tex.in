@@ -43,6 +43,17 @@
 \makeatother
 \usepackage{doxygen}
 
+% Doxygen's default LaTeX header defines this for breaks in long C++ names.
+\newcommand{\+}{\discretionary{\mbox{\scriptsize$\hookleftarrow$}}{}{}}
+
+% Embed a Doxygen group one level below the surrounding Markdown section.
+\newenvironment{DoxygenGroupReference}{%
+  \let\section\subsection
+  \let\subsection\subsubsection
+  \let\subsubsection\paragraph
+}{}
+
+
 \begin{document}
 \title{@STROBE_DOCS_TITLE@}
 \date{}

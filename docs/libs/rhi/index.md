@@ -9,7 +9,5 @@ The RHI is Strobe's thin abstraction over Vulkan.
 This becomes a subsection, because the file itself already became the
 `RHI` section from its directory position.
 
-# API reference
-
 ::: {.doxygen group="rhi"}
 :::
