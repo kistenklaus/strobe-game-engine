@@ -6,6 +6,12 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief A device-owned buffer.
+ *
+ * Buffers are created through Device and may be retained by command buffers.
+ */
 class Buffer : Object<Buffer> {
   friend class Device;
   friend class CommandBuffer;

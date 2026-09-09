@@ -1,0 +1,52 @@
+% This is the owned PDF shell.  Doxygen only contributes selected fragments;
+% it never gets to choose the manual's chapter order or global indices.
+\documentclass[oneside]{report}
+
+\usepackage[a4paper,margin=28mm]{geometry}
+\usepackage{microtype}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{alltt}
+\usepackage{calc}
+\usepackage{etoolbox}
+\usepackage{fancyvrb}
+\usepackage{ifthen}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{adjustbox}
+\usepackage{wasysym}
+\usepackage{textcomp}
+\usepackage{hyperref}
+\usepackage{bookmark}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue!60!black,
+  citecolor=black,
+  pdftitle={@STROBE_DOCS_TITLE@}
+}
+\graphicspath{@STROBE_DOCS_GRAPHIC_PATHS@}
+
+% Doxygen's generated .tex files include one another by bare filename.
+% These paths make that work when the files are embedded into this manual.
+\makeatletter
+\def\input@path{{pages/}{doxygen/latex/}}
+\makeatother
+\usepackage{doxygen}
+
+\begin{document}
+\title{@STROBE_DOCS_TITLE@}
+\date{}
+\maketitle
+\tableofcontents
+\input{manual-structure.tex}
+\end{document}
