@@ -4,6 +4,12 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief A resource descriptor
+ *
+ * Resources are buffers and images ...
+ */
 class ResourceDescriptor : Object<ResourceDescriptor> {
 public:
   explicit ResourceDescriptor(void *handle) noexcept : Object(handle) {}

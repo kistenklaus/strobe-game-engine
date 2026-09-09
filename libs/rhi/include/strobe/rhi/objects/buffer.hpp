@@ -26,10 +26,22 @@ public:
   Buffer &operator=(const Buffer &) noexcept;
   Buffer &operator=(Buffer &&) noexcept;
   ~Buffer() noexcept;
+
+  /**
+   * \brief returns if the buffer is valid.
+   */
   explicit operator bool() const noexcept { return m_handle != nullptr; }
+
+  /**
+   * \brief compares two Buffers
+   */
   friend bool operator==(const Buffer &lhs, const Buffer &rhs) noexcept {
     return lhs.m_handle == rhs.m_handle;
   }
+
+  /**
+   * \brief compares two Buffers
+   */
   friend bool operator!=(const Buffer &lhs, const Buffer &rhs) noexcept {
     return lhs.m_handle != rhs.m_handle;
   }
@@ -39,10 +51,19 @@ public:
    */
   uint64_t size() const noexcept;
 
+  /**
+   * \brief Returns a mapped ptr of the buffer
+   */
   void *ptr() const;
 
+  /**
+   * \brief set debug utils name
+   */
   void set_name(const char *name) const noexcept;
 
+  /**
+   * \brief don't use.
+   */
   explicit Buffer(void *handle) noexcept : Object(handle) { assert(handle); }
 };
 } // namespace strobe::rhi

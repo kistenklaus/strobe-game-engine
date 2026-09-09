@@ -1,0 +1,15 @@
+/**
+ * \mainpage Strobe Documentation
+ *
+ * \section strobe_overview Overview
+ *
+ * Strobe is a renderer and engine built around a thin Vulkan RHI. This site is
+ * generated directly from Doxygen pages and C++ documentation comments.
+ *
+ * \section strobe_libraries Libraries
+ *
+ * \subsection strobe_rhi RHI
+ *
+ * The \ref rhi "RHI API reference" is generated from the documented public
+ * declarations in libs/rhi/include.
+ */

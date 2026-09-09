@@ -1,0 +1,270 @@
+/*
+ * STROBE_CPPREFERENCE_STYLESHEET_V1
+ *
+ * A compact Doxygen reference presentation.  This is intentionally a full
+ * replacement for strobe.css, not an add-on to the earlier bordered style.
+ */
+
+body,
+table,
+div,
+p,
+dl {
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+#titlearea {
+  padding: 0.45rem 0.75rem;
+  border-bottom-color: var(--nav-border-color);
+  background-color: var(--nav-background-color);
+}
+
+#projectname {
+  font-size: 150%;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+div.contents {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 2rem 2.75rem 4rem;
+}
+
+div.headertitle {
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--group-header-separator-color);
+}
+
+div.title,
+.title {
+  font-size: 200%;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+div.contents h1,
+div.contents h2,
+div.contents h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+div.contents h2 {
+  margin-top: 2.25rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--group-header-separator-color);
+}
+
+/* Base styling: a plain list, never a bordered card. */
+table.memberdecls {
+  width: 100%;
+  margin: 0.75rem 0 1.5rem;
+  border: 0;
+  border-collapse: collapse;
+  background: transparent;
+}
+
+table.memberdecls td {
+  padding: 0.3rem 0;
+  border: 0;
+  background: transparent;
+}
+
+table.memberdecls tr.heading > td {
+  padding: 1.5rem 0 0.4rem;
+  border-bottom: 1px solid var(--group-header-separator-color);
+}
+
+h2.groupheader {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+/* Member pages already have a direct URL and a class-page index.  Doxygen's
+ * second, vertical quick-member strip is redundant and wastes page width. */
+div.navtab {
+  display: none;
+}
+
+table.memberdecls td.memItemLeft {
+  display: none;
+}
+
+table.memberdecls td.memItemRight {
+  padding-right: 1.5rem;
+}
+
+/*
+ * Doxygen emits an entry as two rows: a "memitem:<anchor>" declaration and a
+ * "memdesc:<anchor>" brief.  Flatten the pair into return type | signature |
+ * brief, matching cppreference's inventory pages.
+ */
+@supports selector(table:has(tr[class^="memdesc:"])) {
+  table.memberdecls:has(tr[class^="memdesc:"]) {
+    display: grid;
+    grid-template-columns: max-content minmax(16rem, 1fr);
+    align-items: baseline;
+  }
+
+  table.memberdecls:has(tr[class^="memdesc:"]) > tbody,
+  table.memberdecls:has(tr[class^="memdesc:"]) tr {
+    display: contents;
+  }
+
+  table.memberdecls:has(tr[class^="memdesc:"]) tr.heading > td {
+    grid-column: 1 / -1;
+  }
+
+  table.memberdecls:has(tr[class^="memdesc:"]) tr[class^="memitem:"] > td.memItemLeft {
+    display: none;
+  }
+
+  table.memberdecls:has(tr[class^="memdesc:"]) tr[class^="memitem:"] > td.memItemRight {
+    grid-column: 1;
+  }
+
+  table.memberdecls:has(tr[class^="memdesc:"]) tr[class^="memdesc:"] > td.mdescLeft {
+    display: none;
+  }
+
+  table.memberdecls:has(tr[class^="memdesc:"]) tr[class^="memdesc:"] > td.mdescRight {
+    grid-column: 2;
+    padding-left: 1.25rem;
+  }
+
+  table.memberdecls:has(tr[class^="memdesc:"]) td.mdescRight > br:last-child {
+    display: none;
+  }
+}
+
+/* Detailed member pages get a plain title, then a single compact declaration
+ * panel.  The diamond Doxygen puts in the title is only a permalink, so it is
+ * redundant on a standalone member page. */
+h2.memtitle {
+  margin: 1.75rem 0 0.55rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: 1.25rem;
+  font-weight: 600;
+  float: none;
+}
+
+h2.memtitle::after,
+h2.memtitle .permalink {
+  display: none;
+}
+
+div.memitem {
+  display: block !important;
+  width: auto;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+div.memproto {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--memdef-border-color);
+  border-radius: 3px;
+  background: var(--memdef-proto-background-color);
+}
+
+/* Doxygen places declaration qualifiers in badge spans.  Keep their text, but
+ * make it part of the monospace declaration rather than a row of UI chips. */
+div.memproto table.mlabels {
+  width: auto;
+}
+
+div.memproto td.mlabels-left {
+  width: auto;
+}
+
+div.memproto td.mlabels-right {
+  padding: 0;
+  white-space: normal;
+}
+
+div.memproto span.mlabels {
+  margin-left: 0;
+}
+
+div.memproto span.mlabel {
+  display: inline;
+  margin: 0;
+  margin-left: 0.6ch;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-family-monospace);
+  /* Doxygen's declaration text (.memname) is 13px; its badge rule is 7pt. */
+  font-size: 13px !important;
+  font-weight: inherit;
+  line-height: inherit;
+  vertical-align: baseline;
+}
+
+div.memdoc {
+  padding: 0.75rem 0 0.25rem;
+  border: 0;
+}
+
+div.fragment {
+  padding: 0.8rem 1rem;
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+pre.fragment {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+span.tt {
+  padding: 0.05em 0.22em;
+  border-radius: 2px;
+}
+
+dl.section {
+  margin: 1.25rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--nav-border-color);
+  background-color: var(--blockquote-background-color);
+}
+
+@media (max-width: 767px) {
+  div.contents {
+    padding: 1.25rem 1rem 3rem;
+  }
+
+  @supports selector(table:has(tr[class^="memdesc:"])) {
+    table.memberdecls:has(tr[class^="memdesc:"]) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    table.memberdecls:has(tr[class^="memdesc:"]) tr[class^="memitem:"] > td.memItemRight {
+      grid-column: 1;
+      padding-right: 0;
+    }
+
+    table.memberdecls:has(tr[class^="memdesc:"]) tr[class^="memdesc:"] > td.mdescRight {
+      grid-column: 1;
+      padding: 0 0 0.85rem;
+    }
+  }
+}

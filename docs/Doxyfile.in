@@ -1,36 +1,53 @@
-# This file is configured by docs/CMakeLists.txt.  Keep documentation-specific
-# Doxygen policy here; project paths are supplied by CMake.
+# Configured by docs/CMakeLists.txt. Paths and the page tree are owned by CMake;
+# documentation policy and HTML presentation live here and beside this file.
 
-PROJECT_NAME           = "@STROBE_DOCS_TITLE@"
-OUTPUT_DIRECTORY       = "@STROBE_DOCS_DOXYGEN_OUTPUT@"
-CREATE_SUBDIRS         = NO
+PROJECT_NAME            = "@STROBE_DOCS_TITLE@"
+OUTPUT_DIRECTORY        = "@STROBE_DOCS_DOXYGEN_OUTPUT_DIRECTORY@"
+HTML_OUTPUT             = "@STROBE_DOCS_DOXYGEN_HTML_OUTPUT@"
+CREATE_SUBDIRS          = NO
 
-INPUT                  = @STROBE_DOCS_DOXYGEN_INPUTS_DOXYFILE@
-RECURSIVE              = YES
-FILE_PATTERNS          = *.h *.hh *.hpp *.hxx *.c *.cc *.cpp *.cxx *.inl *.dox
-EXCLUDE_PATTERNS       = */build/* */docs/*
+INPUT                   = @STROBE_DOCS_DOXYGEN_INPUTS_DOXYFILE@
+RECURSIVE               = YES
+FILE_PATTERNS           = *.dox *.h *.hh *.hpp *.hxx *.c *.cc *.cpp *.cxx *.inl
+EXCLUDE_PATTERNS        = */build/*
+STRIP_FROM_PATH         = "@STROBE_DOCS_PROJECT_SOURCE_DIR@"
+STRIP_FROM_INC_PATH     = "@STROBE_DOCS_PROJECT_SOURCE_DIR@"
 
-EXTRACT_ALL            = NO
+EXTRACT_ALL             = NO
 EXTRACT_PRIVATE         = NO
 EXTRACT_STATIC          = YES
 HIDE_UNDOC_MEMBERS      = YES
 HIDE_UNDOC_CLASSES      = YES
-SORT_MEMBER_DOCS       = NO
-JAVADOC_AUTOBRIEF      = YES
-MARKDOWN_SUPPORT        = YES
+HIDE_COMPOUND_REFERENCE = YES
+SORT_MEMBER_DOCS        = NO
+JAVADOC_AUTOBRIEF       = YES
+MARKDOWN_SUPPORT        = NO
 
-GENERATE_HTML          = NO
-GENERATE_MAN           = NO
-GENERATE_RTF           = NO
-GENERATE_XML           = NO
-GENERATE_LATEX         = YES
-LATEX_OUTPUT           = latex
-PDF_HYPERLINKS         = YES
-USE_PDFLATEX           = NO
+GENERATE_HTML           = YES
+GENERATE_LATEX          = NO
+GENERATE_MAN            = NO
+GENERATE_RTF            = NO
+GENERATE_XML            = NO
 
-QUIET                  = YES
-WARN_IF_UNDOCUMENTED   = YES
-WARN_IF_DOC_ERROR      = YES
-WARN_AS_ERROR          = NO
+GENERATE_TREEVIEW       = NO
+FULL_SIDEBAR            = NO
+HTML_DYNAMIC_MENUS      = YES
+HTML_COPY_CLIPBOARD     = YES
+HTML_CODE_FOLDING       = NO
+SEARCHENGINE            = YES
+SOURCE_BROWSER          = YES
+SOURCE_TOOLTIPS         = YES
+VERBATIM_HEADERS        = NO
 
-INLINE_GROUPED_CLASSES = YES
+INLINE_GROUPED_CLASSES  = NO
+SEPARATE_MEMBER_PAGES   = YES
+ALWAYS_DETAILED_SEC     = YES
+REPEAT_BRIEF            = YES
+
+LAYOUT_FILE             = "@STROBE_DOCS_DOXYGEN_LAYOUT@"
+HTML_EXTRA_STYLESHEET   = "@STROBE_DOCS_DOXYGEN_STYLESHEET@"
+
+QUIET                   = YES
+WARN_IF_UNDOCUMENTED    = YES
+WARN_IF_DOC_ERROR       = YES
+WARN_AS_ERROR           = NO
