@@ -292,7 +292,7 @@ void cmd_set_stencil_reference(CommandBuffer cmd, VkStencilFaceFlags faceMask,
 
 void cmd_set_stencil_reference(CommandBuffer cmd, StencilFace faceMask,
                                uint32_t reference) noexcept {
-  cmd_set_stencil_write_mask(cmd, to_vk_stencil_face(faceMask), reference);
+  cmd_set_stencil_reference(cmd, to_vk_stencil_face(faceMask), reference);
 }
 void cmd_set_blend_constants(CommandBuffer cmd, vec4 constants) noexcept {
   float blendConstants[4] = {
@@ -391,7 +391,6 @@ void cmd_set_rasterizer_samples(const Context *context, CommandBuffer cmd,
   cmd_set_rasterizer_samples(context, cmd, to_vk_sample_count(samples));
 }
 
-
 void cmd_set_sample_mask(const Context *context, CommandBuffer cmd,
                          SampleCount samples, uint64_t mask) noexcept {
   const VkSampleCountFlagBits sampleCount = to_vk_sample_count(samples);
@@ -450,7 +449,6 @@ void cmd_set_polygon_mode(const Context *context, CommandBuffer cmd,
                           PolygonMode polygonMode) noexcept {
   cmd_set_polygon_mode(context, cmd, to_vk_polygon_mode(polygonMode));
 }
-
 
 void cmd_set_depth_clamp_enable(const Context *context, CommandBuffer cmd,
                                 bool depthClampEnable) {

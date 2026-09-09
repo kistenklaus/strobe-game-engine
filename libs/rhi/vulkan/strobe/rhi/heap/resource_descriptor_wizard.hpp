@@ -377,7 +377,7 @@ public:
       VkResourceDescriptorInfoEXT resource{
           .sType = VK_STRUCTURE_TYPE_RESOURCE_DESCRIPTOR_INFO_EXT,
           .pNext = nullptr,
-          .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+          .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
           .data =
               VkResourceDescriptorDataEXT{
                   .pImage = &imageInfo,

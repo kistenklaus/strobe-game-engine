@@ -46,8 +46,10 @@ public:
     std::byte *dst_bytes = static_cast<std::byte *>(dst);
     for (uint32_t i = 0; i < m_infos.size(); ++i) {
       ResourceDescriptorWizard wizard{m_heap, m_index + i, m_infos[i]};
-      descriptors[i] = wizard.complete(
-          dst_bytes + i * stride, [](BufferRange) -> Timepoint { return {}; });
+      std::construct_at(descriptors + i,
+                        std::move(wizard.complete(
+                            dst_bytes + i * stride,
+                            [](BufferRange) -> Timepoint { return {}; })));
     }
 
     Timepoint ready = fn(BufferRange{

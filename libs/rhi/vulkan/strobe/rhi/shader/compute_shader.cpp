@@ -20,7 +20,7 @@ ComputeShader &ComputeShader::operator=(const ComputeShader &o) noexcept {
     return *this;
   }
   if (o.m_handle != nullptr) {
-    pin_void_handle<ShaderObjectImpl>(m_handle);
+    pin_void_handle<ShaderObjectImpl>(o.m_handle);
   }
   unpin_void_handle<ShaderObjectImpl>(m_handle);
   m_handle = o.m_handle;
