@@ -33,10 +33,9 @@ struct MemoryPoolImpl {
   using allocator_traits = AllocatorTraits<allocator>;
 
   Context context;
-  std::mutex mutex;
 
   MemoryPoolImpl(Context context, const strobe::rhi::allocator_ref alloc)
-      : context(std::move(context)), mutex{}, //
+      : context(std::move(context)), m_lifetimeAllocatorMutex{}, //
         m_lifetimeAllocator(alloc), m_handleAlloc{alloc} {}
 
   MemoryPoolImpl(const MemoryPool &) = delete;
@@ -111,6 +110,7 @@ struct MemoryPoolImpl {
 
   inline MemoryBinding commit_memory(void *internal) {
     assert(internal != nullptr);
+    std::lock_guard lck{m_lifetimeAllocatorMutex};
     return m_lifetimeAllocator.commit_memory(context.ctx(), internal);
   }
 
@@ -120,15 +120,18 @@ private:
                               vulkan::MemoryUsage usage,
                               MemoryGranularityClass granularity) {
     ZoneScopedN("pool/reserve-memory");
+    std::lock_guard lck{m_lifetimeAllocatorMutex};
     return m_lifetimeAllocator.reserve_memory(context.ctx(), lifetime,
                                               requirements, usage, granularity);
   }
 
   inline void release_memory([[maybe_unused]] MemoryBinding binding,
                              void *internal) {
+    std::lock_guard lck{m_lifetimeAllocatorMutex};
     m_lifetimeAllocator.release_memory(context.ctx(), internal);
   }
 
+  std::mutex m_lifetimeAllocatorMutex;
   MemoryLifetimeAllocator m_lifetimeAllocator;
   handle_allocator<MemoryAllocationImpl> m_handleAlloc;
 

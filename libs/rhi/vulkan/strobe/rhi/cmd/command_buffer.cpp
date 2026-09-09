@@ -122,6 +122,7 @@ void CommandBuffer::transition_image(const Image &image, ImageLayout src,
   ZoneScopedN("CommandBuffer::transition_image");
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
   auto *img_impl = object_handle_ptr<ImageImpl>(image);
+  img_impl->commit();
   vulkan::cmd_transition_image(
       impl->cmd, img_impl->image,
       ImageSubresourceRange{
@@ -132,6 +133,7 @@ void CommandBuffer::transition_image(const Image &image, ImageLayout src,
           .layerCount = image.arrayLayers(),
       },
       src, dst);
+  impl->state.retain(image);
 }
 
 void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
@@ -145,6 +147,7 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
   for (uint32_t i = 0; i < colorAttachments.size(); ++i) {
     for (uint32_t i = 0; i < info.colorAttachments.size(); ++i) {
       const auto &attachment = info.colorAttachments[i];
+      impl->state.retain(attachment.view);
       colorAttachments[i] = VkRenderingAttachmentInfo{
           .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
           .pNext = nullptr,

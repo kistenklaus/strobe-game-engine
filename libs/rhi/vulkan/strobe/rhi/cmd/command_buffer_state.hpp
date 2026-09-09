@@ -28,7 +28,7 @@ struct CommandBufferState {
   CommandBufferState(const allocator &alloc) noexcept
       : m_boundVertexShaders(alloc), m_boundFragmentShaders(alloc),
         m_boundComputeShaders(alloc), m_boundBuffers(alloc),
-        m_boundImages(alloc), m_boundBlas(alloc),
+        m_boundImages(alloc), m_boundImageViews(alloc), m_boundBlas(alloc),
         m_boundBufferDescriptors(alloc), m_boundBufferDescriptorArrays(alloc) {}
 
   void retain(const VertexShader &obj) {
@@ -136,6 +136,27 @@ struct CommandBufferState {
     bindings.push_back(obj);
   }
 
+  void retain(const ImageView &obj) {
+    auto &bindings = m_boundImageViews;
+    if (bindings.size() > SEARCH_WINDOW_SIZE) {
+      auto it = bindings.end();
+      STROBE_UNROLL(SEARCH_WINDOW_SIZE)
+      for (size_t i = 0; i < SEARCH_WINDOW_SIZE; ++i) {
+        --it;
+        if (obj == *it) {
+          return;
+        }
+      }
+    } else {
+      for (const auto &bound : bindings) {
+        if (obj == bound) {
+          return;
+        }
+      }
+    }
+    bindings.push_back(obj);
+  }
+
   void retain(const Blas &obj) {
     auto &bindings = m_boundBlas;
     if (bindings.size() > SEARCH_WINDOW_SIZE) {
@@ -205,6 +226,7 @@ private:
   Vector<ComputeShader, allocator> m_boundComputeShaders;
   Vector<Buffer, allocator> m_boundBuffers;
   Vector<Image, allocator> m_boundImages;
+  Vector<ImageView, allocator> m_boundImageViews;
   Vector<Blas, allocator> m_boundBlas;
   Vector<ResourceDescriptor, allocator> m_boundBufferDescriptors;
   Vector<ResourceDescriptorArray, allocator> m_boundBufferDescriptorArrays;
