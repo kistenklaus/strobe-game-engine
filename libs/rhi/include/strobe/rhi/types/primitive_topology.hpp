@@ -4,6 +4,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class PrimitiveTopology : uint8_t {
   point_list,
   line_list,

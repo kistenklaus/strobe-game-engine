@@ -10,6 +10,11 @@ struct ComputeShaderInfo {
   span<const uint32_t> spirv = {};
 };
 
+
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 class ComputeShader : Object<ComputeShader> {
   friend class Device;
   friend class CommandBuffer;

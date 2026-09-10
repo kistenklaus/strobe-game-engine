@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class QueueFlags : uint32_t {
   none = 0,
   graphics = 1u << 0,

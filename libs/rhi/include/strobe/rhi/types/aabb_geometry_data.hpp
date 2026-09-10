@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct AabbGeometryData {
   Buffer buffer{};
   uint64_t offset = 0;

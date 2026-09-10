@@ -4,6 +4,11 @@
 
 namespace strobe::rhi {
 
+
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 class ResourceDescriptorArray : Object<ResourceDescriptorArray> {
 public:
   explicit ResourceDescriptorArray(void *handle) noexcept : Object(handle) {}

@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct Aabb {
   float minX = 0;
   float minY = 0;

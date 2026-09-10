@@ -6,6 +6,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 class SwapchainImage : Object<SwapchainImage> {
 public:
   explicit SwapchainImage(void *handle) noexcept : Object(handle) {}

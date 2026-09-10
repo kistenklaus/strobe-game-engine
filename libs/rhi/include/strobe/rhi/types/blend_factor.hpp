@@ -4,6 +4,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class BlendFactor : uint8_t {
   zero,
   one,

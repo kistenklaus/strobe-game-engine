@@ -4,6 +4,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class LogicOp : uint8_t {
   clear,
   and_,

@@ -11,12 +11,20 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct StorageBufferDescriptorInfo {
   Buffer buffer{};
   uint64_t size = std::numeric_limits<uint64_t>::max();
   uint64_t offset = 0;
 };
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct StorageTexelBufferDescriptorInfo {
   Buffer buffer{};
   uint64_t size = std::numeric_limits<uint64_t>::max();
@@ -24,12 +32,20 @@ struct StorageTexelBufferDescriptorInfo {
   Format format = Format::undefined;
 };
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct UniformBufferDescriptorInfo {
   Buffer buffer{};
   uint64_t size = std::numeric_limits<uint64_t>::max();
   uint64_t offset = 0;
 };
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct UniformTexelBufferDescriptorInfo {
   Buffer buffer{};
   uint64_t size = std::numeric_limits<uint64_t>::max();
@@ -37,6 +53,10 @@ struct UniformTexelBufferDescriptorInfo {
   Format format = Format::undefined;
 };
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct SampledImageDescriptorInfo {
   Image image{};
   ImageLayout layout = ImageLayout::undefined;
@@ -45,6 +65,10 @@ struct SampledImageDescriptorInfo {
   ImageSubresourceRange subresource{};
 };
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct StorageImageDescriptorInfo {
   Image image{};
   ImageLayout layout = ImageLayout::undefined;
@@ -53,6 +77,10 @@ struct StorageImageDescriptorInfo {
   ImageSubresourceRange subresource{};
 };
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 using ResourceDescriptorInfo =
     std::variant<StorageBufferDescriptorInfo, StorageTexelBufferDescriptorInfo,
                  UniformBufferDescriptorInfo, UniformTexelBufferDescriptorInfo,

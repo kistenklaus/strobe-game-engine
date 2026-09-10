@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct SwapchainInfo {
   GLFWwindow* window = nullptr;
   bool vsync = false;

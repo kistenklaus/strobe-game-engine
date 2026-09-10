@@ -7,6 +7,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct RenderingInfo {
   span<const Attachment> colorAttachments = {};
   std::optional<Attachment> depthAttachment = std::nullopt;

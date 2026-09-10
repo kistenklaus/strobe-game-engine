@@ -3,6 +3,10 @@
 #include <cstdint>
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class ImageViewType : uint8_t {
   none,
   image_1d,

@@ -6,6 +6,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct FragmentShaderInfo {
   span<const uint32_t> spirv = {};
 };

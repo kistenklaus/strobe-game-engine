@@ -4,6 +4,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class StencilOp : uint8_t {
   keep,
   zero,

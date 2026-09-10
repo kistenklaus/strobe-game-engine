@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct BufferRange {
   Buffer buffer;
   uint64_t offset = 0;

@@ -4,6 +4,10 @@
 #include "strobe/rhi/types/memory_usage.hpp"
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct TlasInfo {
   BuildFlags buildFlags = BuildFlags::none;
   MemoryUsage memoryUsage = MemoryUsage::automatic;

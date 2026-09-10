@@ -26,6 +26,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 class Device : Object<Device> {
 public:
   explicit Device(void *handle) noexcept : Object(handle) {}

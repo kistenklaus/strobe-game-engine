@@ -5,8 +5,10 @@
 
 namespace strobe::rhi {
 
-// Buffer is implicitly convertible to a
-// BufferOffset with offset = 0.
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct BufferOffset {
   Buffer buffer{};
   uint64_t offset = 0;

@@ -9,6 +9,10 @@
 #include "strobe/rhi/types/sample_count.hpp"
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct ImageInfo {
   ImageType type = ImageType::image_2d;
   Format format = Format::rgba8_srgb;

@@ -6,6 +6,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct ImageViewInfo {
   ImageViewType type = ImageViewType::none;
   Format format = Format::undefined; // undefined => inherit from image

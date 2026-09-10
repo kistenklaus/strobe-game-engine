@@ -4,7 +4,8 @@
 #include "strobe/rhi/types/device_info.hpp"
 
 /**
- * \defgroup rhi Api Reference
+ * \defgroup rhi Render Hardware Interface
+ * 
  */
 namespace strobe::rhi {
 

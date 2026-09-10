@@ -6,6 +6,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct BufferInfo {
   uint64_t size = 0;
   BufferUsage bufferUsage = BufferUsage::none;

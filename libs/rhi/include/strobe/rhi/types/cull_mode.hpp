@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class CullMode : uint8_t {
   none = 0,
   front = 1u << 0,

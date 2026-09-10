@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class CommandBufferFlags : uint8_t {
   none      = 0,
   secondary = 1u << 0,

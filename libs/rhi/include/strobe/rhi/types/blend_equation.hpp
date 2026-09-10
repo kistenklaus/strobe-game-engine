@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct BlendEquation {
   BlendFactor srcColor;
   BlendFactor dstColor;

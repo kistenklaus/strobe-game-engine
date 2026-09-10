@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 class CommandPool : Object<CommandPool> {
   friend class Device;
   friend struct DeviceImpl;

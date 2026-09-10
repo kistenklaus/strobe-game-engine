@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct MemoryBarrier {
   PipelineStage srcStage = PipelineStage::none;
   Access srcAccess = Access::none;

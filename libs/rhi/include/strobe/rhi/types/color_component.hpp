@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class ColorComponent : uint8_t {
   none = 0,
   r = 1u << 0,

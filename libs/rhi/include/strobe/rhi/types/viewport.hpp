@@ -4,6 +4,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct Viewport {
   vec2 position{0.0f};
   vec2 extent{0.0f};

@@ -12,9 +12,9 @@
 
   <class>
     <briefdescription visible="no"/>
-    <includes visible="$SHOW_HEADERFILE"/>
-    <inheritancegraph visible="yes"/>
+    <inheritancegraph visible="no"/>
     <collaborationgraph visible="no"/>
+    <detaileddescription visible="yes" title="Description"/>
     <memberdecl>
       <nestedclasses visible="yes" title=""/>
       <publictypes visible="yes" title=""/>
@@ -49,7 +49,6 @@
       <related visible="yes" title="" subtitle=""/>
       <membergroups visible="yes"/>
     </memberdecl>
-    <detaileddescription visible="yes" title="Description"/>
     <memberdef>
       <inlineclasses visible="yes" title=""/>
       <typedefs visible="yes" title=""/>
@@ -63,6 +62,7 @@
       <properties visible="no" title=""/>
       <events visible="no" title=""/>
     </memberdef>
+    <includes visible="$SHOW_HEADERFILE"/>
     <allmemberslink visible="no"/>
     <usedfiles visible="no"/>
     <authorsection visible="no"/>
@@ -154,29 +154,29 @@
     <briefdescription visible="no"/>
     <groupgraph visible="no"/>
     <memberdecl>
-      <nestedgroups visible="no" title=""/>
-      <modules visible="no" title=""/>
-      <dirs visible="no" title=""/>
-      <files visible="no" title=""/>
-      <namespaces visible="no" title=""/>
-      <concepts visible="no" title=""/>
-      <classes visible="no" title=""/>
-      <defines visible="no" title=""/>
-      <typedefs visible="no" title=""/>
-      <sequences visible="no" title=""/>
-      <dictionaries visible="no" title=""/>
-      <enums visible="no" title=""/>
-      <enumvalues visible="no" title=""/>
-      <functions visible="no" title=""/>
-      <variables visible="no" title=""/>
+      <nestedgroups visible="yes" title=""/>
+      <modules visible="yes" title=""/>
+      <dirs visible="yes" title=""/>
+      <files visible="yes" title=""/>
+      <namespaces visible="yes" title=""/>
+      <concepts visible="yes" title=""/>
+      <classes visible="yes" title=""/>
+      <defines visible="yes" title=""/>
+      <typedefs visible="yes" title=""/>
+      <sequences visible="yes" title=""/>
+      <dictionaries visible="yes" title=""/>
+      <enums visible="yes" title=""/>
+      <enumvalues visible="yes" title=""/>
+      <functions visible="yes" title=""/>
+      <variables visible="yes" title="Constants"/>
       <signals visible="no" title=""/>
-      <publicslots visible="no" title=""/>
+      <publicslots visible="yes" title=""/>
       <protectedslots visible="no" title=""/>
       <privateslots visible="no" title=""/>
       <events visible="no" title=""/>
-      <properties visible="no" title=""/>
+      <properties visible="yes" title=""/>
       <friends visible="no" title=""/>
-      <membergroups visible="no"/>
+      <membergroups visible="yes"/>
     </memberdecl>
     <detaileddescription visible="no" title=""/>
     <memberdef>

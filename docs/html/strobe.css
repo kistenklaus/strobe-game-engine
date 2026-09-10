@@ -1,8 +1,5 @@
 /*
  * STROBE_CPPREFERENCE_STYLESHEET_V1
- *
- * A compact Doxygen reference presentation. This is intentionally a full
- * replacement for strobe.css, not an add-on to the earlier bordered style.
  */
 
 body,
@@ -14,35 +11,258 @@ dl {
   line-height: 1.55;
 }
 
+body {
+  margin: 0;
+  color: var(--page-foreground-color, #111);
+  background: var(--page-background-color, #fff);
+}
+
+a {
+  color: var(--page-link-color, #0645ad);
+}
+
+/*
+ * Compact project header
+ */
+
 #titlearea {
-  padding: 0.45rem 0.75rem;
-  border-bottom-color: var(--nav-border-color);
-  background-color: var(--nav-background-color);
+  height: 2rem !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border-top: 2px solid #243f78 !important;
+  border-bottom: 1px solid #d6d6d6 !important;
+  background: #fafafa !important;
+}
+
+#titlearea table {
+  width: min(76rem, calc(100% - 2rem)) !important;
+  height: 2rem !important;
+  margin: 0 auto !important;
+}
+
+#projectrow {
+  height: 2rem !important;
+}
+
+#projectalign {
+  height: 2rem !important;
+  padding: 0 !important;
+  text-align: center;
+  vertical-align: middle;
 }
 
 #projectname {
-  font-size: 150%;
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: #0645ad !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 0.9rem !important;
+  line-height: 2rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em;
 }
 
-div.contents {
-  max-width: 76rem;
-  margin: 0 auto;
-  padding: 2rem 2.75rem 4rem;
+/*
+ * Main navigation
+ */
+
+#main-nav {
+  height: 1.85rem !important;
+  min-height: 0 !important;
+  border-bottom: 1px solid #d6d6d6 !important;
+  background: #f5f5f5 !important;
+}
+
+#main-menu {
+  width: min(76rem, calc(100% - 2rem));
+  height: 1.85rem;
+  margin: 0 auto !important;
+  padding: 0 !important;
+}
+
+#main-menu > li > a {
+  height: 1.85rem !important;
+  padding: 0 0.7rem !important;
+  color: #0645ad !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 0.74rem !important;
+  line-height: 1.85rem !important;
+}
+
+#main-menu > li:first-child > a {
+  padding-left: 0 !important;
+}
+
+#main-menu > li > a:hover,
+#main-menu > li > a:focus {
+  color: #000 !important;
+  background: #e8e8e8 !important;
+}
+
+#MSearchBox {
+  margin: 0.18rem 0 !important;
+}
+
+#MSearchField {
+  width: 9rem !important;
+  height: 1.35rem !important;
+  padding: 0 0.4rem !important;
+  border: 1px solid #c8c8c8 !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+  font-size: 0.7rem !important;
+}
+
+/*
+ * Breadcrumbs
+ *
+ * Hidden on normal pages. On standalone member pages, only the owning class
+ * backlink is retained. The breadcrumb separator line is deliberately removed.
+ */
+
+/* Hide namespace breadcrumbs everywhere by default. */
+#nav-path,
+div.navpath {
+  display: none !important;
+}
+
+/* Show the backlink only on standalone member pages. */
+body:has(h2.memtitle) #nav-path,
+body:has(h2.memtitle) div.navpath {
+  display: block !important;
+  height: 2rem !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: #fff !important;
+}
+
+/* Remove the horizontal line and Doxygen chevrons. */
+body:has(h2.memtitle) #nav-path,
+body:has(h2.memtitle) #nav-path ul,
+body:has(h2.memtitle) #nav-path li.navelem::after {
+  border: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+body:has(h2.memtitle) #nav-path ul {
+  box-sizing: border-box !important;
+  width: min(76rem, calc(100% - 2rem)) !important;
+  height: 2rem !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  line-height: 2rem !important;
+}
+
+/* Reset Doxygen's floating breadcrumb layout. */
+body:has(h2.memtitle) #nav-path li.navelem {
+  display: inline !important;
+  float: none !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: none !important;
+  font-size: 0 !important;
+  line-height: 2rem !important;
+}
+
+/* Remove namespace names such as strobe and rhi. */
+body:has(h2.memtitle) #nav-path li.navelem:has(> b) {
+  display: none !important;
+}
+
+/* Keep the real owning-class link. */
+body:has(h2.memtitle) #nav-path li.navelem a {
+  display: inline-block !important;
+  color: #0645ad !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 0.8rem !important;
+  line-height: 2rem !important;
+  text-decoration: none;
+}
+
+body:has(h2.memtitle) #nav-path li.navelem a::before {
+  content: "← ";
+}
+
+body:has(h2.memtitle) #nav-path li.navelem a:hover {
+  text-decoration: underline;
+}
+
+/*
+ * Page header
+ */
+
+div.header {
+  min-height: 0 !important;
+  padding: 0 !important;
+  border-bottom: 1px solid #aaa !important;
+  background: #fff !important;
+}
+
+div.header .summary {
+  float: none !important;
+  width: min(76rem, calc(100% - 2rem)) !important;
+  margin: 0 auto !important;
+  padding: 0.25rem 0 0 !important;
+  text-align: right;
+  font-size: 0.68rem !important;
+  line-height: 1rem !important;
+}
+
+div.header .summary a {
+  color: #0645ad !important;
+  text-decoration: none;
+}
+
+div.header .summary a:hover {
+  text-decoration: underline;
 }
 
 div.headertitle {
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.65rem;
-  border-bottom: 1px solid var(--group-header-separator-color);
+  width: min(76rem, calc(100% - 2rem));
+  margin: 0 auto !important;
+  padding: 0.45rem 0 0.55rem !important;
+  border: 0 !important;
 }
 
-div.title,
-.title {
-  font-size: 200%;
+div.headertitle div.title {
+  margin: 0 !important;
+  padding: 0 !important;
+  color: #202020 !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 1.35rem !important;
+  line-height: 1.2 !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+div.headertitle div.ingroups {
+  margin-top: 0.15rem !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 0.68rem !important;
+  line-height: 1rem !important;
+}
+
+div.headertitle div.ingroups a {
+  color: #0645ad !important;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+/*
+ * Contents
+ */
+
+div.contents {
+  box-sizing: border-box;
+  width: min(76rem, calc(100% - 2rem));
+  max-width: none;
+  margin: 0 auto;
+  padding: 2rem 0 4rem;
 }
 
 div.contents h1,
@@ -58,10 +278,18 @@ div.contents h2 {
   border-bottom: 1px solid var(--group-header-separator-color);
 }
 
+div.contents {
+  padding-top: 0.75rem !important;
+}
+
+div.contents > h2#header-details {
+  margin-top: 0.5rem !important;
+}
+
 /*
- * High-level class sections, such as "Member Functions", "Friends", and
- * "Description".
+ * High-level sections
  */
+
 h2.groupheader,
 h2.groupheader a {
   margin: 0;
@@ -84,8 +312,9 @@ div.contents h2.groupheader {
 }
 
 /*
- * Member declarations.
+ * Member declarations
  */
+
 table.memberdecls {
   width: 100%;
   margin: 0.75rem 0 1.5rem;
@@ -100,9 +329,6 @@ table.memberdecls td {
   background: transparent;
 }
 
-/*
- * "Member Functions" and other ordinary Doxygen section headings.
- */
 table.memberdecls tr.heading > td {
   padding: 1.15rem 0 0.35rem;
   border-bottom: 1px solid var(--group-header-separator-color);
@@ -114,25 +340,12 @@ table.memberdecls tr.heading > td > h2.groupheader a {
   padding: 0;
   border: 0;
   color: #111 !important;
-  font-family: inherit;
   font-size: 1.35rem !important;
-  line-height: 1.25;
   font-weight: 600;
-  letter-spacing: -0.01em;
   text-decoration: none;
 }
 
-/*
- * Native \name member groups.
- *
- * Doxygen 1.18 emits:
- *
- *   <tr class="groupHeader">
- *     <td><div class="groupHeader">...</div></td>
- *   </tr>
- *
- * The capital H is intentional.
- */
+/* Native \name groups. */
 table.memberdecls tr.groupHeader > td {
   padding: 1rem 0 0.35rem;
   border-bottom: 1px solid var(--group-header-separator-color);
@@ -146,14 +359,9 @@ table.memberdecls tr.groupHeader > td > div.groupHeader {
   font-size: 1.05rem !important;
   line-height: 1.3;
   font-weight: 700;
-  letter-spacing: 0;
 }
 
-/* Remove Doxygen's redundant vertical quick-member navigation. */
-div.navtab {
-  display: none;
-}
-
+/* Hide the return-type column. */
 table.memberdecls td.memItemLeft {
   display: none;
 }
@@ -162,10 +370,21 @@ table.memberdecls td.memItemRight {
   padding-right: 1.5rem;
 }
 
+table.memberdecls a.el {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+table.memberdecls a.el:hover {
+  text-decoration: underline;
+}
+
 /*
- * Doxygen emits each member as two rows: a "memitem:<anchor>" declaration and
- * a "memdesc:<anchor>" brief. Flatten the pair into declaration | description.
+ * Flatten declaration and description rows.
  */
+
 @supports selector(table:has(tr[class^="memdesc:"])) {
   table.memberdecls:has(tr[class^="memdesc:"]) {
     display: grid;
@@ -178,8 +397,10 @@ table.memberdecls td.memItemRight {
     display: contents;
   }
 
-  table.memberdecls:has(tr[class^="memdesc:"]) tr.heading > td,
-  table.memberdecls:has(tr[class^="memdesc:"]) tr.groupHeader > td {
+  table.memberdecls:has(tr[class^="memdesc:"])
+    tr.heading > td,
+  table.memberdecls:has(tr[class^="memdesc:"])
+    tr.groupHeader > td {
     grid-column: 1 / -1;
   }
 
@@ -204,17 +425,18 @@ table.memberdecls td.memItemRight {
     padding-left: 1.25rem;
   }
 
-  table.memberdecls:has(tr[class^="memdesc:"]) td.mdescRight > br:last-child {
+  table.memberdecls:has(tr[class^="memdesc:"])
+    td.mdescRight > br:last-child {
     display: none;
   }
 }
 
 /*
- * Detailed member pages get a plain title followed by a compact declaration
- * panel.
+ * Standalone member pages
  */
+
 h2.memtitle {
-  margin: 1.75rem 0 0.55rem;
+  margin: 1.25rem 0 0.55rem;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -228,7 +450,7 @@ h2.memtitle {
 }
 
 div.contents h2.memtitle {
-  margin: 1.75rem 0 0.55rem;
+  margin: 1.25rem 0 0.55rem;
   padding: 0;
   border: 0;
 }
@@ -257,10 +479,6 @@ div.memproto {
   background: var(--memdef-proto-background-color);
 }
 
-/*
- * Doxygen builds declarations from nested tables. Keep them at their content
- * width so the declaration panel wraps the signature rather than the page.
- */
 div.memproto table.memname,
 div.memproto table.mlabels {
   width: auto;
@@ -306,7 +524,6 @@ div.memproto span.mlabel {
   vertical-align: baseline;
 }
 
-/* Space between const and the first modifier, and later modifiers. */
 div.memproto td.mlabels-right span.mlabel:first-of-type,
 div.memproto td.mlabels-right span.mlabel + span.mlabel {
   margin-left: 0.6ch;
@@ -315,6 +532,49 @@ div.memproto td.mlabels-right span.mlabel + span.mlabel {
 div.memdoc {
   padding: 0.75rem 0 0.25rem;
   border: 0;
+}
+
+/*
+ * Include line
+ */
+
+div.contents > p:has(> code > a.el[href$="_source.html"]) > code {
+  font-size: 0;
+}
+
+div.contents
+  > p:has(> code > a.el[href$="_source.html"])
+  > code::before {
+  content: "Defined in header <";
+  color: inherit;
+  font-family: var(--font-family-monospace);
+  font-size: 13px;
+}
+
+div.contents
+  > p:has(> code > a.el[href$="_source.html"])
+  > code
+  > a.el {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  cursor: pointer;
+  font-family: var(--font-family-monospace);
+  font-size: 13px;
+}
+
+div.contents
+  > p:has(> code > a.el[href$="_source.html"])
+  > code::after {
+  content: ">";
+  color: inherit;
+  font-family: var(--font-family-monospace);
+  font-size: 13px;
+}
+
+/* Hide source-location text. */
+div.contents > div.textblock > p.definition {
+  display: none;
 }
 
 div.fragment {
@@ -341,8 +601,29 @@ dl.section {
 }
 
 @media (max-width: 767px) {
+  #titlearea table,
+  #main-menu,
+  #nav-path ul,
+  div.header .summary,
+  div.headertitle,
   div.contents {
-    padding: 1.25rem 1rem 3rem;
+    width: calc(100% - 1.5rem) !important;
+  }
+
+  #projectalign {
+    text-align: left;
+  }
+
+  #projectname {
+    font-size: 0.85rem !important;
+  }
+
+  div.headertitle div.title {
+    font-size: 1.2rem !important;
+  }
+
+  div.contents {
+    padding: 1.25rem 0 3rem;
   }
 
   @supports selector(table:has(tr[class^="memdesc:"])) {
@@ -364,31 +645,30 @@ dl.section {
   }
 }
 
-/* Replace Doxygen's "#include <...>" class header line with "Defined in <...>". */
-div.contents > p:has(> code > a.el[href$="_source.html"]) > code {
-  font-size: 0;
+/*
+ * Restore the compact standalone-member layout.
+ */
+
+/* Hide Doxygen's vertical quick-member sidebar. */
+div.navtab,
+#side-nav {
+  display: none !important;
 }
 
-div.contents > p:has(> code > a.el[href$="_source.html"]) > code::before {
-  content: "Defined in header <";
-  color: inherit;
-  font-family: var(--font-family-monospace);
-  font-size: 13px;
+/*
+ * REPEAT_BRIEF must remain YES because it preserves Doxygen's member links.
+ * Hide only the repeated class brief from the class page.
+ */
+div.contents > div.textblock > p:first-child {
+  display: none !important;
 }
 
-div.contents > p:has(> code > a.el[href$="_source.html"]) > code > a.el {
-  font-family: var(--font-family-monospace);
-  font-size: 13px;
+/* Keep the actual detailed description visible. */
+div.contents > div.textblock > p:not(:first-child) {
+  display: block;
 }
 
-div.contents > p:has(> code > a.el[href$="_source.html"]) > code::after {
-  content: ">";
-  color: inherit;
-  font-family: var(--font-family-monospace);
-  font-size: 13px;
-}
-
-/* Hide Doxygen's source-location footer in class descriptions. */
-div.contents > div.textblock > p.definition {
-  display: none;
+/* Hide "Definition at line ... of file ...". */
+p.definition {
+  display: none !important;
 }

@@ -31,11 +31,13 @@ set(_strobe_docs_main_page "${_strobe_docs_source_dir}/main.dox")
 set(_strobe_docs_doxyfile "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile")
 set(_strobe_docs_layout "${_strobe_docs_source_dir}/DoxygenLayout.xml")
 set(_strobe_docs_stylesheet "${_strobe_docs_source_dir}/html/strobe.css")
+set(_strobe_docs_script "${_strobe_docs_source_dir}/html/search-shortcuts.js")
 
 foreach(_required_file IN ITEMS
     "${_strobe_docs_main_page}"
     "${_strobe_docs_layout}"
-    "${_strobe_docs_stylesheet}")
+    "${_strobe_docs_stylesheet}"
+    "${_strobe_docs_script}")
   if(NOT EXISTS "${_required_file}")
     message(FATAL_ERROR "Missing documentation input: ${_required_file}")
   endif()
@@ -101,6 +103,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in"
   "${_strobe_docs_layout}"
   "${_strobe_docs_stylesheet}"
+  "${_strobe_docs_script}"
   ${_strobe_docs_doxygen_dependencies})
 
 string(REPLACE "\\" "/" STROBE_DOCS_DOXYGEN_OUTPUT_DIRECTORY
@@ -109,6 +112,7 @@ set(STROBE_DOCS_DOXYGEN_HTML_OUTPUT "${_strobe_docs_html_name}")
 set(STROBE_DOCS_DOXYGEN_INPUTS_DOXYFILE "${_strobe_docs_doxygen_inputs}")
 string(REPLACE "\\" "/" STROBE_DOCS_DOXYGEN_LAYOUT "${_strobe_docs_layout}")
 string(REPLACE "\\" "/" STROBE_DOCS_DOXYGEN_STYLESHEET "${_strobe_docs_stylesheet}")
+string(REPLACE "\\" "/" STROBE_DOCS_DOXYGEN_SCRIPT "${_strobe_docs_script}")
 string(REPLACE "\\" "/" STROBE_DOCS_PROJECT_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in"
@@ -122,6 +126,7 @@ add_custom_command(
     "${_strobe_docs_doxyfile}"
     "${_strobe_docs_layout}"
     "${_strobe_docs_stylesheet}"
+    "${_strobe_docs_script}"
     ${_strobe_docs_doxygen_dependencies}
   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
   VERBATIM)

@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class ImageFlags : uint32_t {
   none = 0,
   mutable_format = 1u << 0,

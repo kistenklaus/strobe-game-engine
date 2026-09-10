@@ -9,6 +9,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct BlasInfo {
   BuildFlags buildFlags = BuildFlags::none;
   MemoryUsage memoryUsage = MemoryUsage::automatic;

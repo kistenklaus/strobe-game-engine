@@ -8,6 +8,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct Attachment {
   ImageView view;
   AttachmentLoadOp loadOp = AttachmentLoadOp::load;

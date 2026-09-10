@@ -8,6 +8,10 @@ namespace strobe::rhi {
 // fwd decl.
 class Image;
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 class ImageView : Object<ImageView> {
   friend class Device;
   friend class Image;

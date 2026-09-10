@@ -6,6 +6,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 class Timepoint {
   friend class Timeline;
   friend struct TimelineImpl;

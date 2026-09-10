@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class ShaderStage : uint32_t {
   none = 0,
   vertex = 1u << 0,

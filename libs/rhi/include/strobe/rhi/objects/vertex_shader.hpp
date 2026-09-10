@@ -11,6 +11,10 @@ struct VertexShaderInfo {
   ShaderStage nextStage = ShaderStage::fragment;
 };
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct VertexShader : Object<VertexShader> {
   friend class Device;
   friend class CommandBuffer;

@@ -8,6 +8,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 class Queue : Object<Queue> {
 public:
   explicit Queue(void *handle) noexcept : Object(handle) {}

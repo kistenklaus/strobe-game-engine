@@ -4,6 +4,10 @@
 #include <cstdint>
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct VertexBinding {
   uint32_t binding = 0;
   uint32_t stride = 0;

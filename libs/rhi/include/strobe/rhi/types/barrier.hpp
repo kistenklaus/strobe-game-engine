@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct Barrier {
   span<const MemoryBarrier> memoryBarriers = {};
   // span<const BufferMemoryBarrier> bufferBarriers = {};

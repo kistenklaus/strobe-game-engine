@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class Access : uint64_t {
   none = 0,
   indirect_command_read = 1ull << 0,

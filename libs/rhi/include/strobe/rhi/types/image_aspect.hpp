@@ -5,6 +5,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 enum class ImageAspect : uint8_t {
   none = 0,
   color = 1u << 0,

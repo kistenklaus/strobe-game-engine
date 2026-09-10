@@ -35,6 +35,11 @@
 
 namespace strobe::rhi {
 
+
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 class CommandBuffer : Object<CommandBuffer> {
   friend struct CommandPoolImpl;
   friend class CommandPool;

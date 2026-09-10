@@ -9,6 +9,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 class Image : Object<Image> {
   friend class Device;
   friend struct ImageViewImpl;

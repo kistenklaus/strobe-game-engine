@@ -4,6 +4,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct PushConstantRange {
   ShaderStage stage;
   uint32_t offset;

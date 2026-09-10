@@ -9,8 +9,6 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief A device-owned buffer.
- *
- * Buffers are created through Device and may be retained by command buffers.
  */
 class Buffer : Object<Buffer> {
   friend class Device;
@@ -68,11 +66,6 @@ public:
   }
 
 
-  /** 
-   * \name Interface
-   * @{
-   */
-
   /**
    * \brief pointer to memory mapped memory
    */
@@ -83,12 +76,10 @@ public:
    */
   uint64_t size() const noexcept;
 
-  /**
-   * @}
-   */
+
 
   /** 
-   * \name Debug Utils
+   * \name (debug-utils)
    * @{
    */
 
@@ -100,6 +91,7 @@ public:
   /**
    * @}
    */
+
 
 
   explicit Buffer(void *handle) noexcept : Object(handle) { assert(handle); }

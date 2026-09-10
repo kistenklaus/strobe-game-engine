@@ -5,12 +5,24 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 static constexpr uint32_t REMAINING_MIP_LEVELS =
     std::numeric_limits<uint32_t>::max();
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 static constexpr uint32_t REMAINING_ARRAY_LAYERS =
     std::numeric_limits<uint32_t>::max();
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct ImageSubresourceRange {
   ImageAspect aspect = ImageAspect::none;
   uint32_t baseMipLevel = 0;

@@ -3,6 +3,10 @@
 #include <cstdint>
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct TlasInstance {
   float transform[3][4];     // object-to-world [row-major]
   uint32_t customIndex : 24; // user defined value

@@ -4,6 +4,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 class Tlas : Object<Tlas> {
   public:
     explicit Tlas(void* handle) noexcept : Object(handle) {}

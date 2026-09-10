@@ -7,9 +7,17 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 static constexpr uint32_t INFER_FROM_TRIANGLE_COUNT =
     std::numeric_limits<uint32_t>::max();
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct TriangleGeometrySizeInfo {
   GeometryFlags flags = GeometryFlags::none;
   uint32_t maxTriangles = 0;

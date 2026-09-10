@@ -2,6 +2,10 @@
 
 namespace strobe::rhi {
 
+/**
+ * \ingroup rhi
+ * \brief todo
+ */
 struct DeviceInfo {
   bool debug_utils = false;
   bool swapchain = true;
