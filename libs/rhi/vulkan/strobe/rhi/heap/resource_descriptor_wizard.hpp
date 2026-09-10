@@ -7,7 +7,7 @@
 #include "strobe/rhi/heap/resource_descriptor_impl.hpp"
 #include "strobe/rhi/img/image_impl.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
-#include "strobe/rhi/objects/buffer_descriptor.hpp"
+#include "strobe/rhi/objects/resource_descriptor.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/types/buffer_range.hpp"
 #include "strobe/rhi/types/image_subresource_range.hpp"

@@ -5,37 +5,12 @@
 
 namespace strobe::rhi {
 
-FencePool::FencePool(const FencePool &o) noexcept : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<FencePoolImpl>(m_handle);
-  }
+void FencePool::pin(void *handle) noexcept {
+  pin_void_handle<FencePoolImpl>(handle);
 }
-
-FencePool::FencePool(FencePool &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-FencePool &FencePool::operator=(const FencePool &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<FencePoolImpl>(o.m_handle);
-  }
-  unpin_void_handle<FencePoolImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
+void FencePool::unpin(void *handle) noexcept {
+  unpin_void_handle<FencePoolImpl>(handle);
 }
-
-FencePool &FencePool::operator=(FencePool &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<FencePoolImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-FencePool::~FencePool() noexcept { unpin_void_handle<FencePoolImpl>(m_handle); }
 
 Fence FencePool::allocate(void *pUserData,
                           void (*callback)(void *,

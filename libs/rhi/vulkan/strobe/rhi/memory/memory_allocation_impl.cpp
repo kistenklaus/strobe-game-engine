@@ -6,7 +6,7 @@
 namespace strobe::rhi {
 
 MemoryAllocationImpl::~MemoryAllocationImpl() noexcept {
-  auto *pool_impl = void_handle_ptr<MemoryPoolImpl>(pool.m_handle);
+  auto *pool_impl = object_handle_ptr<MemoryPoolImpl>(pool);
   if (mapped) {
     vulkan::unmap_memory(pool_impl->context.ctx(), binding.memory);
   }
@@ -15,7 +15,7 @@ MemoryAllocationImpl::~MemoryAllocationImpl() noexcept {
 
 void *MemoryAllocationImpl::map() {
   vulkan::Context *ctx =
-      void_handle_ptr<MemoryPoolImpl>(pool.m_handle)->context.ctx();
+      object_handle_ptr<MemoryPoolImpl>(pool)->context.ctx();
   assert(binding);
   mapped = static_cast<std::byte *>(vulkan::map_memory(ctx, binding.memory)) +
            binding.offset;
@@ -23,21 +23,21 @@ void *MemoryAllocationImpl::map() {
 }
 void MemoryAllocationImpl::flush() {
   vulkan::Context *ctx =
-      void_handle_ptr<MemoryPoolImpl>(pool.m_handle)->context.ctx();
+      object_handle_ptr<MemoryPoolImpl>(pool)->context.ctx();
   assert(binding);
   vulkan::flush_memory(ctx, binding.memory, binding.offset);
 }
 
 void MemoryAllocationImpl::invalidate() {
   vulkan::Context *ctx =
-      void_handle_ptr<MemoryPoolImpl>(pool.m_handle)->context.ctx();
+      object_handle_ptr<MemoryPoolImpl>(pool)->context.ctx();
   assert(binding);
   vulkan::invalidate_memory(ctx, binding.memory, binding.offset);
 }
 
 bool MemoryAllocationImpl::commit() {
   if (!binding) {
-    auto *pool_impl = void_handle_ptr<MemoryPoolImpl>(pool.m_handle);
+    auto *pool_impl = object_handle_ptr<MemoryPoolImpl>(pool);
     binding = pool_impl->commit_memory(internals);
     assert(binding);
     return true;

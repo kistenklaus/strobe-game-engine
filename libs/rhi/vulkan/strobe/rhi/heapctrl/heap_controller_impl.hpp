@@ -9,8 +9,8 @@
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
 #include "strobe/rhi/heap/resource_descriptor_wizard.hpp"
 #include "strobe/rhi/memory/memory_pool.hpp"
-#include "strobe/rhi/objects/buffer_descriptor.hpp"
-#include "strobe/rhi/objects/buffer_descriptor_array.hpp"
+#include "strobe/rhi/objects/resource_descriptor.hpp"
+#include "strobe/rhi/objects/resource_descriptor_array.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/stage/stage_arena.hpp"
 

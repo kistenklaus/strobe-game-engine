@@ -15,14 +15,13 @@ class ResourceDescriptorWizard;
 class ResourceDescriptorArrayWizard;
 
 class ResourceDescriptorHeap : Object<ResourceDescriptorHeap> {
+  friend class Object<ResourceDescriptorHeap>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
+
 public:
+  using Object::Object;
   explicit ResourceDescriptorHeap(void *handle) noexcept : Object(handle) {}
-  ResourceDescriptorHeap() noexcept : Object(nullptr) {}
-  ResourceDescriptorHeap(const ResourceDescriptorHeap &) noexcept;
-  ResourceDescriptorHeap(ResourceDescriptorHeap &&) noexcept;
-  ResourceDescriptorHeap &operator=(const ResourceDescriptorHeap &) noexcept;
-  ResourceDescriptorHeap &operator=(ResourceDescriptorHeap &&) noexcept;
-  ~ResourceDescriptorHeap() noexcept;
 
   ResourceDescriptorWizard
   create_descriptor_wizard(const ResourceDescriptorInfo &info) noexcept;

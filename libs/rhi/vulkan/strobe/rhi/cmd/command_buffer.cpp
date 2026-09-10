@@ -49,41 +49,12 @@ namespace strobe::rhi {
 #define CmdZoneScopedN(impl, name) ZoneScopedN(name);
 #endif
 
-CommandBuffer::CommandBuffer(const CommandBuffer &o) noexcept
-    : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<CommandBufferImpl>(m_handle);
-  }
+void CommandBuffer::unpin(void *handle) noexcept {
+  pin_void_handle<CommandBufferImpl>(handle);
 }
-
-CommandBuffer::CommandBuffer(CommandBuffer &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-CommandBuffer &CommandBuffer::operator=(const CommandBuffer &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<CommandBufferImpl>(o.m_handle);
-  }
-  unpin_void_handle<CommandBufferImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
+void CommandBuffer::pin(void *handle) noexcept {
+  unpin_void_handle<CommandBufferImpl>(handle);
 }
-
-CommandBuffer &CommandBuffer::operator=(CommandBuffer &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<CommandBufferImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-CommandBuffer::~CommandBuffer() noexcept {
-  unpin_void_handle<CommandBufferImpl>(m_handle);
-}
-
 void CommandBuffer::begin() {
   assert(m_handle);
   ZoneScopedN("CommandBuffer::begin");
@@ -150,15 +121,15 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
     colorAttachments[i] = VkRenderingAttachmentInfo{
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .pNext = nullptr,
-        .imageView = void_handle_ptr<ImageViewImpl>(attachment.view.m_handle)
-                         ->imageView.handle,
+        .imageView =
+            object_handle_ptr<ImageViewImpl>(attachment.view)->imageView.handle,
         .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
         .resolveMode = to_vk_resolve_mode(attachment.resolveMode),
-        .resolveImageView = attachment.resolveView
-                                ? (void_handle_ptr<ImageViewImpl>(
-                                       attachment.resolveView.m_handle)
-                                       ->imageView.handle)
-                                : VK_NULL_HANDLE,
+        .resolveImageView =
+            attachment.resolveView
+                ? (object_handle_ptr<ImageViewImpl>(attachment.resolveView)
+                       ->imageView.handle)
+                : VK_NULL_HANDLE,
         .resolveImageLayout = VK_IMAGE_LAYOUT_GENERAL,
         .loadOp = to_vk_attachment_load_op(attachment.loadOp),
         .storeOp = to_vk_attachment_store_op(attachment.storeOp),
@@ -177,15 +148,15 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
     depthAttachment = VkRenderingAttachmentInfo{
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .pNext = nullptr,
-        .imageView = void_handle_ptr<ImageViewImpl>(attachment.view.m_handle)
-                         ->imageView.handle,
+        .imageView =
+            object_handle_ptr<ImageViewImpl>(attachment.view)->imageView.handle,
         .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
         .resolveMode = to_vk_resolve_mode(attachment.resolveMode),
-        .resolveImageView = attachment.resolveView
-                                ? (void_handle_ptr<ImageViewImpl>(
-                                       attachment.resolveView.m_handle)
-                                       ->imageView.handle)
-                                : VK_NULL_HANDLE,
+        .resolveImageView =
+            attachment.resolveView
+                ? (object_handle_ptr<ImageViewImpl>(attachment.resolveView)
+                       ->imageView.handle)
+                : VK_NULL_HANDLE,
         .resolveImageLayout = VK_IMAGE_LAYOUT_GENERAL,
         .loadOp = to_vk_attachment_load_op(attachment.loadOp),
         .storeOp = to_vk_attachment_store_op(attachment.storeOp),
@@ -204,15 +175,15 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
     stencilAttachment = VkRenderingAttachmentInfo{
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .pNext = nullptr,
-        .imageView = void_handle_ptr<ImageViewImpl>(attachment.view.m_handle)
-                         ->imageView.handle,
+        .imageView =
+            object_handle_ptr<ImageViewImpl>(attachment.view)->imageView.handle,
         .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
         .resolveMode = to_vk_resolve_mode(attachment.resolveMode),
-        .resolveImageView = attachment.resolveView
-                                ? (void_handle_ptr<ImageViewImpl>(
-                                       attachment.resolveView.m_handle)
-                                       ->imageView.handle)
-                                : VK_NULL_HANDLE,
+        .resolveImageView =
+            attachment.resolveView
+                ? (object_handle_ptr<ImageViewImpl>(attachment.resolveView)
+                       ->imageView.handle)
+                : VK_NULL_HANDLE,
         .resolveImageLayout = VK_IMAGE_LAYOUT_GENERAL,
         .loadOp = to_vk_attachment_load_op(attachment.loadOp),
         .storeOp = to_vk_attachment_store_op(attachment.storeOp),

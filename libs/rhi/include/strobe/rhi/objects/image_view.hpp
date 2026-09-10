@@ -13,22 +13,14 @@ class Image;
  * \brief todo
  */
 class ImageView : public Object<ImageView> {
-  friend class Device;
-  friend class Image;
-  friend class CommandBuffer;
-  friend struct CommandBufferImpl;
+  friend class Object<ImageView>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 
 public:
-  ImageView() noexcept : Object(nullptr) {}
-  ImageView(const ImageView &) noexcept;
-  ImageView(ImageView &&) noexcept;
-  ImageView &operator=(const ImageView &) noexcept;
-  ImageView &operator=(ImageView &&) noexcept;
-  ~ImageView() noexcept;
-
+  using Object::Object;
   Format format() const noexcept;
   const Image &image() const noexcept;
-
   explicit ImageView(void *handle) noexcept : Object(handle) {}
 };
 

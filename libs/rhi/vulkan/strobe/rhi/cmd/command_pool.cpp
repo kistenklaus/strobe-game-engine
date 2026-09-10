@@ -7,38 +7,11 @@
 
 namespace strobe::rhi {
 
-CommandPool::CommandPool(const CommandPool &o) noexcept : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<CommandPoolImpl>(m_handle);
-  }
+void CommandPool::pin(void *handle) noexcept {
+  pin_void_handle<CommandPoolImpl>(handle);
 }
-
-CommandPool::CommandPool(CommandPool &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-CommandPool &CommandPool::operator=(const CommandPool &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<CommandPoolImpl>(o.m_handle);
-  }
-  unpin_void_handle<CommandPoolImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
-}
-
-CommandPool &CommandPool::operator=(CommandPool &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<CommandPoolImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-CommandPool::~CommandPool() noexcept {
-  unpin_void_handle<CommandPoolImpl>(m_handle);
+void CommandPool::unpin(void *handle) noexcept {
+  unpin_void_handle<CommandPoolImpl>(handle);
 }
 
 CommandBuffer CommandPool::alloc(CommandBufferFlags flags) {

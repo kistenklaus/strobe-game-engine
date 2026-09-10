@@ -11,7 +11,7 @@ strobe::rhi::CommandBufferImpl::CommandBufferImpl(
     const cmd_buf_state_allocator_ref &alloc) noexcept
     : pool(std::move(pool)), nativePool(nativePool), cmd(cmd), state{alloc},
       flags(flags),
-      ctx(void_handle_ptr<CommandPoolImpl>(this->pool.m_handle)->context.ctx()),
+      ctx(object_handle_ptr<CommandPoolImpl>(this->pool)->context.ctx()),
       localStage(std::move(stagePool))
 #ifdef STROBE_TRACY
       ,
@@ -22,13 +22,13 @@ strobe::rhi::CommandBufferImpl::CommandBufferImpl(
 }
 
 strobe::rhi::CommandBufferImpl::~CommandBufferImpl() noexcept {
-  auto *pool_impl = void_handle_ptr<CommandPoolImpl>(pool.m_handle);
+  auto *pool_impl = object_handle_ptr<CommandPoolImpl>(pool);
   pool_impl->recycle(nativePool);
 }
 
 void strobe::rhi::CommandBufferImpl::flush_pc() noexcept {
   if (pushDirtyBegin < pushDirtyEnd) {
-    auto *pool_impl = void_handle_ptr<CommandPoolImpl>(pool.m_handle);
+    auto *pool_impl = object_handle_ptr<CommandPoolImpl>(pool);
     vulkan::Context *ctx = pool_impl->context.ctx();
 
     VkPushDataInfoEXT info{

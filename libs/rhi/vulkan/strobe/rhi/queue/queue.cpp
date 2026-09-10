@@ -5,36 +5,11 @@
 
 namespace strobe::rhi {
 
-Queue::Queue(const Queue &o) noexcept : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<QueueImpl>(m_handle);
-  }
+void Queue::pin(void *handle) noexcept { pin_void_handle<QueueImpl>(handle); }
+
+void Queue::unpin(void *handle) noexcept {
+  unpin_void_handle<QueueImpl>(handle);
 }
-
-Queue::Queue(Queue &&o) noexcept : Object(std::exchange(o.m_handle, nullptr)) {}
-
-Queue &Queue::operator=(const Queue &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<QueueImpl>(o.m_handle);
-  }
-  unpin_void_handle<QueueImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
-}
-
-Queue &Queue::operator=(Queue &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<QueueImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-Queue::~Queue() noexcept { unpin_void_handle<QueueImpl>(m_handle); }
 
 void Queue::wait(const Timepoint &timepoint, PipelineStage stage) noexcept {
   if (!timepoint) {

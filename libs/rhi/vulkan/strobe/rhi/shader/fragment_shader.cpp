@@ -4,40 +4,11 @@
 
 namespace strobe::rhi {
 
-FragmentShader::FragmentShader(const FragmentShader & o) noexcept 
-  : Object(o.m_handle) {
-    if (m_handle != nullptr) {
-      pin_void_handle<ShaderObjectImpl>(m_handle);
-    }
-  }
-
-FragmentShader::FragmentShader(FragmentShader && o) noexcept 
-  : Object(std::exchange(o.m_handle, nullptr)){
+void FragmentShader::pin(void *handle) noexcept {
+  pin_void_handle<ShaderObjectImpl>(handle);
 }
-
-FragmentShader &FragmentShader::operator=(const FragmentShader & o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<ShaderObjectImpl>(o.m_handle);
-  }
-  unpin_void_handle<ShaderObjectImpl>(m_handle);;
-  m_handle = o.m_handle;
-  return *this;
-}
-
-FragmentShader &FragmentShader::operator=(FragmentShader && o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<ShaderObjectImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-FragmentShader::~FragmentShader() noexcept {
-  unpin_void_handle<ShaderObjectImpl>(m_handle);
+void FragmentShader::unpin(void *handle) noexcept {
+  unpin_void_handle<ShaderObjectImpl>(handle);
 }
 
 } // namespace strobe::rhi

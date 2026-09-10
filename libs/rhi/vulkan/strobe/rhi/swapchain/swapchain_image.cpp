@@ -5,43 +5,30 @@
 
 namespace strobe::rhi {
 
-
-SwapchainImage::SwapchainImage(SwapchainImage &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-SwapchainImage &SwapchainImage::operator=(SwapchainImage &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<SwapchainImageImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
+void SwapchainImage::pin(void *handle) noexcept {
+  pin_void_handle<SwapchainImageImpl>(handle);
 }
-
-SwapchainImage::~SwapchainImage() noexcept {
-  unpin_void_handle<SwapchainImageImpl>(m_handle);
+void SwapchainImage::unpin(void *handle) noexcept {
+  unpin_void_handle<SwapchainImageImpl>(handle);
 }
 
 const Image &SwapchainImage::image() const noexcept {
   assert(m_handle);
   auto *impl = void_handle_ptr<SwapchainImageImpl>(m_handle);
-  auto *gen =
-      void_handle_ptr<SwapchainGenerationImpl>(impl->generation.m_handle);
+  auto *gen = object_handle_ptr<SwapchainGenerationImpl>(impl->generation);
   return gen->frames[impl->index].image;
 }
 
 const ImageView &SwapchainImage::view() const noexcept {
   assert(m_handle);
   auto *impl = void_handle_ptr<SwapchainImageImpl>(m_handle);
-  auto *gen =
-      void_handle_ptr<SwapchainGenerationImpl>(impl->generation.m_handle);
+  auto *gen = object_handle_ptr<SwapchainGenerationImpl>(impl->generation);
   return gen->frames[impl->index].view;
 }
 
 const uvec2 SwapchainImage::extent() const noexcept {
   auto *impl = void_handle_ptr<SwapchainImageImpl>(m_handle);
-  auto *gen =
-      void_handle_ptr<SwapchainGenerationImpl>(impl->generation.m_handle);
+  auto *gen = object_handle_ptr<SwapchainGenerationImpl>(impl->generation);
   return gen->extent;
 }
 

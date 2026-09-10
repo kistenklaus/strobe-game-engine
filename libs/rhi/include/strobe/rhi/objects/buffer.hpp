@@ -11,44 +11,12 @@ namespace strobe::rhi {
  * \brief A device-owned buffer.
  */
 class Buffer : public Object<Buffer> {
-  friend class Device;
-  friend class CommandBuffer;
-  friend class MemoryPool;
-  friend struct CommandBufferImpl;
-  friend struct BlasImpl; // TODO: remove me
+  friend Object<Buffer>;
+  static void pin(void *handle) noexcept;
+  static void unpin(void *handle) noexcept;
 
 public:
-  /** \name (constructors)
-   * @{
-   */
-  /**
-   * \brief default constructor
-   */
-  Buffer() noexcept : Object(nullptr) {}
-  /**
-   * \brief copy-constructor
-   */
-  Buffer(const Buffer &) noexcept;
-  /**
-   * \brief move-constructor
-   */
-  Buffer(Buffer &&) noexcept;
-  /**
-   * \brief copy-assignment
-   */
-  Buffer &operator=(const Buffer &) noexcept;
-  /**
-   * \brief move-assignment
-   */
-  Buffer &operator=(Buffer &&) noexcept;
-  /**
-   * \brief destructor
-   */
-  ~Buffer() noexcept;
-  /**
-   * @}
-   */
-
+  using Object::Object;
   /**
    * \brief pointer to memory mapped memory
    */
@@ -59,23 +27,10 @@ public:
    */
   uint64_t size() const noexcept;
 
-
-
-  /** 
-   * \name (debug-utils)
-   * @{
-   */
-
   /**
    * \brief set debug utils name
    */
   void set_name(const char *name) const noexcept;
-
-  /**
-   * @}
-   */
-
-
 
   explicit Buffer(void *handle) noexcept : Object(handle) { assert(handle); }
 };

@@ -5,11 +5,11 @@
 #include "strobe/rhi/cmd/command_buffer_state_alloctor.hpp"
 #include "strobe/rhi/objects/blas.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
-#include "strobe/rhi/objects/buffer_descriptor.hpp"
-#include "strobe/rhi/objects/buffer_descriptor_array.hpp"
 #include "strobe/rhi/objects/compute_shader.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
 #include "strobe/rhi/objects/image.hpp"
+#include "strobe/rhi/objects/resource_descriptor.hpp"
+#include "strobe/rhi/objects/resource_descriptor_array.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
 
 namespace strobe::rhi {

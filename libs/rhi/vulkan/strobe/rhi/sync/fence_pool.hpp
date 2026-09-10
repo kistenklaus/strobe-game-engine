@@ -7,14 +7,13 @@
 namespace strobe::rhi {
 
 class FencePool : public Object<FencePool> {
+  friend class Object<FencePool>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
+
 public:
+  using Object::Object;
   explicit FencePool(void *handle) noexcept : Object(handle) {}
-  FencePool() noexcept : Object(nullptr) {}
-  FencePool(const FencePool &) noexcept;
-  FencePool(FencePool &&) noexcept;
-  FencePool &operator=(const FencePool &) noexcept;
-  FencePool &operator=(FencePool &&) noexcept;
-  ~FencePool() noexcept;
 
   Fence allocate(void *pUserData = nullptr,
                  void (*callback)(void *,

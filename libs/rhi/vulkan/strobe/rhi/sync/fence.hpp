@@ -8,17 +8,14 @@
 namespace strobe::rhi {
 
 // Not a object
-class Fence : Object<Fence> {
-  friend class FencePool;
-  explicit Fence(void *handle) noexcept : Object(handle) {}
+class Fence : public Object<Fence> {
+  friend class Object<Fence>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 
 public:
-  Fence() noexcept : Object(nullptr) {}
-  Fence(const Fence &) noexcept;
-  Fence(Fence &&) noexcept;
-  Fence &operator=(const Fence &) noexcept;
-  Fence &operator=(Fence &&) noexcept;
-  ~Fence() noexcept;
+  using Object::Object;
+  explicit Fence(void *handle) noexcept : Object(handle) {}
   explicit operator bool() const noexcept { return m_handle != nullptr; }
 
   bool

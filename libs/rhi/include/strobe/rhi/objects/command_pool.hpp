@@ -10,19 +10,12 @@ namespace strobe::rhi {
  * \brief todo
  */
 class CommandPool : public Object<CommandPool> {
-  friend class Device;
-  friend struct DeviceImpl;
-  friend struct CommandBufferImpl;
-  friend class CommandBuffer;
-  friend struct CommandPoolImpl;
+  friend class Object<CommandPool>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 
 public:
-  CommandPool() noexcept : Object(nullptr) {}
-  CommandPool(const CommandPool &) noexcept;
-  CommandPool(CommandPool &&) noexcept;
-  CommandPool &operator=(const CommandPool &) noexcept;
-  CommandPool &operator=(CommandPool &&) noexcept;
-  ~CommandPool() noexcept;
+  using Object::Object;
   CommandBuffer alloc(CommandBufferFlags flags = CommandBufferFlags::none);
 
   explicit CommandPool(void *handle) : Object(handle) {};

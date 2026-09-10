@@ -10,15 +10,13 @@ namespace strobe::rhi {
  * \brief todo
  */
 class Swapchain : public Object<Swapchain> {
-public:
-  explicit Swapchain(void *handle) noexcept : Object(handle) {}
-  Swapchain() noexcept : Object(nullptr) {}
-  Swapchain(const Swapchain &) noexcept;
-  Swapchain(Swapchain &&) noexcept;
-  Swapchain &operator=(const Swapchain &) noexcept;
-  Swapchain &operator=(Swapchain &&) noexcept;
-  ~Swapchain() noexcept;
+  friend class Object<Swapchain>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 
+public:
+  using Object::Object;
+  explicit Swapchain(void *handle) noexcept : Object(handle) {}
   SwapchainImage acquire();
 };
 

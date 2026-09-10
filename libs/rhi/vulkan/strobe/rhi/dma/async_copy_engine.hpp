@@ -8,14 +8,13 @@
 namespace strobe::rhi {
 
 class AsyncCopyEngine : public Object<AsyncCopyEngine> {
+  friend class Object<AsyncCopyEngine>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
+
 public:
+  using Object::Object;
   explicit AsyncCopyEngine(void *handle) noexcept : Object(handle) {}
-  AsyncCopyEngine() noexcept : Object(nullptr) {}
-  AsyncCopyEngine(const AsyncCopyEngine &) noexcept;
-  AsyncCopyEngine(AsyncCopyEngine &&) noexcept;
-  AsyncCopyEngine &operator=(const AsyncCopyEngine &) noexcept;
-  AsyncCopyEngine &operator=(AsyncCopyEngine &&) noexcept;
-  ~AsyncCopyEngine() noexcept;
 
   Timepoint
   async_copy(BufferOffset dst, BufferOffset src,

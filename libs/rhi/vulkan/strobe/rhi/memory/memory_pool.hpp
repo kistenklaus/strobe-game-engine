@@ -3,24 +3,18 @@
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/memory/memory_allocation.hpp"
 #include "strobe/rhi/memory/memory_requirements.hpp"
+#include "strobe/rhi/objects/object.hpp"
 #include "strobe/rhi/types/memory_lifetime.hpp"
 
 namespace strobe::rhi {
 
-class MemoryPool {
-  friend class Device;
-  friend class Buffer;
-  friend class CommandBuffer;
-  friend struct MemoryAllocationImpl;
+class MemoryPool : public Object<MemoryPool> {
+  friend class Object<MemoryPool>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 
 public:
-  MemoryPool() noexcept : m_handle(nullptr) {}
-  MemoryPool(const MemoryPool &) noexcept;
-  MemoryPool(MemoryPool &&) noexcept;
-  MemoryPool &operator=(const MemoryPool &) noexcept;
-  MemoryPool &operator=(MemoryPool &&) noexcept;
-  ~MemoryPool() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
+  using Object::Object;
 
   void commit();
 
@@ -32,10 +26,7 @@ public:
 
   const Context &context() const noexcept;
 
-  explicit MemoryPool(void *handle) noexcept : m_handle(handle) {}
-
-private:
-  void *m_handle;
+  explicit MemoryPool(void *handle) noexcept : Object(handle) {}
 };
 
 } // namespace strobe::rhi

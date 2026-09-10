@@ -5,14 +5,13 @@
 namespace strobe::rhi {
 
 struct StagingPool : public Object<StagingPool> {
+  friend class Object<StagingPool>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
+
 public:
+  using Object::Object;
   explicit StagingPool(void *handle) noexcept : Object(handle) {}
-  StagingPool() noexcept : Object(nullptr) {}
-  StagingPool(const StagingPool &) noexcept;
-  StagingPool(StagingPool &&) noexcept;
-  StagingPool &operator=(const StagingPool &) noexcept;
-  StagingPool &operator=(StagingPool &&) noexcept;
-  ~StagingPool() noexcept;
 };
 
 } // namespace strobe::rhi

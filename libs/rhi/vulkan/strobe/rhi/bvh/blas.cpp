@@ -4,36 +4,11 @@
 
 namespace strobe::rhi {
 
-Blas::Blas(const Blas &o) noexcept : Object(o.m_handle) {
-  if (m_handle) {
-    pin_void_handle<BvhImpl>(m_handle);
-  }
+void Blas::pin(void *handle) noexcept {
+  pin_void_handle<BvhImpl>(handle);
 }
-
-Blas::Blas(Blas &&o) noexcept : Object(std::exchange(o.m_handle, nullptr)) {}
-
-Blas &Blas::operator=(const Blas &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<BvhImpl>(o.m_handle);
-  }
-  unpin_void_handle<BvhImpl>(m_handle);
-  return *this;
-}
-
-Blas &Blas::operator=(Blas &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<BvhImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-Blas::~Blas() noexcept { 
-  unpin_void_handle<BvhImpl>(m_handle); 
+void Blas::unpin(void *handle) noexcept {
+  unpin_void_handle<BvhImpl>(handle);
 }
 
 } // namespace strobe::rhi

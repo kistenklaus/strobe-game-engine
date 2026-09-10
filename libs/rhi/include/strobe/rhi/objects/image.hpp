@@ -14,21 +14,12 @@ namespace strobe::rhi {
  * \brief todo
  */
 class Image : public Object<Image> {
-  friend class Device;
-  friend struct ImageViewImpl;
-  friend struct SwapchainImpl;
-  friend struct SwapchainGenerationImpl;
-  friend class CommandBuffer;
-  friend class MemoryPool;
+  friend class Object<Image>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 
 public:
-  Image() noexcept : Object(nullptr) {}
-  Image(const Image &) noexcept;
-  Image(Image &&) noexcept;
-  Image &operator=(const Image &) noexcept;
-  Image &operator=(Image &&) noexcept;
-  ~Image() noexcept;
-
+  using Object::Object;
   ImageType type() const noexcept;
   Format format() const noexcept;
   uvec3 extent() const noexcept;

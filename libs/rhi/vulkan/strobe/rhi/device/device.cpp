@@ -7,44 +7,16 @@
 #include "strobe/rhi/handle_allocators.hpp"
 #include "strobe/rhi/img/img.hpp"
 #include "strobe/rhi/shader/shader.hpp"
-#include "strobe/rhi/swapchain/swap.hpp"
 #include "strobe/rhi/types/queue_flags.hpp"
 #include <tracy/Tracy.hpp>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi {
 
-Device::Device(const Device &o) noexcept : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<DeviceImpl>(m_handle);
-  }
+void Device::pin(void *handle) noexcept { pin_void_handle<DeviceImpl>(handle); }
+void Device::unpin(void *handle) noexcept {
+  unpin_void_handle<DeviceImpl>(handle);
 }
-
-Device::Device(Device &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-Device &Device::operator=(const Device &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<DeviceImpl>(o.m_handle);
-  }
-  unpin_void_handle<DeviceImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
-}
-
-Device &Device::operator=(Device &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<DeviceImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-Device::~Device() noexcept { unpin_void_handle<DeviceImpl>(m_handle); }
 
 FragmentShader
 Device::create_fragment_shader(const FragmentShaderInfo &info) noexcept {
@@ -149,8 +121,8 @@ Timepoint Device::async_upload(BufferOffset dst, void *src,
   return impl->dma.async_upload(dst, src, size);
 }
 
-ResourceDescriptor
-Device::create_resource_descriptor(const ResourceDescriptorInfo &info) noexcept {
+ResourceDescriptor Device::create_resource_descriptor(
+    const ResourceDescriptorInfo &info) noexcept {
   ZoneScopedN("Device::create_buffer_descriptor");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->heapctrl.create_resource_descriptor(info);

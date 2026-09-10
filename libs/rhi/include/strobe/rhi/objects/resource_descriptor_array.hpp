@@ -8,14 +8,14 @@ namespace strobe::rhi {
  * \ingroup rhi
  * \brief todo
  */
-class Tlas : public Object<Tlas> {
-  friend class Object<Tlas>;
+class ResourceDescriptorArray : public Object<ResourceDescriptorArray> {
+  friend class Object<ResourceDescriptorArray>;
   static void pin(void *) noexcept;
   static void unpin(void *) noexcept;
 
 public:
   using Object::Object;
-  explicit Tlas(void *handle) noexcept : Object(handle) {}
+  explicit ResourceDescriptorArray(void *handle) noexcept : Object(handle) {}
 };
 
 } // namespace strobe::rhi

@@ -5,15 +5,14 @@
 
 namespace strobe::rhi {
 
-class ScratchBuffer : Object<ScratchBuffer> {
+class ScratchBuffer : public Object<ScratchBuffer> {
+  friend class Object<ScratchBuffer>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
+
 public:
+  using Object::Object;
   explicit ScratchBuffer(void *handle) noexcept : Object(handle) {}
-  ScratchBuffer() noexcept : Object(nullptr) {}
-  ScratchBuffer(const ScratchBuffer &) noexcept;
-  ScratchBuffer(ScratchBuffer &&) noexcept;
-  ScratchBuffer &operator=(const ScratchBuffer &) noexcept;
-  ScratchBuffer &operator=(ScratchBuffer &&) noexcept;
-  ~ScratchBuffer() noexcept;
 
   Buffer scratch() const noexcept;
   void require(uint64_t size) const noexcept;

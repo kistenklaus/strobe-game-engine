@@ -7,37 +7,10 @@
 
 namespace strobe::rhi {
 
-Buffer::Buffer(const Buffer &o) noexcept : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<BufferImpl>(m_handle);
-  }
+void Buffer::pin(void *handle) noexcept { pin_void_handle<BufferImpl>(handle); }
+void Buffer::unpin(void *handle) noexcept {
+  unpin_void_handle<BufferImpl>(handle);
 }
-
-Buffer::Buffer(Buffer &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-Buffer &Buffer::operator=(const Buffer &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<BufferImpl>(o.m_handle);
-  }
-  unpin_void_handle<BufferImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
-}
-
-Buffer &Buffer::operator=(Buffer &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<BufferImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-Buffer::~Buffer() noexcept { unpin_void_handle<BufferImpl>(m_handle); }
 
 uint64_t Buffer::size() const noexcept {
   if (m_handle == nullptr) {

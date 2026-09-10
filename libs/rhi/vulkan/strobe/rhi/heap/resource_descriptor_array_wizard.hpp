@@ -7,7 +7,7 @@
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap_impl.hpp"
 #include "strobe/rhi/heap/resource_descriptor_wizard.hpp"
-#include "strobe/rhi/objects/buffer_descriptor_array.hpp"
+#include "strobe/rhi/objects/resource_descriptor_array.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/types/buffer_range.hpp"
 #include <limits>

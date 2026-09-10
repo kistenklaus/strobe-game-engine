@@ -11,14 +11,13 @@ namespace strobe::rhi {
  * Resources are buffers and images ...
  */
 class ResourceDescriptor : public Object<ResourceDescriptor> {
+  friend class Object<ResourceDescriptor>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
+
 public:
+  using Object::Object;
   explicit ResourceDescriptor(void *handle) noexcept : Object(handle) {}
-  ResourceDescriptor() noexcept : Object(nullptr) {}
-  ResourceDescriptor(const ResourceDescriptor &) noexcept;
-  ResourceDescriptor(ResourceDescriptor &&) noexcept;
-  ResourceDescriptor &operator=(const ResourceDescriptor &) noexcept;
-  ResourceDescriptor &operator=(ResourceDescriptor &&) noexcept;
-  ~ResourceDescriptor() noexcept;
 };
 
 } // namespace strobe::rhi

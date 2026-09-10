@@ -11,7 +11,7 @@ struct ImageViewImpl {
   ImageViewImpl(Image image, vulkan::ImageView view, Format format)
       : image(std::move(image)), imageView(view), format(format) {}
   ~ImageViewImpl() {
-    auto *image_impl = void_handle_ptr<ImageImpl>(image.m_handle);
+    auto *image_impl = object_handle_ptr<ImageImpl>(image);
     vulkan::destroy_image_view(image_impl->context.ctx(), imageView);
   }
 

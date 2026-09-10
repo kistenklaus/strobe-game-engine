@@ -12,40 +12,12 @@
 
 namespace strobe::rhi {
 
-SwapchainGeneration::SwapchainGeneration(const SwapchainGeneration &o) noexcept
-    : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<SwapchainGenerationImpl>(m_handle);
-  }
-}
-SwapchainGeneration::SwapchainGeneration(SwapchainGeneration &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-SwapchainGeneration &
-SwapchainGeneration::operator=(const SwapchainGeneration &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<SwapchainGenerationImpl>(o.m_handle);
-  }
-  unpin_void_handle<SwapchainGenerationImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
+void SwapchainGeneration::pin(void *handle) noexcept {
+  pin_void_handle<SwapchainGenerationImpl>(handle);
 }
 
-SwapchainGeneration &
-SwapchainGeneration::operator=(SwapchainGeneration &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<SwapchainGenerationImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-SwapchainGeneration::~SwapchainGeneration() noexcept {
-  unpin_void_handle<SwapchainGenerationImpl>(m_handle);
+void SwapchainGeneration::unpin(void *handle) noexcept {
+  unpin_void_handle<SwapchainGenerationImpl>(handle);
 }
 
 SwapchainImage SwapchainGeneration::acquire() {
@@ -91,7 +63,8 @@ SwapchainImage SwapchainGeneration::acquire() {
   std::unreachable();
 }
 
-std::pair<BinarySemaphore, Fence> SwapchainGeneration::present([[maybe_unused]] uint32_t index) {
+std::pair<BinarySemaphore, Fence>
+SwapchainGeneration::present([[maybe_unused]] uint32_t index) {
   auto *impl = void_handle_ptr<SwapchainGenerationImpl>(m_handle);
   assert(impl);
 
@@ -101,15 +74,17 @@ std::pair<BinarySemaphore, Fence> SwapchainGeneration::present([[maybe_unused]] 
 
   std::construct_at(presentFrame, *this, impl->semPool.allocate());
 
-  Fence presentFence = impl->fencePool.allocate(presentFrame, [](void *ptr, FenceCallbackFlag) {
-    auto *presentFrame = static_cast<SwapchainPresentFrame *>(ptr);
-    // the generations own the backing allocator so we have to be careful here.
-    SwapchainGeneration generation = std::move(presentFrame->generation);
-    std::destroy_at(presentFrame);
-    object_handle_ptr<SwapchainGenerationImpl>(generation)
-        ->get_present_frame_allocator()
-        .deallocate(presentFrame);
-  });
+  Fence presentFence =
+      impl->fencePool.allocate(presentFrame, [](void *ptr, FenceCallbackFlag) {
+        auto *presentFrame = static_cast<SwapchainPresentFrame *>(ptr);
+        // the generations own the backing allocator so we have to be careful
+        // here.
+        SwapchainGeneration generation = std::move(presentFrame->generation);
+        std::destroy_at(presentFrame);
+        object_handle_ptr<SwapchainGenerationImpl>(generation)
+            ->get_present_frame_allocator()
+            .deallocate(presentFrame);
+      });
   return {presentFrame->presentReady, std::move(presentFence)};
 }
 

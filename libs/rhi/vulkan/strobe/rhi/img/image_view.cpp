@@ -5,37 +5,12 @@
 
 namespace strobe::rhi {
 
-ImageView::ImageView(const ImageView &o) noexcept : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<ImageViewImpl>(m_handle);
-  }
+void ImageView::pin(void *handle) noexcept {
+  pin_void_handle<ImageViewImpl>(handle);
 }
-
-ImageView::ImageView(ImageView &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-ImageView &ImageView::operator=(const ImageView &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<ImageViewImpl>(o.m_handle);
-  }
-  unpin_void_handle<ImageViewImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
+void ImageView::unpin(void *handle) noexcept {
+  unpin_void_handle<ImageViewImpl>(handle);
 }
-
-ImageView &ImageView::operator=(ImageView &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<ImageViewImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-ImageView::~ImageView() noexcept { unpin_void_handle<ImageViewImpl>(m_handle); }
 
 Format ImageView::format() const noexcept {
   auto *impl = void_handle_ptr<ImageViewImpl>(m_handle);

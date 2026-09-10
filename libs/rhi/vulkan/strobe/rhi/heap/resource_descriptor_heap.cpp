@@ -7,43 +7,12 @@
 
 namespace strobe::rhi {
 
-ResourceDescriptorHeap::ResourceDescriptorHeap(
-    const ResourceDescriptorHeap &o) noexcept
-    : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<ResourceDescriptorHeapImpl>(m_handle);
-  }
+void ResourceDescriptorHeap::pin(void *handle) noexcept {
+  pin_void_handle<ResourceDescriptorHeapImpl>(handle);
 }
 
-ResourceDescriptorHeap::ResourceDescriptorHeap(
-    ResourceDescriptorHeap &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-ResourceDescriptorHeap &
-ResourceDescriptorHeap::operator=(const ResourceDescriptorHeap &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<ResourceDescriptorHeapImpl>(o.m_handle);
-  }
-  unpin_void_handle<ResourceDescriptorHeapImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
-}
-
-ResourceDescriptorHeap &
-ResourceDescriptorHeap::operator=(ResourceDescriptorHeap &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<ResourceDescriptorHeapImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-ResourceDescriptorHeap::~ResourceDescriptorHeap() noexcept {
-  unpin_void_handle<ResourceDescriptorHeapImpl>(m_handle);
+void ResourceDescriptorHeap::unpin(void *handle) noexcept {
+  unpin_void_handle<ResourceDescriptorHeapImpl>(handle);
 }
 
 ResourceDescriptorWizard ResourceDescriptorHeap::create_descriptor_wizard(

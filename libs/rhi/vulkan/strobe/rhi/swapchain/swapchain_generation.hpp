@@ -9,16 +9,13 @@
 namespace strobe::rhi {
 
 class SwapchainGeneration : public Object<SwapchainGeneration> {
-  friend class SwapchainImage;
+  friend Object<SwapchainGeneration>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 
 public:
+  using Object::Object;
   explicit SwapchainGeneration(void *handle) noexcept : Object(handle) {}
-  SwapchainGeneration() noexcept : Object(nullptr) {}
-  SwapchainGeneration(const SwapchainGeneration &) noexcept;
-  SwapchainGeneration(SwapchainGeneration &&) noexcept;
-  SwapchainGeneration &operator=(const SwapchainGeneration &) noexcept;
-  SwapchainGeneration &operator=(SwapchainGeneration &&) noexcept;
-  ~SwapchainGeneration() noexcept;
 
   // may return null, then the swapchain has to be recreated immediatly,
   // otherwise

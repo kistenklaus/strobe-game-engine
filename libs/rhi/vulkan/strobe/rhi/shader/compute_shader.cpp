@@ -5,39 +5,11 @@
 
 namespace strobe::rhi {
 
-ComputeShader::ComputeShader(const ComputeShader &o) noexcept
-    : Object(o.m_handle) {
-  if (m_handle) {
-    pin_void_handle<ShaderObjectImpl>(m_handle);
-  }
+void ComputeShader::pin(void *handle) noexcept {
+  pin_void_handle<ShaderObjectImpl>(handle);
 }
-
-ComputeShader::ComputeShader(ComputeShader &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-ComputeShader &ComputeShader::operator=(const ComputeShader &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<ShaderObjectImpl>(o.m_handle);
-  }
-  unpin_void_handle<ShaderObjectImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
-}
-
-ComputeShader &ComputeShader::operator=(ComputeShader &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<ShaderObjectImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-ComputeShader::~ComputeShader() noexcept {
-  unpin_void_handle<ShaderObjectImpl>(m_handle);
+void ComputeShader::unpin(void *handle) noexcept {
+  unpin_void_handle<ShaderObjectImpl>(handle);
 }
 
 void ComputeShader::set_name(const char *name) {

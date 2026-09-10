@@ -5,26 +5,15 @@
 
 namespace strobe::rhi {
 
-struct MemoryAllocation : Object<MemoryAllocation> {
-  friend class MemoryPool;
-  friend struct MemoryPoolImpl;
-  friend class Buffer;
-  friend struct BufferImpl;
-  friend class CommandBuffer;
+struct MemoryAllocation : public Object<MemoryAllocation> {
+  friend class Object<MemoryAllocation>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 
 public:
+  using Object::Object;
   explicit MemoryAllocation(void *handle) noexcept : Object(handle) {}
-  MemoryAllocation() noexcept : Object(nullptr) {}
 
-  MemoryAllocation(const MemoryAllocation &) noexcept;
-  MemoryAllocation(MemoryAllocation &&) noexcept;
-
-  MemoryAllocation &operator=(const MemoryAllocation &) noexcept;
-  MemoryAllocation &operator=(MemoryAllocation &&) noexcept;
-
-  ~MemoryAllocation() noexcept;
-
-  [[nodiscard]]
   explicit operator bool() const noexcept {
     return m_handle != nullptr;
   }

@@ -5,16 +5,14 @@
 namespace strobe::rhi {
 
 class BinarySemaphorePool : public Object<BinarySemaphorePool> {
-  public:
-    explicit BinarySemaphorePool(void* handle) noexcept : Object(handle) {}
-    BinarySemaphorePool() noexcept : Object(nullptr) {}
-    BinarySemaphorePool(const BinarySemaphorePool &) noexcept;
-    BinarySemaphorePool(BinarySemaphorePool &&) noexcept;
-    BinarySemaphorePool &operator=(const BinarySemaphorePool &) noexcept;
-    BinarySemaphorePool &operator=(BinarySemaphorePool &&) noexcept;
-    ~BinarySemaphorePool() noexcept;
+  friend class Object<BinarySemaphorePool>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 
-    BinarySemaphore allocate() noexcept;
+public:
+  using Object::Object;
+  explicit BinarySemaphorePool(void *handle) noexcept : Object(handle) {}
+  BinarySemaphore allocate() noexcept;
 };
 
-}
+} // namespace strobe::rhi

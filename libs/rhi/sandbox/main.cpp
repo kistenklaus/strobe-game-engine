@@ -1,6 +1,6 @@
 #include "io.hpp"
 #include "strobe/core/lina/vec.hpp"
-#include "strobe/rhi/objects/buffer_descriptor.hpp"
+#include "strobe/rhi/objects/resource_descriptor.hpp"
 #include "strobe/rhi/objects/command_pool.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
 #include "strobe/rhi/objects/queue.hpp"

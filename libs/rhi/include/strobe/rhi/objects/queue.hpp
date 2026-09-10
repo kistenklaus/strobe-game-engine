@@ -13,16 +13,15 @@ namespace strobe::rhi {
  * \brief todo
  */
 class Queue : public Object<Queue> {
-public:
-  explicit Queue(void *handle) noexcept : Object(handle) {}
-  Queue() noexcept : Object(nullptr) {}
-  Queue(const Queue &) noexcept;
-  Queue(Queue &&) noexcept;
-  Queue &operator=(const Queue &) noexcept;
-  Queue &operator=(Queue &&) noexcept;
-  ~Queue() noexcept;
+  friend class Object<Queue>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 
-  void wait(const Timepoint& timepoint,
+public:
+  using Object::Object;
+  explicit Queue(void *handle) noexcept : Object(handle) {}
+
+  void wait(const Timepoint &timepoint,
             PipelineStage stage = PipelineStage::all_commands) noexcept;
 
   void wait(const SwapchainImage &swapchainImage,

@@ -3,41 +3,16 @@
 #include "strobe/rhi/sync/timeline_impl.hpp"
 #include "strobe/rhi/sync/timeline_notify_flag.hpp"
 #include <atomic>
-#include <thread>
 
 namespace strobe::rhi {
 
-Timeline::Timeline(const Timeline &o) noexcept : Object(o.m_handle) {
-  if (m_handle) {
-    pin_void_handle<TimelineImpl>(m_handle);
-  }
+void Timeline::pin(void *handle) noexcept {
+  pin_void_handle<TimelineImpl>(handle);
 }
 
-Timeline::Timeline(Timeline &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-Timeline &Timeline::operator=(const Timeline &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<TimelineImpl>(o.m_handle);
-  }
-  unpin_void_handle<TimelineImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
+void Timeline::unpin(void *handle) noexcept {
+  unpin_void_handle<TimelineImpl>(handle);
 }
-
-Timeline &Timeline::operator=(Timeline &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<TimelineImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-Timeline::~Timeline() noexcept { unpin_void_handle<TimelineImpl>(m_handle); }
 
 void Timeline::notify(const Timepoint &timepoint,
                       TimelineNotifyFlag flag) noexcept {
@@ -85,7 +60,6 @@ Timepoint Timeline::now() noexcept {
 bool Timeline::contains(Timepoint timepoint) const noexcept {
   return timepoint.m_handle == m_handle;
 }
-
 
 void Timeline::complete(Timepoint timepoint) noexcept {
   auto *impl = void_handle_ptr<TimelineImpl>(m_handle);

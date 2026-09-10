@@ -16,18 +16,13 @@ struct ComputeShaderInfo {
  * \brief todo
  */
 class ComputeShader : public Object<ComputeShader> {
-  friend class Device;
-  friend class CommandBuffer;
-  friend struct CommandBufferImpl;
+  friend class Object<ComputeShader>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 
 public:
+  using Object::Object;
   explicit ComputeShader(void *handle) noexcept : Object(handle) {}
-  ComputeShader() noexcept : Object(nullptr) {}
-  ComputeShader(const ComputeShader &) noexcept;
-  ComputeShader(ComputeShader &&) noexcept;
-  ComputeShader &operator=(const ComputeShader &) noexcept;
-  ComputeShader &operator=(ComputeShader &&) noexcept;
-  ~ComputeShader() noexcept;
   void set_name(const char *name);
 };
 

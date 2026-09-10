@@ -5,42 +5,12 @@
 
 namespace strobe::rhi {
 
-AsyncCopyEngine::AsyncCopyEngine(const AsyncCopyEngine &o) noexcept
-    : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<AsyncCopyEngineImpl>(m_handle);
-  }
+void AsyncCopyEngine::pin(void *handle) noexcept {
+  pin_void_handle<AsyncCopyEngineImpl>(handle);
 }
 
-AsyncCopyEngine::AsyncCopyEngine(AsyncCopyEngine &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-AsyncCopyEngine &AsyncCopyEngine::operator=(const AsyncCopyEngine &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<AsyncCopyEngineImpl>(o.m_handle);
-  }
-  unpin_void_handle<AsyncCopyEngineImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
-}
-
-AsyncCopyEngine &AsyncCopyEngine::operator=(AsyncCopyEngine &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<AsyncCopyEngineImpl>(o.m_handle);
-  }
-  unpin_void_handle<AsyncCopyEngineImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-AsyncCopyEngine::~AsyncCopyEngine() noexcept {
-  unpin_void_handle<AsyncCopyEngineImpl>(m_handle);
+void AsyncCopyEngine::unpin(void *handle) noexcept {
+  unpin_void_handle<AsyncCopyEngineImpl>(handle);
 }
 
 Timepoint AsyncCopyEngine::async_copy(BufferOffset dst, BufferOffset src,

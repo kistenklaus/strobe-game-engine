@@ -9,14 +9,13 @@
 namespace strobe::rhi {
 
 class GarbageCollector : public Object<GarbageCollector> {
+  friend class Object<GarbageCollector>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
+
 public:
+  using Object::Object;
   explicit GarbageCollector(void *handle) noexcept : Object(handle) {}
-  GarbageCollector() noexcept : Object(nullptr) {}
-  GarbageCollector(const GarbageCollector &) noexcept;
-  GarbageCollector(GarbageCollector &&) noexcept;
-  GarbageCollector &operator=(const GarbageCollector &) noexcept;
-  GarbageCollector &operator=(GarbageCollector &&) noexcept;
-  ~GarbageCollector() noexcept;
 
   void request_commit(Timepoint timepoint) noexcept;
 

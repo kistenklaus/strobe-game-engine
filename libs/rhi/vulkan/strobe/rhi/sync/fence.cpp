@@ -7,32 +7,11 @@
 
 namespace strobe::rhi {
 
-Fence::Fence(const Fence &o) noexcept : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<FenceImpl>(m_handle);
-  }
+void Fence::pin(void *handle) noexcept { pin_void_handle<FenceImpl>(handle); }
+
+void Fence::unpin(void *handle) noexcept {
+  unpin_void_handle<FenceImpl>(handle);
 }
-Fence::Fence(Fence &&o) noexcept : Object(std::exchange(o.m_handle, nullptr)) {}
-Fence &Fence::operator=(const Fence &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<FenceImpl>(o.m_handle);
-  }
-  unpin_void_handle<FenceImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
-}
-Fence &Fence::operator=(Fence &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<FenceImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-Fence::~Fence() noexcept { unpin_void_handle<FenceImpl>(m_handle); }
 
 bool Fence::wait(uint64_t timeout) const noexcept {
   if (m_handle == nullptr) {

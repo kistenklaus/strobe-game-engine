@@ -4,39 +4,11 @@
 
 namespace strobe::rhi {
 
-VertexShader::VertexShader(const VertexShader &o) noexcept
-    : Object(o.m_handle) {
-  if (m_handle != nullptr) {
-    pin_void_handle<ShaderObjectImpl>(m_handle);
-  }
+void VertexShader::pin(void *handle) noexcept {
+  pin_void_handle<ShaderObjectImpl>(handle);
 }
-
-VertexShader::VertexShader(VertexShader &&o) noexcept
-    : Object(std::exchange(o.m_handle, nullptr)) {}
-
-VertexShader &VertexShader::operator=(const VertexShader &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<ShaderObjectImpl>(o.m_handle);
-  }
-  unpin_void_handle<ShaderObjectImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
-}
-
-VertexShader &VertexShader::operator=(VertexShader &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<ShaderObjectImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-VertexShader::~VertexShader() noexcept {
-  unpin_void_handle<ShaderObjectImpl>(m_handle);
+void VertexShader::unpin(void *handle) noexcept {
+  unpin_void_handle<ShaderObjectImpl>(handle);
 }
 
 } // namespace strobe::rhi

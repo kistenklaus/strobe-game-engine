@@ -3,43 +3,16 @@
 #include "strobe/rhi/memory/memory_allocation_impl.hpp"
 #include "strobe/rhi/memory/memory_pool_impl.hpp"
 #include <tracy/Tracy.hpp>
-#include <utility>
 #include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi {
 
-MemoryPool::MemoryPool(const MemoryPool &o) noexcept : m_handle(o.m_handle) {
-  if (m_handle) {
-    pin_void_handle<MemoryPoolImpl>(m_handle);
-  }
+void MemoryPool::pin(void *handle) noexcept {
+  pin_void_handle<MemoryPoolImpl>(handle);
 }
 
-MemoryPool::MemoryPool(MemoryPool &&o) noexcept
-    : m_handle(std::exchange(o.m_handle, nullptr)) {}
-
-MemoryPool &MemoryPool::operator=(const MemoryPool &o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  if (o.m_handle != nullptr) {
-    pin_void_handle<MemoryPoolImpl>(o.m_handle);
-  }
-  unpin_void_handle<MemoryPoolImpl>(m_handle);
-  m_handle = o.m_handle;
-  return *this;
-}
-
-MemoryPool &MemoryPool::operator=(MemoryPool &&o) noexcept {
-  if (this == &o) {
-    return *this;
-  }
-  unpin_void_handle<MemoryPoolImpl>(m_handle);
-  m_handle = std::exchange(o.m_handle, nullptr);
-  return *this;
-}
-
-MemoryPool::~MemoryPool() noexcept {
-  unpin_void_handle<MemoryPoolImpl>(m_handle);
+void MemoryPool::unpin(void *handle) noexcept {
+  unpin_void_handle<MemoryPoolImpl>(handle);
 }
 
 void MemoryPool::commit() {
@@ -52,8 +25,8 @@ bool MemoryPool::memory_overlaps(const MemoryAllocation &lhs,
                                  const MemoryAllocation &rhs) const noexcept {
   lhs.commit();
   rhs.commit();
-  auto *lhs_impl = void_handle_ptr<MemoryAllocationImpl>(lhs.m_handle);
-  auto *rhs_impl = void_handle_ptr<MemoryAllocationImpl>(rhs.m_handle);
+  auto *lhs_impl = object_handle_ptr<MemoryAllocationImpl>(lhs);
+  auto *rhs_impl = object_handle_ptr<MemoryAllocationImpl>(rhs);
   assert(lhs_impl->binding);
   assert(rhs_impl->binding);
   const VkDeviceSize lhs_offset = lhs_impl->binding.offset;

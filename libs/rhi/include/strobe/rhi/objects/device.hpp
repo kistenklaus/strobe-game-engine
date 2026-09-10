@@ -2,7 +2,6 @@
 
 #include "strobe/rhi/objects/blas.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
-#include "strobe/rhi/objects/buffer_descriptor.hpp"
 #include "strobe/rhi/objects/command_pool.hpp"
 #include "strobe/rhi/objects/compute_shader.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
@@ -10,6 +9,7 @@
 #include "strobe/rhi/objects/image_view.hpp"
 #include "strobe/rhi/objects/object.hpp"
 #include "strobe/rhi/objects/queue.hpp"
+#include "strobe/rhi/objects/resource_descriptor.hpp"
 #include "strobe/rhi/objects/swapchain.hpp"
 #include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
@@ -31,14 +31,12 @@ namespace strobe::rhi {
  * \brief todo
  */
 class Device : public Object<Device> {
+  friend class Object<Device>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 public:
+  using Object::Object;
   explicit Device(void *handle) noexcept : Object(handle) {}
-  Device() noexcept : Object(nullptr) {}
-  Device(const Device &) noexcept;
-  Device(Device &&) noexcept;
-  Device &operator=(const Device &) noexcept;
-  Device &operator=(Device &&) noexcept;
-  ~Device() noexcept;
 
   FragmentShader
   create_fragment_shader(const FragmentShaderInfo &info) noexcept;

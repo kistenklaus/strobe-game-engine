@@ -2,10 +2,10 @@
 
 #include "strobe/rhi/objects/blas.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
-#include "strobe/rhi/objects/buffer_descriptor.hpp"
-#include "strobe/rhi/objects/buffer_descriptor_array.hpp"
 #include "strobe/rhi/objects/compute_shader.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
+#include "strobe/rhi/objects/resource_descriptor.hpp"
+#include "strobe/rhi/objects/resource_descriptor_array.hpp"
 #include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
 #include "strobe/rhi/types/aabb_geometry_data.hpp"
@@ -35,25 +35,17 @@
 
 namespace strobe::rhi {
 
-
 /**
  * \ingroup rhi
  * \brief todo
  */
 class CommandBuffer : public Object<CommandBuffer> {
-  friend struct CommandPoolImpl;
-  friend class CommandPool;
-  friend struct SwapchainImpl;
-  friend class Queue;
+  friend class Object<CommandBuffer>;
+  static void pin(void*) noexcept;
+  static void unpin(void*) noexcept;
 
 public:
-  CommandBuffer() noexcept : Object(nullptr) {}
-  CommandBuffer(const CommandBuffer &) noexcept;
-  CommandBuffer(CommandBuffer &&) noexcept;
-  CommandBuffer &operator=(const CommandBuffer &) noexcept;
-  CommandBuffer &operator=(CommandBuffer &&) noexcept;
-  ~CommandBuffer() noexcept;
-
+  using Object::Object;
   // pool must be externally synchronized
   void begin();
   // pool must be externally synchronized

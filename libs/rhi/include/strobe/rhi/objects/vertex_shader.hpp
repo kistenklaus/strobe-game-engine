@@ -16,18 +16,12 @@ struct VertexShaderInfo {
  * \brief todo
  */
 struct VertexShader : public Object<VertexShader> {
-  friend class Device;
-  friend class CommandBuffer;
-  friend struct CommandBufferImpl;
+  friend class Object<VertexShader>;
+  static void pin(void *) noexcept;
+  static void unpin(void *) noexcept;
 
 public:
   explicit VertexShader(void *handle) noexcept : Object(handle) {}
-  VertexShader() noexcept : Object(nullptr) {}
-  VertexShader(const VertexShader &) noexcept;
-  VertexShader(VertexShader &&) noexcept;
-  VertexShader &operator=(const VertexShader &) noexcept;
-  VertexShader &operator=(VertexShader &&) noexcept;
-  ~VertexShader() noexcept;
 };
 
 } // namespace strobe::rhi

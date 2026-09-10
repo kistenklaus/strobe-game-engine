@@ -4,44 +4,12 @@
 
 namespace strobe::rhi {
 
-Surface::Surface(const Surface &other) noexcept : Object(other.m_handle) {
-  if (m_handle) {
-    pin_void_handle<SurfaceImpl>(m_handle);
-  }
+void Surface::pin(void *handle) noexcept {
+  pin_void_handle<SurfaceImpl>(handle);
 }
 
-Surface::Surface(Surface &&other) noexcept : Object(other.m_handle) {
-  other.m_handle = nullptr;
-}
-
-Surface &Surface::operator=(const Surface &other) noexcept {
-  if (this == &other) {
-    return *this;
-  }
-  if (other.m_handle) {
-    pin_void_handle<SurfaceImpl>(other.m_handle);
-  }
-  if (m_handle) {
-    unpin_void_handle<SurfaceImpl>(m_handle);
-  }
-  m_handle = other.m_handle;
-  return *this;
-}
-
-Surface &Surface::operator=(Surface &&other) noexcept {
-  if (this == &other) {
-    return *this;
-  }
-  unpin_void_handle<SurfaceImpl>(m_handle);
-  m_handle = other.m_handle;
-  other.m_handle = nullptr;
-  return *this;
-}
-
-Surface::~Surface() noexcept {
-  if (m_handle) {
-    unpin_void_handle<SurfaceImpl>(m_handle);
-  }
+void Surface::unpin(void *handle) noexcept {
+  unpin_void_handle<SurfaceImpl>(handle);
 }
 
 vulkan::Surface Surface::get() const noexcept {
