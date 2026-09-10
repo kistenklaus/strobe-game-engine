@@ -17,9 +17,6 @@ class SwapchainImage : public Object<SwapchainImage> {
 
 public:
   using Object::Object;
-  explicit SwapchainImage(void *handle) noexcept : Object(handle) {}
-
-
   const Image &image() const noexcept;
   const ImageView &view() const noexcept;
   const uvec2 extent() const noexcept;

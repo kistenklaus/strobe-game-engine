@@ -17,7 +17,5 @@ class CommandPool : public Object<CommandPool> {
 public:
   using Object::Object;
   CommandBuffer alloc(CommandBufferFlags flags = CommandBufferFlags::none);
-
-  explicit CommandPool(void *handle) : Object(handle) {};
 };
 } // namespace strobe::rhi

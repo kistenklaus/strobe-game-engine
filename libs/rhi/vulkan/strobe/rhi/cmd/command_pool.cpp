@@ -4,6 +4,7 @@
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/objects/command_buffer.hpp"
 #include "strobe/rhi/types/command_buffer_type.hpp"
+#include "strobe/rhi/object_factory.hpp"
 
 namespace strobe::rhi {
 
@@ -21,9 +22,9 @@ CommandBuffer CommandPool::alloc(CommandBufferFlags flags) {
   auto [nativePool, cmd] =
       impl->alloc((flags & CommandBufferFlags::secondary) == 0);
 
-  return CommandBuffer{make_void_handle<CommandBufferImpl>(
+  return detail::make_object<CommandBuffer>(make_void_handle<CommandBufferImpl>(
       &impl->cmdAlloc, *this, impl->stagingPool, nativePool, cmd, flags,
-      impl->stateAlloc)};
+      impl->stateAlloc));
 }
 
 } // namespace strobe::rhi

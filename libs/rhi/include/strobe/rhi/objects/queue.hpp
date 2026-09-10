@@ -19,7 +19,6 @@ class Queue : public Object<Queue> {
 
 public:
   using Object::Object;
-  explicit Queue(void *handle) noexcept : Object(handle) {}
 
   void wait(const Timepoint &timepoint,
             PipelineStage stage = PipelineStage::all_commands) noexcept;

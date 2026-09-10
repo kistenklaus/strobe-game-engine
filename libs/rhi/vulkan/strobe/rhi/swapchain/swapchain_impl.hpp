@@ -3,6 +3,7 @@
 #include "strobe/core/lina/vec.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/img/img.hpp"
+#include "strobe/rhi/object_factory.hpp"
 #include "strobe/rhi/swapchain/surface.hpp"
 #include "strobe/rhi/swapchain/swapchain_generation.hpp"
 #include "strobe/rhi/swapchain/swapchain_generation_impl.hpp"
@@ -171,10 +172,10 @@ struct SwapchainImpl {
     Vector<SwapchainFrame, strobe::rhi::allocator_ref> frames{
         nativeImages.size(), m_alloc};
     for (uint32_t i = 0; i < frames.size(); ++i) {
-      frames[i].image = Image{make_void_handle<ImageImpl>(
+      frames[i].image = detail::make_object<Image>(make_void_handle<ImageImpl>(
           &m_imgAlloc->imageAllocator, m_surface.context(), MemoryAllocation{},
           nativeImages[i], ImageType::image_2d, from_vk_format(format.format),
-          uvec3{extent.x(), extent.y(), 1}, 1, 1, SampleCount::x1)};
+          uvec3{extent.x(), extent.y(), 1}, 1, 1, SampleCount::x1));
       frames[i].view =
           img::create_image_view(frames[i].image,
                                  {
@@ -185,10 +186,11 @@ struct SwapchainImpl {
                                  m_imgAlloc);
     }
 
-    generation = SwapchainGeneration{make_void_handle<SwapchainGenerationImpl>(
-        &m_generationAllocator, m_surface, m_fencePool, m_semPool, swapchain,
-        std::move(frames), extent, from_vk_format(format.format),
-        &m_swapchainImageAllocator, m_alloc)};
+    generation = detail::make_object<SwapchainGeneration>(
+        make_void_handle<SwapchainGenerationImpl>(
+            &m_generationAllocator, m_surface, m_fencePool, m_semPool,
+            swapchain, std::move(frames), extent, from_vk_format(format.format),
+            &m_swapchainImageAllocator, m_alloc));
     return true;
   }
 

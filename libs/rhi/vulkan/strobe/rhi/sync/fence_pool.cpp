@@ -2,6 +2,7 @@
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/sync/fence_callback_flag.hpp"
 #include "strobe/rhi/sync/fence_pool_impl.hpp"
+#include "strobe/rhi/object_factory.hpp"
 
 namespace strobe::rhi {
 
@@ -17,8 +18,8 @@ Fence FencePool::allocate(void *pUserData,
                                            FenceCallbackFlag)) noexcept {
   auto *impl = void_handle_ptr<FencePoolImpl>(m_handle);
   FenceNode *node = impl->allocate();
-  return Fence{make_void_handle<FenceImpl>(impl->get_fence_handle_alloc(),
-                                           *this, node, pUserData, callback)};
+  return detail::make_object<Fence>(make_void_handle<FenceImpl>(
+      impl->get_fence_handle_alloc(), *this, node, pUserData, callback));
 }
 
 } // namespace strobe::rhi

@@ -26,10 +26,6 @@ public:
   uint32_t mip_levels() const noexcept;
   uint32_t arrayLayers() const noexcept;
   SampleCount samples() const noexcept;
-
-  explicit Image(void *handle) noexcept : Object(handle) {}
-
-private:
 };
 
 } // namespace strobe::rhi

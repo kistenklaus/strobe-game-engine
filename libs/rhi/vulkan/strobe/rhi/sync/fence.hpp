@@ -15,7 +15,6 @@ class Fence : public Object<Fence> {
 
 public:
   using Object::Object;
-  explicit Fence(void *handle) noexcept : Object(handle) {}
   explicit operator bool() const noexcept { return m_handle != nullptr; }
 
   bool

@@ -2,6 +2,7 @@
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/memory/memory_allocation_impl.hpp"
 #include "strobe/rhi/memory/memory_pool_impl.hpp"
+#include "strobe/rhi/object_factory.hpp"
 #include <tracy/Tracy.hpp>
 #include <vulkan/vulkan_core.h>
 
@@ -44,9 +45,10 @@ MemoryPool::allocate_memory(const MemoryRequirements &requirements,
   auto *impl = void_handle_ptr<MemoryPoolImpl>(m_handle);
   const auto [binding, internals] =
       impl->allocate_memory(requirements, lifetime);
-  return MemoryAllocation{make_void_handle<MemoryAllocationImpl>(
-      impl->get_handle_alloc(), *this, binding, requirements.memoryUsage,
-      internals)};
+  return detail::make_object<MemoryAllocation>(
+      make_void_handle<MemoryAllocationImpl>(impl->get_handle_alloc(), *this,
+                                             binding, requirements.memoryUsage,
+                                             internals));
 }
 
 const Context &MemoryPool::context() const noexcept {

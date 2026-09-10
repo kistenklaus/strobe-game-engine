@@ -4,7 +4,6 @@
 #include "strobe/rhi/cmd/command_buffer_state_alloctor.hpp"
 #include "strobe/rhi/cmd/command_pool_impl.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/objects/command_buffer.hpp"
 #include "strobe/rhi/objects/command_pool.hpp"
 
 namespace strobe::rhi::cmd {

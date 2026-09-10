@@ -6,7 +6,7 @@ namespace strobe::rhi {
 
 ResourceDescriptorArrayWizard::~ResourceDescriptorArrayWizard() noexcept {
   if (m_index != std::numeric_limits<uint32_t>::max()) {
-    auto* heap_impl = object_handle_ptr<ResourceDescriptorHeapImpl>(m_heap);
+    auto *heap_impl = object_handle_ptr<ResourceDescriptorHeapImpl>(m_heap);
     heap_impl->layout.free_range(m_index, m_infos.size());
   }
 }

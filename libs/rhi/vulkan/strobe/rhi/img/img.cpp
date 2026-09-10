@@ -1,5 +1,6 @@
 #include "strobe/rhi/img/img.hpp"
 #include "strobe/rhi/context/context.hpp"
+#include "strobe/rhi/object_factory.hpp"
 #include "strobe/rhi/memory/memory_allocation_flags.hpp"
 #include "strobe/rhi/memory/memory_granularity_class.hpp"
 #include "strobe/rhi/utils/format_utilts.hpp"
@@ -15,8 +16,7 @@
 namespace strobe::rhi::img {
 
 Image create_image(const MemoryPool &memoryPool, const ImageInfo &info,
-                   const MemoryLifetime &lifetime,
-                   handle_allocators* alloc) {
+                   const MemoryLifetime &lifetime, handle_allocators *alloc) {
   ZoneScopedN("img/create-image");
   Context context = memoryPool.context();
   vulkan::Context *ctx = context.ctx();
@@ -70,10 +70,10 @@ Image create_image(const MemoryPool &memoryPool, const ImageInfo &info,
     vulkan::bind_image_memory(ctx, allocation.binding().memory, image,
                               allocation.binding().offset);
   }
-  return Image{make_void_handle<ImageImpl>(
-      &alloc->imageAllocator, std::move(context), std::move(allocation), image, info.type,
-      info.format, info.extent, info.mip_levels, info.arrayLayers,
-      info.samples)};
+  return detail::make_object<Image>(make_void_handle<ImageImpl>(
+      &alloc->imageAllocator, std::move(context), std::move(allocation), image,
+      info.type, info.format, info.extent, info.mip_levels, info.arrayLayers,
+      info.samples));
 }
 
 ImageView create_image_view(Image image, const ImageViewInfo &info,
@@ -134,8 +134,8 @@ ImageView create_image_view(Image image, const ImageViewInfo &info,
                    },
            });
 
-  return ImageView{make_void_handle<ImageViewImpl>(
-      &alloc->imageViewAllocator, std::move(image), view, format)};
+  return detail::make_object<ImageView>(make_void_handle<ImageViewImpl>(
+      &alloc->imageViewAllocator, std::move(image), view, format));
 }
 
 } // namespace strobe::rhi::img

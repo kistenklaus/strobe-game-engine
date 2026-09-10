@@ -13,9 +13,6 @@ struct Blas : public Object<Blas> {
   static void pin(void *handle) noexcept;
   static void unpin(void *handle) noexcept;
   using Object::Object;
-
-public:
-  explicit Blas(void *handle) noexcept : Object(handle) {}
 };
 
 } // namespace strobe::rhi

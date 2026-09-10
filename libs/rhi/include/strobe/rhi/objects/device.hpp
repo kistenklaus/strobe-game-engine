@@ -36,7 +36,6 @@ class Device : public Object<Device> {
   static void unpin(void *) noexcept;
 public:
   using Object::Object;
-  explicit Device(void *handle) noexcept : Object(handle) {}
 
   FragmentShader
   create_fragment_shader(const FragmentShaderInfo &info) noexcept;

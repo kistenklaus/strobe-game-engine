@@ -15,7 +15,6 @@ class Tlas : public Object<Tlas> {
 
 public:
   using Object::Object;
-  explicit Tlas(void *handle) noexcept : Object(handle) {}
 };
 
 } // namespace strobe::rhi

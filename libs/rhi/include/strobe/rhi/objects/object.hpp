@@ -3,6 +3,10 @@
 #include <utility>
 namespace strobe::rhi {
 
+namespace detail {
+template <typename T> T make_object(void *handle) noexcept;
+}
+
 template <typename Derived> class Object {
 public:
   Object() noexcept = default;
@@ -13,8 +17,7 @@ public:
     }
   }
 
-  Object(Object &&o) noexcept
-      : m_handle(std::exchange(o.m_handle, nullptr)) {}
+  Object(Object &&o) noexcept : m_handle(std::exchange(o.m_handle, nullptr)) {}
 
   Object &operator=(const Object &o) noexcept {
     if (this == &o)
@@ -54,6 +57,19 @@ public:
 
   friend bool operator!=(const Derived &lhs, const Derived &rhs) noexcept {
     return !(lhs == rhs);
+  }
+
+private:
+  template <typename T> friend T detail::make_object(void *) noexcept;
+
+  static Derived from_handle(void *handle) noexcept {
+    Derived object;
+    object.m_handle = handle;
+
+    static_assert(sizeof(Derived) == sizeof(void *));
+    static_assert(alignof(Derived) == alignof(void *));
+
+    return object;
   }
 
 protected:

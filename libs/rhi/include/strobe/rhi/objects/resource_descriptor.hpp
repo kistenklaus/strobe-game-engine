@@ -17,7 +17,6 @@ class ResourceDescriptor : public Object<ResourceDescriptor> {
 
 public:
   using Object::Object;
-  explicit ResourceDescriptor(void *handle) noexcept : Object(handle) {}
 };
 
 } // namespace strobe::rhi

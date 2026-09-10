@@ -22,7 +22,6 @@ class ComputeShader : public Object<ComputeShader> {
 
 public:
   using Object::Object;
-  explicit ComputeShader(void *handle) noexcept : Object(handle) {}
   void set_name(const char *name);
 };
 

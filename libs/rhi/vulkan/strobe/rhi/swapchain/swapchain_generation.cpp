@@ -1,6 +1,7 @@
 #include "strobe/rhi/swapchain/swapchain_generation.hpp"
 #include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/handle.hpp"
+#include "strobe/rhi/object_factory.hpp"
 #include "strobe/rhi/swapchain/swapchain_generation_impl.hpp"
 #include "strobe/rhi/swapchain/swapchain_image_impl.hpp"
 #include "strobe/rhi/sync/fence_callback_flag.hpp"
@@ -42,16 +43,17 @@ SwapchainImage SwapchainGeneration::acquire() {
     impl->frames[imageIndex].imageAvailable = std::move(imageAvailable);
     auto alloc = impl->get_swapchain_image_handle_allocator();
     auto *ptr = make_void_handle<SwapchainImageImpl>(alloc, *this, imageIndex);
-    return SwapchainImage{ptr};
+    return detail::make_object<SwapchainImage>(ptr);
   }
   case vulkan::SwapchainAcquireStatus::suboptimal:
     fmt::println("suboptimal");
     impl->debugCounter.fetch_add(1, std::memory_order_relaxed);
     impl->frames[imageIndex].imageAvailable = std::move(imageAvailable);
     impl->suboptimal = true;
-    return SwapchainImage{make_void_handle<SwapchainImageImpl>(
-        impl->get_swapchain_image_handle_allocator(), //
-        *this, imageIndex)};
+    return detail::make_object<SwapchainImage>(
+        make_void_handle<SwapchainImageImpl>(
+            impl->get_swapchain_image_handle_allocator(), //
+            *this, imageIndex));
   case vulkan::SwapchainAcquireStatus::out_of_date:
     return {};
   case vulkan::SwapchainAcquireStatus::timeout:

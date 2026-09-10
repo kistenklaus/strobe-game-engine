@@ -31,7 +31,5 @@ public:
    * \brief set debug utils name
    */
   void set_name(const char *name) const noexcept;
-
-  explicit Buffer(void *handle) noexcept : Object(handle) { assert(handle); }
 };
 } // namespace strobe::rhi

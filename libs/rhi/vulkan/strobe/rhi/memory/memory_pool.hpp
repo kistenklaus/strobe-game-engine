@@ -25,8 +25,6 @@ public:
                                    const MemoryLifetime &lifetime) const;
 
   const Context &context() const noexcept;
-
-  explicit MemoryPool(void *handle) noexcept : Object(handle) {}
 };
 
 } // namespace strobe::rhi

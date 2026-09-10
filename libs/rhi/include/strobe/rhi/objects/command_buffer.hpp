@@ -176,10 +176,6 @@ public:
   void push(uint32_t offset, const ResourceDescriptor &descriptor) noexcept;
   void push(uint32_t offset,
             const ResourceDescriptorArray &descriptor) noexcept;
-
-  explicit CommandBuffer(void *handle) noexcept : Object(handle) {}
-
-private:
 };
 
 } // namespace strobe::rhi

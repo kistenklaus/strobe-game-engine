@@ -16,7 +16,6 @@ class Swapchain : public Object<Swapchain> {
 
 public:
   using Object::Object;
-  explicit Swapchain(void *handle) noexcept : Object(handle) {}
   SwapchainImage acquire();
 };
 

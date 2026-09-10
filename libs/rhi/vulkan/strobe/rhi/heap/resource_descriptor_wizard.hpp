@@ -6,6 +6,7 @@
 #include "strobe/rhi/heap/resource_descriptor_heap_impl.hpp"
 #include "strobe/rhi/heap/resource_descriptor_impl.hpp"
 #include "strobe/rhi/img/image_impl.hpp"
+#include "strobe/rhi/object_factory.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/resource_descriptor.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
@@ -404,10 +405,11 @@ public:
         .offset = offset,
         .size = stride,
     });
-    return ResourceDescriptor{make_void_handle<ResourceDescriptorImpl>(
-        &impl->bufferDescAlloc, std::move(m_heap),
-        std::exchange(m_index, std::numeric_limits<uint32_t>::max()),
-        std::move(ready), std::move(resource))};
+    return detail::make_object<ResourceDescriptor>(
+        make_void_handle<ResourceDescriptorImpl>(
+            &impl->bufferDescAlloc, std::move(m_heap),
+            std::exchange(m_index, std::numeric_limits<uint32_t>::max()),
+            std::move(ready), std::move(resource)));
   }
   ~ResourceDescriptorWizard() noexcept;
 

@@ -19,9 +19,6 @@ struct VertexShader : public Object<VertexShader> {
   friend class Object<VertexShader>;
   static void pin(void *) noexcept;
   static void unpin(void *) noexcept;
-
-public:
-  explicit VertexShader(void *handle) noexcept : Object(handle) {}
 };
 
 } // namespace strobe::rhi

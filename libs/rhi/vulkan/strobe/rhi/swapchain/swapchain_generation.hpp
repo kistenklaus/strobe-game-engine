@@ -15,7 +15,6 @@ class SwapchainGeneration : public Object<SwapchainGeneration> {
 
 public:
   using Object::Object;
-  explicit SwapchainGeneration(void *handle) noexcept : Object(handle) {}
 
   // may return null, then the swapchain has to be recreated immediatly,
   // otherwise

@@ -21,7 +21,6 @@ class FragmentShader : public Object<FragmentShader> {
 
 public:
   using Object::Object;
-  explicit FragmentShader(void *handle) noexcept : Object(handle) {}
 };
 
 } // namespace strobe::rhi

@@ -12,7 +12,6 @@ class Surface : public Object<Surface> {
 
 public:
   using Object::Object;
-  explicit Surface(void *handle) noexcept : Object(handle) {}
 
   vulkan::Surface get() const noexcept;
   vulkan::Context *ctx() const noexcept;

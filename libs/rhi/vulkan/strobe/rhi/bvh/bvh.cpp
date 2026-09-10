@@ -2,6 +2,7 @@
 #include "strobe/rhi/buf/buf.hpp"
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/handle.hpp"
+#include "strobe/rhi/object_factory.hpp"
 #include "strobe/rhi/types/aabb.hpp"
 #include "strobe/rhi/types/aabb_geometry_info_size_info.hpp"
 #include "strobe/rhi/types/build_flags.hpp"
@@ -287,9 +288,9 @@ Blas create_blas(MemoryPool memoryPool, ScratchBuffer scratchBuffer,
            });
   scratchBuffer.require(sizeInfo.first.scratchSize);
 
-  return Blas{make_void_handle<BvhImpl>(
+  return detail::make_object<Blas>(make_void_handle<BvhImpl>(
       &alloc->bvhAllocator, std::move(context), std::move(buffer),
-      std::move(scratchBuffer), bvh, std::move(sizeInfo.first))};
+      std::move(scratchBuffer), bvh, std::move(sizeInfo.first)));
 }
 
 Tlas create_tlas(MemoryPool memoryPool, ScratchBuffer scratchBuffer,
@@ -323,15 +324,15 @@ Tlas create_tlas(MemoryPool memoryPool, ScratchBuffer scratchBuffer,
            });
   scratchBuffer.require(bvhInfo.scratchSize);
 
-  return Tlas{make_void_handle<BvhImpl>(
+  return detail::make_object<Tlas>(make_void_handle<BvhImpl>(
       &alloc->bvhAllocator, std::move(context), std::move(buffer),
-      std::move(scratchBuffer), bvh, std::move(bvhInfo))};
+      std::move(scratchBuffer), bvh, std::move(bvhInfo)));
 }
 
 ScratchBuffer create_scratch(MemoryPool memoryPool, handle_allocators *alloc) {
   ZoneScopedN("bvh/create-scratch");
-  return ScratchBuffer{make_void_handle<ScratchBufferImpl>(
-      &alloc->scratchAllocator, std::move(memoryPool), alloc->bufAllocators)};
+  return detail::make_object<ScratchBuffer>(make_void_handle<ScratchBufferImpl>(
+      &alloc->scratchAllocator, std::move(memoryPool), alloc->bufAllocators));
 }
 
 } // namespace strobe::rhi::bvh

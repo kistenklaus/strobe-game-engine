@@ -132,21 +132,21 @@ Device create_device(const DeviceInfo &info) {
   HeapController heapctrl =
       heapctrl::create_heapctrl(memory, dma, &allocs->heapCtrlAlloc);
 
-  return Device{make_void_handle<DeviceImpl>( //
-      &allocs->deviceAlloc,                   //
-      std::move(context),                     //
-      allocs,                                 //
-      std::move(fencePool),                   //
-      std::move(semPool),                     //
-      std::move(memory),                      //
-      std::move(staging),                     //
-      std::move(scratch),                     //
-      std::move(gc),                          //
-      std::move(universalQueue),              //
-      std::move(transferQueue),               //
-      std::move(dma),                         //
-      std::move(heapctrl)                     //
-      )};
+  return detail::make_object<Device>(make_void_handle<DeviceImpl>( //
+      &allocs->deviceAlloc,                                        //
+      std::move(context),                                          //
+      allocs,                                                      //
+      std::move(fencePool),                                        //
+      std::move(semPool),                                          //
+      std::move(memory),                                           //
+      std::move(staging),                                          //
+      std::move(scratch),                                          //
+      std::move(gc),                                               //
+      std::move(universalQueue),                                   //
+      std::move(transferQueue),                                    //
+      std::move(dma),                                              //
+      std::move(heapctrl)                                          //
+      ));
 }
 
 } // namespace strobe::rhi

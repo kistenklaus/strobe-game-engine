@@ -7,6 +7,7 @@
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap_impl.hpp"
 #include "strobe/rhi/heap/resource_descriptor_wizard.hpp"
+#include "strobe/rhi/object_factory.hpp"
 #include "strobe/rhi/objects/resource_descriptor_array.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/types/buffer_range.hpp"
@@ -63,11 +64,11 @@ public:
       desc->ready = ready;
     }
 
-    return ResourceDescriptorArray{
+    return detail::make_object<ResourceDescriptorArray>(
         make_void_handle<ResourceDescriptorArrayImpl>(
             &impl->bufferDescArrayAlloc, std::move(m_heap),
             std::exchange(m_index, std::numeric_limits<uint32_t>::max()),
-            m_infos.size(), std::move(ready), descriptors)};
+            m_infos.size(), std::move(ready), descriptors));
   }
 
   ~ResourceDescriptorArrayWizard() noexcept;

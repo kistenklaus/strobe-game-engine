@@ -12,7 +12,6 @@ struct MemoryAllocation : public Object<MemoryAllocation> {
 
 public:
   using Object::Object;
-  explicit MemoryAllocation(void *handle) noexcept : Object(handle) {}
 
   explicit operator bool() const noexcept {
     return m_handle != nullptr;
