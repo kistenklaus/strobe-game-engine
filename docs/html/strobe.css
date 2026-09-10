@@ -1,7 +1,7 @@
 /*
  * STROBE_CPPREFERENCE_STYLESHEET_V1
  *
- * A compact Doxygen reference presentation.  This is intentionally a full
+ * A compact Doxygen reference presentation. This is intentionally a full
  * replacement for strobe.css, not an add-on to the earlier bordered style.
  */
 
@@ -58,7 +58,34 @@ div.contents h2 {
   border-bottom: 1px solid var(--group-header-separator-color);
 }
 
-/* Base styling: a plain list, never a bordered card. */
+/*
+ * High-level class sections, such as "Member Functions", "Friends", and
+ * "Description".
+ */
+h2.groupheader,
+h2.groupheader a {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  color: #111 !important;
+  font-family: inherit;
+  font-size: 1.35rem !important;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+div.contents h2.groupheader {
+  margin: 2.25rem 0 0.4rem;
+  padding: 0 0 0.3rem;
+  border-bottom: 1px solid var(--group-header-separator-color);
+}
+
+/*
+ * Member declarations.
+ */
 table.memberdecls {
   width: 100%;
   margin: 0.75rem 0 1.5rem;
@@ -73,20 +100,56 @@ table.memberdecls td {
   background: transparent;
 }
 
+/*
+ * "Member Functions" and other ordinary Doxygen section headings.
+ */
 table.memberdecls tr.heading > td {
-  padding: 1.5rem 0 0.4rem;
+  padding: 1.15rem 0 0.35rem;
   border-bottom: 1px solid var(--group-header-separator-color);
 }
 
-h2.groupheader {
+table.memberdecls tr.heading > td > h2.groupheader,
+table.memberdecls tr.heading > td > h2.groupheader a {
   margin: 0;
   padding: 0;
   border: 0;
-  box-shadow: none;
+  color: #111 !important;
+  font-family: inherit;
+  font-size: 1.35rem !important;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
 }
 
-/* Member pages already have a direct URL and a class-page index.  Doxygen's
- * second, vertical quick-member strip is redundant and wastes page width. */
+/*
+ * Native \name member groups.
+ *
+ * Doxygen 1.18 emits:
+ *
+ *   <tr class="groupHeader">
+ *     <td><div class="groupHeader">...</div></td>
+ *   </tr>
+ *
+ * The capital H is intentional.
+ */
+table.memberdecls tr.groupHeader > td {
+  padding: 1rem 0 0.35rem;
+  border-bottom: 1px solid var(--group-header-separator-color);
+}
+
+table.memberdecls tr.groupHeader > td > div.groupHeader {
+  margin: 0;
+  padding: 0;
+  color: #111 !important;
+  font-family: inherit;
+  font-size: 1.05rem !important;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+/* Remove Doxygen's redundant vertical quick-member navigation. */
 div.navtab {
   display: none;
 }
@@ -100,9 +163,8 @@ table.memberdecls td.memItemRight {
 }
 
 /*
- * Doxygen emits an entry as two rows: a "memitem:<anchor>" declaration and a
- * "memdesc:<anchor>" brief.  Flatten the pair into return type | signature |
- * brief, matching cppreference's inventory pages.
+ * Doxygen emits each member as two rows: a "memitem:<anchor>" declaration and
+ * a "memdesc:<anchor>" brief. Flatten the pair into declaration | description.
  */
 @supports selector(table:has(tr[class^="memdesc:"])) {
   table.memberdecls:has(tr[class^="memdesc:"]) {
@@ -116,23 +178,28 @@ table.memberdecls td.memItemRight {
     display: contents;
   }
 
-  table.memberdecls:has(tr[class^="memdesc:"]) tr.heading > td {
+  table.memberdecls:has(tr[class^="memdesc:"]) tr.heading > td,
+  table.memberdecls:has(tr[class^="memdesc:"]) tr.groupHeader > td {
     grid-column: 1 / -1;
   }
 
-  table.memberdecls:has(tr[class^="memdesc:"]) tr[class^="memitem:"] > td.memItemLeft {
+  table.memberdecls:has(tr[class^="memdesc:"])
+    tr[class^="memitem:"] > td.memItemLeft {
     display: none;
   }
 
-  table.memberdecls:has(tr[class^="memdesc:"]) tr[class^="memitem:"] > td.memItemRight {
+  table.memberdecls:has(tr[class^="memdesc:"])
+    tr[class^="memitem:"] > td.memItemRight {
     grid-column: 1;
   }
 
-  table.memberdecls:has(tr[class^="memdesc:"]) tr[class^="memdesc:"] > td.mdescLeft {
+  table.memberdecls:has(tr[class^="memdesc:"])
+    tr[class^="memdesc:"] > td.mdescLeft {
     display: none;
   }
 
-  table.memberdecls:has(tr[class^="memdesc:"]) tr[class^="memdesc:"] > td.mdescRight {
+  table.memberdecls:has(tr[class^="memdesc:"])
+    tr[class^="memdesc:"] > td.mdescRight {
     grid-column: 2;
     padding-left: 1.25rem;
   }
@@ -142,9 +209,10 @@ table.memberdecls td.memItemRight {
   }
 }
 
-/* Detailed member pages get a plain title, then a single compact declaration
- * panel.  The diamond Doxygen puts in the title is only a permalink, so it is
- * redundant on a standalone member page. */
+/*
+ * Detailed member pages get a plain title followed by a compact declaration
+ * panel.
+ */
 h2.memtitle {
   margin: 1.75rem 0 0.55rem;
   padding: 0;
@@ -157,6 +225,12 @@ h2.memtitle {
   font-size: 1.25rem;
   font-weight: 600;
   float: none;
+}
+
+div.contents h2.memtitle {
+  margin: 1.75rem 0 0.55rem;
+  padding: 0;
+  border: 0;
 }
 
 h2.memtitle::after,
@@ -183,10 +257,29 @@ div.memproto {
   background: var(--memdef-proto-background-color);
 }
 
-/* Doxygen places declaration qualifiers in badge spans.  Keep their text, but
- * make it part of the monospace declaration rather than a row of UI chips. */
+/*
+ * Doxygen builds declarations from nested tables. Keep them at their content
+ * width so the declaration panel wraps the signature rather than the page.
+ */
+div.memproto table.memname,
 div.memproto table.mlabels {
   width: auto;
+  border-spacing: 0;
+}
+
+div.memproto table.memname,
+div.memproto table.memname td,
+div.memproto table.mlabels,
+div.memproto table.mlabels td {
+  font-family: var(--font-family-monospace);
+  font-size: 13px;
+  line-height: 1.5;
+  vertical-align: baseline;
+}
+
+div.memproto table.mlabels {
+  display: inline-table;
+  margin-left: 0;
 }
 
 div.memproto td.mlabels-left {
@@ -198,25 +291,25 @@ div.memproto td.mlabels-right {
   white-space: normal;
 }
 
-div.memproto span.mlabels {
-  margin-left: 0;
-}
-
 div.memproto span.mlabel {
   display: inline;
   margin: 0;
-  margin-left: 0.6ch;
   padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: inherit;
   font-family: var(--font-family-monospace);
-  /* Doxygen's declaration text (.memname) is 13px; its badge rule is 7pt. */
   font-size: 13px !important;
   font-weight: inherit;
   line-height: inherit;
   vertical-align: baseline;
+}
+
+/* Space between const and the first modifier, and later modifiers. */
+div.memproto td.mlabels-right span.mlabel:first-of-type,
+div.memproto td.mlabels-right span.mlabel + span.mlabel {
+  margin-left: 0.6ch;
 }
 
 div.memdoc {
@@ -257,14 +350,45 @@ dl.section {
       grid-template-columns: minmax(0, 1fr);
     }
 
-    table.memberdecls:has(tr[class^="memdesc:"]) tr[class^="memitem:"] > td.memItemRight {
+    table.memberdecls:has(tr[class^="memdesc:"])
+      tr[class^="memitem:"] > td.memItemRight {
       grid-column: 1;
       padding-right: 0;
     }
 
-    table.memberdecls:has(tr[class^="memdesc:"]) tr[class^="memdesc:"] > td.mdescRight {
+    table.memberdecls:has(tr[class^="memdesc:"])
+      tr[class^="memdesc:"] > td.mdescRight {
       grid-column: 1;
       padding: 0 0 0.85rem;
     }
   }
+}
+
+/* Replace Doxygen's "#include <...>" class header line with "Defined in <...>". */
+div.contents > p:has(> code > a.el[href$="_source.html"]) > code {
+  font-size: 0;
+}
+
+div.contents > p:has(> code > a.el[href$="_source.html"]) > code::before {
+  content: "Defined in header <";
+  color: inherit;
+  font-family: var(--font-family-monospace);
+  font-size: 13px;
+}
+
+div.contents > p:has(> code > a.el[href$="_source.html"]) > code > a.el {
+  font-family: var(--font-family-monospace);
+  font-size: 13px;
+}
+
+div.contents > p:has(> code > a.el[href$="_source.html"]) > code::after {
+  content: ">";
+  color: inherit;
+  font-family: var(--font-family-monospace);
+  font-size: 13px;
+}
+
+/* Hide Doxygen's source-location footer in class descriptions. */
+div.contents > div.textblock > p.definition {
+  display: none;
 }

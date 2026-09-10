@@ -11,10 +11,24 @@
   </navindex>
 
   <class>
-    <briefdescription visible="yes"/>
+    <briefdescription visible="no"/>
     <includes visible="$SHOW_HEADERFILE"/>
-    <inheritancegraph visible="no"/>
+    <inheritancegraph visible="yes"/>
     <collaborationgraph visible="no"/>
+    <detaileddescription visible="yes" title="Description"/>
+    <memberdef>
+      <inlineclasses visible="yes" title=""/>
+      <typedefs visible="yes" title=""/>
+      <enums visible="yes" title=""/>
+      <services visible="yes" title=""/>
+      <interfaces visible="yes" title=""/>
+      <constructors visible="yes" title=""/>
+      <functions visible="yes" title=""/>
+      <related visible="yes" title=""/>
+      <variables visible="yes" title=""/>
+      <properties visible="no" title=""/>
+      <events visible="no" title=""/>
+    </memberdef>
     <memberdecl>
       <nestedclasses visible="yes" title=""/>
       <publictypes visible="yes" title=""/>
@@ -22,7 +36,7 @@
       <interfaces visible="yes" title=""/>
       <publicslots visible="yes" title=""/>
       <signals visible="yes" title=""/>
-      <publicmethods visible="yes" title=""/>
+      <publicmethods visible="yes" title="Member Functions"/>
       <publicstaticmethods visible="yes" title=""/>
       <publicattributes visible="yes" title=""/>
       <publicstaticattributes visible="yes" title=""/>
@@ -49,20 +63,6 @@
       <related visible="yes" title="" subtitle=""/>
       <membergroups visible="yes"/>
     </memberdecl>
-    <detaileddescription visible="yes" title=""/>
-    <memberdef>
-      <inlineclasses visible="yes" title=""/>
-      <typedefs visible="yes" title=""/>
-      <enums visible="yes" title=""/>
-      <services visible="yes" title=""/>
-      <interfaces visible="yes" title=""/>
-      <constructors visible="yes" title=""/>
-      <functions visible="yes" title=""/>
-      <related visible="yes" title=""/>
-      <variables visible="yes" title=""/>
-      <properties visible="no" title=""/>
-      <events visible="no" title=""/>
-    </memberdef>
     <allmemberslink visible="no"/>
     <usedfiles visible="no"/>
     <authorsection visible="no"/>

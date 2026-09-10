@@ -1,0 +1,7 @@
+/**
+ * \page rhi_overview Render Hardware Interface
+ *
+ * Strobe is a renderer and engine built around a thin Vulkan RHI. This site is
+ * generated directly from Doxygen pages and C++ documentation comments.
+ *
+ */
