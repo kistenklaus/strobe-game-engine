@@ -49,12 +49,13 @@ namespace strobe::rhi {
 #define CmdZoneScopedN(impl, name) ZoneScopedN(name);
 #endif
 
-void CommandBuffer::unpin(void *handle) noexcept {
+void CommandBuffer::pin(void *handle) noexcept {
   pin_void_handle<CommandBufferImpl>(handle);
 }
-void CommandBuffer::pin(void *handle) noexcept {
+void CommandBuffer::unpin(void *handle) noexcept {
   unpin_void_handle<CommandBufferImpl>(handle);
 }
+
 void CommandBuffer::begin() {
   assert(m_handle);
   ZoneScopedN("CommandBuffer::begin");

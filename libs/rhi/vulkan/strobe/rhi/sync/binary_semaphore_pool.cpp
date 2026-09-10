@@ -10,7 +10,7 @@ void BinarySemaphorePool::pin(void *handle) noexcept {
 }
 
 void BinarySemaphorePool::unpin(void *handle) noexcept {
-  pin_void_handle<BinarySemaphorePoolImpl>(handle);
+  unpin_void_handle<BinarySemaphorePoolImpl>(handle);
 }
 
 BinarySemaphore BinarySemaphorePool::allocate() noexcept {
