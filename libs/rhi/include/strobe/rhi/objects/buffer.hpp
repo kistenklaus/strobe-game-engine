@@ -74,12 +74,12 @@ public:
    */
 
   /**
-   * \brief Returns a mapped ptr of the buffer
+   * \brief pointer to memory mapped memory
    */
   void *ptr() const;
 
   /**
-   * \brief Returns the buffer size in bytes.
+   * \brief size of the buffer in bytes
    */
   uint64_t size() const noexcept;
 
