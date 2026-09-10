@@ -1,5 +1,8 @@
-(function() {
+(function () {
   "use strict";
+
+  let openBestResult = false;
+  let installed = false;
 
   function searchField() {
     return document.getElementById("MSearchField");
@@ -13,45 +16,66 @@
     field.select();
   }
 
-  function openFirstResult(attempt) {
-    const results = document.getElementById("MSearchResultsWindow");
-    const link = results && results.querySelector(
-      ".SRResult a, .searchresult a, a[href]"
-    );
+  function installSearchHook() {
+    if (installed) return true;
 
-    if (link) {
-      link.click();
+    if (typeof searchBox === "undefined" ||
+        typeof searchResults === "undefined") {
+      return false;
+    }
+
+    const originalSearchResults = searchResults.Search;
+
+    searchResults.Search = function (query) {
+      const result = originalSearchResults.call(this, query);
+
+      if (openBestResult) {
+        openBestResult = false;
+
+        const firstResult = this.NavNext(0);
+
+        if (firstResult) {
+          firstResult.click();
+        }
+      }
+
+      return result;
+    };
+
+    installed = true;
+    return true;
+  }
+
+  function searchAndOpenBestResult() {
+    if (!installSearchHook()) {
+      window.setTimeout(searchAndOpenBestResult, 25);
       return;
     }
 
-    // Search results are populated asynchronously by Doxygen.
-    if (attempt < 20) {
-      window.setTimeout(function() {
-        openFirstResult(attempt + 1);
-      }, 50);
-    }
+    openBestResult = true;
+
+    // Calls Doxygen's actual search engine immediately. This also loads
+    // the appropriate search-index shard if it has not been loaded yet.
+    searchBox.Search();
   }
 
-  document.addEventListener("keydown", function(event) {
-    console.log("event")
+  document.addEventListener("keydown", function (event) {
     const target = event.target;
-    const isTyping = target instanceof HTMLInputElement ||
+    const isTyping =
+      target instanceof HTMLInputElement ||
       target instanceof HTMLTextAreaElement ||
       target.isContentEditable;
 
-    // / focuses the search field from anywhere on the page.
-    if (event.ctrlKey && event.key.toLowerCase() === "f") {
+    if (!isTyping && event.key === "/") {
       event.preventDefault();
-      event.stopPropagation();
       focusSearch();
       return;
     }
 
-    // Let Doxygen perform the search, then open its first result.
     if (target === searchField() && event.key === "Enter") {
-      window.setTimeout(function() {
-        openFirstResult(0);
-      }, 100);
+      event.preventDefault();
+      event.stopPropagation();
+      searchAndOpenBestResult();
     }
   });
 })();

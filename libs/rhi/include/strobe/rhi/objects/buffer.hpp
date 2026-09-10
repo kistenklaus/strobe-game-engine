@@ -10,7 +10,7 @@ namespace strobe::rhi {
  * \ingroup rhi
  * \brief A device-owned buffer.
  */
-class Buffer : Object<Buffer> {
+class Buffer : public Object<Buffer> {
   friend class Device;
   friend class CommandBuffer;
   friend class MemoryPool;
@@ -48,23 +48,6 @@ public:
   /**
    * @}
    */
-
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-
-  /**
-   * \brief compares two Buffers
-   */
-  friend bool operator==(const Buffer &lhs, const Buffer &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-
-  /**
-   * \brief compares two Buffers
-   */
-  friend bool operator!=(const Buffer &lhs, const Buffer &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
-
 
   /**
    * \brief pointer to memory mapped memory

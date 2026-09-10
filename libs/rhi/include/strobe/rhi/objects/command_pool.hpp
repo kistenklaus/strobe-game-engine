@@ -9,7 +9,7 @@ namespace strobe::rhi {
  * \ingroup rhi
  * \brief todo
  */
-class CommandPool : Object<CommandPool> {
+class CommandPool : public Object<CommandPool> {
   friend class Device;
   friend struct DeviceImpl;
   friend struct CommandBufferImpl;
@@ -23,8 +23,6 @@ public:
   CommandPool &operator=(const CommandPool &) noexcept;
   CommandPool &operator=(CommandPool &&) noexcept;
   ~CommandPool() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-
   CommandBuffer alloc(CommandBufferFlags flags = CommandBufferFlags::none);
 
   explicit CommandPool(void *handle) : Object(handle) {};

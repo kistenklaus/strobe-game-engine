@@ -7,7 +7,7 @@
 #include <limits>
 namespace strobe::rhi {
 
-class AsyncCopyEngine : Object<AsyncCopyEngine> {
+class AsyncCopyEngine : public Object<AsyncCopyEngine> {
 public:
   explicit AsyncCopyEngine(void *handle) noexcept : Object(handle) {}
   AsyncCopyEngine() noexcept : Object(nullptr) {}
@@ -16,13 +16,6 @@ public:
   AsyncCopyEngine &operator=(const AsyncCopyEngine &) noexcept;
   AsyncCopyEngine &operator=(AsyncCopyEngine &&) noexcept;
   ~AsyncCopyEngine() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const AsyncCopyEngine &lhs, const AsyncCopyEngine &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const AsyncCopyEngine &lhs, const AsyncCopyEngine &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 
   Timepoint
   async_copy(BufferOffset dst, BufferOffset src,

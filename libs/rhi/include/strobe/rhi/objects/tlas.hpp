@@ -8,7 +8,7 @@ namespace strobe::rhi {
  * \ingroup rhi
  * \brief todo
  */
-class Tlas : Object<Tlas> {
+class Tlas : public Object<Tlas> {
   public:
     explicit Tlas(void* handle) noexcept : Object(handle) {}
     Tlas() noexcept : Object(nullptr) {}

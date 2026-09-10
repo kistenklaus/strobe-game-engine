@@ -15,7 +15,7 @@ struct ComputeShaderInfo {
  * \ingroup rhi
  * \brief todo
  */
-class ComputeShader : Object<ComputeShader> {
+class ComputeShader : public Object<ComputeShader> {
   friend class Device;
   friend class CommandBuffer;
   friend struct CommandBufferImpl;
@@ -28,15 +28,6 @@ public:
   ComputeShader &operator=(const ComputeShader &) noexcept;
   ComputeShader &operator=(ComputeShader &&) noexcept;
   ~ComputeShader() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const ComputeShader &lhs,
-                         const ComputeShader &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const ComputeShader &lhs,
-                         const ComputeShader &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
   void set_name(const char *name);
 };
 

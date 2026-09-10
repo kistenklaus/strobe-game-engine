@@ -5,7 +5,6 @@
 #include "strobe/rhi/heap/descriptor_heap_bind_info.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/object.hpp"
-#include "strobe/rhi/types/buffer_range.hpp"
 #include "strobe/rhi/types/resource_descriptor_info.hpp"
 #include "strobe/rhi/vulkan/context/context.hpp"
 
@@ -24,15 +23,6 @@ public:
   ResourceDescriptorHeap &operator=(const ResourceDescriptorHeap &) noexcept;
   ResourceDescriptorHeap &operator=(ResourceDescriptorHeap &&) noexcept;
   ~ResourceDescriptorHeap() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const ResourceDescriptorHeap &lhs,
-                         const ResourceDescriptorHeap &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const ResourceDescriptorHeap &lhs,
-                         const ResourceDescriptorHeap &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 
   ResourceDescriptorWizard
   create_descriptor_wizard(const ResourceDescriptorInfo &info) noexcept;

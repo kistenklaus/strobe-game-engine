@@ -13,7 +13,7 @@ namespace strobe::rhi {
  * \ingroup rhi
  * \brief todo
  */
-class Image : Object<Image> {
+class Image : public Object<Image> {
   friend class Device;
   friend struct ImageViewImpl;
   friend struct SwapchainImpl;
@@ -28,13 +28,6 @@ public:
   Image &operator=(const Image &) noexcept;
   Image &operator=(Image &&) noexcept;
   ~Image() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const Image &lhs, const Image &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const Image &lhs, const Image &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 
   ImageType type() const noexcept;
   Format format() const noexcept;

@@ -9,7 +9,7 @@ namespace strobe::rhi {
  * \ingroup rhi
  * \brief todo
  */
-class ResourceDescriptorArray : Object<ResourceDescriptorArray> {
+class ResourceDescriptorArray : public Object<ResourceDescriptorArray> {
 public:
   explicit ResourceDescriptorArray(void *handle) noexcept : Object(handle) {}
   ResourceDescriptorArray() noexcept : Object(nullptr) {}
@@ -18,16 +18,6 @@ public:
   ResourceDescriptorArray &operator=(const ResourceDescriptorArray &) noexcept;
   ResourceDescriptorArray &operator=(ResourceDescriptorArray &&) noexcept;
   ~ResourceDescriptorArray() noexcept;
-
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const ResourceDescriptorArray &lhs,
-                         const ResourceDescriptorArray &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const ResourceDescriptorArray &lhs,
-                         const ResourceDescriptorArray &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 };
 
 } // namespace strobe::rhi

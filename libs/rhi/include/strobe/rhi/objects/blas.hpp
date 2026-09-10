@@ -4,28 +4,50 @@
 
 namespace strobe::rhi {
 
-struct Blas : Object<Blas> {
+
+/**
+ * \ingroup rhi
+ * \brief Bottom Level Acceleration Structure
+ * 
+ * Blas is a BVH acceleration structure, containing triangles or AABBs.
+ */
+struct Blas : public Object<Blas> {
   friend class Device;
   friend class MemoryPool;
   friend class CommandBuffer;
   friend struct CommandBufferImpl;
 
 public:
+  /** \name (constructors)
+   * @{
+   */
+  /**
+   * \brief default constructor
+   */
   Blas() noexcept : Object(nullptr) {}
+  /**
+   * \brief copy-constructor
+   */
   Blas(const Blas &) noexcept;
+  /**
+   * \brief move-constructor
+   */
   Blas(Blas &&) noexcept;
+  /**
+   * \brief copy-assignment
+   */
   Blas &operator=(const Blas &) noexcept;
+  /**
+   * \brief move-assignment
+   */
   Blas &operator=(Blas &&) noexcept;
+  /**
+   * \brief destructor
+   */
   ~Blas() noexcept;
-  explicit operator bool() const noexcept { return m_handle; }
-  friend bool operator==(const Blas &lhs, const Blas &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const Blas &lhs, const Blas &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 
   explicit Blas(void *handle) noexcept : Object(handle) {}
+private:
 };
 
 } // namespace strobe::rhi

@@ -12,7 +12,7 @@ class Image;
  * \ingroup rhi
  * \brief todo
  */
-class ImageView : Object<ImageView> {
+class ImageView : public Object<ImageView> {
   friend class Device;
   friend class Image;
   friend class CommandBuffer;
@@ -25,13 +25,6 @@ public:
   ImageView &operator=(const ImageView &) noexcept;
   ImageView &operator=(ImageView &&) noexcept;
   ~ImageView() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const ImageView &lhs, const ImageView &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const ImageView &lhs, const ImageView &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 
   Format format() const noexcept;
   const Image &image() const noexcept;

@@ -9,7 +9,7 @@ namespace strobe::rhi {
  * \ingroup rhi
  * \brief todo
  */
-class Swapchain : Object<Swapchain> {
+class Swapchain : public Object<Swapchain> {
 public:
   explicit Swapchain(void *handle) noexcept : Object(handle) {}
   Swapchain() noexcept : Object(nullptr) {}
@@ -18,13 +18,6 @@ public:
   Swapchain &operator=(const Swapchain &) noexcept;
   Swapchain &operator=(Swapchain &&) noexcept;
   ~Swapchain() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const Swapchain &lhs, const Swapchain &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const Swapchain &lhs, const Swapchain &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 
   SwapchainImage acquire();
 };

@@ -17,13 +17,6 @@ public:
   Timeline &operator=(const Timeline &) noexcept;
   Timeline &operator=(Timeline &&) noexcept;
   ~Timeline() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const Timeline &lhs, const Timeline &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const Timeline &lhs, const Timeline &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 
   static void notify(const Timepoint& timepoint, TimelineNotifyFlag flag = TimelineNotifyFlag::block) noexcept;
   void notify(uint64_t serial, TimelineNotifyFlag flag = TimelineNotifyFlag::block) noexcept;

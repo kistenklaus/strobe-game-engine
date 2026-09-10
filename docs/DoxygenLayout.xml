@@ -152,6 +152,7 @@
        documented types, not Doxygen's competing index and prose sections. -->
   <group>
     <briefdescription visible="no"/>
+    <detaileddescription visible="yes" title="Description"/>
     <groupgraph visible="no"/>
     <memberdecl>
       <nestedgroups visible="yes" title=""/>
@@ -178,7 +179,6 @@
       <friends visible="no" title=""/>
       <membergroups visible="yes"/>
     </memberdecl>
-    <detaileddescription visible="no" title=""/>
     <memberdef>
       <pagedocs visible="no"/>
       <inlineclasses visible="yes" title=""/>

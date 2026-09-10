@@ -8,7 +8,7 @@
 
 namespace strobe::rhi {
 
-class SwapchainGeneration : Object<SwapchainGeneration> {
+class SwapchainGeneration : public Object<SwapchainGeneration> {
   friend class SwapchainImage;
 
 public:
@@ -19,15 +19,6 @@ public:
   SwapchainGeneration &operator=(const SwapchainGeneration &) noexcept;
   SwapchainGeneration &operator=(SwapchainGeneration &&) noexcept;
   ~SwapchainGeneration() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const SwapchainGeneration &lhs,
-                         const SwapchainGeneration &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const SwapchainGeneration &lhs,
-                         const SwapchainGeneration &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 
   // may return null, then the swapchain has to be recreated immediatly,
   // otherwise

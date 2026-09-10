@@ -8,7 +8,7 @@
 
 namespace strobe::rhi {
 
-class HeapController : Object<HeapController> {
+class HeapController : public Object<HeapController> {
 public:
   explicit HeapController(void *handle) noexcept : Object(handle) {}
   HeapController() noexcept : Object(nullptr) {}
@@ -17,15 +17,6 @@ public:
   HeapController &operator=(const HeapController &) noexcept;
   HeapController &operator=(HeapController &&) noexcept;
   ~HeapController() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const HeapController &lhs,
-                         const HeapController &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const HeapController &lhs,
-                         const HeapController &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 
   ResourceDescriptor
   create_resource_descriptor(const ResourceDescriptorInfo &info) noexcept;

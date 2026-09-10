@@ -12,7 +12,7 @@ namespace strobe::rhi {
  * \ingroup rhi
  * \brief todo
  */
-class Queue : Object<Queue> {
+class Queue : public Object<Queue> {
 public:
   explicit Queue(void *handle) noexcept : Object(handle) {}
   Queue() noexcept : Object(nullptr) {}
@@ -21,13 +21,6 @@ public:
   Queue &operator=(const Queue &) noexcept;
   Queue &operator=(Queue &&) noexcept;
   ~Queue() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const Queue &lhs, const Queue &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const Queue &lhs, const Queue &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 
   void wait(const Timepoint& timepoint,
             PipelineStage stage = PipelineStage::all_commands) noexcept;

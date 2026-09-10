@@ -30,7 +30,7 @@ namespace strobe::rhi {
  * \ingroup rhi
  * \brief todo
  */
-class Device : Object<Device> {
+class Device : public Object<Device> {
 public:
   explicit Device(void *handle) noexcept : Object(handle) {}
   Device() noexcept : Object(nullptr) {}
@@ -39,13 +39,6 @@ public:
   Device &operator=(const Device &) noexcept;
   Device &operator=(Device &&) noexcept;
   ~Device() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const Device &lhs, const Device &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const Device &lhs, const Device &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 
   FragmentShader
   create_fragment_shader(const FragmentShaderInfo &info) noexcept;

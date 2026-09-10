@@ -15,7 +15,7 @@ struct VertexShaderInfo {
  * \ingroup rhi
  * \brief todo
  */
-struct VertexShader : Object<VertexShader> {
+struct VertexShader : public Object<VertexShader> {
   friend class Device;
   friend class CommandBuffer;
   friend struct CommandBufferImpl;
@@ -28,13 +28,6 @@ public:
   VertexShader &operator=(const VertexShader &) noexcept;
   VertexShader &operator=(VertexShader &&) noexcept;
   ~VertexShader() noexcept;
-  explicit operator bool() const noexcept { return m_handle != nullptr; }
-  friend bool operator==(const VertexShader &lhs, const VertexShader &rhs) {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const VertexShader &lhs, const VertexShader &rhs) {
-    return lhs.m_handle != rhs.m_handle;
-  }
 };
 
 } // namespace strobe::rhi

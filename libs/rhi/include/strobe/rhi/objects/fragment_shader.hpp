@@ -14,7 +14,7 @@ struct FragmentShaderInfo {
   span<const uint32_t> spirv = {};
 };
 
-class FragmentShader : Object<FragmentShader> {
+class FragmentShader : public Object<FragmentShader> {
   friend class Device;
   friend class CommandBuffer;
   friend struct CommandBufferImpl;
@@ -27,15 +27,6 @@ public:
   FragmentShader &operator=(const FragmentShader &) noexcept;
   FragmentShader &operator=(FragmentShader &&) noexcept;
   ~FragmentShader() noexcept;
-  explicit operator bool() const noexcept { return m_handle; }
-  friend bool operator==(const FragmentShader &lhs,
-                         const FragmentShader &rhs) noexcept {
-    return lhs.m_handle == rhs.m_handle;
-  }
-  friend bool operator!=(const FragmentShader &lhs,
-                         const FragmentShader &rhs) noexcept {
-    return lhs.m_handle != rhs.m_handle;
-  }
 };
 
 } // namespace strobe::rhi
