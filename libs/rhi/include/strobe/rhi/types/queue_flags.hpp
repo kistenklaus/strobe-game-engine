@@ -7,15 +7,19 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Queue capability mask.
+ *
+ * Specifies required queue capabilities and selection constraints.
+ * QueueFlags values may be combined and queried using the provided bitwise
+ * operators.
  */
 enum class QueueFlags : uint32_t {
-  none = 0,
-  graphics = 1u << 0,
-  transfer = 1u << 1,
-  compute = 1u << 2,
-  present = 1u << 3,
-  exclusive = 1u << 4,
+  none = 0,             ///< No queue capabilities requested.
+  graphics = 1u << 0,   ///< Graphics command support.
+  transfer = 1u << 1,   ///< Transfer command support.
+  compute = 1u << 2,    ///< Compute command support.
+  present = 1u << 3,    ///< Presentation support.
+  exclusive = 1u << 4,  ///< Require an exclusively selected queue.
 };
 
 [[nodiscard]]

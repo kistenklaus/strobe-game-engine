@@ -7,13 +7,16 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Stencil face mask.
+ *
+ * Selects the polygon faces affected by stencil state. StencilFace values may
+ * be combined and queried using the provided bitwise operators.
  */
 enum class StencilFace : uint8_t {
-  none = 0,
-  front = 1u << 0,
-  back = 1u << 1,
-  front_and_back = (1u << 0) | (1u << 1),
+  none = 0, ///< No stencil faces.
+  front = 1u << 0, ///< Front-facing polygons.
+  back = 1u << 1, ///< Back-facing polygons.
+  front_and_back = (1u << 0) | (1u << 1), ///< Front- and back-facing polygons.
 };
 
 [[nodiscard]]

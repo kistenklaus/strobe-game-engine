@@ -7,8 +7,13 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Color blend equation.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet blend_equation.hpp BlendEquation
+ *
+ * Describes separate blending equations for color and alpha components.
  */
+// [BlendEquation]
 struct BlendEquation {
   BlendFactor srcColor;
   BlendFactor dstColor;
@@ -17,5 +22,6 @@ struct BlendEquation {
   BlendFactor dstAlpha;
   BlendOp alphaBlendOp;
 };
+// [BlendEquation]
 
 } // namespace strobe::rhi

@@ -7,8 +7,16 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Memory access mask.
+ *
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{.cpp} access.hpp Access
+ *
+ * Describes memory access types used to define synchronization
+ * dependencies. Access values may be combined and queried using the
+ * provided bitwise operators.
  */
+// [Access]
 enum class Access : uint64_t {
   none = 0,
   indirect_command_read = 1ull << 0,
@@ -29,6 +37,7 @@ enum class Access : uint64_t {
   memory_read = 1ull << 15,
   memory_write = 1ull << 16,
 };
+// [Access]
 
 [[nodiscard]] constexpr Access operator|(Access lhs, Access rhs) noexcept {
   return static_cast<Access>(static_cast<std::underlying_type_t<Access>>(lhs) |

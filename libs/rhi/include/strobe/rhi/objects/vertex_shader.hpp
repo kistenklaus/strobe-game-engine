@@ -1,21 +1,20 @@
 #pragma once
 
-#include "strobe/core/containers/span.hpp"
 #include "strobe/rhi/objects/object.hpp"
-#include "strobe/rhi/types/shader_stage.hpp"
 
 namespace strobe::rhi {
 
-struct VertexShaderInfo {
-  span<const uint32_t> spirv = {};
-  ShaderStage nextStage = ShaderStage::fragment;
-};
-
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Vertex shader object.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \code{.cpp}
+ * class VertexShader : public Object<VertexShader>;
+ * \endcode
+ *
+ * Represents a device-owned vertex shader object.
  */
-struct VertexShader : public Object<VertexShader> {
+class VertexShader : public Object<VertexShader> {
   friend class Object<VertexShader>;
   static void pin(void *) noexcept;
   static void unpin(void *) noexcept;

@@ -6,7 +6,14 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Top-level acceleration structure.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \code{.cpp}
+ * class Tlas : public Object<Tlas>;
+ * \endcode
+ *
+ * Represents a device-owned top-level acceleration structure containing
+ * instances of bottom-level acceleration structures.
  */
 class Tlas : public Object<Tlas> {
   friend class Object<Tlas>;

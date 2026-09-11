@@ -6,9 +6,14 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief A resource descriptor
+ * \brief Resource descriptor handle.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \code{.cpp}
+ * class ResourceDescriptor : public Object<ResourceDescriptor>;
+ * \endcode
  *
- * Resources are buffers and images ...
+ * Represents a descriptor of a buffer or image stored in the device resource
+ * descriptor heap.
  */
 class ResourceDescriptor : public Object<ResourceDescriptor> {
   friend class Object<ResourceDescriptor>;

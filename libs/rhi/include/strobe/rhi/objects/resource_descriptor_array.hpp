@@ -6,7 +6,14 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Resource descriptor array.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \code{.cpp}
+ * class ResourceDescriptorArray : public Object<ResourceDescriptorArray>;
+ * \endcode
+ *
+ * Represents a contiguous range of resource descriptors stored in the device
+ * resource descriptor heap.
  */
 class ResourceDescriptorArray : public Object<ResourceDescriptorArray> {
   friend class Object<ResourceDescriptorArray>;

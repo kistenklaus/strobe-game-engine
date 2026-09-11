@@ -7,7 +7,11 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Swapchain
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \code{.cpp}
+ * class Swapchain : public Object<Swapchain>;
+ * \endcode
  */
 class Swapchain : public Object<Swapchain> {
   friend class Object<Swapchain>;

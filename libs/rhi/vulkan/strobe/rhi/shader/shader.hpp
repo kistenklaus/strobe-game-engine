@@ -6,6 +6,9 @@
 #include "strobe/rhi/objects/fragment_shader.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
 #include "strobe/rhi/shader/shader_object_impl.hpp"
+#include "strobe/rhi/types/compute_shader_info.hpp"
+#include "strobe/rhi/types/fragment_shader_info.hpp"
+#include "strobe/rhi/types/vertex_shader_info.hpp"
 
 namespace strobe::rhi::shader {
 

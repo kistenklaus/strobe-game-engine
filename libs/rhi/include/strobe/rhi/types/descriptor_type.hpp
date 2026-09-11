@@ -4,11 +4,13 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Resource descriptor type.
+ *
+ * Specifies the type of resource represented by a descriptor.
  */
 enum class DescriptorType {
-  storage_buffer,
-  uniform_buffer,
+  storage_buffer, ///< Storage buffer descriptor.
+  uniform_buffer, ///< Uniform buffer descriptor.
 };
 
-}
+} // namespace strobe::rhi

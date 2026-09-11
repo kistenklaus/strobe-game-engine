@@ -7,16 +7,20 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Acceleration structure build flags.
+ *
+ * Specifies build behavior and optimization preferences for acceleration
+ * structures. BuildFlags values may be combined and queried using the provided
+ * bitwise operators.
  */
 enum class BuildFlags : uint32_t {
-  none = 0,
+  none = 0, ///< No additional build behavior.
 
-  allow_update = 1u << 0,
-  allow_compaction = 1u << 1,
-  prefer_fast_trace = 1u << 2,
-  prefer_fast_build = 1u << 3,
-  low_memory = 1u << 4,
+  allow_update = 1u << 0, ///< Allows subsequent acceleration structure updates.
+  allow_compaction = 1u << 1, ///< Allows acceleration structure compaction.
+  prefer_fast_trace = 1u << 2, ///< Prefer faster traversal performance.
+  prefer_fast_build = 1u << 3, ///< Prefer faster build performance.
+  low_memory = 1u << 4, ///< Prefer reduced memory usage.
 };
 
 [[nodiscard]] constexpr BuildFlags

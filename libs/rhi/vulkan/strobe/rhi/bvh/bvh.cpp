@@ -4,7 +4,7 @@
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/object_factory.hpp"
 #include "strobe/rhi/types/aabb.hpp"
-#include "strobe/rhi/types/aabb_geometry_info_size_info.hpp"
+#include "strobe/rhi/types/aabb_geometry_size_info.hpp"
 #include "strobe/rhi/types/build_flags.hpp"
 #include "strobe/rhi/types/triangle_geometry_size_info.hpp"
 #include "strobe/rhi/utils/build_flags_utils.hpp"

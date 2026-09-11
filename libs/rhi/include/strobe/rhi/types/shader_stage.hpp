@@ -7,24 +7,30 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Shader stage mask.
+ *
+ * Specifies shader stages participating in an operation. ShaderStage values
+ * may be combined and queried using the provided bitwise operators.
  */
 enum class ShaderStage : uint32_t {
-  none = 0,
-  vertex = 1u << 0,
-  tessellation_control = 1u << 1,
-  tessellation_evaluation = 1u << 2,
-  geometry = 1u << 3,
-  fragment = 1u << 4,
-  compute = 1u << 5,
-  raygen = 1u << 6,
-  anyhit = 1u << 7,
-  hit = 1u << 8,
-  miss = 1u << 9,
-  intersection = 1u << 10,
-  callable = 1u << 11,
-  task = 1u << 12,
-  mesh = 1u << 13,
+  none = 0, ///< No shader stages.
+
+  vertex = 1u << 0, ///< Vertex shader stage.
+  tessellation_control = 1u << 1, ///< Tessellation control shader stage.
+  tessellation_evaluation = 1u << 2, ///< Tessellation evaluation shader stage.
+  geometry = 1u << 3, ///< Geometry shader stage.
+  fragment = 1u << 4, ///< Fragment shader stage.
+  compute = 1u << 5, ///< Compute shader stage.
+
+  raygen = 1u << 6, ///< Ray generation shader stage.
+  anyhit = 1u << 7, ///< Any-hit shader stage.
+  hit = 1u << 8, ///< Closest-hit shader stage.
+  miss = 1u << 9, ///< Miss shader stage.
+  intersection = 1u << 10, ///< Intersection shader stage.
+  callable = 1u << 11, ///< Callable shader stage.
+
+  task = 1u << 12, ///< Task shader stage.
+  mesh = 1u << 13, ///< Mesh shader stage.
 };
 
 [[nodiscard]]

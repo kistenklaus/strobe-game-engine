@@ -7,12 +7,19 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Swapchain creation information.
+ *
+ * Describes the window, presentation mode, and image usage of a swapchain.
  */
 struct SwapchainInfo {
-  GLFWwindow* window = nullptr;
+  /** GLFW window used for presentation. */
+  GLFWwindow *window = nullptr;
+
+  /** Whether presentation is synchronized to the display refresh. */
   bool vsync = false;
+
+  /** Intended usage of swapchain images. */
   ImageUsage imageUsage = ImageUsage::color_attachment;
 };
 
-}
+} // namespace strobe::rhi

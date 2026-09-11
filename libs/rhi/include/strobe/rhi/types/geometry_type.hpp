@@ -6,11 +6,14 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Acceleration geometry type.
+ *
+ * Specifies the primitive representation used by acceleration structure
+ * geometry.
  */
 enum class GeometryType : uint32_t {
-  triangles,
-  aabbs,
+  triangles, ///< Triangle geometry.
+  aabbs,     ///< Axis-aligned bounding box geometry.
 };
 
 } // namespace strobe::rhi

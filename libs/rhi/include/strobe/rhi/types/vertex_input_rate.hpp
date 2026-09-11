@@ -6,11 +6,13 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Vertex input rate.
+ *
+ * Specifies how vertex buffer elements advance during drawing.
  */
 enum class VertexInputRate : uint8_t {
-  vertex,
-  instance,
+  vertex,   ///< Advance once per vertex.
+  instance, ///< Advance once per instance.
 };
 
 } // namespace strobe::rhi

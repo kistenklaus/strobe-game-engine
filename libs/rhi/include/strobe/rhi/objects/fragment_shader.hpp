@@ -1,18 +1,19 @@
 #pragma once
 
-#include "strobe/core/containers/span.hpp"
 #include "strobe/rhi/objects/object.hpp"
-#include <cstdint>
 
 namespace strobe::rhi {
 
-struct FragmentShaderInfo {
-  span<const uint32_t> spirv = {};
-};
-
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Fragment shader object.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * 
+ * \code{.cpp}
+ * class FragmentShader : public Object<FragmentShader>;
+ * \endcode
+ *
+ * Represents a device-owned fragment shader object.
  */
 class FragmentShader : public Object<FragmentShader> {
   friend class Object<FragmentShader>;

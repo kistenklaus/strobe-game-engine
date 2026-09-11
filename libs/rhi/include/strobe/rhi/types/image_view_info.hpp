@@ -8,12 +8,19 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Image view creation information.
+ *
+ * Describes the type, format, and subresource range of an image view.
  */
 struct ImageViewInfo {
+  /** Image view type. */
   ImageViewType type = ImageViewType::none;
-  Format format = Format::undefined; // undefined => inherit from image
+
+  /** View format, or Format::undefined to inherit the image format. */
+  Format format = Format::undefined;
+
+  /** Image subresources visible through the view. */
   ImageSubresourceRange range = {};
 };
 
-}
+} // namespace strobe::rhi

@@ -13,73 +13,130 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Storage buffer descriptor.
+ *
+ * Describes a byte range of a buffer exposed as a storage resource.
  */
 struct StorageBufferDescriptorInfo {
+  /** Referenced buffer. */
   Buffer buffer{};
+
+  /** Size of the exposed range in bytes. */
   uint64_t size = std::numeric_limits<uint64_t>::max();
+
+  /** Byte offset to the beginning of the range. */
   uint64_t offset = 0;
 };
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Storage texel descriptor.
+ *
+ * Describes a formatted buffer range exposed as a storage texel resource.
  */
 struct StorageTexelBufferDescriptorInfo {
+  /** Referenced buffer. */
   Buffer buffer{};
+
+  /** Size of the exposed range in bytes. */
   uint64_t size = std::numeric_limits<uint64_t>::max();
+
+  /** Byte offset to the beginning of the range. */
   uint64_t offset = 0;
+
+  /** Texel format. */
   Format format = Format::undefined;
 };
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Uniform buffer descriptor.
+ *
+ * Describes a byte range of a buffer exposed as a uniform resource.
  */
 struct UniformBufferDescriptorInfo {
+  /** Referenced buffer. */
   Buffer buffer{};
+
+  /** Size of the exposed range in bytes. */
   uint64_t size = std::numeric_limits<uint64_t>::max();
+
+  /** Byte offset to the beginning of the range. */
   uint64_t offset = 0;
 };
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Uniform texel descriptor.
+ *
+ * Describes a formatted buffer range exposed as a uniform texel resource.
  */
 struct UniformTexelBufferDescriptorInfo {
+  /** Referenced buffer. */
   Buffer buffer{};
+
+  /** Size of the exposed range in bytes. */
   uint64_t size = std::numeric_limits<uint64_t>::max();
+
+  /** Byte offset to the beginning of the range. */
   uint64_t offset = 0;
+
+  /** Texel format. */
   Format format = Format::undefined;
 };
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Sampled image descriptor.
+ *
+ * Describes an image view exposed for sampled image access.
  */
 struct SampledImageDescriptorInfo {
+  /** Referenced image. */
   Image image{};
+
+  /** Image layout used for descriptor access. */
   ImageLayout layout = ImageLayout::undefined;
-  ImageViewType viewType = ImageViewType::none; // none => inherit from image.
-  Format format = Format::undefined; // undefined => inherit from image.
+
+  /** Image view type, or ImageViewType::none to inherit from the image. */
+  ImageViewType viewType = ImageViewType::none;
+
+  /** View format, or Format::undefined to inherit from the image. */
+  Format format = Format::undefined;
+
+  /** Image subresources exposed by the descriptor. */
   ImageSubresourceRange subresource{};
 };
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Storage image descriptor.
+ *
+ * Describes an image view exposed for storage image access.
  */
 struct StorageImageDescriptorInfo {
+  /** Referenced image. */
   Image image{};
+
+  /** Image layout used for descriptor access. */
   ImageLayout layout = ImageLayout::undefined;
-  ImageViewType viewType = ImageViewType::none; // none => inherit from image.
-  Format format = Format::undefined; // undefined => inherit from image.
+
+  /** Image view type, or ImageViewType::none to inherit from the image. */
+  ImageViewType viewType = ImageViewType::none;
+
+  /** View format, or Format::undefined to inherit from the image. */
+  Format format = Format::undefined;
+
+  /** Image subresources exposed by the descriptor. */
   ImageSubresourceRange subresource{};
 };
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Resource descriptor information.
+ *
+ * Describes one resource descriptor stored in the device resource descriptor
+ * heap.
  */
 using ResourceDescriptorInfo =
     std::variant<StorageBufferDescriptorInfo, StorageTexelBufferDescriptorInfo,

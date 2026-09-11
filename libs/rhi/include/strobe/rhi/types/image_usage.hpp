@@ -7,19 +7,22 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Image usage mask.
+ *
+ * Specifies the operations for which an image may be used. ImageUsage values
+ * may be combined and queried using the provided bitwise operators.
  */
 enum class ImageUsage : uint32_t {
-  none = 0,
+  none = 0, ///< No image usage.
 
-  transfer_src = 1u << 0,
-  transfer_dst = 1u << 1,
+  transfer_src = 1u << 0, ///< Transfer source.
+  transfer_dst = 1u << 1, ///< Transfer destination.
 
-  sampled = 1u << 2,
-  storage = 1u << 3,
+  sampled = 1u << 2, ///< Sampled image access.
+  storage = 1u << 3, ///< Storage image access.
 
-  color_attachment = 1u << 4,
-  depth_stencil = 1u << 5,
+  color_attachment = 1u << 4, ///< Color attachment usage.
+  depth_stencil = 1u << 5, ///< Depth-stencil attachment usage.
 };
 
 [[nodiscard]]

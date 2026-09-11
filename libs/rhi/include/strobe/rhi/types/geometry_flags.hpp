@@ -7,13 +7,18 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Geometry build flags.
+ *
+ * Specifies per-geometry behavior for acceleration structure builds.
+ * GeometryFlags values may be combined and queried using the provided bitwise
+ * operators.
  */
 enum class GeometryFlags : uint32_t {
-  none = 0,
+  none = 0, ///< No additional geometry behavior.
 
-  opaque = 1u << 0,
-  no_duplicate_any_hit = 1u << 1,
+  opaque = 1u << 0, ///< Treat geometry as opaque during ray traversal.
+  no_duplicate_any_hit =
+      1u << 1, ///< Prevent duplicate any-hit shader invocations.
 };
 
 [[nodiscard]] constexpr GeometryFlags

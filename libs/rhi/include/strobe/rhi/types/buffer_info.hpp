@@ -8,11 +8,18 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Buffer creation information.
+ *
+ * Describes the size, usage, and memory placement of a buffer.
  */
 struct BufferInfo {
+  /** Buffer size in bytes. */
   uint64_t size = 0;
+
+  /** Intended buffer usages. */
   BufferUsage bufferUsage = BufferUsage::none;
+
+  /** Requested memory usage. */
   MemoryUsage memoryUsage = MemoryUsage::automatic;
 };
 

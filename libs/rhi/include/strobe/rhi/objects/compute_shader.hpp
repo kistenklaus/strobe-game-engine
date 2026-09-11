@@ -1,28 +1,39 @@
 #pragma once
 
-#include "strobe/core/containers/span.hpp"
 #include "strobe/rhi/objects/object.hpp"
-#include <cstdint>
 
-namespace strobe::rhi {
+    namespace strobe::rhi {
 
-struct ComputeShaderInfo {
-  span<const uint32_t> spirv = {};
-};
+  /**
+   * \ingroup rhi
+   * \brief Compute shader object.
+   *
+   * Defined in header <strobe/rhi/rhi.hpp>
+   * \code{.cpp}
+   * class ComputeShader : public Object<ComputeShader>;
+   * \endcode
+   *
+   * Represents a device-owned compute shader object.
+   */
+  class ComputeShader : public Object<ComputeShader> {
+    friend class Object<ComputeShader>;
+    static void pin(void *) noexcept;
+    static void unpin(void *) noexcept;
 
+  public:
+    using Object::Object;
 
-/**
- * \ingroup rhi
- * \brief todo
- */
-class ComputeShader : public Object<ComputeShader> {
-  friend class Object<ComputeShader>;
-  static void pin(void *) noexcept;
-  static void unpin(void *) noexcept;
-
-public:
-  using Object::Object;
-  void set_name(const char *name);
-};
+    /**
+     * \brief Sets debug name.
+     *
+     * Assigns a human-readable name to the shader object.
+     *
+     * \param name Null-terminated debug name.
+     *
+     * \attention 1. \p name must point to a valid null-terminated string.
+     * \attention 2. validation layers must be enabled.
+     */
+    void set_name(const char *name);
+  };
 
 } // namespace strobe::rhi

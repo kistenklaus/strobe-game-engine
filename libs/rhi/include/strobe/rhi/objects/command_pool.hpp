@@ -7,7 +7,19 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Allocates command buffers.
+ *
+ * Defined in header <strobe/rhi/rhi.hpp>
+ *
+ * \code{.cpp}
+ * class CommandPool : public : Object<CommandPool>;
+ * \endcode
+ *
+ * CommandPool allocates and owns the backing storage of CommandBuffer objects.
+ *
+ * \attention 1. Host access to the CommandPool must be externally synchronized.
+ * \attention 2. Recording any CommandBuffer allocated from this pool counts as
+ * host access to the pool.
  */
 class CommandPool : public Object<CommandPool> {
   friend class Object<CommandPool>;
@@ -16,6 +28,19 @@ class CommandPool : public Object<CommandPool> {
 
 public:
   using Object::Object;
+
+  /**
+   * \brief Allocates command buffer.
+   *
+   * Allocates a CommandBuffer associated with this pool.
+   *
+   * \param flags Command buffer allocation and usage flags.
+   *
+   * \return Command buffer allocated from this pool.
+   *
+   * \attention 1. The CommandPool must be externally synchronized.
+   */
   CommandBuffer alloc(CommandBufferFlags flags = CommandBufferFlags::none);
 };
+
 } // namespace strobe::rhi

@@ -2,6 +2,10 @@
  * STROBE_CPPREFERENCE_STYLESHEET_V1
  */
 
+/* -------------------------------------------------------------------------- */
+/* Base                                                                        */
+/* -------------------------------------------------------------------------- */
+
 body,
 table,
 div,
@@ -21,15 +25,14 @@ a {
   color: var(--page-link-color, #0645ad);
 }
 
-/*
- * Compact project header
- */
+/* -------------------------------------------------------------------------- */
+/* Project header                                                              */
+/* -------------------------------------------------------------------------- */
 
 #titlearea {
   height: 2rem !important;
   min-height: 0 !important;
   padding: 0 !important;
-  border-top: 2px solid #243f78 !important;
   border-bottom: 1px solid #d6d6d6 !important;
   background: #fafafa !important;
 }
@@ -40,12 +43,12 @@ a {
   margin: 0 auto !important;
 }
 
-#projectrow {
+#projectrow,
+#projectalign {
   height: 2rem !important;
 }
 
 #projectalign {
-  height: 2rem !important;
   padding: 0 !important;
   text-align: center;
   vertical-align: middle;
@@ -62,9 +65,9 @@ a {
   letter-spacing: 0.01em;
 }
 
-/*
- * Main navigation
- */
+/* -------------------------------------------------------------------------- */
+/* Navigation                                                                  */
+/* -------------------------------------------------------------------------- */
 
 #main-nav {
   height: 1.85rem !important;
@@ -113,20 +116,15 @@ a {
   font-size: 0.7rem !important;
 }
 
-/*
- * Breadcrumbs
- *
- * Hidden on normal pages. On standalone member pages, only the owning class
- * backlink is retained. The breadcrumb separator line is deliberately removed.
- */
+/* -------------------------------------------------------------------------- */
+/* Breadcrumbs                                                                 */
+/* -------------------------------------------------------------------------- */
 
-/* Hide namespace breadcrumbs everywhere by default. */
 #nav-path,
 div.navpath {
   display: none !important;
 }
 
-/* Show the backlink only on standalone member pages. */
 body:has(h2.memtitle) #nav-path,
 body:has(h2.memtitle) div.navpath {
   display: block !important;
@@ -138,7 +136,6 @@ body:has(h2.memtitle) div.navpath {
   background: #fff !important;
 }
 
-/* Remove the horizontal line and Doxygen chevrons. */
 body:has(h2.memtitle) #nav-path,
 body:has(h2.memtitle) #nav-path ul,
 body:has(h2.memtitle) #nav-path li.navelem::after {
@@ -157,7 +154,6 @@ body:has(h2.memtitle) #nav-path ul {
   line-height: 2rem !important;
 }
 
-/* Reset Doxygen's floating breadcrumb layout. */
 body:has(h2.memtitle) #nav-path li.navelem {
   display: inline !important;
   float: none !important;
@@ -169,12 +165,10 @@ body:has(h2.memtitle) #nav-path li.navelem {
   line-height: 2rem !important;
 }
 
-/* Remove namespace names such as strobe and rhi. */
 body:has(h2.memtitle) #nav-path li.navelem:has(> b) {
   display: none !important;
 }
 
-/* Keep the real owning-class link. */
 body:has(h2.memtitle) #nav-path li.navelem a {
   display: inline-block !important;
   color: #0645ad !important;
@@ -192,9 +186,9 @@ body:has(h2.memtitle) #nav-path li.navelem a:hover {
   text-decoration: underline;
 }
 
-/*
- * Page header
- */
+/* -------------------------------------------------------------------------- */
+/* Page header                                                                 */
+/* -------------------------------------------------------------------------- */
 
 div.header {
   min-height: 0 !important;
@@ -253,16 +247,17 @@ div.headertitle div.ingroups a {
   text-decoration: none;
 }
 
-/*
- * Contents
- */
+/* -------------------------------------------------------------------------- */
+/* Contents                                                                    */
+/* -------------------------------------------------------------------------- */
 
 div.contents {
   box-sizing: border-box;
   width: min(76rem, calc(100% - 2rem));
   max-width: none;
   margin: 0 auto;
-  padding: 2rem 0 4rem;
+  padding: 0.75rem 0 4rem;
+  overflow-x: clip;
 }
 
 div.contents h1,
@@ -278,17 +273,9 @@ div.contents h2 {
   border-bottom: 1px solid var(--group-header-separator-color);
 }
 
-div.contents {
-  padding-top: 0.75rem !important;
-}
-
 div.contents > h2#header-details {
   margin-top: 0.5rem !important;
 }
-
-/*
- * High-level sections
- */
 
 h2.groupheader,
 h2.groupheader a {
@@ -311,9 +298,9 @@ div.contents h2.groupheader {
   border-bottom: 1px solid var(--group-header-separator-color);
 }
 
-/*
- * Member declarations
- */
+/* -------------------------------------------------------------------------- */
+/* Member declarations                                                         */
+/* -------------------------------------------------------------------------- */
 
 table.memberdecls {
   width: 100%;
@@ -334,18 +321,16 @@ table.memberdecls tr.heading > td {
   border-bottom: 1px solid var(--group-header-separator-color);
 }
 
-table.memberdecls tr.heading > td > h2.groupheader,
-table.memberdecls tr.heading > td > h2.groupheader a {
+table.memberdecls tr.heading > td > h2.groupheader {
   margin: 0;
   padding: 0;
-  border: 0;
+  border: 0 !important;
   color: #111 !important;
   font-size: 1.35rem !important;
   font-weight: 600;
   text-decoration: none;
 }
 
-/* Native \name groups. */
 table.memberdecls tr.groupHeader > td {
   padding: 1rem 0 0.35rem;
   border-bottom: 1px solid var(--group-header-separator-color);
@@ -361,7 +346,7 @@ table.memberdecls tr.groupHeader > td > div.groupHeader {
   font-weight: 700;
 }
 
-/* Hide the return-type column. */
+/* Remove the return-type column. */
 table.memberdecls td.memItemLeft {
   display: none;
 }
@@ -381,13 +366,28 @@ table.memberdecls a.el:hover {
   text-decoration: underline;
 }
 
-/*
- * Flatten declaration and description rows.
- */
+/* Keep only the first function link and hide qualifiers/text after it. */
+table.memberdecls td.memItemRight {
+  font-size: 0 !important;
+  white-space: nowrap;
+}
 
+table.memberdecls td.memItemRight > a.el {
+  display: inline;
+  font-size: 15px !important;
+  line-height: 1.55;
+}
+
+table.memberdecls td.memItemRight > a.el ~ a.el {
+  display: none !important;
+}
+
+/* Flatten declaration and description rows. */
 @supports selector(table:has(tr[class^="memdesc:"])) {
   table.memberdecls:has(tr[class^="memdesc:"]) {
     display: grid;
+    width: 100% !important;
+    max-width: none;
     grid-template-columns: max-content minmax(16rem, 1fr);
     align-items: baseline;
   }
@@ -431,9 +431,22 @@ table.memberdecls a.el:hover {
   }
 }
 
-/*
- * Standalone member pages
- */
+/* Remove the unwanted rounded border before the first member. */
+table.memberdecls {
+  border-top: 0 !important;
+  box-shadow: none !important;
+}
+
+table.memberdecls tr.heading + tr[class^="memitem:"] > td {
+  border-top: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Standalone member pages                                                     */
+/* -------------------------------------------------------------------------- */
 
 h2.memtitle {
   margin: 1.25rem 0 0.55rem;
@@ -534,9 +547,9 @@ div.memdoc {
   border: 0;
 }
 
-/*
- * Include line
- */
+/* -------------------------------------------------------------------------- */
+/* Source/include lines                                                        */
+/* -------------------------------------------------------------------------- */
 
 div.contents > p:has(> code > a.el[href$="_source.html"]) > code {
   font-size: 0;
@@ -545,7 +558,7 @@ div.contents > p:has(> code > a.el[href$="_source.html"]) > code {
 div.contents
   > p:has(> code > a.el[href$="_source.html"])
   > code::before {
-  content: "Defined in header <";
+  content: "Source: <";
   color: inherit;
   font-family: var(--font-family-monospace);
   font-size: 13px;
@@ -572,10 +585,13 @@ div.contents
   font-size: 13px;
 }
 
-/* Hide source-location text. */
-div.contents > div.textblock > p.definition {
-  display: none;
+p.definition {
+  display: none !important;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Code blocks and descriptions                                                */
+/* -------------------------------------------------------------------------- */
 
 div.fragment {
   padding: 0.8rem 1rem;
@@ -599,6 +615,88 @@ dl.section {
   border-left: 3px solid var(--nav-border-color);
   background-color: var(--blockquote-background-color);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Enum/group member pages                                                     */
+/* -------------------------------------------------------------------------- */
+
+div.navtab,
+#side-nav {
+  display: none !important;
+}
+
+td.mempage > div.memitem > div.memdoc > p:first-of-type {
+  display: none !important;
+}
+
+/* Hide the generated enum declaration bubble on group-member pages. */
+td.mempage > div.memitem > div.memproto {
+  display: none !important;
+}
+
+td.mempage > h2.memtitle {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+td.mempage > div.memitem > div.memdoc {
+  padding-top: 0 !important;
+}
+
+table.fieldtable {
+  display: none;
+}
+
+h2.groupheader:has(+ table.fieldtable) {
+  display: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Compact member-list separators                                              */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The member declaration and its brief are separate grid items. Therefore
+ * only the brief creates the separator; its pseudo-element is extended to
+ * the left column and clipped by div.contents.
+ */
+
+table.memberdecls:has(tr[class^="memdesc:"])
+  tr[class^="memitem:"] > td.memItemRight,
+table.memberdecls:has(tr[class^="memdesc:"])
+  tr[class^="memdesc:"] > td.mdescRight {
+  line-height: 1.25 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+table.memberdecls:has(tr[class^="memdesc:"])
+  tr[class^="memitem:"] > td.memItemRight {
+  padding: 0.2rem 0 !important;
+}
+
+table.memberdecls:has(tr[class^="memdesc:"])
+  tr[class^="memdesc:"] > td.mdescRight {
+  position: relative;
+  padding: 0.2rem 0 0.45rem 1.25rem !important;
+}
+
+table.memberdecls:has(tr[class^="memdesc:"])
+  tr[class^="memdesc:"] > td.mdescRight::after {
+  content: "";
+  position: absolute;
+  left: -100vw;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: #d8d8d8;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Responsive layout                                                           */
+/* -------------------------------------------------------------------------- */
 
 @media (max-width: 767px) {
   #titlearea table,
@@ -640,35 +738,7 @@ dl.section {
     table.memberdecls:has(tr[class^="memdesc:"])
       tr[class^="memdesc:"] > td.mdescRight {
       grid-column: 1;
-      padding: 0 0 0.85rem;
+      padding: 0 0 0.85rem 0 !important;
     }
   }
-}
-
-/*
- * Restore the compact standalone-member layout.
- */
-
-/* Hide Doxygen's vertical quick-member sidebar. */
-div.navtab,
-#side-nav {
-  display: none !important;
-}
-
-/*
- * REPEAT_BRIEF must remain YES because it preserves Doxygen's member links.
- * Hide only the repeated class brief from the class page.
- */
-div.contents > div.textblock > p:first-child {
-  display: none !important;
-}
-
-/* Keep the actual detailed description visible. */
-div.contents > div.textblock > p:not(:first-child) {
-  display: block;
-}
-
-/* Hide "Definition at line ... of file ...". */
-p.definition {
-  display: none !important;
 }

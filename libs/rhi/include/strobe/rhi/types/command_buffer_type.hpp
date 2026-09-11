@@ -7,12 +7,16 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Command buffer flags.
+ *
+ * Specifies command buffer allocation and recording behavior.
+ * CommandBufferFlags values may be combined and queried using the provided
+ * bitwise operators.
  */
 enum class CommandBufferFlags : uint8_t {
-  none      = 0,
-  secondary = 1u << 0,
-  reusable  = 1u << 1,
+  none      = 0,       ///< No additional behavior.
+  secondary = 1u << 0, ///< Allocate a secondary command buffer.
+  reusable  = 1u << 1, ///< Allow repeated submission of the command buffer.
 };
 
 [[nodiscard]]

@@ -7,13 +7,16 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Image aspect mask.
+ *
+ * Selects the image aspects affected by an operation. ImageAspect values may
+ * be combined using the provided bitwise operators.
  */
 enum class ImageAspect : uint8_t {
-  none = 0,
-  color = 1u << 0,
-  depth = 1u << 1,
-  stencil = 1u << 2,
+  none = 0,          ///< No image aspects.
+  color = 1u << 0,  ///< Color aspect.
+  depth = 1u << 1,  ///< Depth aspect.
+  stencil = 1u << 2,///< Stencil aspect.
 };
 
 [[nodiscard]] constexpr ImageAspect operator|(ImageAspect lhs,
@@ -42,17 +45,17 @@ enum class ImageAspect : uint8_t {
       ~static_cast<std::underlying_type_t<ImageAspect>>(value));
 }
 
-constexpr ImageAspect& operator|=(ImageAspect& lhs, ImageAspect rhs) noexcept {
+constexpr ImageAspect &operator|=(ImageAspect &lhs, ImageAspect rhs) noexcept {
   lhs = lhs | rhs;
   return lhs;
 }
 
-constexpr ImageAspect& operator&=(ImageAspect& lhs, ImageAspect rhs) noexcept {
+constexpr ImageAspect &operator&=(ImageAspect &lhs, ImageAspect rhs) noexcept {
   lhs = lhs & rhs;
   return lhs;
 }
 
-constexpr ImageAspect& operator^=(ImageAspect& lhs, ImageAspect rhs) noexcept {
+constexpr ImageAspect &operator^=(ImageAspect &lhs, ImageAspect rhs) noexcept {
   lhs = lhs ^ rhs;
   return lhs;
 }

@@ -10,8 +10,14 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Rendering attachment description.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{.cpp} attachment.hpp Attachment
+ *
+ * Describes an image attachment used during dynamic rendering, including load,
+ * store, clear, and resolve behavior.
  */
+// [Attachment]
 struct Attachment {
   ImageView view;
   AttachmentLoadOp loadOp = AttachmentLoadOp::load;
@@ -20,5 +26,6 @@ struct Attachment {
   ResolveMode resolveMode = ResolveMode::none;
   ImageView resolveView = {};
 };
+// [Attachment]
 
 } // namespace strobe::rhi

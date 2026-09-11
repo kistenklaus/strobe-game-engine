@@ -7,31 +7,36 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Buffer usage mask.
+ *
+ * Specifies the operations for which a buffer may be used. BufferUsage values
+ * may be combined and queried using the provided bitwise operators.
  */
 enum class BufferUsage : uint64_t {
-  none = 0,
+  none = 0, ///< No buffer usage.
 
-  transfer_src = 1ull << 0,
-  transfer_dst = 1ull << 1,
+  transfer_src = 1ull << 0, ///< Transfer source.
+  transfer_dst = 1ull << 1, ///< Transfer destination.
 
-  uniform_texel = 1ull << 2,
-  storage_texel = 1ull << 3,
+  uniform_texel = 1ull << 2, ///< Uniform texel buffer.
+  storage_texel = 1ull << 3, ///< Storage texel buffer.
 
-  uniform = 1ull << 4,
-  storage = 1ull << 5,
+  uniform = 1ull << 4, ///< Uniform buffer.
+  storage = 1ull << 5, ///< Storage buffer.
 
-  index = 1ull << 6,
-  vertex = 1ull << 7,
-  indirect = 1ull << 8,
+  index = 1ull << 6, ///< Index buffer.
+  vertex = 1ull << 7, ///< Vertex buffer.
+  indirect = 1ull << 8, ///< Indirect command buffer.
 
-  shader_device_address = 1ull << 9,
+  shader_device_address = 1ull << 9, ///< Shader device address access.
 
-  shader_binding_table = 1ull << 10,
-  acceleration_structure_build_input = 1ull << 11,
-  acceleration_structure_storage = 1ull << 12,
+  shader_binding_table = 1ull << 10, ///< Ray tracing shader binding table.
+  acceleration_structure_build_input =
+      1ull << 11, ///< Acceleration structure build input.
+  acceleration_structure_storage =
+      1ull << 12, ///< Acceleration structure storage.
 
-  descriptor_heap = 1ull << 13,
+  descriptor_heap = 1ull << 13, ///< Resource descriptor heap storage.
 };
 
 [[nodiscard]] constexpr BufferUsage

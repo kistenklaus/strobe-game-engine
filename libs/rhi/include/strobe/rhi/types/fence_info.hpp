@@ -4,9 +4,12 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Fence creation information.
+ *
+ * Describes the initial state of a fence.
  */
 struct FenceInfo {
+  /** Whether the fence is initially signaled. */
   bool signaled = false;
 };
 

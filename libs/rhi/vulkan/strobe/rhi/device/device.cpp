@@ -7,6 +7,7 @@
 #include "strobe/rhi/handle_allocators.hpp"
 #include "strobe/rhi/img/img.hpp"
 #include "strobe/rhi/shader/shader.hpp"
+#include "strobe/rhi/types/compute_shader_info.hpp"
 #include "strobe/rhi/types/queue_flags.hpp"
 #include <tracy/Tracy.hpp>
 #include <vulkan/vulkan_core.h>

@@ -7,12 +7,15 @@ namespace strobe::rhi {
 
 /**
  * \ingroup rhi
- * \brief todo
+ * \brief Image creation flags.
+ *
+ * Specifies additional image creation behavior. ImageFlags values may be
+ * combined and queried using the provided bitwise operators.
  */
 enum class ImageFlags : uint32_t {
-  none = 0,
-  mutable_format = 1u << 0,
-  cube_compatible = 1u << 1,
+  none = 0,                  ///< No additional image creation behavior.
+  mutable_format = 1u << 0, ///< Allow image views with compatible formats.
+  cube_compatible = 1u << 1,///< Allow creation of cube-compatible image views.
 };
 
 [[nodiscard]]
