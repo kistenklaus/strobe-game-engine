@@ -25,6 +25,9 @@
 
     /**
      * \brief Sets debug name.
+     * \code{.cpp}
+     * void set_name(const char* name) noexcept;
+     * \endcode
      *
      * Assigns a human-readable name to the shader object.
      *
@@ -33,7 +36,7 @@
      * \attention 1. \p name must point to a valid null-terminated string.
      * \attention 2. validation layers must be enabled.
      */
-    void set_name(const char *name);
+    void set_name(const char *name) noexcept;
   };
 
 } // namespace strobe::rhi

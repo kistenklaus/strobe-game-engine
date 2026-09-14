@@ -8,21 +8,18 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Memory dependency description.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet memory_barrier.hpp MemoryBarrier
  *
  * Describes source and destination synchronization scopes for a memory barrier.
  */
+// [MemoryBarrier]
 struct MemoryBarrier {
-  /** Source pipeline stages. */
   PipelineStage srcStage = PipelineStage::none;
-
-  /** Source memory access types. */
   Access srcAccess = Access::none;
-
-  /** Destination pipeline stages. */
   PipelineStage dstStage = PipelineStage::none;
-
-  /** Destination memory access types. */
   Access dstAccess = Access::none;
 };
+// [MemoryBarrier]
 
 } // namespace strobe::rhi

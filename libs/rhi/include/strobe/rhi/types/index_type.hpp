@@ -5,14 +5,18 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Index element type.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} index_type.hpp IndexType
  *
  * Specifies the integer format used by an index buffer.
  */
+// [IndexType]
 enum class IndexType {
-  none,   ///< No index type specified.
-  uint8,  ///< 8-bit unsigned integer indices.
-  uint16, ///< 16-bit unsigned integer indices.
-  uint32, ///< 32-bit unsigned integer indices.
+  none,
+  uint8,
+  uint16,
+  uint32,
 };
+// [IndexType]
 
 } // namespace strobe::rhi

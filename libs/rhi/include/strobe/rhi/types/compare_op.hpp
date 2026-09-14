@@ -7,18 +7,22 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Comparison operation.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} compare_op.hpp CompareOp
  *
  * Specifies the comparison function used by depth and stencil tests.
  */
+// [CompareOp]
 enum class CompareOp : uint8_t {
-  never,            ///< Comparison always fails.
-  less,             ///< Passes when the source value is less.
-  equal,            ///< Passes when both values are equal.
-  less_or_equal,    ///< Passes when the source value is less or equal.
-  greater,          ///< Passes when the source value is greater.
-  not_equal,        ///< Passes when both values differ.
-  greater_or_equal, ///< Passes when the source value is greater or equal.
-  always,           ///< Comparison always passes.
+  never,
+  less,
+  equal,
+  less_or_equal,
+  greater,
+  not_equal,
+  greater_or_equal,
+  always,
 };
+// [CompareOp]
 
 } // namespace strobe::rhi

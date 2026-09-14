@@ -8,19 +8,18 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief TLAS creation information.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} tlas_info.hpp TlasInfo
  *
  * Describes the capacity, build behavior, and memory placement of a top-level
  * acceleration structure.
  */
+// [TlasInfo]
 struct TlasInfo {
-  /** Acceleration structure build flags. */
   BuildFlags buildFlags = BuildFlags::none;
-
-  /** Requested memory usage. */
   MemoryUsage memoryUsage = MemoryUsage::automatic;
-
-  /** Maximum number of instances. */
   uint32_t instanceCount = 0;
 };
+// [TlasInfo]
 
 } // namespace strobe::rhi

@@ -31,6 +31,10 @@
 
     /**
      * \brief Adds queue wait.
+     * \code{.cpp}
+     * void wait(const Timepoint& timepoint, PipelineState stage = PipelineStage::all_commands) noexcept;   (1)
+     * void wait(const SwapchainImage& image, PipelineStage& stage = PipelineStage::all_commands) noexcept; (2)
+     * \endcode
      *
      * Adds a dependency on \p timepoint to subsequent queue submissions.
      *
@@ -42,26 +46,14 @@
      */
     void wait(const Timepoint &timepoint,
               PipelineStage stage = PipelineStage::all_commands) noexcept;
-
-    /**
-     * \brief Adds acquire wait.
-     *
-     * Adds the acquire dependency associated with \p swapchainImage to
-     * subsequent queue submissions.
-     *
-     * \param swapchainImage Acquired swapchain image.
-     * \param stage Earliest pipeline stage affected by the wait.
-     *
-     * \attention 1. \p swapchainImage must reference an acquired image.
-     * \attention 2. The acquire wait associated with \p swapchainImage must not
-     * have been consumed previously.
-     * \attention 3. The Queue must be externally synchronized.
-     */
-    void wait(const SwapchainImage &swapchainImage,
+    void wait(const SwapchainImage &image,
               PipelineStage stage = PipelineStage::all_commands) noexcept;
 
     /**
      * \brief Submits command buffers.
+     * \code{.cpp}
+     * Timepoint submit(span<const CommandBuffer> cmds) noexcept;
+     * \endcode
      *
      * Adds \p cmds to the queue together with currently pending waits.
      *
@@ -80,10 +72,13 @@
 
     /**
      * \brief Presents swapchain image.
+     * \code{.cpp}
+     * void present(SwapchainImage image) noexcept;
+     * \endcode
      *
      * Schedules presentation of \p swapchainImage after preceding queue work.
      *
-     * \param swapchainImage Swapchain image to present.
+     * \param image Swapchain image to present.
      *
      * \attention 1. \p swapchainImage must reference an acquired image.
      * \attention 2. The image must be in a valid presentation layout.
@@ -92,10 +87,13 @@
      * swapchain surface.
      * \attention 5. The Queue must be externally synchronized.
      */
-    void present(SwapchainImage swapchainImage) noexcept;
+    void present(SwapchainImage image) noexcept;
 
     /**
      * \brief Flushes pending work.
+     * \code{.cpp}
+     * void flush() noexcept;
+     * \endcode
      *
      * Submits all queue operations accumulated so far.
      *

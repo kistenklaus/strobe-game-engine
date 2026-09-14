@@ -8,21 +8,18 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Vertex attribute description.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} vertex_attribute.hpp VertexAttribute
  *
  * Describes how a vertex attribute is read from a bound vertex buffer.
  */
+// [VertexAttribute]
 struct VertexAttribute {
-  /** Shader input location. */
   uint32_t location;
-
-  /** Vertex buffer binding index. */
   uint32_t binding;
-
-  /** Attribute data format. */
   Format format;
-
-  /** Byte offset within each vertex element. */
   uint32_t offset;
 };
+// [VertexAttribute]
 
 } // namespace strobe::rhi

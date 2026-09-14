@@ -14,134 +14,119 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Storage buffer descriptor.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} resource_descriptor_info.hpp StorageBufferDescriptorInfo
  *
  * Describes a byte range of a buffer exposed as a storage resource.
  */
+// [StorageBufferDescriptorInfo]
 struct StorageBufferDescriptorInfo {
-  /** Referenced buffer. */
   Buffer buffer{};
-
-  /** Size of the exposed range in bytes. */
   uint64_t size = std::numeric_limits<uint64_t>::max();
-
-  /** Byte offset to the beginning of the range. */
   uint64_t offset = 0;
 };
+// [StorageBufferDescriptorInfo]
 
 /**
  * \ingroup rhi
  * \brief Storage texel descriptor.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} resource_descriptor_info.hpp StorageTexelBufferDescriptorInfo
  *
  * Describes a formatted buffer range exposed as a storage texel resource.
  */
+// [StorageTexelBufferDescriptorInfo]
 struct StorageTexelBufferDescriptorInfo {
-  /** Referenced buffer. */
   Buffer buffer{};
-
-  /** Size of the exposed range in bytes. */
   uint64_t size = std::numeric_limits<uint64_t>::max();
-
-  /** Byte offset to the beginning of the range. */
   uint64_t offset = 0;
-
-  /** Texel format. */
   Format format = Format::undefined;
 };
+// [StorageTexelBufferDescriptorInfo]
 
 /**
  * \ingroup rhi
  * \brief Uniform buffer descriptor.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} resource_descriptor_info.hpp UniformBufferDescriptorInfo
  *
  * Describes a byte range of a buffer exposed as a uniform resource.
  */
+// [UniformBufferDescriptorInfo]
 struct UniformBufferDescriptorInfo {
-  /** Referenced buffer. */
   Buffer buffer{};
-
-  /** Size of the exposed range in bytes. */
   uint64_t size = std::numeric_limits<uint64_t>::max();
-
-  /** Byte offset to the beginning of the range. */
   uint64_t offset = 0;
 };
+// [UniformBufferDescriptorInfo]
 
 /**
  * \ingroup rhi
  * \brief Uniform texel descriptor.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} resource_descriptor_info.hpp UniformTexelBufferDescriptorInfo
  *
  * Describes a formatted buffer range exposed as a uniform texel resource.
  */
+// [UniformTexelBufferDescriptorInfo]
 struct UniformTexelBufferDescriptorInfo {
-  /** Referenced buffer. */
   Buffer buffer{};
-
-  /** Size of the exposed range in bytes. */
   uint64_t size = std::numeric_limits<uint64_t>::max();
-
-  /** Byte offset to the beginning of the range. */
   uint64_t offset = 0;
-
-  /** Texel format. */
   Format format = Format::undefined;
 };
+// [UniformTexelBufferDescriptorInfo]
 
 /**
  * \ingroup rhi
  * \brief Sampled image descriptor.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} resource_descriptor_info.hpp SampledImageDescriptorInfo
  *
  * Describes an image view exposed for sampled image access.
  */
+// [SampledImageDescriptorInfo]
 struct SampledImageDescriptorInfo {
-  /** Referenced image. */
   Image image{};
-
-  /** Image layout used for descriptor access. */
   ImageLayout layout = ImageLayout::undefined;
-
-  /** Image view type, or ImageViewType::none to inherit from the image. */
   ImageViewType viewType = ImageViewType::none;
-
-  /** View format, or Format::undefined to inherit from the image. */
   Format format = Format::undefined;
-
-  /** Image subresources exposed by the descriptor. */
   ImageSubresourceRange subresource{};
 };
+// [SampledImageDescriptorInfo]
 
 /**
  * \ingroup rhi
  * \brief Storage image descriptor.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} resource_descriptor_info.hpp StorageImageDescriptorInfo
  *
  * Describes an image view exposed for storage image access.
  */
+// [StorageImageDescriptorInfo]
 struct StorageImageDescriptorInfo {
-  /** Referenced image. */
   Image image{};
-
-  /** Image layout used for descriptor access. */
   ImageLayout layout = ImageLayout::undefined;
-
-  /** Image view type, or ImageViewType::none to inherit from the image. */
   ImageViewType viewType = ImageViewType::none;
-
-  /** View format, or Format::undefined to inherit from the image. */
   Format format = Format::undefined;
-
-  /** Image subresources exposed by the descriptor. */
   ImageSubresourceRange subresource{};
 };
+// [StorageImageDescriptorInfo]
 
 /**
  * \ingroup rhi
  * \brief Resource descriptor information.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} resource_descriptor_info.hpp ResourceDescriptorInfo
  *
  * Describes one resource descriptor stored in the device resource descriptor
  * heap.
  */
+// [ResourceDescriptorInfo]
 using ResourceDescriptorInfo =
     std::variant<StorageBufferDescriptorInfo, StorageTexelBufferDescriptorInfo,
                  UniformBufferDescriptorInfo, UniformTexelBufferDescriptorInfo,
-                 SampledImageDescriptorInfo,
-                 StorageImageDescriptorInfo>;
+                 SampledImageDescriptorInfo, StorageImageDescriptorInfo>;
+// [ResourceDescriptorInfo]
 
 } // namespace strobe::rhi

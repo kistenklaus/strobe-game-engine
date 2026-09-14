@@ -7,13 +7,17 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Polygon rasterization mode.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} polygon_mode.hpp PolygonMode
  *
  * Specifies how polygons are rasterized.
  */
+// [PolygonMode]
 enum class PolygonMode : uint8_t {
-  fill,  ///< Rasterize polygon interiors.
-  line,  ///< Rasterize polygon edges.
-  point, ///< Rasterize polygon vertices.
+  fill,
+  line,
+  point,
 };
+// [PolygonMode]
 
 } // namespace strobe::rhi

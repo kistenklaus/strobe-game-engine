@@ -29,6 +29,9 @@ public:
 
   /**
    * \brief Gets image type.
+   * \code{.cpp}
+   * ImageType type() const noexcept;
+   * \endcode
    *
    * Returns the dimensionality of the image.
    *
@@ -38,6 +41,9 @@ public:
 
   /**
    * \brief Gets image format.
+   * \code{.cpp}
+   * Format format() const noexcept;
+   * \endcode
    *
    * Returns the image format.
    *
@@ -47,6 +53,9 @@ public:
 
   /**
    * \brief Gets image extent.
+   * \code{.cpp}
+   * uvec3 extent() const noexcept;
+   * \endcode
    *
    * Returns the image extent in texels.
    *
@@ -56,6 +65,9 @@ public:
 
   /**
    * \brief Gets mip levels.
+   * \code{.cpp}
+   * uint32_t mip_levels() const noexcept;
+   * \endcode
    *
    * Returns the number of mip levels.
    *
@@ -65,6 +77,9 @@ public:
 
   /**
    * \brief Gets array layers.
+   * \code{.cpp}
+   * uint32_t arrayLayers() const noexcept;
+   * \endcode
    *
    * Returns the number of array layers.
    *
@@ -74,6 +89,9 @@ public:
 
   /**
    * \brief Gets sample count.
+   * \code{.cpp}
+   * SampleCount samples() const noexcept;
+   * \endcode
    *
    * Returns the image sample count.
    *

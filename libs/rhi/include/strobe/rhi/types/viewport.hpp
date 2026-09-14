@@ -7,21 +7,18 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Rendering viewport.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} viewport.hpp Viewport
  *
  * Describes the framebuffer region and depth range used during rasterization.
  */
+// [Viewport]
 struct Viewport {
-  /** Viewport position in framebuffer coordinates. */
   vec2 position{0.0f};
-
-  /** Viewport width and height. */
   vec2 extent{0.0f};
-
-  /** Minimum viewport depth. */
   float minDepth = 0.0f;
-
-  /** Maximum viewport depth. */
   float maxDepth = 1.0f;
 };
+// [Viewport]
 
 } // namespace strobe::rhi

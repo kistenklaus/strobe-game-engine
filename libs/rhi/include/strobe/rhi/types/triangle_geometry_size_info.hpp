@@ -10,6 +10,10 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Infer maximum vertex index.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \code{cpp}
+ * static constexpr uint32_t INFER_FROM_TRIANGLE_COUNT = <sentinal>;
+ * \endcode
  *
  * Infers the maximum vertex index from the configured triangle count.
  */
@@ -19,27 +23,20 @@ static constexpr uint32_t INFER_FROM_TRIANGLE_COUNT =
 /**
  * \ingroup rhi
  * \brief Triangle geometry size.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} triangle_geometry_size_info.hpp TriangleGeometrySizeInfo
  *
  * Describes the maximum triangle geometry requirements used to size a BLAS.
  */
+// [TriangleGeometrySizeInfo]
 struct TriangleGeometrySizeInfo {
-  /** Geometry build flags. */
   GeometryFlags flags = GeometryFlags::none;
-
-  /** Maximum number of triangles. */
   uint32_t maxTriangles = 0;
-
-  /** Format of vertex position data. */
   Format positionFormat = Format::rgb32_float;
-
-  /** Index element type, or IndexType::none for non-indexed geometry. */
   IndexType indexType = IndexType::none;
-
-  /** Maximum referenced vertex index, or INFER_FROM_TRIANGLE_COUNT to infer it. */
   uint32_t maxVertexIndex = INFER_FROM_TRIANGLE_COUNT;
-
-  /** Whether the geometry may provide a transform. */
   bool transform = false;
 };
+// [TriangleGeometrySizeInfo]
 
 } // namespace strobe::rhi

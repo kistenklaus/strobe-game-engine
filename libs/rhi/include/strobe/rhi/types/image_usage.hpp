@@ -8,22 +8,23 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Image usage mask.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} image_usage.hpp ImageUsage
  *
  * Specifies the operations for which an image may be used. ImageUsage values
  * may be combined and queried using the provided bitwise operators.
  */
+// [ImageUsage]
 enum class ImageUsage : uint32_t {
-  none = 0, ///< No image usage.
-
-  transfer_src = 1u << 0, ///< Transfer source.
-  transfer_dst = 1u << 1, ///< Transfer destination.
-
-  sampled = 1u << 2, ///< Sampled image access.
-  storage = 1u << 3, ///< Storage image access.
-
-  color_attachment = 1u << 4, ///< Color attachment usage.
-  depth_stencil = 1u << 5, ///< Depth-stencil attachment usage.
+  none = 0,
+  transfer_src = 1u << 0,
+  transfer_dst = 1u << 1,
+  sampled = 1u << 2,
+  storage = 1u << 3,
+  color_attachment = 1u << 4,
+  depth_stencil = 1u << 5,
 };
+// [ImageUsage]
 
 [[nodiscard]]
 constexpr ImageUsage operator|(ImageUsage lhs, ImageUsage rhs) noexcept {
@@ -68,30 +69,26 @@ constexpr ImageUsage &operator^=(ImageUsage &lhs, ImageUsage rhs) noexcept {
 }
 
 [[nodiscard]]
-constexpr bool
-operator==(ImageUsage lhs,
-           std::underlying_type_t<ImageUsage> rhs) noexcept {
+constexpr bool operator==(ImageUsage lhs,
+                          std::underlying_type_t<ImageUsage> rhs) noexcept {
   return static_cast<std::underlying_type_t<ImageUsage>>(lhs) == rhs;
 }
 
 [[nodiscard]]
-constexpr bool
-operator==(std::underlying_type_t<ImageUsage> lhs,
-           ImageUsage rhs) noexcept {
+constexpr bool operator==(std::underlying_type_t<ImageUsage> lhs,
+                          ImageUsage rhs) noexcept {
   return lhs == static_cast<std::underlying_type_t<ImageUsage>>(rhs);
 }
 
 [[nodiscard]]
-constexpr bool
-operator!=(ImageUsage lhs,
-           std::underlying_type_t<ImageUsage> rhs) noexcept {
+constexpr bool operator!=(ImageUsage lhs,
+                          std::underlying_type_t<ImageUsage> rhs) noexcept {
   return !(lhs == rhs);
 }
 
 [[nodiscard]]
-constexpr bool
-operator!=(std::underlying_type_t<ImageUsage> lhs,
-           ImageUsage rhs) noexcept {
+constexpr bool operator!=(std::underlying_type_t<ImageUsage> lhs,
+                          ImageUsage rhs) noexcept {
   return !(lhs == rhs);
 }
 

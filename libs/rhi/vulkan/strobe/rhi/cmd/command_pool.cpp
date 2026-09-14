@@ -15,7 +15,7 @@ void CommandPool::unpin(void *handle) noexcept {
   unpin_void_handle<CommandPoolImpl>(handle);
 }
 
-CommandBuffer CommandPool::alloc(CommandBufferFlags flags) {
+CommandBuffer CommandPool::alloc(CommandBufferFlags flags) noexcept {
   ZoneScopedN("CommandPool::alloc");
   assert(m_handle);
   auto *impl = void_handle_ptr<CommandPoolImpl>(m_handle);

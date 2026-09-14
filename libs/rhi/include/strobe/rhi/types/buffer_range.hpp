@@ -8,18 +8,17 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Buffer byte range.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{.cpp} buffer_range.hpp BufferRange
  *
  * Identifies a contiguous byte range within a buffer.
  */
+// [BufferRange]
 struct BufferRange {
-  /** Referenced buffer. */
   Buffer buffer;
-
-  /** Byte offset to the beginning of the range. */
   uint64_t offset = 0;
-
-  /** Size of the range in bytes. */
   uint64_t size = 0;
 };
+// [BufferRange]
 
 } // namespace strobe::rhi

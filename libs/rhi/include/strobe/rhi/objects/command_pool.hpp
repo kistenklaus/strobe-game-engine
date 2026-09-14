@@ -31,6 +31,9 @@ public:
 
   /**
    * \brief Allocates command buffer.
+   * \code{.cpp}
+   * CommandBuffer alloc(CommandBufferFlags flags = CommandBufferFlags::none) noexcept;
+   * \endcode
    *
    * Allocates a CommandBuffer associated with this pool.
    *
@@ -40,7 +43,7 @@ public:
    *
    * \attention 1. The CommandPool must be externally synchronized.
    */
-  CommandBuffer alloc(CommandBufferFlags flags = CommandBufferFlags::none);
+  CommandBuffer alloc(CommandBufferFlags flags = CommandBufferFlags::none) noexcept;
 };
 
 } // namespace strobe::rhi

@@ -7,15 +7,19 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Color blend operation.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{.cpp} blend_op.hpp BlendOp
  *
  * Specifies how source and destination blend terms are combined.
  */
+// [BlendOp] 
 enum class BlendOp : uint8_t {
-  add,              ///< Adds source and destination terms.
-  subtract,         ///< Subtracts destination from source.
-  reverse_subtract, ///< Subtracts source from destination.
-  min,              ///< Selects the component-wise minimum.
-  max,              ///< Selects the component-wise maximum.
+  add,              
+  subtract,         
+  reverse_subtract, 
+  min,              
+  max,              
 };
+// [BlendOp] 
 
 } // namespace strobe::rhi

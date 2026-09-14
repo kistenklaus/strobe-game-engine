@@ -28,6 +28,9 @@ public:
 
   /**
    * \brief Gets view format.
+   * \code{.cpp}
+   * Format format() const noexcept;
+   * \endcode
    *
    * Returns the format used by this image view.
    *
@@ -37,23 +40,15 @@ public:
 
   /**
    * \brief Gets source image.
+   * \code{.cpp}
+   * const Image& image() const noexcept;
+   * \endcode
    *
    * Returns the image referenced by this view.
    *
    * \return Referenced image.
    */
   const Image &image() const noexcept;
-
-  /**
-   * \brief Wraps image view.
-   *
-   * Constructs an ImageView from an internal object handle.
-   *
-   * \param handle Internal image view handle.
-   *
-   * \attention 1. \p handle must reference a valid ImageView implementation.
-   */
-  explicit ImageView(void *handle) noexcept : Object(handle) {}
 };
 
 } // namespace strobe::rhi

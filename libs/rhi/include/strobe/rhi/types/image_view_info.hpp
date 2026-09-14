@@ -9,18 +9,17 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Image view creation information.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} image_view_info.hpp ImageViewInfo
  *
  * Describes the type, format, and subresource range of an image view.
  */
+// [ImageViewInfo]
 struct ImageViewInfo {
-  /** Image view type. */
   ImageViewType type = ImageViewType::none;
-
-  /** View format, or Format::undefined to inherit the image format. */
   Format format = Format::undefined;
-
-  /** Image subresources visible through the view. */
   ImageSubresourceRange range = {};
 };
+// [ImageViewInfo]
 
 } // namespace strobe::rhi

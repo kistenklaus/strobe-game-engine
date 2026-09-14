@@ -88,7 +88,8 @@ public:
   /**
    * \brief Records memory barrier.
    * \code{.cpp}
-   * void memory_barrier(const MemoryBarrier& barrier);
+   * void memory_barrier(const MemoryBarrier& barrier);     (1)
+   * void memory_barrier(AccessScope src, AccessScope dst); (2)
    * \endcode
    *
    * Establishes the memory dependency described by \p barrier.
@@ -102,24 +103,6 @@ public:
    * little benefit over equivalent memory barriers.
    */
   void memory_barrier(const MemoryBarrier &barrier);
-
-  /**
-   * \brief Records memory barrier.
-   * \code{.cpp}
-   * void memory_barrier(AccessScope src, AccessScope dst);
-   * \endcode
-   *
-   * Establishes a memory dependency between two access scopes.
-   *
-   * \param src Source access scope.
-   * \param dst Destination access scope.
-   *
-   * \attention 1. The command buffer must be recording.
-   * \attention 2. The owning CommandPool must be externally synchronized.
-   *
-   * \note On modern hardware, dedicated buffer and image barriers often offer
-   * little benefit over equivalent memory barriers.
-   */
   void memory_barrier(AccessScope src, AccessScope dst);
 
   /**
@@ -181,6 +164,7 @@ public:
    * \brief Sets rendering viewports.
    * \code{.cpp}
    * void set_viewports(span<const Viewport> viewports) noexcept;
+   * void set_viewport(const Viewport& viewports) noexcept;
    * \endcode
    *
    * Replaces the active viewport state.
@@ -191,11 +175,15 @@ public:
    * \attention 2. The owning CommandPool must be externally synchronized.
    */
   void set_viewports(span<const Viewport> viewports) noexcept;
+  inline void set_viewport(const Viewport &viewport) noexcept {
+    set_viewports({&viewport, 1});
+  }
 
   /**
    * \brief Sets scissor rectangles.
    * \code{.cpp}
    * void set_scissors(span<const Rect> scissors) noexcept;
+   * void set_scissor(const Rect scissors) noexcept;
    * \endcode
    *
    * Replaces the active scissor state.
@@ -206,6 +194,9 @@ public:
    * \attention 2. The owning CommandPool must be externally synchronized.
    */
   void set_scissors(span<const Rect> scissors) noexcept;
+  inline void set_scissor(const Rect &scissor) noexcept {
+    set_scissors({&scissor, 1});
+  }
 
   /**
    * \brief Sets rasterizer discard.
@@ -412,7 +403,10 @@ public:
 
   /**
    * \brief Sets stencil compare mask.
-   *
+   * \code{.cpp}
+   * void set_stencil_compare_mask(StencilFace faceMask, uint32_t compareMask) noexcept;
+   * \endcode
+   * 
    * Sets the comparison mask for the selected stencil faces.
    *
    * \param faceMask Stencil faces to modify.
@@ -426,6 +420,9 @@ public:
 
   /**
    * \brief Sets stencil write mask.
+   * \code{.cpp}
+   * void set_stencil_write_mask(StencilFace faceMask, uint32_t writeMask) noexcept;
+   * \endcode
    *
    * Sets the write mask for the selected stencil faces.
    *
@@ -440,6 +437,9 @@ public:
 
   /**
    * \brief Sets stencil reference.
+   * \code{.cpp}
+   * void set_stencil_reference(StencilFace faceMask, uint32_t reference) noexcept;
+   * \endcode
    *
    * Sets the reference value for the selected stencil faces.
    *
@@ -453,6 +453,9 @@ public:
 
   /**
    * \brief Sets blend constants.
+   * \code{.cpp}
+   * void set_blend_constants(vec4 constants) noexcept;
+   * \endcode
    *
    * Sets the constant RGBA values used by blending.
    *
@@ -465,6 +468,9 @@ public:
 
   /**
    * \brief Sets line width.
+   * \code{.cpp}
+   * void set_line_width(float lineWidth) noexcept;
+   * \endcode
    *
    * Sets the width used when rasterizing lines.
    *
@@ -478,6 +484,9 @@ public:
 
   /**
    * \brief Sets depth bias.
+   * \code{.cpp}
+   * void set_depth_bias(float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlope) noexcept;
+   * \endcode
    *
    * Sets the parameters used when depth bias is enabled.
    *
@@ -493,6 +502,9 @@ public:
 
   /**
    * \brief Sets vertex input.
+   * \code{.cpp}
+   * void set_vertex_input(span<const VertexBinding> bindings, span<const VertexAttribute> attributes) noexcept;
+   * \endcode
    *
    * Sets vertex bindings and their associated attributes.
    *
@@ -520,6 +532,9 @@ public:
 
   /**
    * \brief Sets sample mask.
+   * \code{.cpp}
+   * void set_sample_mask(SampleCount samples, uint64_t mask = std::numeric_limits<uint64_t>::max()) noexcept;
+   * \endcode
    *
    * Selects which rasterization samples are enabled.
    *
@@ -536,6 +551,9 @@ public:
 
   /**
    * \brief Sets alpha-to-coverage.
+   * \code{.cpp}
+   * void set_alpha_to_coverage_enable(bool alphaToCoverageEnable) noexcept;
+   * \endcode
    *
    * Controls alpha-to-coverage multisampling.
    *
@@ -548,6 +566,9 @@ public:
 
   /**
    * \brief Sets polygon mode.
+   * \code{.cpp}
+   * void set_polygon_mode(PolygonMode polygonMode) noexcept;
+   * \endcode
    *
    * Selects how polygons are rasterized.
    *
@@ -560,6 +581,9 @@ public:
 
   /**
    * \brief Sets depth clamp.
+   * \code{.cpp}
+   * void set_depth_clamp_enable(bool depthClampEnable) noexcept;
+   * \endcode
    *
    * Controls whether fragment depth values are clamped.
    *
@@ -572,6 +596,9 @@ public:
 
   /**
    * \brief Sets logic operations.
+   * \code{.cpp}
+   * void set_logic_op_enable(bool logicOpEnable) noexcept;
+   * \endcode
    *
    * Controls whether logical color operations are performed.
    *
@@ -584,6 +611,9 @@ public:
 
   /**
    * \brief Sets logic operation.
+   * \code{.cpp}
+   * void set_logic_op(LogicOp logicOp) noexcept;
+   * \endcode
    *
    * Selects the logical operation applied to color values.
    *
@@ -596,6 +626,10 @@ public:
 
   /**
    * \brief Sets color blending.
+   * \code{.cpp}
+   * void set_color_blend_enable(uint32_t firstAttachment, uint32_t attachmentCount, uint32_t bitmask) noexcept; (1)
+   * void set_color_blend_enable(uint32_t firstAttachment, uint32_t attachmentCount, bool enable) noexcept; (2)
+   * \endcode
    *
    * Sets blending enable state for consecutive color attachments.
    *
@@ -611,9 +645,18 @@ public:
   void set_color_blend_enable(uint32_t firstAttachment,
                               uint32_t attachmentCount,
                               uint32_t bitmask) noexcept;
+  inline void set_color_blend_enable(uint32_t firstAttachment,
+                                     uint32_t attachmentCount,
+                                     bool enable) noexcept {
+    set_color_blend_enable(firstAttachment, attachmentCount,
+                           enable ? std::numeric_limits<uint32_t>::max() : 0);
+  }
 
   /**
    * \brief Sets blend equations.
+   * \code{.cpp}
+   * void set_color_blend_equation(uint32_t firstAttachment, span<const BlendEquation> colorBlendEquations) noexcept;
+   * \endcode
    *
    * Sets one blend equation for each consecutive color attachment.
    *
@@ -631,6 +674,9 @@ public:
 
   /**
    * \brief Sets color write masks.
+   * \code{.cpp}
+   * void set_color_write_mask(uint32_t firstAttachment, span<const ColorComponent> colorWriteMasks) noexcept;
+   * \endcode
    *
    * Sets one component write mask for each consecutive color attachment.
    *
@@ -648,6 +694,9 @@ public:
 
   /**
    * \brief Sets alpha-to-one.
+   * \code{.cpp}
+   * void set_alpha_to_one_enable(bool alphaToOneEnable) noexcept;
+   * \endcode
    *
    * Controls alpha-to-one multisampling.
    *
@@ -660,6 +709,9 @@ public:
 
   /**
    * \brief Sets patch control points.
+   * \code{.cpp}
+   * void set_patch_control_points(uint32_t patchControlPoints) noexcept;
+   * \endcode
    *
    * Sets the number of control points used by patch primitives.
    *
@@ -671,55 +723,14 @@ public:
    */
   void set_patch_control_points(uint32_t patchControlPoints) noexcept;
 
-  /**
-   * \brief Sets color blending.
-   *
-   * Applies the same blending state to consecutive color attachments.
-   *
-   * \param firstAttachment First color attachment.
-   * \param attachmentCount Number of attachments.
-   * \param enable Whether blending is enabled.
-   *
-   * \attention 1. The command buffer must be recording.
-   * \attention 2. The owning CommandPool must be externally synchronized.
-   */
-  inline void set_color_blend_enable(uint32_t firstAttachment,
-                                     uint32_t attachmentCount,
-                                     bool enable) noexcept {
-    set_color_blend_enable(firstAttachment, attachmentCount,
-                           enable ? std::numeric_limits<uint32_t>::max() : 0);
-  }
 
-  /**
-   * \brief Sets single viewport.
-   *
-   * Sets a single active viewport.
-   *
-   * \param viewport Viewport to set.
-   *
-   * \attention 1. The command buffer must be recording.
-   * \attention 2. The owning CommandPool must be externally synchronized.
-   */
-  inline void set_viewport(const Viewport &viewport) noexcept {
-    set_viewports({&viewport, 1});
-  }
 
-  /**
-   * \brief Sets single scissor.
-   *
-   * Sets a single active scissor rectangle.
-   *
-   * \param scissor Scissor rectangle to set.
-   *
-   * \attention 1. The command buffer must be recording.
-   * \attention 2. The owning CommandPool must be externally synchronized.
-   */
-  inline void set_scissor(const Rect &scissor) noexcept {
-    set_scissors({&scissor, 1});
-  }
 
   /**
    * \brief Binds vertex buffer.
+   * \code{.cpp}
+   * void bind_vertex_buffer(const Buffer& buffer, uint64_t offset = 0) noexcept;
+   * \endcode
    *
    * Binds \p buffer as vertex input starting at \p offset.
    *
@@ -741,6 +752,11 @@ public:
 
   /**
    * \brief Binds vertex shader.
+   * \code{.cpp}
+   * void bind_shader(const VertexShader& shader) noexcept;   (1)
+   * void bind_shader(const FragmentShader& shader) noexcept; (2)
+   * void bind_shader(const ComputeShader& shader) noexcept;  (3)
+   * \endcode
    *
    * Binds \p shader to the vertex stage.
    *
@@ -750,33 +766,14 @@ public:
    * \attention 2. The owning CommandPool must be externally synchronized.
    */
   void bind_shader(const VertexShader &shader) noexcept;
-
-  /**
-   * \brief Binds fragment shader.
-   *
-   * Binds \p shader to the fragment stage.
-   *
-   * \param shader Fragment shader.
-   *
-   * \attention 1. The command buffer must be recording.
-   * \attention 2. The owning CommandPool must be externally synchronized.
-   */
   void bind_shader(const FragmentShader &shader) noexcept;
-
-  /**
-   * \brief Binds compute shader.
-   *
-   * Binds \p shader to the compute stage.
-   *
-   * \param shader Compute shader.
-   *
-   * \attention 1. The command buffer must be recording.
-   * \attention 2. The owning CommandPool must be externally synchronized.
-   */
   void bind_shader(const ComputeShader &shader) noexcept;
 
   /**
    * \brief Unbinds shader stages.
+   * \code{.cpp}
+   * void unbind_shader(ShaderStage stage) noexcept;
+   * \endcode
    *
    * Unbinds shaders from the stages selected by \p stage.
    *
@@ -795,6 +792,9 @@ public:
 
   /**
    * \brief Copies buffer data.
+   * \code{.cpp}
+   * void copy_buffer(BufferOffset dst, BufferOffset src, uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
+   * \endcode
    *
    * Copies \p size bytes from \p src to \p dst.
    *
@@ -817,6 +817,11 @@ public:
 
   /**
    * \brief Updates buffer data.
+   * \code{.cpp}
+   * void update(BufferOffset dst, const void* src, uint64_t size) noexcept; (1)
+   * template<typename T>
+   * void update(BufferOffset dst, span<const T> src) noexcept;              (2)
+   * \endcode
    *
    * Copies host data into a buffer as part of command execution.
    *
@@ -833,26 +838,8 @@ public:
    * \attention 6. The owning CommandPool must be externally synchronized.
    */
   void update(BufferOffset dst, const void *src, uint64_t size) noexcept;
-
-  /**
-   * \brief Updates buffer data.
-   *
-   * Copies the contents of \p src into \p dst.
-   *
-   * \tparam T Source element type.
-   * \param dst Destination buffer and offset.
-   * \param src Source elements.
-   *
-   * \attention 1. The command buffer must be recording.
-   * \attention 2. No dynamic rendering instance may be active.
-   * \attention 3. The destination range must be valid.
-   * \attention 4. The destination buffer must support transfer-destination
-   * usage.
-   * \attention 5. Vulkan update-buffer size and alignment restrictions apply.
-   * \attention 6. The owning CommandPool must be externally synchronized.
-   */
   template <typename T>
-  inline void update(BufferOffset dst, span<const T> src) {
+  inline void update(BufferOffset dst, span<const T> src) noexcept {
     update(std::move(dst), src.data(), src.size_bytes());
   }
 
@@ -864,6 +851,9 @@ public:
 
   /**
    * \brief Records draw call.
+   * \code{.cpp}
+   * void draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t firstVertex = 0, uint32_t firstInstance = 0) noexcept;
+   * \endcode
    *
    * Draws non-indexed primitives using the current graphics state.
    *
@@ -883,6 +873,14 @@ public:
 
   /**
    * \brief Records indexed draw.
+   * \code{.cpp}
+   * void draw_indexed(uint32_t indexCount, 
+   *                   uint32_t instanceCount = 1, 
+   *                   uint32_t firstIndex = 0, 
+   *                   uint32_t firstIndex = 0, 
+   *                   uint32_t vertexOffset = 0, 
+   *                   uint32_t firstInstance = 0) noexcept;
+   * \endcode
    *
    * Draws indexed primitives using the current graphics state.
    *
@@ -910,7 +908,12 @@ public:
    */
 
   /**
-   * \brief Builds triangle BLAS.
+   * \brief Builds acceleration structure.
+   * \code{.cpp}
+   * void build(const Blas& blas, span<const TriangleGeometryData> triangleGeometries) noexcept; (1)
+   * void build(const Blas& blas, span<const AabbGeometryData> aabbGeometries) noexcept;         (2)
+   * void build(const Tlas& tlas, BufferOffset instanceBuffer, uint32_t count) noexcept;         (3)
+   * \endcode
    *
    * Builds \p blas from triangle geometry.
    *
@@ -925,42 +928,9 @@ public:
    */
   void build(const Blas &blas,
              span<const TriangleGeometryData> triangleGeometries) noexcept;
-
-  /**
-   * \brief Builds AABB BLAS.
-   *
-   * Builds \p blas from AABB geometry.
-   *
-   * \param blas Destination acceleration structure.
-   * \param aabbGeometries AABB geometry.
-   *
-   * \attention 1. The command buffer must be recording.
-   * \attention 2. No dynamic rendering instance may be active.
-   * \attention 3. Geometry buffers must remain valid until execution
-   * completes.
-   * \attention 4. The owning CommandPool must be externally synchronized.
-   */
   void build(const Blas &blas,
              span<const AabbGeometryData> aabbGeometries) noexcept;
-
-  /**
-   * \brief Builds top-level AS.
-   *
-   * Builds a TLAS from the instances in \p instanceBuffer.
-   *
-   * \param blas Destination top-level acceleration structure.
-   * \param instanceBuffer Instance buffer and offset.
-   * \param count Number of instances.
-   *
-   * \attention 1. The command buffer must be recording.
-   * \attention 2. No dynamic rendering instance may be active.
-   * \attention 3. The instance buffer must contain at least \p count valid
-   * instances.
-   * \attention 4. Referenced acceleration structures must remain valid until
-   * execution completes.
-   * \attention 5. The owning CommandPool must be externally synchronized.
-   */
-  void build(const Tlas &blas, BufferOffset instanceBuffer,
+  void build(const Tlas &tlas, BufferOffset instanceBuffer,
              uint32_t count) noexcept;
 
   /** @} */
@@ -971,6 +941,11 @@ public:
 
   /**
    * \brief Pushes constant data.
+   * \code{.cpp}
+   * void push(uint32_t offset, void* data, uint32_t size) noexcept;                 (1)
+   * void push(uint32_t offset, const ResourceDescriptor& descriptor) noexcept;      (2)
+   * void push(uint32_t offset, const ResourceDescriptorArray& descriptor) noexcept; (3)
+   * \endcode
    *
    * Writes \p size bytes into the shader push-constant block.
    *
@@ -985,40 +960,7 @@ public:
    * \attention 4. The owning CommandPool must be externally synchronized.
    */
   void push(uint32_t offset, void *data, uint32_t size) noexcept;
-
-  /**
-   * \brief Pushes resource descriptor.
-   *
-   * Pushes the descriptor-heap index of \p descriptor.
-   *
-   * \param offset Byte offset.
-   * \param descriptor Resource descriptor.
-   *
-   * \attention 1. The command buffer must be recording.
-   * \attention 2. \p descriptor must be valid.
-   * \attention 3. The descriptor must remain valid until execution completes.
-   * \attention 4. The written range must fit within the supported push-constant
-   * block.
-   * \attention 5. The owning CommandPool must be externally synchronized.
-   */
   void push(uint32_t offset, const ResourceDescriptor &descriptor) noexcept;
-
-  /**
-   * \brief Pushes descriptor array.
-   *
-   * Pushes the descriptor-heap index of \p descriptor.
-   *
-   * \param offset Byte offset.
-   * \param descriptor Resource descriptor array.
-   *
-   * \attention 1. The command buffer must be recording.
-   * \attention 2. \p descriptor must be valid.
-   * \attention 3. The descriptor array must remain valid until execution
-   * completes.
-   * \attention 4. The written range must fit within the supported push-constant
-   * block.
-   * \attention 5. The owning CommandPool must be externally synchronized.
-   */
   void push(uint32_t offset,
             const ResourceDescriptorArray &descriptor) noexcept;
 

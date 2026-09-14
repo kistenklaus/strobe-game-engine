@@ -7,9 +7,12 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Image memory layout.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} image_layout.hpp ImageLayout
  *
  * Specifies the memory layout and intended access mode of an image.
  */
+// [ImageLayout]
 enum class ImageLayout : uint8_t {
   undefined,    ///< Previous image contents are not preserved.
   general,      ///< General-purpose image layout.
@@ -22,5 +25,6 @@ enum class ImageLayout : uint8_t {
 
   present,      ///< Presentation layout.
 };
+// [ImageLayout]
 
 } // namespace strobe::rhi

@@ -8,21 +8,18 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Vertex buffer binding.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} vertex_binding.hpp VertexBinding
  *
  * Describes how elements are read from a bound vertex buffer.
  */
+// [VertexBinding]
 struct VertexBinding {
-  /** Vertex buffer binding index. */
   uint32_t binding = 0;
-
-  /** Byte stride between consecutive elements. */
   uint32_t stride = 0;
-
-  /** Rate at which elements advance. */
   VertexInputRate inputRate = VertexInputRate::vertex;
-
-  /** Number of draws between input advances for instance-rate bindings. */
   uint32_t divisor = 1;
 };
+// [VertexBinding]
 
 } // namespace strobe::rhi

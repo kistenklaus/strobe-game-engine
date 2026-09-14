@@ -27,6 +27,9 @@
 
     /**
      * \brief Gets swapchain image.
+     * \code{.cpp}
+     * const Image& image() const noexcept;
+     * \endcode
      *
      * Returns the underlying image.
      *
@@ -36,6 +39,9 @@
 
     /**
      * \brief Gets image view.
+     * \code{.cpp}
+     * const ImageView& view() const noexcept;
+     * \endcode
      *
      * Returns the image view associated with the swapchain image.
      *
@@ -45,6 +51,9 @@
 
     /**
      * \brief Gets image extent.
+     * \code{.cpp}
+     * const uvec2 extent() const noexcept;
+     * \endcode
      *
      * Returns the extent of the swapchain image.
      *

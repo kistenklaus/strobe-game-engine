@@ -8,47 +8,17 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Attachment clear value.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} clear_value.hpp ClearValue
  *
  * Stores a color or depth-stencil value used when clearing an attachment.
  */
+// [ClearValue]
 union ClearValue {
-  /** Floating-point color clear value. */
-  vec4 float4;
-
-  /** Unsigned integer color clear value. */
+  vec4 float4 = {};
   uvec4 unsigned4;
-
-  /** Depth-stencil clear value. */
   ClearDepthStencil depthStencil;
-
-  /**
-   * \brief Constructs zero clear.
-   *
-   * Initializes the clear value as a zero floating-point color.
-   */
-  constexpr ClearValue() noexcept : float4{} {}
-
-  /**
-   * \brief Constructs float clear.
-   *
-   * \param value Floating-point color clear value.
-   */
-  constexpr ClearValue(vec4 value) noexcept : float4(value) {}
-
-  /**
-   * \brief Constructs integer clear.
-   *
-   * \param value Unsigned integer color clear value.
-   */
-  constexpr ClearValue(uvec4 value) noexcept : unsigned4(value) {}
-
-  /**
-   * \brief Constructs depth-stencil clear.
-   *
-   * \param value Depth-stencil clear value.
-   */
-  constexpr ClearValue(ClearDepthStencil value) noexcept
-      : depthStencil(value) {}
 };
+// [ClearValue]
 
 } // namespace strobe::rhi

@@ -20,6 +20,13 @@ class Swapchain : public Object<Swapchain> {
 
 public:
   using Object::Object;
+
+  /**
+   * \brief acquire swapchain image
+   * \code{.cpp}
+   * SwapchainImage acquire();
+   * \endcode
+   */
   SwapchainImage acquire();
 };
 

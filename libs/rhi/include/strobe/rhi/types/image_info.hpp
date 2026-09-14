@@ -13,40 +13,25 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Image creation information.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} image_info.hpp ImageInfo
  *
  * Describes the dimensions, format, usage, sampling, and memory placement of
  * an image.
  */
+// [ImageInfo]
 struct ImageInfo {
-  /** Image dimensionality. */
   ImageType type = ImageType::image_2d;
-
-  /** Image format. */
   Format format = Format::rgba8_srgb;
-
-  /** Image extent in texels. */
   uvec3 extent = uvec3(0, 0, 0);
-
-  /** Number of mip levels. */
   uint32_t mip_levels = 1;
-
-  /** Number of array layers. */
   uint32_t arrayLayers = 1;
-
-  /** Image sample count. */
   SampleCount samples = SampleCount::x1;
-
-  /** Whether linear tiling is requested. */
   bool linearTiling = false;
-
-  /** Additional image creation flags. */
   ImageFlags flags = ImageFlags::none;
-
-  /** Intended image usages. */
   ImageUsage imageUsage = ImageUsage::none;
-
-  /** Requested memory usage. */
   MemoryUsage memoryUsage = MemoryUsage::automatic;
 };
+// [ImageInfo]
 
 } // namespace strobe::rhi

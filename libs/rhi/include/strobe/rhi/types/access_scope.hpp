@@ -12,17 +12,17 @@ namespace strobe::rhi {
  * \snippet{.cpp} access_scope.hpp AccessScope
  *
  * \code{.cpp}
- * inline constexpr AccessScope none;
- * inline constexpr AccessScope index_read;
- * inline constexpr AccessScope vertex_attribute_read;
- * inline constexpr AccessScope transfer_write;
- * inline constexpr AccessScope transfer_read;
- * inline constexpr AccessScope color_attachment_read;
- * inline constexpr AccessScope color_attachment_read;
- * inline constexpr AccessScope depth_stencil_read;
- * inline constexpr AccessScope depth_stencil_write;
- * inline constexpr AccessScope host_read;
- * inline constexpr AccessScope host_write;
+ * inline constexpr AccessScope none = { ... };
+ * inline constexpr AccessScope index_read = { ... };
+ * inline constexpr AccessScope vertex_attribute_read = { ... };
+ * inline constexpr AccessScope transfer_write = { ... };
+ * inline constexpr AccessScope transfer_read = { ... };
+ * inline constexpr AccessScope color_attachment_read = { ... };
+ * inline constexpr AccessScope color_attachment_read = { ... };
+ * inline constexpr AccessScope depth_stencil_read = { ... };  
+ * inline constexpr AccessScope depth_stencil_write = { ... };
+ * inline constexpr AccessScope host_read = { ... };
+ * inline constexpr AccessScope host_write = { ... };
  * \endcode 
  * \code{.cpp}
  * inline constexpr AccessScope transfer = transfer_write | transfer_read;

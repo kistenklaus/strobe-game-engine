@@ -12,7 +12,7 @@ void ComputeShader::unpin(void *handle) noexcept {
   unpin_void_handle<ShaderObjectImpl>(handle);
 }
 
-void ComputeShader::set_name(const char *name) {
+void ComputeShader::set_name(const char *name) noexcept {
   assert(m_handle);
   auto *impl = void_handle_ptr<ShaderObjectImpl>(m_handle);
   vulkan::set_debug_name(impl->context.ctx(), impl->shader, name);

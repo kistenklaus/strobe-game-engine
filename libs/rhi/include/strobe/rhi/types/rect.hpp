@@ -7,15 +7,16 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Integer rectangle.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} rect.hpp Rect
  *
  * Describes a two-dimensional rectangular region using an offset and extent.
  */
+// [Rect]
 struct Rect {
-  /** Offset of the rectangle origin. */
   ivec2 offset = {0, 0};
-
-  /** Width and height of the rectangle. */
   uvec2 extent = {0, 0};
 };
+// [Rect]
 
 } // namespace strobe::rhi

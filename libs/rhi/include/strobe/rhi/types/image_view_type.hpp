@@ -7,18 +7,22 @@ namespace strobe::rhi {
 /**
  * \ingroup rhi
  * \brief Image view type.
+ * Defined in header <strobe/rhi/rhi.hpp>
+ * \snippet{cpp} image_view_type.hpp ImageViewType
  *
  * Specifies how an image is interpreted through an image view.
  */
+// [ImageViewType]
 enum class ImageViewType : uint8_t {
-  none,           ///< No image view type specified.
-  image_1d,       ///< One-dimensional image view.
-  image_2d,       ///< Two-dimensional image view.
-  image_3d,       ///< Three-dimensional image view.
-  image_1d_array, ///< One-dimensional image array view.
-  image_2d_array, ///< Two-dimensional image array view.
-  cube,           ///< Cube image view.
-  cube_array,     ///< Cube image array view.
+  none,
+  image_1d,
+  image_2d,
+  image_3d,
+  image_1d_array,
+  image_2d_array,
+  cube,
+  cube_array,
 };
+// [ImageViewType]
 
 } // namespace strobe::rhi

@@ -51,6 +51,9 @@ public:
 
   /**
    * \brief Creates fragment shader.
+   * \code{.cpp}
+   * FragmentShader create_fragment_shader(const FragmentShaderInfo& info) noexcept;
+   * \endcode
    *
    * Creates a fragment shader from \p info.
    *
@@ -65,6 +68,9 @@ public:
 
   /**
    * \brief Creates vertex shader.
+   * \code{.cpp}
+   * VertexShader create_vertex_shader(const VertexShaderInfo& info) noexcept;
+   * \endcode
    *
    * Creates a vertex shader from \p info.
    *
@@ -78,6 +84,9 @@ public:
 
   /**
    * \brief Creates compute shader.
+   * \code{.cpp}
+   * ComputeShader create_compute_shader(const ComputeShaderInfo& info) noexcept;
+   * \endcode
    *
    * Creates a compute shader from \p info.
    *
@@ -91,6 +100,9 @@ public:
 
   /**
    * \brief Creates swapchain.
+   * \code{.cpp}
+   * Swapchain create_swapchain(const SwapchainInfo& info) noexcept;
+   * \endcode
    *
    * Creates a presentation swapchain from \p info.
    *
@@ -104,6 +116,9 @@ public:
 
   /**
    * \brief Gets device queue.
+   * \code{.cpp}
+   * Queue get_queue(QueueFlags flags = QueueFlags::graphics | QueueFlags::compute | QueueFlags::transfer) noexcept;
+   * \endcode
    *
    * Returns a queue supporting the requested capabilities.
    *
@@ -119,6 +134,9 @@ public:
 
   /**
    * \brief Creates command pool.
+   * \code{.cpp}
+   * CommandPool create_cmdpool() noexcept;
+   * \endcode
    *
    * Creates a command pool associated with this device.
    *
@@ -128,6 +146,9 @@ public:
 
   /**
    * \brief Creates buffer.
+   * \code{.cpp}
+   * Buffer create_buffer(const BufferInfo& info, const MemoryLifetime& lifetime = {}) noexcept;
+   * \endcode
    *
    * Creates a buffer using the requested memory lifetime.
    *
@@ -145,6 +166,9 @@ public:
 
   /**
    * \brief Creates image.
+   * \code{.cpp}
+   * Image create_image(const ImageInfo& info, const MemoryLifetime = {}) noexcept;
+   * \endcode
    *
    * Creates an image using the requested memory lifetime.
    *
@@ -162,6 +186,9 @@ public:
 
   /**
    * \brief Creates image view.
+   * \code{.cpp}
+   * ImageView create_image_view(const Image& image, const ImageViewInfo& info) noexcept;
+   * \endcode
    *
    * Creates a view into \p image.
    *
@@ -178,6 +205,9 @@ public:
 
   /**
    * \brief Creates BLAS.
+   * \code{.cpp}
+   * Blas create_blas(const BlasInfo& info, const MemoryLifetime& = {}) noexcept;
+   * \endcode
    *
    * Creates a bottom-level acceleration structure.
    *
@@ -196,6 +226,9 @@ public:
 
   /**
    * \brief Creates TLAS.
+   * \code{.cpp}
+   * Tlas create_tlas(const TlasInfo& info, const MemoryLifetime& lifetime = {}) noexcept;
+   * \endcode
    *
    * Creates a top-level acceleration structure.
    *
@@ -214,6 +247,9 @@ public:
 
   /**
    * \brief Copies buffer asynchronously.
+   * \code{.cpp}
+   * Timepoint async_copy(BufferOffset dst, BufferOffset src, uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
+   * \endcode
    *
    * Schedules a device-side copy from \p src to \p dst.
    *
@@ -237,6 +273,9 @@ public:
 
   /**
    * \brief Uploads buffer asynchronously.
+   * \code{.cpp}
+   * Timepoint async_upload(BufferOffset dst, void* src, uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
+   * \endcode
    *
    * Schedules a host-to-device upload into \p dst.
    *
@@ -257,6 +296,15 @@ public:
 
   /**
    * \brief Creates resource descriptor.
+   * \code{.cpp}
+   * ResourceDescriptor create_resource_descriptor(const ResourceDescriptorInfo& info) noexcept;                       (1)
+   * ResourceDescriptor create_storage_buffer_descriptor(const StorageBufferDescriptorInfo& info) noexcept;            (2)
+   * ResourceDescriptor create_storage_texel_buffer_descriptor(const StorageTexelBufferDescriptorInfo& info) noexcept; (3)
+   * ResourceDescriptor create_uniform_buffer_descriptor(const UniformBufferDescriptorInfo& info) noexcept;            (4)
+   * ResourceDescriptor create_uniform_texel_buffer_descriptor(cont UniformTexelBufferDescriptorInfo& info) noexcept;  (5)
+   * ResourceDescriptor create_sampled_image_descriptor(const SampledImageDescriptorInfo& info) noexcept;              (6)
+   * ResourceDescriptor create_storage_image_descriptor(const StorageImageDescriptorInfo& info) noexcept;              (7)
+   * \endcode
    *
    * Creates a descriptor from \p info.
    *
@@ -270,100 +318,26 @@ public:
    */
   ResourceDescriptor
   create_resource_descriptor(const ResourceDescriptorInfo &info) noexcept;
-
-  /**
-   * \brief Creates storage descriptor.
-   *
-   * Creates a storage-buffer descriptor.
-   *
-   * \param info Storage buffer descriptor information.
-   *
-   * \return Created resource descriptor.
-   *
-   * \attention 1. \p info must describe a valid storage-buffer descriptor.
-   */
   inline ResourceDescriptor create_storage_buffer_descriptor(
       const StorageBufferDescriptorInfo &info) noexcept {
     return create_resource_descriptor(info);
   }
-
-  /**
-   * \brief Creates storage texel descriptor.
-   *
-   * Creates a storage texel-buffer descriptor.
-   *
-   * \param info Storage texel-buffer descriptor information.
-   *
-   * \return Created resource descriptor.
-   *
-   * \attention 1. \p info must describe a valid storage texel-buffer
-   * descriptor.
-   */
   inline ResourceDescriptor create_storage_texel_buffer_descriptor(
       const StorageTexelBufferDescriptorInfo &info) noexcept {
     return create_resource_descriptor(info);
   }
-
-  /**
-   * \brief Creates uniform descriptor.
-   *
-   * Creates a uniform-buffer descriptor.
-   *
-   * \param info Uniform buffer descriptor information.
-   *
-   * \return Created resource descriptor.
-   *
-   * \attention 1. \p info must describe a valid uniform-buffer descriptor.
-   */
   inline ResourceDescriptor create_uniform_buffer_descriptor(
       const UniformBufferDescriptorInfo &info) noexcept {
     return create_resource_descriptor(info);
   }
-
-  /**
-   * \brief Creates uniform texel descriptor.
-   *
-   * Creates a uniform texel-buffer descriptor.
-   *
-   * \param info Uniform texel-buffer descriptor information.
-   *
-   * \return Created resource descriptor.
-   *
-   * \attention 1. \p info must describe a valid uniform texel-buffer
-   * descriptor.
-   */
   inline ResourceDescriptor create_uniform_texel_buffer_descriptor(
       const UniformTexelBufferDescriptorInfo &info) noexcept {
     return create_resource_descriptor(info);
   }
-
-  /**
-   * \brief Creates sampled image descriptor.
-   *
-   * Creates a descriptor for sampled image access.
-   *
-   * \param info Sampled image descriptor information.
-   *
-   * \return Created resource descriptor.
-   *
-   * \attention 1. \p info must describe a valid sampled-image descriptor.
-   */
   inline ResourceDescriptor create_sampled_image_descriptor(
       const SampledImageDescriptorInfo &info) noexcept {
     return create_resource_descriptor(info);
   }
-
-  /**
-   * \brief Creates storage image descriptor.
-   *
-   * Creates a descriptor for storage image access.
-   *
-   * \param info Storage image descriptor information.
-   *
-   * \return Created resource descriptor.
-   *
-   * \attention 1. \p info must describe a valid storage-image descriptor.
-   */
   inline ResourceDescriptor create_storage_image_descriptor(
       const StorageImageDescriptorInfo &info) noexcept {
     return create_resource_descriptor(info);

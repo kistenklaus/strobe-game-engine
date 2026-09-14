@@ -37,7 +37,7 @@ enum class Access : uint64_t {
   memory_read = 1ull << 15,
   memory_write = 1ull << 16,
 };
-// [Access]
+//[Access]
 
 [[nodiscard]] constexpr Access operator|(Access lhs, Access rhs) noexcept {
   return static_cast<Access>(static_cast<std::underlying_type_t<Access>>(lhs) |
