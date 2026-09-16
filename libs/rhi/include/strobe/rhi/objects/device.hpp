@@ -10,6 +10,8 @@
 #include "strobe/rhi/objects/object.hpp"
 #include "strobe/rhi/objects/queue.hpp"
 #include "strobe/rhi/objects/resource_descriptor.hpp"
+#include "strobe/rhi/objects/sampler_descriptor.hpp"
+#include "strobe/rhi/objects/sampler_descriptor_array.hpp"
 #include "strobe/rhi/objects/swapchain.hpp"
 #include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
@@ -22,6 +24,7 @@
 #include "strobe/rhi/types/memory_lifetime.hpp"
 #include "strobe/rhi/types/queue_flags.hpp"
 #include "strobe/rhi/types/resource_descriptor_info.hpp"
+#include "strobe/rhi/types/sampler_descriptor_info.hpp"
 #include "strobe/rhi/types/swapchain_info.hpp"
 #include "strobe/rhi/types/tlas_info.hpp"
 #include "strobe/rhi/types/vertex_shader_info.hpp"
@@ -342,6 +345,15 @@ public:
       const StorageImageDescriptorInfo &info) noexcept {
     return create_resource_descriptor(info);
   }
+
+  ResourceDescriptorArray create_resource_descriptors(
+      span<const ResourceDescriptorInfo> infos) noexcept;
+
+  SamplerDescriptor
+  create_sampler_descriptor(const SamplerDescriptorInfo &info) noexcept;
+
+  SamplerDescriptorArray
+  create_sampler_descriptors(span<const SamplerDescriptorInfo> infos) noexcept;
 };
 
 } // namespace strobe::rhi

@@ -2,35 +2,30 @@
 
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/heap/resource_descriptor_array_impl.hpp"
-#include "strobe/rhi/heap/resource_descriptor_impl.hpp"
 #include "strobe/rhi/heap/descriptor_heap_bind_info.hpp"
-#include "strobe/rhi/heap/resource_descriptor_heap_index_pool.hpp"
+#include "strobe/rhi/heap/sampler_descriptor_array_impl.hpp"
+#include "strobe/rhi/heap/sampler_descriptor_heap_index_pool.hpp"
+#include "strobe/rhi/heap/sampler_descriptor_impl.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
-#include "strobe/rhi/vulkan/device_info/device_properties.hpp"
-
-#include <mutex>
-#include <tracy/Tracy.hpp>
-
 namespace strobe::rhi {
 
-struct ResourceDescriptorHeapImpl {
+class SamplerDescriptorHeapImpl {
 public:
-  explicit ResourceDescriptorHeapImpl(Context context, Buffer buffer,
-                                      strobe::rhi::allocator_ref alloc) noexcept
+  explicit SamplerDescriptorHeapImpl(Context context, Buffer buffer,
+                                     strobe::rhi::allocator_ref alloc) noexcept
       : context(std::move(context)),
         layout(buffer.size(),
-               this->context.ctx()->deviceInfo().properties.descriptorHeap, 
+               this->context.ctx()->deviceInfo().properties.descriptorHeap,
                alloc),
-        alloc(alloc), bufferDescAlloc(alloc), bufferDescArrayAlloc(alloc),
-        m_buffer(std::move(buffer)), m_ready({}),
+        alloc(std::move(alloc)), samplerDescAlloc(this->alloc),
+        samplerDescArrayAlloc(this->alloc),
         m_reservedOffset(layout.reserved_range_offset()),
         m_reservedSize(layout.reserved_range_size()) {}
 
-  ~ResourceDescriptorHeapImpl() noexcept = default;
-  ResourceDescriptorHeapImpl(const ResourceDescriptorHeapImpl &) = delete;
-  ResourceDescriptorHeapImpl(ResourceDescriptorHeapImpl &&) = delete;
+  ~SamplerDescriptorHeapImpl() noexcept = default;
+  SamplerDescriptorHeapImpl(const SamplerDescriptorHeapImpl &) = delete;
+  SamplerDescriptorHeapImpl(SamplerDescriptorHeapImpl &&) = delete;
 
   void exchange(Buffer newBuffer, Timepoint ready) noexcept {
     std::lock_guard lck{m_mutex};
@@ -41,7 +36,6 @@ public:
     m_reservedOffset = layout.reserved_range_offset();
     m_reservedSize = layout.reserved_range_size();
   }
-
   Buffer buffer() const noexcept {
     std::lock_guard lck{m_mutex};
     return m_buffer;
@@ -59,17 +53,13 @@ public:
   }
 
   const Context context;
-  ResourceDescriptorHeapIndexPool layout; // <- internally synchronized.
+  SamplerDescriptorHeapIndexPool layout;
 
   [[no_unique_address]] strobe::rhi::allocator_ref alloc;
-  handle_allocator<ResourceDescriptorImpl> bufferDescAlloc;
-  handle_allocator<ResourceDescriptorArrayImpl> bufferDescArrayAlloc;
+  handle_allocator<SamplerDescriptorImpl> samplerDescAlloc;
+  handle_allocator<SamplerDescriptorArrayImpl> samplerDescArrayAlloc;
 
 private:
-  // Synchronized by mutex.
-  // NOTE: We will have to see how much
-  // contension we get on this lock for
-  // heavy parallel recording.
   Buffer m_buffer;
   Timepoint m_ready;
   uint64_t m_reservedOffset;

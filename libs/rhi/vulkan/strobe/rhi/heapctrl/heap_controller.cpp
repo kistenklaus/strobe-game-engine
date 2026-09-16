@@ -24,4 +24,17 @@ ResourceDescriptorArray HeapController::create_resource_descriptor_array(
   return impl->create_resource_descriptor_array(infos);
 }
 
+SamplerDescriptor HeapController::create_sampler_descriptor(
+    const SamplerDescriptorInfo &info) noexcept {
+  auto *impl = void_handle_ptr<HeapControllerImpl>(m_handle);
+  return impl->create_sampler_descriptor(info);
+}
+
+SamplerDescriptorArray HeapController::create_sampler_descriptor_array(
+    span<const SamplerDescriptorInfo> infos) noexcept {
+  auto *impl = void_handle_ptr<HeapControllerImpl>(m_handle);
+  return impl->create_sampler_descriptor_array(infos);
+
+}
+
 } // namespace strobe::rhi

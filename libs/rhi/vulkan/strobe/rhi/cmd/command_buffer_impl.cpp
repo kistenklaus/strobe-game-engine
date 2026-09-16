@@ -1,7 +1,6 @@
 #include "strobe/rhi/cmd/command_buffer_impl.hpp"
 #include "strobe/rhi/cmd/command_pool_impl.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/types/command_buffer_type.hpp"
 #include "strobe/rhi/vulkan/context/pnf.hpp"
 #include <vulkan/vulkan_core.h>
 

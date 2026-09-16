@@ -3,7 +3,6 @@
 #include "strobe/rhi/cmd/command_pool_impl.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/objects/command_buffer.hpp"
-#include "strobe/rhi/types/command_buffer_type.hpp"
 #include "strobe/rhi/object_factory.hpp"
 
 namespace strobe::rhi {

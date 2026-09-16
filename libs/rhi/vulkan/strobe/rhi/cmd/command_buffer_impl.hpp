@@ -12,7 +12,7 @@
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/stage/stage_arena.hpp"
 #include "strobe/rhi/types/color_component.hpp"
-#include "strobe/rhi/types/command_buffer_type.hpp"
+#include "strobe/rhi/types/command_buffer_flags.hpp"
 #include "strobe/rhi/vulkan/cmd/rendering.hpp"
 #include "strobe/rhi/vulkan/command_buffer.hpp"
 #include "strobe/rhi/vulkan/context/pnf.hpp"

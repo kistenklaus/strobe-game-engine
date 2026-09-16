@@ -92,6 +92,13 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/resource_descriptor_impl.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/resource_descriptor_wizard.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/resource_descriptor_heap.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/sampler_descriptor.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/sampler_descriptor_array.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/sampler_descriptor_array_impl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/sampler_descriptor_array_wizard.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/sampler_descriptor_heap.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/sampler_descriptor_impl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/heap/sampler_descriptor_wizard.cpp
   # strobe::rhi command
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/cmd.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/cmd/command_buffer.cpp

@@ -16,10 +16,10 @@ void ResourceDescriptorHeap::unpin(void *handle) noexcept {
 }
 
 ResourceDescriptorWizard ResourceDescriptorHeap::create_descriptor_wizard(
-    const ResourceDescriptorInfo &buffer) noexcept {
+    const ResourceDescriptorInfo &info) noexcept {
   auto *impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
   uint32_t index = impl->layout.alloc_range(1);
-  return ResourceDescriptorWizard{*this, index, buffer};
+  return ResourceDescriptorWizard{*this, index, info};
 }
 
 ResourceDescriptorArrayWizard

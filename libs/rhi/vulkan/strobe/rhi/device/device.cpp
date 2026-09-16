@@ -128,5 +128,26 @@ ResourceDescriptor Device::create_resource_descriptor(
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->heapctrl.create_resource_descriptor(info);
 }
+ResourceDescriptorArray Device::create_resource_descriptors(
+    span<const ResourceDescriptorInfo> infos) noexcept {
+  ZoneScopedN("Device::create_buffer_descriptors");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  return impl->heapctrl.create_resource_descriptor_array(infos);
+
+}
+
+SamplerDescriptor
+Device::create_sampler_descriptor(const SamplerDescriptorInfo &info) noexcept {
+  ZoneScopedN("Device::create_sampler_descriptor");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  return impl->heapctrl.create_sampler_descriptor(info);
+}
+
+SamplerDescriptorArray Device::create_sampler_descriptors(
+    span<const SamplerDescriptorInfo> infos) noexcept {
+  ZoneScopedN("Device::create_sampler_descriptors");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  return impl->heapctrl.create_sampler_descriptor_array(infos);
+}
 
 } // namespace strobe::rhi

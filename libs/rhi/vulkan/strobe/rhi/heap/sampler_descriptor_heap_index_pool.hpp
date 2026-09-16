@@ -1,0 +1,107 @@
+#pragma once
+
+#include "strobe/core/containers/bitmap_index_pool.hpp"
+#include "strobe/rhi/allocator.hpp"
+#include "strobe/rhi/vulkan/device_info/device_properties.hpp"
+#include <cstdint>
+#include <limits>
+namespace strobe::rhi {
+
+class SamplerDescriptorHeapIndexPool {
+public:
+  static constexpr uint32_t INVALID_INDEX =
+      std::numeric_limits<uint32_t>::max();
+
+private:
+  static constexpr uint64_t descriptor_stride(
+      const vulkan::DescriptorHeapProperties &properties) noexcept {
+    return properties.samplerDescriptorSize;
+  }
+
+  static constexpr uint32_t
+  slot_count(uint64_t bufferSize,
+             const vulkan::DescriptorHeapProperties &properties) {
+    if (bufferSize < properties.minSamplerHeapReservedRange) {
+      return 0;
+    }
+    const uint64_t stride = descriptor_stride(properties);
+    assert(stride != 0);
+    const uint64_t effectiveSize =
+        bufferSize - properties.minSamplerHeapReservedRange;
+    uint64_t slotCount = effectiveSize / stride;
+    assert(slotCount <= std::numeric_limits<uint32_t>::max());
+    return static_cast<uint32_t>(slotCount);
+  }
+
+public:
+  explicit SamplerDescriptorHeapIndexPool(
+      uint64_t bufferSize, const vulkan::DescriptorHeapProperties &properties,
+      strobe::rhi::allocator_ref alloc) noexcept
+      : m_stride(descriptor_stride(properties)), m_bufferSize(bufferSize),
+        m_descriptorCount(slot_count(bufferSize, properties)),
+        m_indexPool(m_descriptorCount, alloc) {}
+
+  uint32_t alloc_range(uint32_t count = 1) noexcept {
+    std::lock_guard lck{m_mutex};
+    return alloc_unlocked(count);
+  }
+
+  void free_range(uint32_t index, uint32_t count = 1) noexcept {
+    std::lock_guard lck{m_mutex};
+    assert(index != INVALID_INDEX);
+    m_indexPool.free(index, count);
+  }
+
+  uint64_t descriptor_stride() const noexcept { return m_stride; }
+
+  uint64_t reserved_range_offset() const noexcept {
+    std::lock_guard lck{m_mutex};
+    return descriptor_region_size_unlocked();
+  }
+
+  uint64_t reserved_range_size() const noexcept {
+    std::lock_guard lck{m_mutex};
+    return m_bufferSize - descriptor_region_size_unlocked();
+  }
+
+  uint64_t descriptor_region_size() const noexcept {
+    std::lock_guard lck{m_mutex};
+    return descriptor_region_size_unlocked();
+  }
+  uint32_t descriptor_count() const noexcept { return m_descriptorCount; }
+
+  void grow(uint64_t newBufferSize,
+            const vulkan::DescriptorHeapProperties &properties) noexcept {
+    std::lock_guard lock{m_mutex};
+    assert(descriptor_stride(properties) == m_stride);
+    assert(newBufferSize >= m_bufferSize);
+    const uint32_t newDescriptorCount = slot_count(newBufferSize, properties);
+    assert(newDescriptorCount >= m_descriptorCount);
+    m_indexPool.resize(newDescriptorCount);
+    m_bufferSize = newBufferSize;
+    m_descriptorCount = newDescriptorCount;
+  }
+
+private:
+  using index_pool = BitmapIndexPool<strobe::rhi::allocator_ref>;
+  uint32_t alloc_unlocked(uint32_t count) noexcept {
+    const size_t index = m_indexPool.alloc(count);
+    if (index == index_pool::INVALID_INDEX) {
+      return INVALID_INDEX;
+    }
+    assert(index <= std::numeric_limits<uint32_t>::max());
+    return static_cast<uint32_t>(index);
+  }
+
+  uint64_t descriptor_region_size_unlocked() const noexcept {
+    return static_cast<uint64_t>(m_descriptorCount) * m_stride;
+  }
+
+  const uint64_t m_stride;
+  uint64_t m_bufferSize;
+  uint64_t m_descriptorCount;
+  index_pool m_indexPool;
+  mutable std::mutex m_mutex;
+};
+
+} // namespace strobe::rhi

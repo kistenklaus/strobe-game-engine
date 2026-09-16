@@ -1,7 +1,7 @@
 #pragma once
 
 #include "strobe/rhi/objects/command_buffer.hpp"
-#include "strobe/rhi/types/command_buffer_type.hpp"
+#include "strobe/rhi/types/command_buffer_flags.hpp"
 
 namespace strobe::rhi {
 
@@ -32,7 +32,8 @@ public:
   /**
    * \brief Allocates command buffer.
    * \code{.cpp}
-   * CommandBuffer alloc(CommandBufferFlags flags = CommandBufferFlags::none) noexcept;
+   * CommandBuffer alloc(CommandBufferFlags flags = CommandBufferFlags::none)
+   * noexcept;
    * \endcode
    *
    * Allocates a CommandBuffer associated with this pool.
@@ -43,7 +44,8 @@ public:
    *
    * \attention 1. The CommandPool must be externally synchronized.
    */
-  CommandBuffer alloc(CommandBufferFlags flags = CommandBufferFlags::none) noexcept;
+  CommandBuffer
+  alloc(CommandBufferFlags flags = CommandBufferFlags::none) noexcept;
 };
 
 } // namespace strobe::rhi
