@@ -1,5 +1,6 @@
 #pragma once
 
+#include "strobe/core/lina/vec.hpp"
 #include "strobe/rhi/objects/object.hpp"
 #include "strobe/rhi/types/format.hpp"
 
@@ -49,6 +50,14 @@ public:
    * \return Referenced image.
    */
   const Image &image() const noexcept;
+
+  /**
+   * \brief Gets image extent
+   * \code{cpp}
+   * uvec3 extent() const noexcept;
+   * \endcode
+   */
+  uvec3 extent() const noexcept;
 };
 
 } // namespace strobe::rhi

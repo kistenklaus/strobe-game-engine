@@ -22,4 +22,9 @@ const Image &ImageView::image() const noexcept {
   return impl->image;
 }
 
+uvec3 ImageView::extent() const noexcept {
+  auto *impl = void_handle_ptr<ImageViewImpl>(m_handle);
+  return impl->image.extent();
+}
+
 } // namespace strobe::rhi

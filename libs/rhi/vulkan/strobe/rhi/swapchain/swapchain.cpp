@@ -33,4 +33,10 @@ SwapchainImage Swapchain::acquire() {
   }
 }
 
+void Swapchain::resize_hint(uvec2 size) noexcept {
+  ZoneScopedN("Swapchain::resize");
+  auto* impl = void_handle_ptr<SwapchainImpl>(m_handle);
+  impl->resize(size);
+}
+
 } // namespace strobe::rhi

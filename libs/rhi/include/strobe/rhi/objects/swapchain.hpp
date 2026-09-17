@@ -28,6 +28,14 @@ public:
    * \endcode
    */
   SwapchainImage acquire();
+
+  /**
+   * \brief set resize hint.
+   * \code{cpp}
+   * void resize_hint(uvec2 size) noexcept;
+   * \endcode
+   */
+  void resize_hint(uvec2 size) noexcept;
 };
 
 } // namespace strobe::rhi

@@ -57,6 +57,14 @@ void init(GLFWwindow *window, rhi::Device device) noexcept {
   auto &io = ImGui::GetIO();
   io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
   io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+  ImFont *regular = io.Fonts->AddFontFromFileTTF(
+      "./third_party/fonts/jetbrains/JetBrainsMonoNL-Light.ttf", 16.0f);
+  assert(regular);
+  io.FontDefault = regular;
+
+
   auto &platform_io = ImGui::GetPlatformIO();
   platform_io.DrawCallback_ResetRenderState = callback_reset_render_state;
   platform_io.DrawCallback_SetSamplerLinear = callback_set_sampler_linear;
@@ -103,11 +111,13 @@ void init(GLFWwindow *window, rhi::Device device) noexcept {
 void begin_frame() noexcept {
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
+  ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(),
+                               ImGuiDockNodeFlags_None);
 }
 
 struct Texture {
-  rhi::Image image;
-  rhi::ResourceDescriptor descriptor;
+  rhi::Image m_image;
+  rhi::ResourceDescriptor m_descriptor;
 };
 
 static void create_texture(ImTextureData *texture) {
@@ -149,8 +159,8 @@ static void create_texture(ImTextureData *texture) {
        }});
 
   auto *backend_texture = new Texture{
-      .image = std::move(image),
-      .descriptor = std::move(descriptor),
+      .m_image = std::move(image),
+      .m_descriptor = std::move(descriptor),
   };
 
   texture->BackendUserData = backend_texture;
@@ -185,12 +195,12 @@ static void update_texture(rhi::CommandBuffer cmd, ImTextureData *texture) {
   const rhi::ImageLayout initial_layout =
       create ? rhi::ImageLayout::undefined : rhi::ImageLayout::read_only;
 
-  cmd.transition_image(backend_texture->image, initial_layout,
+  cmd.transition_image(backend_texture->m_image, initial_layout,
                        rhi::ImageLayout::transfer_dst);
 
   cmd.update(
       {
-          .image = backend_texture->image,
+          .image = backend_texture->m_image,
           .subresource =
               {
                   .aspect = rhi::ImageAspect::color,
@@ -212,7 +222,7 @@ static void update_texture(rhi::CommandBuffer cmd, ImTextureData *texture) {
       // are still separated by the full texture pitch.
       static_cast<uint32_t>(texture->Width), 0, rhi::ImageLayout::transfer_dst);
 
-  cmd.transition_image(backend_texture->image, rhi::ImageLayout::transfer_dst,
+  cmd.transition_image(backend_texture->m_image, rhi::ImageLayout::transfer_dst,
                        rhi::ImageLayout::read_only);
 
   texture->SetStatus(ImTextureStatus_OK);
@@ -530,7 +540,7 @@ void render(rhi::CommandBuffer cmd, RenderInfo info) noexcept {
         assert(texture);
 
         cmd.push(16,
-                 texture->descriptor); // uint32_t in shader as push constants.
+                 texture->m_descriptor); // uint32_t in shader as push constants.
         cmd.draw_indexed(draw.ElemCount, 1,
                          global_index_offset + draw.IdxOffset,
                          global_vertex_offset + draw.VtxOffset, 0);

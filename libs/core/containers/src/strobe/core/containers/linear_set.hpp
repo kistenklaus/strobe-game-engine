@@ -6,45 +6,44 @@
 #include "strobe/core/containers/vector.hpp"
 namespace strobe {
 
-template <std::equality_comparable T, Allocator A>
+template <std::equality_comparable T, Allocator A = strobe::Mallocator>
 class LinearSet {
- public:
+public:
   using Container = Vector<T, A>;
   using iterator = Container::iterator;
   using const_iterator = Container::iterator;
   using size_type = Container::size_type;
 
-  LinearSet(const A& alloc) : m_values(alloc) {}
+  LinearSet(const A &alloc = {}) : m_values(alloc) {}
 
-  const_iterator find(const T& v) const {
+  const_iterator find(const T &v) const {
     return std::ranges::find(m_values, v);
   }
 
-  template <std::equality_comparable_with<T> K>
-  iterator find(const K& v) {
+  template <std::equality_comparable_with<T> K> iterator find(const K &v) {
     if constexpr (std::same_as<K, T>) {
       return std::ranges::find(m_values, v);
     } else {
-      return std::ranges::find_if(m_values, [&](const T& o) { return v == o; });
+      return std::ranges::find_if(m_values, [&](const T &o) { return v == o; });
     }
   }
 
-  iterator insert(T&& v) {
+  template <typename U> iterator insert(U &&v) {
     auto it = find(v);
     if (it == end()) {
       return it;
     }
-    m_values.push_back(std::forward<T>(v));
+    m_values.push_back(std::forward<U>(v));
     return end() - 1;
   }
 
-  void insert_unchecked(T&& v) {
+  void insert_unchecked(T &&v) {
     assert(!contains(v));
     m_values.push_back(std::forward<T>(v));
   }
 
-  bool contains(const T& v) { return find(v) != m_values.end(); }
-  bool contains(const T& v) const { return find(v) != m_values.end(); }
+  bool contains(const T &v) { return find(v) != m_values.end(); }
+  bool contains(const T &v) const { return find(v) != m_values.end(); }
 
   iterator erase(const_iterator pos) {
     std::swap(*pos, m_values.back());
@@ -54,8 +53,7 @@ class LinearSet {
     return pos;
   }
 
-  template <std::equality_comparable_with<T> K>
-  bool erase(const K& v) {
+  template <std::equality_comparable_with<T> K> bool erase(const K &v) {
     return erase(find(v)) != end();
   }
 
@@ -79,8 +77,8 @@ class LinearSet {
   auto rend() const { return m_values.rend(); }
   auto rcend() const { return m_values.rcend(); }
 
- private:
+private:
   Container m_values;
 };
 
-}  // namespace strobe
+} // namespace strobe

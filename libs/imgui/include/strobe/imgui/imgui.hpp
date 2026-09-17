@@ -4,7 +4,7 @@
 
 namespace strobe::imgui {
 
-void init(GLFWwindow *window, rhi::Device device) noexcept;
+void init(GLFWwindow *window, rhi::Device device, uint32_t framesInFlight) noexcept;
 void shutdown() noexcept;
 
 void begin_frame() noexcept;
