@@ -294,8 +294,13 @@ public:
    * \attention 3. \p src must reference at least \p size bytes of valid data.
    */
   Timepoint
-  async_upload(BufferOffset dst, void *src,
+  async_upload(BufferOffset dst, const void *src,
                uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
+  Timepoint
+  async_upload(ImageRange dst, const void *src, uint32_t rowLength = 0,
+               uint32_t imageHeight = 0,
+               ImageLayout initialLayout = ImageLayout::transfer_dst,
+               ImageLayout finalLayout = ImageLayout::transfer_dst) noexcept;
 
   /**
    * \brief Creates resource descriptor.
@@ -339,6 +344,8 @@ public:
   }
   inline ResourceDescriptor create_sampled_image_descriptor(
       const SampledImageDescriptorInfo &info) noexcept {
+    assert(info.layout != ImageLayout::undefined && "layout must be set!");
+    assert(info.subresource.aspect != ImageAspect::none);
     return create_resource_descriptor(info);
   }
   inline ResourceDescriptor create_storage_image_descriptor(

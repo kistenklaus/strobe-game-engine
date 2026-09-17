@@ -1,5 +1,6 @@
 #pragma once
 
+#include "strobe/core/lina/vec.hpp"
 #include "strobe/rhi/types/format.hpp"
 #include "strobe/rhi/types/image_aspect.hpp"
 #include <cassert>
@@ -8,7 +9,7 @@
 
 namespace strobe::rhi {
 
-static inline VkFormat to_vk_format(Format format) {
+static constexpr VkFormat to_vk_format(Format format) {
   switch (format) {
   case Format::undefined:
     return VK_FORMAT_UNDEFINED;
@@ -89,7 +90,7 @@ static inline VkFormat to_vk_format(Format format) {
   std::unreachable();
 }
 
-static inline Format from_vk_format(VkFormat format) {
+static constexpr Format from_vk_format(VkFormat format) {
   switch (format) {
   case VK_FORMAT_UNDEFINED:
     return Format::undefined;
@@ -221,6 +222,58 @@ static inline Format from_vk_format(VkFormat format) {
     std::unreachable();
   }
 
+  std::unreachable();
+}
+
+static constexpr uvec3 format_block_extent(Format format) {
+  assert(format != Format::undefined);
+  assert(format != Format::unsupported);
+  return {1, 1, 1};
+}
+
+static constexpr uint32_t format_block_size(Format format) {
+  switch (format) {
+  case Format::r8_unorm:
+  case Format::r8_snorm:
+  case Format::r8_uint:
+  case Format::r8_sint:
+    return 1;
+  case Format::rg8_unorm:
+  case Format::rg8_snorm:
+  case Format::rg8_uint:
+  case Format::rg8_sint:
+  case Format::r16_float:
+  case Format::d16_unorm:
+    return 2;
+  case Format::rgba8_unorm:
+  case Format::rgba8_srgb:
+  case Format::rgba8_uint:
+  case Format::rgba8_sint:
+  case Format::bgra8_unorm:
+  case Format::bgra8_srgb:
+  case Format::rg16_float:
+  case Format::r32_float:
+  case Format::r32_uint:
+  case Format::r32_sint:
+  case Format::d32_float:
+  case Format::d24_unorm_s8_uint:
+    return 4;
+  case Format::rgba16_float:
+  case Format::rg32_float:
+  case Format::rg32_uint:
+  case Format::rg32_sint:
+  case Format::d32_float_s8_uint:
+    return 8;
+  case Format::rgb32_float:
+    return 12;
+  case Format::rgba32_float:
+  case Format::rgba32_uint:
+  case Format::rgba32_sint:
+    return 16;
+  case Format::undefined:
+  case Format::unsupported:
+    break;
+  }
   std::unreachable();
 }
 

@@ -15,3 +15,5 @@ include(cmake/dependencies/googlebench.cmake)
 include(cmake/dependencies/tracy.cmake)
 
 include(cmake/dependencies/sanitizers.cmake)
+
+include(cmake/dependencies/imgui.cmake)

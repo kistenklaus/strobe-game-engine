@@ -22,8 +22,20 @@ Timepoint AsyncCopyEngine::async_copy(BufferOffset dst, BufferOffset src,
   }
   return impl->async_cmd().copy(dst, src, size).finish();
 }
+Timepoint AsyncCopyEngine::async_copy(ImageRange dst, BufferImageRange src,
+                                      ImageLayout initialLayout,
+                                      ImageLayout finalLayout) noexcept {
+  auto *impl = void_handle_ptr<AsyncCopyEngineImpl>(m_handle);
+  return impl->async_cmd().copy(dst, src, initialLayout, finalLayout).finish();
+}
 
-Timepoint AsyncCopyEngine::async_upload(BufferOffset dst, void *src,
+Timepoint AsyncCopyEngine::async_copy(BufferImageRange dst, ImageRange src,
+                                      ImageLayout srcLayout) noexcept {
+  auto *impl = void_handle_ptr<AsyncCopyEngineImpl>(m_handle);
+  return impl->async_cmd().copy(dst, src, srcLayout).finish();
+}
+
+Timepoint AsyncCopyEngine::async_upload(BufferOffset dst, const void *src,
                                         uint64_t size) noexcept {
 
   auto *impl = void_handle_ptr<AsyncCopyEngineImpl>(m_handle);
@@ -31,6 +43,17 @@ Timepoint AsyncCopyEngine::async_upload(BufferOffset dst, void *src,
     size = dst.buffer.size() - dst.offset;
   }
   return impl->async_cmd().upload(dst, src, size).finish();
+}
+
+Timepoint AsyncCopyEngine::async_upload(ImageRange dst, const void *src,
+                                        uint32_t rowLength,
+                                        uint32_t imageHeight,
+                                        ImageLayout initialLayout,
+                                        ImageLayout finalLayout) noexcept {
+  auto *impl = void_handle_ptr<AsyncCopyEngineImpl>(m_handle);
+  return impl->async_cmd()
+      .upload(dst, src, rowLength, imageHeight, initialLayout, finalLayout)
+      .finish();
 }
 
 AsyncTransferCmd AsyncCopyEngine::async_cmd() noexcept {

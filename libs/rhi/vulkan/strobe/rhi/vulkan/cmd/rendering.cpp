@@ -9,6 +9,7 @@
 #include "strobe/rhi/utils/cull_mode_utils.hpp"
 #include "strobe/rhi/utils/format_utilts.hpp"
 #include "strobe/rhi/utils/front_face_utils.hpp"
+#include "strobe/rhi/utils/index_type_utils.hpp"
 #include "strobe/rhi/utils/logic_op_utils.hpp"
 #include "strobe/rhi/utils/polygon_mode_utils.hpp"
 #include "strobe/rhi/utils/primitive_topology_utils.hpp"
@@ -579,6 +580,17 @@ void cmd_bind_vertex_buffer(CommandBuffer cmd,
 #endif
     vkCmdBindVertexBuffers(cmd.handle, 0, 1, &verticies.buffer.handle,
                            &verticies.offset);
+  }
+}
+
+void cmd_bind_index_buffer(CommandBuffer cmd, BufferOffset buffer,
+                           IndexType indexType) noexcept {
+  {
+#ifdef STROBE_RHI_TRACE_VK
+    ZoneScopedN("vkCmdBindIndexBuffer");
+#endif
+    vkCmdBindIndexBuffer(cmd.handle, buffer.buffer.handle, buffer.offset,
+                         to_vk_index_type(indexType));
   }
 }
 

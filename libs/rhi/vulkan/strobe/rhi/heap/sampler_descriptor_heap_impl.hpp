@@ -19,8 +19,8 @@ public:
                this->context.ctx()->deviceInfo().properties.descriptorHeap,
                alloc),
         alloc(std::move(alloc)), samplerDescAlloc(this->alloc),
-        samplerDescArrayAlloc(this->alloc),
-        m_reservedOffset(layout.reserved_range_offset()),
+        samplerDescArrayAlloc(this->alloc), m_buffer(std::move(buffer)),
+        m_ready{}, m_reservedOffset(layout.reserved_range_offset()),
         m_reservedSize(layout.reserved_range_size()) {}
 
   ~SamplerDescriptorHeapImpl() noexcept = default;

@@ -4,6 +4,7 @@
 #include "strobe/rhi/types/attachment_load_op.hpp"
 #include "strobe/rhi/types/attachment_store_op.hpp"
 #include "strobe/rhi/types/clear_value.hpp"
+#include "strobe/rhi/types/image_layout.hpp"
 #include "strobe/rhi/types/resolve_mode.hpp"
 
 namespace strobe::rhi {
@@ -20,6 +21,7 @@ namespace strobe::rhi {
 // [Attachment]
 struct Attachment {
   ImageView view;
+  ImageLayout layout = ImageLayout::attachment;
   AttachmentLoadOp loadOp = AttachmentLoadOp::load;
   AttachmentStoreOp storeOp = AttachmentStoreOp::store;
   ClearValue clearValue{};

@@ -135,12 +135,12 @@ target_include_directories(strobe-rhi-vulkan
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/vulkan
 )
 target_link_libraries(strobe-rhi-vulkan
-  PRIVATE strobe-core
+  PUBLIC strobe-core
   PRIVATE Vulkan::Vulkan
   PRIVATE strobe::vma
   PRIVATE strobe::tracy
 )
-target_link_glfw(strobe-rhi-vulkan PRIVATE)
+target_link_glfw(strobe-rhi-vulkan PUBLIC)
 
 if (STROBE_TRACY AND STROBE_RHI_TRACE_DEVICE)
   target_compile_definitions(strobe-rhi-vulkan PRIVATE STROBE_RHI_TRACE_DEVICE=ON)

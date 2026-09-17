@@ -7,6 +7,8 @@
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/heap/resource_descriptor_array_impl.hpp"
 #include "strobe/rhi/heap/resource_descriptor_impl.hpp"
+#include "strobe/rhi/heap/sampler_descriptor_array_impl.hpp"
+#include "strobe/rhi/heap/sampler_descriptor_impl.hpp"
 #include "strobe/rhi/img/image_view_impl.hpp"
 #include "strobe/rhi/memory/memory_allocation_impl.hpp"
 #include "strobe/rhi/shader/shader_object_impl.hpp"
@@ -15,6 +17,7 @@
 #include "strobe/rhi/utils/attachment_store_op_utils.hpp"
 #include "strobe/rhi/utils/clear_value_utils.hpp"
 #include "strobe/rhi/utils/format_utilts.hpp"
+#include "strobe/rhi/utils/image_layout_utils.hpp"
 #include "strobe/rhi/utils/resolve_mode_utils.hpp"
 #include "strobe/rhi/vulkan/cmd/barrier.hpp"
 #include "strobe/rhi/vulkan/cmd/rendering.hpp"
@@ -124,7 +127,7 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
         .pNext = nullptr,
         .imageView =
             object_handle_ptr<ImageViewImpl>(attachment.view)->imageView.handle,
-        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .imageLayout = to_vk_image_layout(attachment.layout),
         .resolveMode = to_vk_resolve_mode(attachment.resolveMode),
         .resolveImageView =
             attachment.resolveView
@@ -151,7 +154,7 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
         .pNext = nullptr,
         .imageView =
             object_handle_ptr<ImageViewImpl>(attachment.view)->imageView.handle,
-        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .imageLayout = to_vk_image_layout(attachment.layout),
         .resolveMode = to_vk_resolve_mode(attachment.resolveMode),
         .resolveImageView =
             attachment.resolveView
@@ -178,7 +181,7 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
         .pNext = nullptr,
         .imageView =
             object_handle_ptr<ImageViewImpl>(attachment.view)->imageView.handle,
-        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .imageLayout = to_vk_image_layout(attachment.layout),
         .resolveMode = to_vk_resolve_mode(attachment.resolveMode),
         .resolveImageView =
             attachment.resolveView
@@ -595,6 +598,18 @@ void CommandBuffer::bind_vertex_buffer(const Buffer &buffer,
   impl->state.retain(buffer);
 }
 
+void CommandBuffer::bind_index_buffer(const Buffer &buffer, IndexType type,
+                                      uint64_t offset) noexcept {
+  assert(m_handle);
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  ZoneScopedN("CommandBuffer::bind_index_buffer");
+  auto *buf_impl = object_handle_ptr<BufferImpl>(buffer);
+  buf_impl->commit();
+  vulkan::cmd_bind_index_buffer(
+      impl->cmd, {.buffer = buf_impl->buffer, .offset = offset}, type);
+  impl->state.retain(buffer);
+}
+
 void CommandBuffer::copy_buffer(BufferOffset dst, BufferOffset src,
                                 uint64_t size) noexcept {
   assert(m_handle);
@@ -614,6 +629,99 @@ void CommandBuffer::copy_buffer(BufferOffset dst, BufferOffset src,
       {.buffer = src_impl->buffer, .offset = src.offset}, size);
   impl->state.retain(dst.buffer);
   impl->state.retain(src.buffer);
+}
+
+void CommandBuffer::copy_buffer_to_image(ImageRange dst, BufferImageRange src,
+                                         ImageLayout dstLayout) noexcept {
+  assert(m_handle);
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  CmdZoneScopedN(impl, "CommandBuffer::copy_buffer_to_image");
+  auto *dst_impl = object_handle_ptr<ImageImpl>(dst.image);
+  auto *src_impl = object_handle_ptr<BufferImpl>(src.buffer);
+  dst_impl->commit();
+  src_impl->commit();
+  assert(dst.offset.x() >= 0);
+  assert(dst.offset.y() >= 0);
+  assert(dst.offset.z() >= 0);
+
+  if (dst.subresource.layerCount == REMAINING_ARRAY_LAYERS) {
+    dst.subresource.layerCount =
+        dst.image.arrayLayers() - dst.subresource.baseArrayLayer;
+  }
+
+  const auto base_extent = dst.image.extent();
+  const uint32_t mip = dst.subresource.mipLevel;
+
+  uvec3 mip_extent{
+      std::max(base_extent.x() >> mip, 1u),
+      std::max(base_extent.y() >> mip, 1u),
+      std::max(base_extent.z() >> mip, 1u),
+  };
+  if (dst.extent.x() == 0) {
+    dst.extent.x() = mip_extent.x() - dst.offset.x();
+  }
+  if (dst.extent.y() == 0) {
+    dst.extent.y() = mip_extent.y() - dst.offset.y();
+  }
+  if (dst.extent.z() == 0) {
+    dst.extent.z() = mip_extent.z() - dst.offset.z();
+  }
+
+  assert(uint32_t(dst.offset.x()) + dst.extent.x() <= mip_extent.x());
+  assert(uint32_t(dst.offset.y()) + dst.extent.y() <= mip_extent.y());
+  assert(uint32_t(dst.offset.z()) + dst.extent.z() <= mip_extent.z());
+
+  vulkan::cmd_copy_buffer_to_image(
+      impl->cmd, dst_impl->image, dstLayout, dst.subresource, dst.offset,
+      dst.extent, {.buffer = src_impl->buffer, .offset = src.offset},
+      src.rowLength, src.imageHeight);
+
+  impl->state.retain(src.buffer);
+  impl->state.retain(dst.image);
+}
+
+void CommandBuffer::copy_image_to_buffer(BufferImageRange dst, ImageRange src,
+                                         ImageLayout srcLayout) noexcept {
+  assert(m_handle);
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  CmdZoneScopedN(impl, "CommandBuffer::copy_image_to_buffer");
+  auto *dst_impl = object_handle_ptr<BufferImpl>(dst.buffer);
+  auto *src_impl = object_handle_ptr<ImageImpl>(src.image);
+  dst_impl->commit();
+  src_impl->commit();
+  if (src.subresource.layerCount == REMAINING_ARRAY_LAYERS) {
+    src.subresource.layerCount =
+        src.image.arrayLayers() - src.subresource.baseArrayLayer;
+  }
+  assert(src.offset.x() >= 0);
+  assert(src.offset.y() >= 0);
+  assert(src.offset.z() >= 0);
+  const auto image_extent = src.image.extent();
+  const uint32_t mip = src.subresource.mipLevel;
+  const uvec3 mip_extent{
+      std::max(image_extent.x() >> mip, 1u),
+      std::max(image_extent.y() >> mip, 1u),
+      std::max(image_extent.z() >> mip, 1u),
+  };
+  if (src.extent.x() == 0) {
+    src.extent.x() = mip_extent.x() - src.offset.x();
+  }
+  if (src.extent.y() == 0) {
+    src.extent.y() = mip_extent.y() - src.offset.y();
+  }
+  if (src.extent.z() == 0) {
+    src.extent.z() = mip_extent.z() - src.offset.z();
+  }
+  assert(uint32_t(src.offset.x()) + src.extent.x() <= mip_extent.x());
+  assert(uint32_t(src.offset.y()) + src.extent.y() <= mip_extent.y());
+  assert(uint32_t(src.offset.z()) + src.extent.z() <= mip_extent.z());
+  vulkan::cmd_copy_image_to_buffer(
+      impl->cmd, {.buffer = dst_impl->buffer, .offset = dst.offset},
+      src_impl->image, srcLayout, src.subresource, src.offset, src.extent,
+      dst.rowLength, dst.imageHeight);
+
+  impl->state.retain(src.image);
+  impl->state.retain(dst.buffer);
 }
 
 void CommandBuffer::update(BufferOffset dst, const void *src,
@@ -663,6 +771,92 @@ void CommandBuffer::update(BufferOffset dst, const void *src,
     impl->state.retain(dst.buffer);
   }
 };
+
+void CommandBuffer::update(ImageRange dst, const void *src, uint32_t rowLength,
+                           uint32_t imageHeight,
+                           ImageLayout dstLayout) noexcept {
+  assert(m_handle);
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  CmdZoneScopedN(impl, "CommandBuffer::update(Image)");
+  assert(src);
+  assert(dst.image);
+  auto *dst_impl = object_handle_ptr<ImageImpl>(dst.image);
+  dst_impl->commit();
+
+  if (dst.subresource.layerCount == REMAINING_ARRAY_LAYERS) {
+    dst.subresource.layerCount =
+        dst.image.arrayLayers() - dst.subresource.baseArrayLayer;
+  }
+  assert(dst.subresource.layerCount > 0);
+  assert(dst.offset.x() >= 0);
+  assert(dst.offset.y() >= 0);
+  assert(dst.offset.z() >= 0);
+  const auto image_extent = dst.image.extent();
+  const uint32_t mip = dst.subresource.mipLevel;
+  const uvec3 mip_extent{
+      std::max(image_extent.x() >> mip, 1u),
+      std::max(image_extent.y() >> mip, 1u),
+      std::max(image_extent.z() >> mip, 1u),
+  };
+  if (dst.extent.x() == 0) {
+    dst.extent.x() = mip_extent.x() - dst.offset.x();
+  }
+  if (dst.extent.y() == 0) {
+    dst.extent.y() = mip_extent.y() - dst.offset.y();
+  }
+  if (dst.extent.z() == 0) {
+    dst.extent.z() = mip_extent.z() - dst.offset.z();
+  }
+  assert(uint32_t(dst.offset.x()) + dst.extent.x() <= mip_extent.x());
+  assert(uint32_t(dst.offset.y()) + dst.extent.y() <= mip_extent.y());
+  assert(uint32_t(dst.offset.z()) + dst.extent.z() <= mip_extent.z());
+  assert(rowLength == 0 || rowLength >= dst.extent.x());
+  assert(imageHeight == 0 || imageHeight >= dst.extent.y());
+
+  const auto block_extent = format_block_extent(dst.image.format());
+  const uint64_t block_size = format_block_size(dst.image.format());
+  auto div_ceil = [](uint64_t x, uint64_t y) { return (x + y - 1) / y; };
+
+  const uint32_t effective_row_length =
+      rowLength != 0 ? rowLength : dst.extent.x();
+
+  const uint32_t effective_image_height =
+      imageHeight != 0 ? imageHeight : dst.extent.y();
+
+  // Explicit Vulkan pitches must respect the format's block dimensions.
+  assert(rowLength == 0 || rowLength % block_extent.x() == 0);
+  assert(imageHeight == 0 || imageHeight % block_extent.y() == 0);
+
+  const uint64_t row_blocks = div_ceil(effective_row_length, block_extent.x());
+  const uint64_t image_rows =
+      div_ceil(effective_image_height, block_extent.y());
+  const uint64_t copy_blocks_x = div_ceil(dst.extent.x(), block_extent.x());
+  const uint64_t copy_blocks_y = div_ceil(dst.extent.y(), block_extent.y());
+  const uint64_t copy_blocks_z = div_ceil(dst.extent.z(), block_extent.z());
+  const uint64_t row_stride = row_blocks * block_size;
+  const uint64_t image_stride = image_rows * row_stride;
+
+  // For array images extent.z == 1; for 3D images layerCount == 1.
+  const uint64_t slice_count = copy_blocks_z * dst.subresource.layerCount;
+  const uint64_t size = (slice_count - 1) * image_stride +
+                        (copy_blocks_y - 1) * row_stride +
+                        copy_blocks_x * block_size;
+
+  impl->staged_upload(
+      [&](vulkan::CommandBuffer cmd, StageBuffer stage) {
+        {
+          ZoneScopedN("memcpy");
+          std::memcpy(stage.ptr, src, size);
+        }
+
+        vulkan::cmd_copy_buffer_to_image(
+            cmd, dst_impl->image, dstLayout, dst.subresource, dst.offset,
+            dst.extent, stage.buffer, rowLength, imageHeight);
+      },
+      size, block_size);
+
+  impl->state.retain(dst.image);
+}
 
 void CommandBuffer::draw(uint32_t vertexCount, uint32_t instanceCount,
                          uint32_t firstVertex,
@@ -822,6 +1016,26 @@ void CommandBuffer::push(uint32_t offset,
   push(offset, &desc->index, sizeof(uint32_t));
   impl->state.retain(descriptor);
   impl->bind_resource_heap(desc->heap, desc->ready);
+  impl->dma_ready &= desc->ready;
+}
+
+void CommandBuffer::push(uint32_t offset,
+                         const SamplerDescriptor &descriptor) noexcept {
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  auto *desc = object_handle_ptr<SamplerDescriptorImpl>(descriptor);
+  push(offset, &desc->index, sizeof(uint32_t));
+  impl->state.retain(descriptor);
+  impl->bind_sampler_heap(desc->heap, desc->ready);
+  impl->dma_ready &= desc->ready;
+}
+
+void CommandBuffer::push(uint32_t offset,
+                         const SamplerDescriptorArray &descriptor) noexcept {
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  auto *desc = object_handle_ptr<SamplerDescriptorArrayImpl>(descriptor);
+  push(offset, &desc->index, sizeof(uint32_t));
+  impl->state.retain(descriptor);
+  impl->bind_sampler_heap(desc->heap, desc->ready);
   impl->dma_ready &= desc->ready;
 }
 

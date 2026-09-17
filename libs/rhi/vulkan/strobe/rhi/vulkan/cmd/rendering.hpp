@@ -8,6 +8,7 @@
 #include "strobe/rhi/types/compare_op.hpp"
 #include "strobe/rhi/types/cull_mode.hpp"
 #include "strobe/rhi/types/front_face.hpp"
+#include "strobe/rhi/types/index_type.hpp"
 #include "strobe/rhi/types/logic_op.hpp"
 #include "strobe/rhi/types/polygon_mode.hpp"
 #include "strobe/rhi/types/primitive_topology.hpp"
@@ -195,6 +196,9 @@ void cmd_set_patch_control_points(const Context *context, CommandBuffer cmd,
                                   uint32_t patchControlPoints) noexcept;
 
 void cmd_bind_vertex_buffer(CommandBuffer cmd, BufferOffset buffer) noexcept;
+
+void cmd_bind_index_buffer(CommandBuffer cmd, BufferOffset buffer,
+                           IndexType indexType) noexcept;
 
 void cmd_bind_shader(const Context *context, CommandBuffer cmd,
                      ShaderObject shader, VkShaderStageFlagBits stage) noexcept;

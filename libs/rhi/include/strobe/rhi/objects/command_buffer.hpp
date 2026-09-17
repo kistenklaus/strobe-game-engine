@@ -6,17 +6,22 @@
 #include "strobe/rhi/objects/fragment_shader.hpp"
 #include "strobe/rhi/objects/resource_descriptor.hpp"
 #include "strobe/rhi/objects/resource_descriptor_array.hpp"
+#include "strobe/rhi/objects/sampler_descriptor.hpp"
+#include "strobe/rhi/objects/sampler_descriptor_array.hpp"
 #include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
 #include "strobe/rhi/types/aabb_geometry_data.hpp"
 #include "strobe/rhi/types/access_scope.hpp"
 #include "strobe/rhi/types/blend_equation.hpp"
+#include "strobe/rhi/types/buffer_image_range.hpp"
 #include "strobe/rhi/types/buffer_offset.hpp"
 #include "strobe/rhi/types/color_component.hpp"
 #include "strobe/rhi/types/compare_op.hpp"
 #include "strobe/rhi/types/cull_mode.hpp"
 #include "strobe/rhi/types/front_face.hpp"
 #include "strobe/rhi/types/image_layout.hpp"
+#include "strobe/rhi/types/image_range.hpp"
+#include "strobe/rhi/types/index_type.hpp"
 #include "strobe/rhi/types/logic_op.hpp"
 #include "strobe/rhi/types/memory_barrier.hpp"
 #include "strobe/rhi/types/polygon_mode.hpp"
@@ -108,7 +113,8 @@ public:
   /**
    * \brief Transitions image layout.
    * \code{.cpp}
-   * void transition_image(const Image& image, ImageLayout src, ImageLayout dst) noexcept;
+   * void transition_image(const Image& image, ImageLayout src, ImageLayout dst)
+   * noexcept;
    * \endcode
    *
    * Transitions \p image from \p src to \p dst.
@@ -384,7 +390,8 @@ public:
   /**
    * \brief Sets stencil operations.
    * \code{.cpp}
-   * void set_stencil_op(StencilFace faceMask, StencilOp failOp, StencilOp passOp, StencilOp depthFail, CompareOp compareOp);
+   * void set_stencil_op(StencilFace faceMask, StencilOp failOp, StencilOp
+   * passOp, StencilOp depthFail, CompareOp compareOp);
    * \endcode
    *
    * Sets stencil behavior for the selected faces.
@@ -404,9 +411,10 @@ public:
   /**
    * \brief Sets stencil compare mask.
    * \code{.cpp}
-   * void set_stencil_compare_mask(StencilFace faceMask, uint32_t compareMask) noexcept;
+   * void set_stencil_compare_mask(StencilFace faceMask, uint32_t compareMask)
+   * noexcept;
    * \endcode
-   * 
+   *
    * Sets the comparison mask for the selected stencil faces.
    *
    * \param faceMask Stencil faces to modify.
@@ -421,7 +429,8 @@ public:
   /**
    * \brief Sets stencil write mask.
    * \code{.cpp}
-   * void set_stencil_write_mask(StencilFace faceMask, uint32_t writeMask) noexcept;
+   * void set_stencil_write_mask(StencilFace faceMask, uint32_t writeMask)
+   * noexcept;
    * \endcode
    *
    * Sets the write mask for the selected stencil faces.
@@ -438,7 +447,8 @@ public:
   /**
    * \brief Sets stencil reference.
    * \code{.cpp}
-   * void set_stencil_reference(StencilFace faceMask, uint32_t reference) noexcept;
+   * void set_stencil_reference(StencilFace faceMask, uint32_t reference)
+   * noexcept;
    * \endcode
    *
    * Sets the reference value for the selected stencil faces.
@@ -485,7 +495,8 @@ public:
   /**
    * \brief Sets depth bias.
    * \code{.cpp}
-   * void set_depth_bias(float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlope) noexcept;
+   * void set_depth_bias(float depthBiasConstantFactor, float depthBiasClamp,
+   * float depthBiasSlope) noexcept;
    * \endcode
    *
    * Sets the parameters used when depth bias is enabled.
@@ -503,7 +514,8 @@ public:
   /**
    * \brief Sets vertex input.
    * \code{.cpp}
-   * void set_vertex_input(span<const VertexBinding> bindings, span<const VertexAttribute> attributes) noexcept;
+   * void set_vertex_input(span<const VertexBinding> bindings, span<const
+   * VertexAttribute> attributes) noexcept;
    * \endcode
    *
    * Sets vertex bindings and their associated attributes.
@@ -533,7 +545,8 @@ public:
   /**
    * \brief Sets sample mask.
    * \code{.cpp}
-   * void set_sample_mask(SampleCount samples, uint64_t mask = std::numeric_limits<uint64_t>::max()) noexcept;
+   * void set_sample_mask(SampleCount samples, uint64_t mask =
+   * std::numeric_limits<uint64_t>::max()) noexcept;
    * \endcode
    *
    * Selects which rasterization samples are enabled.
@@ -627,8 +640,10 @@ public:
   /**
    * \brief Sets color blending.
    * \code{.cpp}
-   * void set_color_blend_enable(uint32_t firstAttachment, uint32_t attachmentCount, uint32_t bitmask) noexcept; (1)
-   * void set_color_blend_enable(uint32_t firstAttachment, uint32_t attachmentCount, bool enable) noexcept; (2)
+   * void set_color_blend_enable(uint32_t firstAttachment, uint32_t
+   * attachmentCount, uint32_t bitmask) noexcept; (1) void
+   * set_color_blend_enable(uint32_t firstAttachment, uint32_t attachmentCount,
+   * bool enable) noexcept; (2)
    * \endcode
    *
    * Sets blending enable state for consecutive color attachments.
@@ -655,7 +670,8 @@ public:
   /**
    * \brief Sets blend equations.
    * \code{.cpp}
-   * void set_color_blend_equation(uint32_t firstAttachment, span<const BlendEquation> colorBlendEquations) noexcept;
+   * void set_color_blend_equation(uint32_t firstAttachment, span<const
+   * BlendEquation> colorBlendEquations) noexcept;
    * \endcode
    *
    * Sets one blend equation for each consecutive color attachment.
@@ -675,7 +691,8 @@ public:
   /**
    * \brief Sets color write masks.
    * \code{.cpp}
-   * void set_color_write_mask(uint32_t firstAttachment, span<const ColorComponent> colorWriteMasks) noexcept;
+   * void set_color_write_mask(uint32_t firstAttachment, span<const
+   * ColorComponent> colorWriteMasks) noexcept;
    * \endcode
    *
    * Sets one component write mask for each consecutive color attachment.
@@ -723,13 +740,11 @@ public:
    */
   void set_patch_control_points(uint32_t patchControlPoints) noexcept;
 
-
-
-
   /**
    * \brief Binds vertex buffer.
    * \code{.cpp}
-   * void bind_vertex_buffer(const Buffer& buffer, uint64_t offset = 0) noexcept;
+   * void bind_vertex_buffer(const Buffer& buffer, uint64_t offset = 0)
+   * noexcept;
    * \endcode
    *
    * Binds \p buffer as vertex input starting at \p offset.
@@ -743,6 +758,10 @@ public:
    * \attention 4. The owning CommandPool must be externally synchronized.
    */
   void bind_vertex_buffer(const Buffer &buffer, uint64_t offset = 0) noexcept;
+
+  void bind_index_buffer(const Buffer &buffer,
+                         IndexType type = IndexType::uint32,
+                         uint64_t offset = 0) noexcept;
 
   /** @} */
 
@@ -793,7 +812,8 @@ public:
   /**
    * \brief Copies buffer data.
    * \code{.cpp}
-   * void copy_buffer(BufferOffset dst, BufferOffset src, uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
+   * void copy_buffer(BufferOffset dst, BufferOffset src, uint64_t size =
+   * std::numeric_limits<uint64_t>::max()) noexcept;
    * \endcode
    *
    * Copies \p size bytes from \p src to \p dst.
@@ -816,32 +836,100 @@ public:
               uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
 
   /**
-   * \brief Updates buffer data.
+   * \brief copy buffer to image
    * \code{.cpp}
-   * void update(BufferOffset dst, const void* src, uint64_t size) noexcept; (1)
+   * void copy_buffer_to_image(ImageRange dst, BufferImageRange src, ImageLayout
+   * dstLayout) noexcept;
+   * \endcode
+   */
+  void copy_buffer_to_image(ImageRange dst, BufferImageRange src,
+                            ImageLayout dstLayout) noexcept;
+  /**
+   * \brief copy buffer to image
+   * \code{.cpp}
+   * void copy_image_to_buffer(BufferImageRange dst, ImageRange src, ImageLayout
+   * srcLayout) noexcept;
+   * \endcode
+   */
+  void copy_image_to_buffer(BufferImageRange dst, ImageRange src,
+                            ImageLayout srcLayout) noexcept;
+
+  /**
+   * \brief Updates buffer or image data from host memory.
+   * \code{.cpp}
+   * void update(BufferOffset dst,
+   *             const void *src,
+   *             uint64_t size) noexcept;                                    (1)
+   *
    * template<typename T>
-   * void update(BufferOffset dst, span<const T> src) noexcept;              (2)
+   * void update(BufferOffset dst,
+   *             span<const T> src) noexcept;                                (2)
+   *
+   * void update(ImageRange dst,
+   *             const void *src,
+   *             uint32_t rowLength = 0,
+   *             uint32_t imageHeight = 0,
+   *             ImageLayout dstLayout = ImageLayout::transfer_dst) noexcept;
+   * (3)
    * \endcode
    *
-   * Copies host data into a buffer as part of command execution.
+   * Copies host data into a buffer or image as part of command execution.
+   * The contents of \p src are consumed during command recording and therefore
+   * do not need to remain valid until command execution.
    *
-   * \param dst Destination buffer and offset.
-   * \param src Source data.
-   * \param size Number of bytes to copy.
+   * (1) Copies \p size bytes from \p src to the buffer range beginning at
+   * \p dst.
+   *
+   * (2) Equivalent to (1), with the copy size determined by
+   * `src.size_bytes()`.
+   *
+   * (3) Copies host data into the image region described by \p dst.
+   * \p dst must refer to exactly one mip level and may refer to one or more
+   * array layers. Zero components of `dst.extent` select the remaining extent
+   * of the selected mip level beginning at `dst.offset`.
+   *
+   * \p rowLength and \p imageHeight describe the layout of the source data in
+   * host memory. They correspond to the row length and image height of a
+   * buffer-to-image copy and are specified in texels, not bytes.
+   *
+   * A \p rowLength of zero means that rows are tightly packed with a length
+   * equal to `dst.extent.x()`. A \p imageHeight of zero means that images are
+   * tightly packed with a height equal to `dst.extent.y()`. Non-zero values may
+   * be used to describe padding between rows or image slices.
+   *
+   * \p dstLayout specifies the layout of the destination image during the copy.
+   * The function does not perform an image layout transition.
+   *
+   * \param dst Destination buffer offset or image region.
+   * \param src Source host data.
+   * \param size Number of bytes to copy for buffer updates.
+   * \param rowLength Source row length in texels for image updates, or zero for
+   * tightly packed rows.
+   * \param imageHeight Source image height in texels for image updates, or zero
+   * for tightly packed images.
+   * \param dstLayout Layout of the destination image during an image update.
    *
    * \attention 1. The command buffer must be recording.
    * \attention 2. No dynamic rendering instance may be active.
    * \attention 3. The destination range must be valid.
-   * \attention 4. The destination buffer must support transfer-destination
-   * usage.
-   * \attention 5. Vulkan update-buffer size and alignment restrictions apply.
-   * \attention 6. The owning CommandPool must be externally synchronized.
+   * \attention 4. The destination resource must support transfer-destination
+   * usage when the update requires a transfer operation.
+   * \attention 5. For image updates, \p dst must select exactly one mip level.
+   * \attention 6. For image updates, \p dstLayout must be valid for a
+   * buffer-to-image copy and must match the actual layout of the selected image
+   * subresources.
+   * \attention 7. Non-zero \p rowLength and \p imageHeight must satisfy the
+   * format's texel-block alignment and copy-layout requirements.
+   * \attention 8. The owning CommandPool must be externally synchronized.
    */
   void update(BufferOffset dst, const void *src, uint64_t size) noexcept;
   template <typename T>
   inline void update(BufferOffset dst, span<const T> src) noexcept {
     update(std::move(dst), src.data(), src.size_bytes());
   }
+  void update(ImageRange dst, const void *src, uint32_t rowLength = 0,
+              uint32_t imageHeight = 0,
+              ImageLayout dstLayout = ImageLayout::transfer_dst) noexcept;
 
   /** @} */
 
@@ -852,7 +940,8 @@ public:
   /**
    * \brief Records draw call.
    * \code{.cpp}
-   * void draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t firstVertex = 0, uint32_t firstInstance = 0) noexcept;
+   * void draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t
+   * firstVertex = 0, uint32_t firstInstance = 0) noexcept;
    * \endcode
    *
    * Draws non-indexed primitives using the current graphics state.
@@ -874,11 +963,11 @@ public:
   /**
    * \brief Records indexed draw.
    * \code{.cpp}
-   * void draw_indexed(uint32_t indexCount, 
-   *                   uint32_t instanceCount = 1, 
-   *                   uint32_t firstIndex = 0, 
-   *                   uint32_t firstIndex = 0, 
-   *                   uint32_t vertexOffset = 0, 
+   * void draw_indexed(uint32_t indexCount,
+   *                   uint32_t instanceCount = 1,
+   *                   uint32_t firstIndex = 0,
+   *                   uint32_t firstIndex = 0,
+   *                   uint32_t vertexOffset = 0,
    *                   uint32_t firstInstance = 0) noexcept;
    * \endcode
    *
@@ -910,9 +999,10 @@ public:
   /**
    * \brief Builds acceleration structure.
    * \code{.cpp}
-   * void build(const Blas& blas, span<const TriangleGeometryData> triangleGeometries) noexcept; (1)
-   * void build(const Blas& blas, span<const AabbGeometryData> aabbGeometries) noexcept;         (2)
-   * void build(const Tlas& tlas, BufferOffset instanceBuffer, uint32_t count) noexcept;         (3)
+   * void build(const Blas& blas, span<const TriangleGeometryData>
+   * triangleGeometries) noexcept; (1) void build(const Blas& blas, span<const
+   * AabbGeometryData> aabbGeometries) noexcept;         (2) void build(const
+   * Tlas& tlas, BufferOffset instanceBuffer, uint32_t count) noexcept; (3)
    * \endcode
    *
    * Builds \p blas from triangle geometry.
@@ -942,9 +1032,10 @@ public:
   /**
    * \brief Pushes constant data.
    * \code{.cpp}
-   * void push(uint32_t offset, void* data, uint32_t size) noexcept;                 (1)
-   * void push(uint32_t offset, const ResourceDescriptor& descriptor) noexcept;      (2)
-   * void push(uint32_t offset, const ResourceDescriptorArray& descriptor) noexcept; (3)
+   * void push(uint32_t offset, void* data, uint32_t size) noexcept; (1) void
+   * push(uint32_t offset, const ResourceDescriptor& descriptor) noexcept; (2)
+   * void push(uint32_t offset, const ResourceDescriptorArray& descriptor)
+   * noexcept; (3)
    * \endcode
    *
    * Writes \p size bytes into the shader push-constant block.
@@ -963,6 +1054,8 @@ public:
   void push(uint32_t offset, const ResourceDescriptor &descriptor) noexcept;
   void push(uint32_t offset,
             const ResourceDescriptorArray &descriptor) noexcept;
+  void push(uint32_t offset, const SamplerDescriptor &descriptor) noexcept;
+  void push(uint32_t offset, const SamplerDescriptorArray &descriptor) noexcept;
 
   /** @} */
 };

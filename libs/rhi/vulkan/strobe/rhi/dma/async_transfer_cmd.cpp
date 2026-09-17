@@ -21,10 +21,47 @@ AsyncTransferCmd &AsyncTransferCmd::copy(BufferOffset dst, StageBuffer src,
   cmd_impl->state.retain(dst.buffer);
   return *this;
 }
+AsyncTransferCmd &AsyncTransferCmd::copy(ImageRange dst, BufferImageRange src,
+                                         ImageLayout initialLayout,
+                                         ImageLayout finalLayout) noexcept {
+  if (initialLayout != ImageLayout::transfer_dst) {
+    m_impl->m_open.cmd.transition_image(dst.image, initialLayout,
+                                        ImageLayout::transfer_dst);
+  }
+  m_impl->m_open.cmd.copy_buffer_to_image(dst, src, ImageLayout::transfer_dst);
+  if (finalLayout != ImageLayout::transfer_dst) {
+    m_impl->m_open.cmd.transition_image(dst.image, ImageLayout::transfer_dst,
+                                        finalLayout);
+  }
+  return *this;
+}
+
+AsyncTransferCmd &AsyncTransferCmd::copy(BufferImageRange dst, ImageRange src,
+                                         ImageLayout srcLayout) noexcept {
+  m_impl->m_open.cmd.copy_image_to_buffer(dst, src, srcLayout);
+  return *this;
+}
 
 AsyncTransferCmd &AsyncTransferCmd::upload(BufferOffset dst, const void *src,
                                            uint64_t size) noexcept {
   m_impl->m_open.cmd.update(dst, src, size);
+  return *this;
+}
+AsyncTransferCmd &AsyncTransferCmd::upload(ImageRange dst, const void *src,
+                                           uint32_t rowLength,
+                                           uint32_t imageHeight,
+                                           ImageLayout initialLayout,
+                                           ImageLayout finalLayout) noexcept {
+  if (initialLayout != ImageLayout::transfer_dst) {
+    m_impl->m_open.cmd.transition_image(dst.image, initialLayout,
+                                        ImageLayout::transfer_dst);
+  }
+  m_impl->m_open.cmd.update(dst, src, rowLength, imageHeight,
+                            ImageLayout::transfer_dst);
+  if (finalLayout != ImageLayout::transfer_dst) {
+    m_impl->m_open.cmd.transition_image(dst.image, ImageLayout::transfer_dst,
+                                        finalLayout);
+  }
   return *this;
 }
 

@@ -115,11 +115,21 @@ Timepoint Device::async_copy(BufferOffset dst, BufferOffset src,
   return impl->dma.async_copy(dst, src, size);
 }
 
-Timepoint Device::async_upload(BufferOffset dst, void *src,
+Timepoint Device::async_upload(BufferOffset dst, const void *src,
                                uint64_t size) noexcept {
-  ZoneScopedN("Device::async_upload");
+  ZoneScopedN("Device::async_upload(Buffer)");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->dma.async_upload(dst, src, size);
+}
+
+Timepoint Device::async_upload(ImageRange dst, const void *src,
+                               uint32_t rowLength, uint32_t imageHeight,
+                               ImageLayout initialLayout,
+                               ImageLayout finalLayout) noexcept {
+  ZoneScopedN("Device::async_upload(Image)");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  return impl->dma.async_upload(dst, src, rowLength, imageHeight, initialLayout,
+                                finalLayout);
 }
 
 ResourceDescriptor Device::create_resource_descriptor(
@@ -133,7 +143,6 @@ ResourceDescriptorArray Device::create_resource_descriptors(
   ZoneScopedN("Device::create_buffer_descriptors");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->heapctrl.create_resource_descriptor_array(infos);
-
 }
 
 SamplerDescriptor

@@ -16,3 +16,4 @@ vgcore**
 *.sh
 *.puml
 TODO
+imgui.ini

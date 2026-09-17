@@ -302,7 +302,7 @@
      *
      * \return true if the Timepoint completed before the timeout.
      */
-    bool wait(uint64_t timeout) const noexcept;
+    bool wait(uint64_t timeout = std::numeric_limits<uint64_t>::max()) const noexcept;
 
     /**
      * \brief Polls for completion.

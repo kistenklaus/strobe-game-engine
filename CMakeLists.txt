@@ -33,11 +33,13 @@ include(cmake/flags.cmake)
 include(cmake/dependencies.cmake)
 include(cmake/configuration.cmake)
 include(cmake/testing.cmake)
+include(cmake/embed_slang_spirv.cmake)
 
 add_subdirectory(libs/core)
 
 add_subdirectory(subsystems/platform)
 add_subdirectory(libs/rhi)
+add_subdirectory(libs/imgui)
 
 add_subdirectory(subsystems/window)
 add_subdirectory(subsystems/input)

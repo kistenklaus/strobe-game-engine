@@ -2,7 +2,9 @@
 
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/stage/stage_arena.hpp"
+#include "strobe/rhi/types/buffer_image_range.hpp"
 #include "strobe/rhi/types/buffer_offset.hpp"
+#include "strobe/rhi/types/image_range.hpp"
 #include <client/TracyLock.hpp>
 #include <mutex>
 
@@ -22,10 +24,24 @@ public:
   AsyncTransferCmd &copy(BufferOffset dst, BufferOffset src,
                          uint64_t size) noexcept;
 
-  AsyncTransferCmd &copy(BufferOffset dst, StageBuffer src, uint64_t size) noexcept;
+  AsyncTransferCmd &copy(BufferOffset dst, StageBuffer src,
+                         uint64_t size) noexcept;
+
+  AsyncTransferCmd &copy(ImageRange dst, BufferImageRange src,
+                         ImageLayout initialLayout, 
+                         ImageLayout finalLayout) noexcept;
+
+  AsyncTransferCmd &copy(BufferImageRange dst, ImageRange src,
+                         ImageLayout srcLayout) noexcept;
 
   AsyncTransferCmd &upload(BufferOffset dst, const void *src,
                            uint64_t size) noexcept;
+
+  AsyncTransferCmd &
+  upload(ImageRange dst, const void *src, uint32_t rowLength = 0,
+         uint32_t imageHeight = 0,
+         ImageLayout initialLayout = ImageLayout::transfer_dst,
+         ImageLayout finalLayout = ImageLayout::transfer_dst) noexcept;
 
   StageBuffer alloc_stage(uint64_t size, uint64_t alignment) noexcept;
 
