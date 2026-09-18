@@ -21,7 +21,7 @@ void SwapchainGeneration::unpin(void *handle) noexcept {
   unpin_void_handle<SwapchainGenerationImpl>(handle);
 }
 
-SwapchainImage SwapchainGeneration::acquire() {
+std::pair<SwapchainImage, bool> SwapchainGeneration::acquire(uint64_t timeout) {
   ZoneScopedN("swap/acquire");
   auto *impl = void_handle_ptr<SwapchainGenerationImpl>(m_handle);
   vulkan::Context *ctx = impl->surface.ctx();
@@ -32,6 +32,7 @@ SwapchainImage SwapchainGeneration::acquire() {
   const auto result = vulkan::acquire_next_swapchain_image(
       ctx, impl->swapchain,
       {
+          .timeout = timeout,
           .signalSemaphore = imageAvailable.signal(),
       },
       &imageIndex);
@@ -43,22 +44,22 @@ SwapchainImage SwapchainGeneration::acquire() {
     impl->frames[imageIndex].imageAvailable = std::move(imageAvailable);
     auto alloc = impl->get_swapchain_image_handle_allocator();
     auto *ptr = make_void_handle<SwapchainImageImpl>(alloc, *this, imageIndex);
-    return detail::make_object<SwapchainImage>(ptr);
+    return {detail::make_object<SwapchainImage>(ptr), false};
   }
   case vulkan::SwapchainAcquireStatus::suboptimal:
     fmt::println("suboptimal");
     impl->debugCounter.fetch_add(1, std::memory_order_relaxed);
     impl->frames[imageIndex].imageAvailable = std::move(imageAvailable);
     impl->suboptimal = true;
-    return detail::make_object<SwapchainImage>(
-        make_void_handle<SwapchainImageImpl>(
-            impl->get_swapchain_image_handle_allocator(), //
-            *this, imageIndex));
+    return {detail::make_object<SwapchainImage>(
+                make_void_handle<SwapchainImageImpl>(
+                    impl->get_swapchain_image_handle_allocator(), //
+                    *this, imageIndex)),
+            false};
   case vulkan::SwapchainAcquireStatus::out_of_date:
-    return {};
+    return {{}, false};
   case vulkan::SwapchainAcquireStatus::timeout:
-    vulkan_error(VK_TIMEOUT, "unexpected swapchain acquire result: {}",
-                 impl->debugCounter.load());
+    return {{}, true};
   case vulkan::SwapchainAcquireStatus::not_ready:
     vulkan_error(VK_NOT_READY, "unexpected swapchain acquire result");
   }

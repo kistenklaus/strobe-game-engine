@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "strobe/core/events/event_listener.hpp"
 #include "strobe/core/events/event_listener_handle.hpp"
+#include "strobe/imgui/platform/window_state.hpp"
 #include "strobe/platform/window.hpp"
 #include "strobe/platform/window_events.hpp"
 
@@ -13,9 +14,9 @@ namespace strobe::imgui::platform {
 
 class Mouse {
 public:
-  explicit Mouse(strobe::platform::Window *window, ImGuiIO *io,
-                 std::mutex *ioMutex) noexcept
-      : m_io(io), m_ioMutex(ioMutex),
+  explicit Mouse(strobe::platform::Window *window, WindowState *state,
+                 ImGuiIO *io, std::mutex *ioMutex) noexcept
+      : m_io(io), m_ioMutex(ioMutex), m_state(state),
         m_positionListener(window->add_cursor_position_listener(
             EventListenerRef<strobe::platform::CursorPositionEvent>::
                 fromMemberFunction<Mouse, &Mouse::on_position>(this))),
@@ -39,9 +40,15 @@ public:
 private:
   void
   on_position(const strobe::platform::CursorPositionEvent &event) noexcept {
-    std::lock_guard lck{*m_ioMutex};
-    m_io->AddMousePosEvent(static_cast<float>(event.x()),
-                           static_cast<float>(event.y()));
+    float x = static_cast<float>(event.x());
+    float y = static_cast<float>(event.y());
+    std::lock_guard lock{*m_ioMutex};
+    if (m_io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+      const ivec2 windowPos = m_state->pos();
+      x += static_cast<float>(windowPos.x());
+      y += static_cast<float>(windowPos.y());
+    }
+    m_io->AddMousePosEvent(x, y);
   }
 
   void on_button(const strobe::platform::MouseButtonEvent &event) noexcept {
@@ -79,6 +86,8 @@ private:
 private:
   ImGuiIO *m_io;
   std::mutex *m_ioMutex;
+
+  WindowState *m_state;
 
   EventListenerHandle m_positionListener;
   EventListenerHandle m_buttonListener;

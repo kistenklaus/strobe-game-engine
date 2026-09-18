@@ -1,6 +1,7 @@
 #include "strobe/rhi/objects/swapchain.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/swapchain/swapchain_impl.hpp"
+#include <limits>
 
 namespace strobe::rhi {
 
@@ -19,23 +20,34 @@ SwapchainImage Swapchain::acquire() {
     return {};
   }
   assert(impl->generation);
-  // if (impl->generation.suboptimal()) {
-  //   impl->recreate();
-  // }
+  if (impl->generation.suboptimal()) {
+    impl->recreate();
+  }
+  constexpr uint64_t initialTimeout = 1'000;     // 1 us
+  constexpr uint64_t maximumTimeout = 1'000'000; // 1 ms
+  uint64_t timeout = initialTimeout;
   while (true) {
-    SwapchainImage image = impl->generation.acquire();
+    auto [image, timedOut] = impl->generation.acquire(timeout);
     if (image) {
       return image;
+    }
+    if (timedOut) {
+      if (timeout < maximumTimeout) {
+        timeout = std::min(timeout * 2, maximumTimeout);
+      } else {
+        std::this_thread::sleep_for(std::chrono::milliseconds{1});
+      }
+      continue;
     }
     if (!impl->recreate()) {
       return {}; // minimized
     }
+    timeout = initialTimeout;
   }
 }
-
 void Swapchain::resize_hint(uvec2 size) noexcept {
   ZoneScopedN("Swapchain::resize");
-  auto* impl = void_handle_ptr<SwapchainImpl>(m_handle);
+  auto *impl = void_handle_ptr<SwapchainImpl>(m_handle);
   impl->resize(size);
 }
 

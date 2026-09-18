@@ -95,7 +95,7 @@ struct PlatformImpl {
     io->BackendPlatformUserData = this;
     io->BackendPlatformName = "strobe-platform";
 
-    // TODO: ImGuiBackendFlags_HasMouseCursors
+    // io->BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
     io->BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
     io->BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;
 
@@ -207,7 +207,6 @@ static void flush_platform_events(PlatformImpl &impl) noexcept {
 }
 
 static void destroy_window(ImGuiViewport *viewport) {
-  fmt::println("destroy-window");
   assert(viewport);
 
   auto *view = static_cast<platform::Viewport *>(viewport->PlatformUserData);
@@ -226,7 +225,6 @@ static void destroy_window(ImGuiViewport *viewport) {
 }
 
 static void show_window(ImGuiViewport *viewport) {
-  fmt::println("show-window");
   assert(viewport);
   auto *view = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(view);
@@ -234,7 +232,6 @@ static void show_window(ImGuiViewport *viewport) {
 }
 
 static void set_window_pos(ImGuiViewport *viewport, ImVec2 pos) {
-  fmt::println("set-window-pos");
   assert(viewport);
   auto *view = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(view);
@@ -248,7 +245,6 @@ static void set_window_pos(ImGuiViewport *viewport, ImVec2 pos) {
 }
 
 static ImVec2 get_window_pos(ImGuiViewport *viewport) {
-  fmt::println("get-window-pos");
   assert(viewport);
   auto *view = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(view);
@@ -260,7 +256,6 @@ static ImVec2 get_window_pos(ImGuiViewport *viewport) {
 }
 
 static void set_window_size(ImGuiViewport *viewport, ImVec2 size) {
-  fmt::println("set-window-size");
   assert(viewport);
   auto *view = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(view);
@@ -274,7 +269,6 @@ static void set_window_size(ImGuiViewport *viewport, ImVec2 size) {
 }
 
 static ImVec2 get_window_size(ImGuiViewport *viewport) {
-  fmt::println("get-window-size");
   assert(viewport);
   auto *view = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(view);
@@ -286,7 +280,6 @@ static ImVec2 get_window_size(ImGuiViewport *viewport) {
 }
 
 static void set_window_focus(ImGuiViewport *viewport) {
-  fmt::println("set-window-focus");
   assert(viewport);
   auto *view = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(view);
@@ -294,7 +287,6 @@ static void set_window_focus(ImGuiViewport *viewport) {
 }
 
 static bool get_window_focus(ImGuiViewport *viewport) {
-  fmt::println("get-window-focus");
   assert(viewport);
   auto *view = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(view);
@@ -302,7 +294,6 @@ static bool get_window_focus(ImGuiViewport *viewport) {
 }
 
 static bool get_window_minimized(ImGuiViewport *viewport) {
-  fmt::println("get-window-minimized");
   assert(viewport);
   auto *view = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(view);
@@ -310,7 +301,6 @@ static bool get_window_minimized(ImGuiViewport *viewport) {
 }
 
 static void set_window_title(ImGuiViewport *viewport, const char *title) {
-  fmt::println("set-window-title");
   assert(viewport);
   assert(title);
   auto *view = static_cast<platform::Viewport *>(viewport->PlatformUserData);
@@ -320,7 +310,6 @@ static void set_window_title(ImGuiViewport *viewport, const char *title) {
 }
 
 static void set_window_alpha(ImGuiViewport *viewport, float alpha) {
-  fmt::println("set-window-alpha");
   assert(viewport);
   auto *view = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(view);
@@ -329,14 +318,12 @@ static void set_window_alpha(ImGuiViewport *viewport, float alpha) {
 
 static void monitor_callback(void *ptr,
                              const strobe::platform::MonitorEvent &) noexcept {
-  fmt::println("monitor-callback");
   assert(ptr);
   auto *impl = static_cast<PlatformImpl *>(ptr);
   impl->monitorsDirty.store(true, std::memory_order_release);
 }
 
 static void create_window(ImGuiViewport *viewport) {
-  fmt::println("create-window");
   assert(viewport);
   auto &io = ImGui::GetIO();
   auto *impl = static_cast<PlatformImpl *>(io.BackendPlatformUserData);

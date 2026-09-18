@@ -11,9 +11,9 @@ class Viewport {
 
 public:
   strobe::platform::Window *window;
+  platform::WindowState windowState;
   platform::Keyboard keyboard;
   platform::Mouse mouse;
-  platform::WindowState windowState;
 
   explicit Viewport(uvec2 size, const char *name, bool decorated, bool topMost,
                     ImGuiIO *io, std::mutex *ioMutex) noexcept
@@ -23,13 +23,13 @@ public:
             .decorated = decorated,
             .floating = topMost,
         }}),
-        window(&m_owned_window.value()), keyboard(window, io, ioMutex),
-        mouse(window, io, ioMutex), windowState(window, io, ioMutex) {}
+        window(&m_owned_window.value()), windowState(window, io, ioMutex),
+        keyboard(window, io, ioMutex), mouse(window, &windowState, io, ioMutex) {}
 
   explicit Viewport(strobe::platform::Window *window, ImGuiIO *io,
                     std::mutex *ioMutex)
-      : m_owned_window{}, window(window), keyboard(window, io, ioMutex),
-        mouse(window, io, ioMutex), windowState(window, io, ioMutex) {}
+      : m_owned_window{}, window(window), windowState(window, io, ioMutex),
+        keyboard(window, io, ioMutex), mouse(window, &windowState, io, ioMutex) {}
 };
 
 } // namespace strobe::imgui::platform

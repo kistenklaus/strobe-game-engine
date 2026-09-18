@@ -18,7 +18,7 @@ public:
 
   // may return null, then the swapchain has to be recreated immediatly,
   // otherwise
-  SwapchainImage acquire();
+  std::pair<SwapchainImage, bool> acquire(uint64_t timeout);
 
   // Afterwards vkQueuePresentKHR must be called!
   std::pair<BinarySemaphore, Fence> present(uint32_t index);
