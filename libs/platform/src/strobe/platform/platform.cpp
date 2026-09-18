@@ -6,8 +6,10 @@
 #include <atomic>
 #include <cassert>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <exception>
+#include <fmt/ostream.h>
 #include <memory>
 #include <mutex>
 #include <semaphore>
@@ -16,6 +18,43 @@
 extern "C" int __real_main(int argc, char **argv);
 
 namespace strobe::platform::detail {
+
+void monitor_entry() noexcept;
+
+void monitor_exit() noexcept;
+
+static void glfw_error_callback(int error, const char *description) noexcept {
+  switch (error) {
+  case GLFW_NOT_INITIALIZED:
+    fmt::println(stderr, "GLFW_NOT_INITIALIZED: {}", description);
+    break;
+  case GLFW_NO_CURRENT_CONTEXT:
+    fmt::println(stderr, "GLFW_NO_CURRENT_CONTEXT: {}", description);
+    break;
+  case GLFW_INVALID_ENUM:
+    fmt::println(stderr, "GLFW_INVALID_ENUM: {}", description);
+    break;
+  case GLFW_INVALID_VALUE:
+    fmt::println(stderr, "GLFW_INVALID_VALUE: {}", description);
+    break;
+  case GLFW_OUT_OF_MEMORY:
+    fmt::println(stderr, "GLFW_OUT_OF_MEMORY: {}", description);
+    break;
+  case GLFW_API_UNAVAILABLE:
+    fmt::println(stderr, "GLFW_API_UNAVAILABLE: {}", description);
+    break;
+  case GLFW_PLATFORM_ERROR:
+    fmt::println(stderr, "GLFW_PLATFORM_ERROR: {}", description);
+    break;
+  case GLFW_FORMAT_UNAVAILABLE:
+    fmt::println(stderr, "GLFW_FORMAT_UNAVAILABLE: {}", description);
+    break;
+  default:
+    fmt::println(stderr, "GLFW_UNKNOWN_ERROR: {}", description);
+    break;
+  }
+  std::terminate();
+}
 
 namespace {
 
@@ -112,9 +151,11 @@ int platform_main(int argc, char **argv) {
   assert(g_executorState.load(std::memory_order_relaxed) ==
          ExecutorState::inactive);
   g_platformThread = std::this_thread::get_id();
+  glfwSetErrorCallback(glfw_error_callback);
   if (glfwInit() != GLFW_TRUE) {
     return EXIT_FAILURE;
   }
+  monitor_entry();
   {
     std::lock_guard lock{g_submissionMutex};
     g_acceptingRequests = true;
@@ -129,6 +170,7 @@ int platform_main(int argc, char **argv) {
   };
   platform_event_loop();
   applicationThread.join();
+  monitor_exit();
   glfwTerminate();
   g_executorState.store(ExecutorState::inactive, std::memory_order_release);
   return applicationResult;

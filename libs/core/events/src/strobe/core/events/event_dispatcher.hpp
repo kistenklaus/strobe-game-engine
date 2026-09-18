@@ -265,7 +265,4 @@ private:
   State *m_state;
 };
 
-template <events::Event E, Allocator A = strobe::Mallocator>
-using SharedEventDispatcher = SharedBlock<EventDispatcher<E, A>, A>;
-
 } // namespace strobe

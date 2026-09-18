@@ -1,5 +1,6 @@
 #pragma once
 
+#include "strobe/core/containers/string.hpp"
 #include "strobe/core/events/event_dispatcher.hpp"
 #include "strobe/core/lina/vec.hpp"
 #include "strobe/platform/window_events.hpp"
@@ -271,6 +272,18 @@ public:
     return window_attribute(GLFW_TRANSPARENT_FRAMEBUFFER);
   }
 
+  std::string clipboard() const noexcept {
+    GLFWwindow *window = m_window;
+    return platform::run(
+        [window] -> std::string { return glfwGetClipboardString(window); });
+  }
+
+  void clipboard(std::string value) noexcept {
+    GLFWwindow *window = m_window;
+    platform::run(
+        [window, &value] { glfwSetClipboardString(window, value.c_str()); });
+  }
+
   EventListenerHandle add_window_position_listener(
       const EventListenerRef<WindowPositionEvent> &listener,
       std::uint8_t layer = 0) {
@@ -472,7 +485,8 @@ private:
   }
 
   static void glfw_character_mods_callback(GLFWwindow *window,
-                                           unsigned int codepoint, int mods) noexcept {
+                                           unsigned int codepoint,
+                                           int mods) noexcept {
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_charModDispatcher.dispatch({
@@ -523,8 +537,11 @@ private:
     });
   }
 
-private:
+public:
+  // TODO: make me private once GLFW is properly contained.
   GLFWwindow *m_window = nullptr;
+
+private:
   EventDispatcher<WindowPositionEvent> m_windowPosDispatcher;
   EventDispatcher<WindowSizeEvent> m_windowSizeDispatcher;
   EventDispatcher<WindowCloseEvent> m_windowCloseDispatcher;

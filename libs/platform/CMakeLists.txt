@@ -1,7 +1,9 @@
 include_guard(GLOBAL)
 
 add_library(strobe-platform EXCLUDE_FROM_ALL
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/platform/monitor.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/platform/platform.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/platform/window.cpp
 )
 
 target_include_directories(strobe-platform
@@ -23,7 +25,6 @@ add_executable(strobe-platform-sandbox EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/main.cpp
 )
 
-target_link_libraries(strobe-platform-sandbox PRIVATE strobe-platform)
-
-
-add_subdirectory(window)
+target_link_libraries(strobe-platform-sandbox 
+  PRIVATE strobe-platform
+)

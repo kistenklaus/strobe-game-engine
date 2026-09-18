@@ -30,9 +30,10 @@ public:
 
   template <typename U> iterator insert(U &&v) {
     auto it = find(v);
-    if (it == end()) {
+    if (it != end()) {
       return it;
     }
+
     m_values.push_back(std::forward<U>(v));
     return end() - 1;
   }
@@ -46,15 +47,19 @@ public:
   bool contains(const T &v) const { return find(v) != m_values.end(); }
 
   iterator erase(const_iterator pos) {
+    assert(pos != end());
     std::swap(*pos, m_values.back());
-    // NOTE: this requires that the vector is non shrinking!
-    // otherwise the iterator would be invalidated.
     m_values.pop_back();
     return pos;
   }
 
   template <std::equality_comparable_with<T> K> bool erase(const K &v) {
-    return erase(find(v)) != end();
+    auto it = find(v);
+    if (it == end()) {
+      return false;
+    }
+    erase(it);
+    return true;
   }
 
   size_type size() const { return m_values.size(); }

@@ -41,7 +41,6 @@ target_include_directories(strobe-imgui-renderer
 target_link_libraries(strobe-imgui-renderer
   PUBLIC strobe::rhi
   PUBLIC imgui
-  PUBLIC imgui-glfw-backend
   PRIVATE strobe-imgui-vertex-shader
   PRIVATE strobe-imgui-fragment-shader
 )

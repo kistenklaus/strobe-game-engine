@@ -5,6 +5,7 @@
 #include "strobe/core/lina/vec.hpp"
 #include "strobe/platform/window_events.hpp"
 
+#include <GLFW/glfw3.h>
 #include <cstdint>
 
 namespace strobe::platform {
@@ -121,6 +122,8 @@ public:
   EventListenerHandle
   add_drop_listener(const EventListenerRef<DropEvent> &listener,
                     std::uint8_t layer = 0);
+
+  GLFWwindow *window_ptr() const noexcept;
 
 private:
   void *m_internals = nullptr;

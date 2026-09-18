@@ -258,4 +258,9 @@ Window::add_drop_listener(const EventListenerRef<DropEvent> &listener,
   return impl->add_drop_listener(listener, layer);
 }
 
+GLFWwindow *Window::window_ptr() const noexcept {
+  auto *impl = static_cast<WindowImpl *>(m_internals);
+  return impl->m_window;
+}
+
 } // namespace strobe::platform
