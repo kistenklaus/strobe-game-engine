@@ -1,110 +1,271 @@
 #pragma once
 
-#include <algorithm>
-#include <cassert>
-#include <iterator>
-#include <strobe/core/containers/small_vector.hpp>
-
 #include "event.hpp"
 #include "event_dispatcher_interface.hpp"
 #include "event_listener.hpp"
 #include "event_listener_handle.hpp"
+#include "strobe/core/containers/small_vector.hpp"
+#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/Mallocator.hpp"
+#include "strobe/core/memory/smart_pointers/SharedBlock.hpp"
+
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <utility>
 
 namespace strobe {
 
-template <events::Event E, Allocator A>
+template <events::Event E, Allocator A = strobe::Mallocator>
 class EventDispatcher : protected events::details::IEventDispatcher {
- private:
-  using Self = EventDispatcher<E, A>;
-  using Container = SmallVector<EventListenerRef<E>, 4, A>;
-  using iterator = Container::iterator;
-  using size_type = Container::size_type;
+private:
+  using StateBase = events::details::EventDispatcherState;
+  using ListenerId = StateBase::ListenerId;
+  using AllocatorTraits = strobe::AllocatorTraits<A>;
 
- public:
+  struct Entry {
+    ListenerId id;
+    EventListenerRef<E> listener;
+    std::uint8_t layer;
+    bool connected;
+  };
+
+  using Container = SmallVector<Entry, 4, A>;
+
+  struct State final : StateBase {
+    explicit State(const A &allocator)
+        : StateBase(&State::disconnect_state, &State::destroy_state),
+          allocator(allocator), listeners(allocator) {}
+
+    static bool disconnect_state(StateBase *base, ListenerId id) noexcept {
+      return static_cast<State *>(base)->disconnect(id);
+    }
+
+    static void destroy_state(StateBase *base) noexcept {
+      auto *state = static_cast<State *>(base);
+
+      // The allocator must survive destruction of State because it is used
+      // to deallocate the memory containing State.
+      A allocator = std::move(state->allocator);
+
+      std::destroy_at(state);
+      AllocatorTraits::template deallocate<State>(allocator, state);
+    }
+
+    bool disconnect(ListenerId id) noexcept {
+      auto it =
+          std::find_if(listeners.begin(), listeners.end(),
+                       [id](const Entry &entry) { return entry.id == id; });
+
+      if (it == listeners.end() || !it->connected) {
+        return false;
+      }
+
+      // Do not invalidate an active dispatch iterator. The disconnected
+      // entry is removed after the outermost dispatch finishes.
+      it->connected = false;
+      dirty = true;
+
+      return true;
+    }
+
+    void finish_dispatch() noexcept {
+      assert(dispatchDepth != 0);
+      --dispatchDepth;
+
+      if (dispatchDepth != 0 || !dirty) {
+        return;
+      }
+
+      auto newEnd =
+          std::remove_if(listeners.begin(), listeners.end(),
+                         [](const Entry &entry) { return !entry.connected; });
+
+      listeners.erase(newEnd, listeners.end());
+
+      std::sort(listeners.begin(), listeners.end(),
+                [](const Entry &lhs, const Entry &rhs) {
+                  return lhs.layer < rhs.layer;
+                });
+
+      activeListenerCount = listeners.size();
+      dirty = false;
+    }
+
+    [[no_unique_address]] A allocator;
+    Container listeners;
+
+    ListenerId nextId = 1;
+
+    // Entries in [0, activeListenerCount) are visible to dispatch().
+    // Listeners added during dispatch are appended outside this prefix.
+    std::size_t activeListenerCount = 0;
+
+    std::size_t dispatchDepth = 0;
+    bool dirty = false;
+  };
+
+  struct DispatchScope {
+    State *state;
+
+    ~DispatchScope() noexcept { state->finish_dispatch(); }
+  };
+
+public:
   using payload_type = E::payload_type;
+  using layer_type = std::uint8_t;
 
-  EventDispatcher(A alloc = {}) : m_listeners(alloc) { m_dispatchIdx = -1; }
+  explicit EventDispatcher(A allocator = {}) : m_state(make_state(allocator)) {}
 
-  EventDispatcher(const EventDispatcher&) = delete;
-  EventDispatcher& operator=(const EventDispatcher&) = delete;
-  EventDispatcher(EventDispatcher&&) = delete;
-  EventDispatcher& operator=(EventDispatcher&&) = delete;
+  EventDispatcher(const EventDispatcher &) = delete;
+  EventDispatcher &operator=(const EventDispatcher &) = delete;
 
-  void dispatch(payload_type v) {
-    E event(std::move(v));
+  EventDispatcher(EventDispatcher &&) = delete;
+  EventDispatcher &operator=(EventDispatcher &&) = delete;
+
+  ~EventDispatcher() noexcept {
+    State *state = std::exchange(m_state, nullptr);
+
+    if (state == nullptr) {
+      return;
+    }
+
+    {
+      std::lock_guard lock{state->mutex};
+
+      // Destroying the dispatcher from one of its own callbacks would
+      // destroy the object whose dispatch() function is still executing.
+      assert(state->dispatchDepth == 0);
+
+      state->alive = false;
+      state->listeners.clear();
+      state->activeListenerCount = 0;
+      state->dirty = false;
+    }
+
+    // Outstanding listener handles keep State alive, but it is marked dead
+    // and those handles become inert.
+    state->release_reference();
+  }
+
+  void dispatch(payload_type payload) {
+    E event(std::move(payload));
     dispatch(event);
   }
 
-  void dispatch(E& e) {
-    for (m_dispatchIdx = 0; m_dispatchIdx < static_cast<std::ptrdiff_t>(m_listeners.size());
-         m_dispatchIdx++) {
-      if (e.canceled()) {
+  void dispatch(E &event) {
+    State *state = m_state;
+    assert(state != nullptr);
+
+    // The mutex is intentionally held across listener invocation. This keeps
+    // dispatch free of per-listener atomic operations and makes destruction
+    // of handles on other threads wait for callbacks to finish.
+    std::lock_guard lock{state->mutex};
+    assert(state->alive);
+
+    if (event.canceled()) {
+      return;
+    }
+
+    ++state->dispatchDepth;
+    DispatchScope scope{state};
+
+    // Do not include listeners added during this dispatch.
+    const std::size_t end = state->activeListenerCount;
+    std::size_t index = 0;
+
+    while (index < end) {
+      const layer_type layer = state->listeners[index].layer;
+
+      do {
+        // Copy the non-owning listener reference because the callback may
+        // append a listener and cause the container to reallocate.
+        const bool connected = state->listeners[index].connected;
+
+        const EventListenerRef<E> listener = state->listeners[index].listener;
+
+        ++index;
+
+        if (connected) {
+          listener(event);
+        }
+      } while (index < end && state->listeners[index].layer == layer);
+
+      // Cancellation applies between layers. All connected listeners in the
+      // current layer receive the event.
+      if (event.canceled()) {
         break;
       }
-      m_listeners[m_dispatchIdx](e);
     }
-    m_dispatchIdx = -1;
   }
 
-  EventListenerHandle addListener(const EventListenerRef<E>& listener) {
-    assert((std::ranges::find(m_listeners, listener) == m_listeners.end()) &&
-           "Attempted to register the same listener twice.");
+  EventListenerHandle addListener(const EventListenerRef<E> &listener,
+                                  layer_type layer = 0) {
+    State *state = m_state;
+    assert(state != nullptr);
 
-    m_listeners.push_back(listener);
-    if (m_dispatchIdx != -1) {
-      if (m_dispatchIdx == static_cast<std::ptrdiff_t>(m_listeners.size()) - 1) {
-        m_dispatchIdx++;  // skip element
-        // last iteration.
-      } else {
-        std::swap(m_listeners[m_dispatchIdx + 1], m_listeners.back());
-        m_dispatchIdx++;
-      }
-    }
+    std::lock_guard lock{state->mutex};
+    assert(state->alive);
 
-    return this->makeHandle<E>(
-        listener, reinterpret_cast<void*>(this),
-        [](void* userData, events::EventListenerId id) {
-          reinterpret_cast<Self*>(userData)->removeListener(id);
-        });
-  }
+    const ListenerId id = state->nextId++;
+    assert(id != 0 && "Event listener ID overflowed.");
 
-  bool removeListener(EventListenerHandle& handle) {
-    return removeListener(handle.detach());
-  }
+    const Entry entry{
+        .id = id,
+        .listener = listener,
+        .layer = layer,
+        .connected = true,
+    };
 
-  bool removeListener(const events::EventListenerId& id) {
-    auto it = std::ranges::find_if(m_listeners,
-                                   [&](const auto& ref) { return ref == id; });
+    if (state->dispatchDepth == 0) {
+      auto position =
+          std::upper_bound(state->listeners.begin(), state->listeners.end(),
+                           layer, [](layer_type value, const Entry &candidate) {
+                             return value < candidate.layer;
+                           });
 
-    if (it == m_listeners.end()) {
-      return false;
-    }
-
-    std::ptrdiff_t idx = std::distance(m_listeners.begin(), it);
-    if (idx == m_dispatchIdx) {
-      m_listeners[idx] = std::move(m_listeners.back());
-      m_listeners.pop_back();  // <- must not modify the origin
-      idx--;  // may underflow, but unsigned underflow is not UB.
-    } else if (idx > m_dispatchIdx) {
-      m_listeners[idx] = std::move(m_listeners.back());
-      m_listeners.pop_back();  // <- must not modify the origin
+      state->listeners.insert(position, entry);
+      ++state->activeListenerCount;
     } else {
-      m_listeners[idx] = std::move(m_listeners[m_dispatchIdx]);
-      m_listeners[m_dispatchIdx] = std::move(m_listeners.back());
-      m_dispatchIdx--;
+      // The new listener remains invisible until the outermost dispatch has
+      // completed, including to nested dispatches.
+      state->listeners.push_back(entry);
+      state->dirty = true;
     }
 
-    return true;
+    return make_handle(state, id);
   }
 
-  bool empty() const { return m_listeners.empty(); }
+  bool removeListener(EventListenerHandle &handle) noexcept {
+    return release_handle(handle, m_state);
+  }
 
- public:
-  Container m_listeners;
-  std::ptrdiff_t m_dispatchIdx;
+  [[nodiscard]] bool empty() const noexcept {
+    State *state = m_state;
+    assert(state != nullptr);
+
+    std::lock_guard lock{state->mutex};
+
+    return std::none_of(state->listeners.begin(), state->listeners.end(),
+                        [](const Entry &entry) { return entry.connected; });
+  }
+
+private:
+  static State *make_state(A &allocator) {
+    State *state = AllocatorTraits::template allocate<State>(allocator);
+
+    assert(state != nullptr);
+
+    return std::construct_at(state, allocator);
+  }
+
+  State *m_state;
 };
 
-template <events::Event E, Allocator A>
+template <events::Event E, Allocator A = strobe::Mallocator>
 using SharedEventDispatcher = SharedBlock<EventDispatcher<E, A>, A>;
 
-}  // namespace strobe
+} // namespace strobe

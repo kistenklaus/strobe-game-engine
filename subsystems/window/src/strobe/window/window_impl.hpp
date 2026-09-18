@@ -143,9 +143,7 @@ public:
     return current;
   }
 
-  GLFWwindow* ptr() noexcept {
-    return m_window;
-  }
+  GLFWwindow *ptr() noexcept { return m_window; }
 
 private:
   static void close_callback(GLFWwindow *window) {
@@ -161,28 +159,26 @@ private:
     win->m_state.size.store(
         uvec2(static_cast<unsigned int>(w), static_cast<unsigned int>(h)),
         std::memory_order_relaxed);
-  }
 
-  static void framebuffer_resize_callback(GLFWwindow *window, int w, int h) {
-    auto win = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
-    assert(w >= 0);
-    assert(h >= 0);
-    win->m_state.fb_size.store(
-        uvec2(static_cast<unsigned int>(w), static_cast<unsigned int>(h)),
-        std::memory_order_relaxed);
-  }
+    static void framebuffer_resize_callback(GLFWwindow * window, int w, int h) {
+      auto win = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
+      assert(w >= 0);
+      assert(h >= 0);
+      win->m_state.fb_size.store(
+          uvec2(static_cast<unsigned int>(w), static_cast<unsigned int>(h)),
+          std::memory_order_relaxed);
+    }
 
+  private:
+    details::SyncWindowState m_state;
+    details::WindowStateSnapshot m_snapshot;
 
-private:
-  details::SyncWindowState m_state;
-  details::WindowStateSnapshot m_snapshot;
+    GLFWwindow *m_window;
 
-  GLFWwindow *m_window;
-
-  // more state
-  uint8_t m_resizable : 1 = false;
-  uint8_t m_visible : 1 = false;
-  uint8_t m_floating : 1 = true;
-};
+    // more state
+    uint8_t m_resizable : 1 = false;
+    uint8_t m_visible : 1 = false;
+    uint8_t m_floating : 1 = true;
+  };
 
 } // namespace strobe::window

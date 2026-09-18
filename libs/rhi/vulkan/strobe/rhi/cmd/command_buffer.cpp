@@ -139,10 +139,8 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
         .storeOp = to_vk_attachment_store_op(attachment.storeOp),
         .clearValue = to_vk_clear_value(attachment.clearValue),
     };
-    minExtent.x() =
-        std::min(minExtent.x(), attachment.view.image().extent().x());
-    minExtent.y() =
-        std::min(minExtent.y(), attachment.view.image().extent().y());
+    minExtent.x() = std::min(minExtent.x(), attachment.view.extent().x());
+    minExtent.y() = std::min(minExtent.y(), attachment.view.extent().y());
   }
 
   std::optional<VkRenderingAttachmentInfo> depthAttachment{};
@@ -166,10 +164,8 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
         .storeOp = to_vk_attachment_store_op(attachment.storeOp),
         .clearValue = to_vk_clear_value(attachment.clearValue),
     };
-    minExtent.x() =
-        std::min(minExtent.x(), attachment.view.image().extent().x());
-    minExtent.y() =
-        std::min(minExtent.y(), attachment.view.image().extent().y());
+    minExtent.x() = std::min(minExtent.x(), attachment.view.extent().x());
+    minExtent.y() = std::min(minExtent.y(), attachment.view.extent().y());
   }
 
   std::optional<VkRenderingAttachmentInfo> stencilAttachment{};
@@ -193,10 +189,8 @@ void CommandBuffer::begin_rendering(const RenderingInfo &info) noexcept {
         .storeOp = to_vk_attachment_store_op(attachment.storeOp),
         .clearValue = to_vk_clear_value(attachment.clearValue),
     };
-    minExtent.x() =
-        std::min(minExtent.x(), attachment.view.image().extent().x());
-    minExtent.y() =
-        std::min(minExtent.y(), attachment.view.image().extent().y());
+    minExtent.x() = std::min(minExtent.x(), attachment.view.extent().x());
+    minExtent.y() = std::min(minExtent.y(), attachment.view.extent().y());
   }
 
   Rect renderArea = info.renderArea;

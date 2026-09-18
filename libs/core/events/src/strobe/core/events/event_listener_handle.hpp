@@ -1,78 +1,125 @@
 #pragma once
 
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <mutex>
 #include <utility>
 
-#include "strobe/core/events/event_listener.hpp"
 namespace strobe {
 
 namespace events::details {
-class IEventDispatcher;
+
+struct EventDispatcherState {
+  using ListenerId = std::uint64_t;
+
+  using DisconnectFunction = bool (*)(EventDispatcherState *,
+                                      ListenerId) noexcept;
+
+  using DestroyFunction = void (*)(EventDispatcherState *) noexcept;
+
+  EventDispatcherState(DisconnectFunction disconnect,
+                       DestroyFunction destroy) noexcept
+      : disconnect(disconnect), destroy(destroy) {}
+
+  EventDispatcherState(const EventDispatcherState &) = delete;
+  EventDispatcherState &operator=(const EventDispatcherState &) = delete;
+
+  void add_reference() noexcept {
+    references.fetch_add(1, std::memory_order_relaxed);
+  }
+
+  void release_reference() noexcept {
+    if (references.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      destroy(this);
+    }
+  }
+
+  std::atomic<std::size_t> references{1};
+
+  // Recursive so a callback may unregister itself or perform a nested
+  // dispatch through the same dispatcher.
+  std::recursive_mutex mutex;
+
+  bool alive = true;
+
+  DisconnectFunction disconnect;
+  DestroyFunction destroy;
 };
 
+class IEventDispatcher;
+
+} // namespace events::details
+
 class EventListenerHandle {
- public:
-  friend events::details::IEventDispatcher;
-  using UnregisterCallback = void (*)(void* userData,
-                                      events::EventListenerId id);
+public:
+  EventListenerHandle() noexcept = default;
 
-  EventListenerHandle()
-      : m_id(), m_unregisterUserData(nullptr), m_unregisterCallback(nullptr) {}
+  ~EventListenerHandle() noexcept { release(); }
 
-  ~EventListenerHandle() { release(); }
+  EventListenerHandle(const EventListenerHandle &) = delete;
+  EventListenerHandle &operator=(const EventListenerHandle &) = delete;
 
-  EventListenerHandle(const EventListenerHandle&) = delete;
-  EventListenerHandle& operator=(const EventListenerHandle&) = delete;
+  EventListenerHandle(EventListenerHandle &&other) noexcept
+      : m_state(std::exchange(other.m_state, nullptr)),
+        m_id(std::exchange(other.m_id, 0)) {}
 
-  EventListenerHandle(EventListenerHandle&& o)
-      : m_id(o.m_id),
-        m_unregisterUserData(std::exchange(o.m_unregisterUserData, nullptr)),
-        m_unregisterCallback(std::exchange(o.m_unregisterCallback, nullptr)) {}
-
-  EventListenerHandle& operator=(EventListenerHandle&& o) {
-    if (this == &o) {
+  EventListenerHandle &operator=(EventListenerHandle &&other) noexcept {
+    if (this == &other) {
       return *this;
     }
+
     release();
-    m_id = o.m_id;
-    m_unregisterUserData = std::exchange(o.m_unregisterUserData, nullptr);
-    m_unregisterCallback = std::exchange(o.m_unregisterCallback, nullptr);
+
+    m_state = std::exchange(other.m_state, nullptr);
+    m_id = std::exchange(other.m_id, 0);
+
     return *this;
   }
 
-  events::EventListenerId detach() {
-    m_unregisterUserData = nullptr;
-    m_unregisterCallback = nullptr;
-    return std::move(m_id);
+  [[nodiscard]] explicit operator bool() const noexcept {
+    return m_state != nullptr;
   }
 
-  void release() {
-    if (m_unregisterCallback != nullptr) {
-      m_unregisterCallback(m_unregisterUserData, m_id);
-      m_unregisterCallback = nullptr;
-      m_unregisterUserData = nullptr;
-      m_id = {};
+  bool release() noexcept { return release_from(nullptr); }
+
+private:
+  friend events::details::IEventDispatcher;
+
+  using State = events::details::EventDispatcherState;
+  using ListenerId = State::ListenerId;
+
+  EventListenerHandle(State *state, ListenerId id) noexcept
+      : m_state(state), m_id(id) {
+    m_state->add_reference();
+  }
+
+  bool release_from(State *expectedState) noexcept {
+    if (m_state == nullptr ||
+        (expectedState != nullptr && m_state != expectedState)) {
+      return false;
     }
+
+    State *state = std::exchange(m_state, nullptr);
+    const ListenerId id = std::exchange(m_id, 0);
+
+    bool disconnected = false;
+
+    {
+      std::lock_guard lock{state->mutex};
+
+      if (state->alive) {
+        disconnected = state->disconnect(state, id);
+      }
+    }
+
+    state->release_reference();
+
+    return disconnected;
   }
 
-  // NOTE: this function will deferr the destruction (unregister/release) to
-  // another object. A deferred callback MUST call
-  // eventDispatcher.removeListener directly with the handle!
-  void deferr(void* deferredUserData, UnregisterCallback deferredCallback) {
-    m_unregisterUserData = deferredUserData;
-    m_unregisterCallback = deferredCallback;
-  }
-
- public:
-  explicit EventListenerHandle(events::EventListenerId id,
-                               void* unregisterUserData,
-                               UnregisterCallback unregisterCallback)
-      : m_id(id),
-        m_unregisterUserData(unregisterUserData),
-        m_unregisterCallback(unregisterCallback) {}
-
-  events::EventListenerId m_id;
-  void* m_unregisterUserData;
-  UnregisterCallback m_unregisterCallback;
+  State *m_state = nullptr;
+  ListenerId m_id = 0;
 };
 
-}  // namespace strobe
+} // namespace strobe

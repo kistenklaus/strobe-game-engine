@@ -37,7 +37,8 @@ include(cmake/embed_slang_spirv.cmake)
 
 add_subdirectory(libs/core)
 
-add_subdirectory(subsystems/platform)
+add_subdirectory(libs/platform)
+# add_subdirectory(subsystems/platform)
 add_subdirectory(libs/rhi)
 add_subdirectory(libs/imgui)
 

@@ -1,23 +1,23 @@
 #pragma once
 
 #include "event_listener_handle.hpp"
+
 namespace strobe::events::details {
 
 class IEventDispatcher {
- protected:
-  EventListenerHandle makeHandle(
-      EventListenerId id, void* userData,
-      EventListenerHandle::UnregisterCallback unregisterCallback) {
-    return EventListenerHandle(id, userData, unregisterCallback);
+protected:
+  using State = EventDispatcherState;
+  using ListenerId = State::ListenerId;
+
+  static EventListenerHandle make_handle(State *state,
+                                         ListenerId id) noexcept {
+    return EventListenerHandle(state, id);
   }
 
-  template <events::Event E>
-  EventListenerHandle makeHandle(
-      const EventListenerRef<E>& ref, void* userData,
-      EventListenerHandle::UnregisterCallback unregisterCallback) {
-    return EventListenerHandle(EventListenerId(ref), userData,
-                               unregisterCallback);
+  static bool release_handle(EventListenerHandle &handle,
+                             State *expectedState) noexcept {
+    return handle.release_from(expectedState);
   }
 };
 
-}  // namespace strobe::events::details
+} // namespace strobe::events::details
