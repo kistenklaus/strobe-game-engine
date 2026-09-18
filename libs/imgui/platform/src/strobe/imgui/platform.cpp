@@ -23,33 +23,29 @@ struct PlatformImpl;
 static void create_window(ImGuiViewport *viewport);
 
 static void destroy_window(ImGuiViewport *viewport) {
+  fmt::println("destroy-window");
   assert(viewport);
   assert(viewport->PlatformUserData);
-
   auto *impl = static_cast<platform::Viewport *>(viewport->PlatformUserData);
-
   delete impl;
-
   viewport->PlatformUserData = nullptr;
   viewport->PlatformHandle = nullptr;
   viewport->PlatformHandleRaw = nullptr;
 }
 
 static void show_window(ImGuiViewport *viewport) {
+  fmt::println("show-window");
   assert(viewport);
-
   auto *impl = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(impl);
-
   impl->window->visible(true);
 }
 
 static void set_window_pos(ImGuiViewport *viewport, ImVec2 pos) {
+  fmt::println("set-window-pos");
   assert(viewport);
-
   auto *impl = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(impl);
-
   impl->window->position(ivec2{
       static_cast<int32_t>(std::round(pos.x)),
       static_cast<int32_t>(std::round(pos.y)),
@@ -57,13 +53,11 @@ static void set_window_pos(ImGuiViewport *viewport, ImVec2 pos) {
 }
 
 static ImVec2 get_window_pos(ImGuiViewport *viewport) {
+  fmt::println("get-window-pos");
   assert(viewport);
-
   auto *impl = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(impl);
-
   const ivec2 pos = impl->window->position();
-
   return ImVec2{
       static_cast<float>(pos.x()),
       static_cast<float>(pos.y()),
@@ -71,11 +65,10 @@ static ImVec2 get_window_pos(ImGuiViewport *viewport) {
 }
 
 static void set_window_size(ImGuiViewport *viewport, ImVec2 size) {
+  fmt::println("set-window-size");
   assert(viewport);
-
   auto *impl = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(impl);
-
   impl->window->size(uvec2{
       static_cast<uint32_t>(std::round(size.x)),
       static_cast<uint32_t>(std::round(size.y)),
@@ -83,13 +76,11 @@ static void set_window_size(ImGuiViewport *viewport, ImVec2 size) {
 }
 
 static ImVec2 get_window_size(ImGuiViewport *viewport) {
+  fmt::println("get-window-size");
   assert(viewport);
-
   auto *impl = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(impl);
-
   const uvec2 size = impl->window->size();
-
   return ImVec2{
       static_cast<float>(size.x()),
       static_cast<float>(size.y()),
@@ -97,48 +88,43 @@ static ImVec2 get_window_size(ImGuiViewport *viewport) {
 }
 
 static void set_window_focus(ImGuiViewport *viewport) {
+  fmt::println("set-window-focus");
   assert(viewport);
-
   auto *impl = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(impl);
-
   impl->window->focus();
 }
 
 static bool get_window_focus(ImGuiViewport *viewport) {
+  fmt::println("get-window-focus");
   assert(viewport);
-
   auto *impl = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(impl);
-
   return impl->window->focused();
 }
 
 static bool get_window_minimized(ImGuiViewport *viewport) {
+  fmt::println("get-window-minimized");
   assert(viewport);
-
   auto *impl = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(impl);
-
   return impl->window->minimized();
 }
 
 static void set_window_title(ImGuiViewport *viewport, const char *title) {
+  fmt::println("set-window-title");
   assert(viewport);
   assert(title);
-
   auto *impl = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(impl);
-
   impl->window->title(title);
 }
 
 static void set_window_alpha(ImGuiViewport *viewport, float alpha) {
+  fmt::println("set-window-alpha");
   assert(viewport);
-
   auto *impl = static_cast<platform::Viewport *>(viewport->PlatformUserData);
   assert(impl);
-
   impl->window->opacity(alpha);
 }
 
@@ -219,28 +205,23 @@ struct PlatformImpl {
 
 static void monitor_callback(void *ptr,
                              const strobe::platform::MonitorEvent &) noexcept {
+  fmt::println("monitor-callback");
   assert(ptr);
-
   auto *impl = static_cast<PlatformImpl *>(ptr);
-
   impl->monitorsDirty.store(true, std::memory_order_release);
 }
 
 static void create_window(ImGuiViewport *viewport) {
+  fmt::println("create-window");
   assert(viewport);
-
   auto &io = ImGui::GetIO();
-
   auto *impl = static_cast<PlatformImpl *>(io.BackendPlatformUserData);
   assert(impl);
-
   const uvec2 size{
       static_cast<uint32_t>(std::round(viewport->Size.x)),
       static_cast<uint32_t>(std::round(viewport->Size.y)),
   };
-
   auto *view = new platform::Viewport{size, "", impl->io, &impl->ioMutex};
-
   viewport->PlatformUserData = view;
   viewport->PlatformHandle = view->window->window_ptr();
 }

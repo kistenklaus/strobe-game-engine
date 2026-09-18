@@ -38,16 +38,11 @@ include(cmake/embed_slang_spirv.cmake)
 add_subdirectory(libs/core)
 
 add_subdirectory(libs/platform)
-# add_subdirectory(subsystems/platform)
 add_subdirectory(libs/rhi)
 add_subdirectory(libs/imgui)
 
-add_subdirectory(subsystems/window)
-add_subdirectory(subsystems/input)
-add_subdirectory(subsystems/ecs)
-# add_subdirectory(subsystems/assets)
 
-add_subdirectory(sandbox)
+# add_subdirectory(sandbox)
 if (STROBE_BUILD_DOCS)
   add_subdirectory(docs)
 endif()

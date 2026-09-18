@@ -16,7 +16,7 @@ int main() {
   window.resizable(true);
 
   rhi::Device device = rhi::create_device({
-      .debug_utils = false,
+      .debug_utils = true,
   });
 
   rhi::Queue queue = device.get_queue();
@@ -63,10 +63,6 @@ int main() {
         platform.new_frame();
       }
 
-      {
-        ZoneScopedN("ImGui::NewFrame");
-      }
-
       ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(),
                                    ImGuiDockNodeFlags_None);
 
@@ -78,12 +74,16 @@ int main() {
         ZoneScopedN("ImGui::Render");
         ImGui::Render();
       }
+
       auto *drawData = ImGui::GetDrawData();
+
+
+
 
       rhi::CommandBuffer cmd = cmdpool.alloc();
       cmd.begin();
 
-      platform::run([]() { ImGui::UpdatePlatformWindows(); });
+      ImGui::UpdatePlatformWindows();
 
       renderer.render(cmd, drawData, image.view());
 

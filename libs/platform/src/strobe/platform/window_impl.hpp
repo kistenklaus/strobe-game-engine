@@ -17,13 +17,12 @@ public:
       glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
       glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
       glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-      glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
+      glfwWindowHint(GLFW_FLOATING, GLFW_FALSE);
 
       GLFWwindow *window =
           glfwCreateWindow(size.x(), size.y(), title, nullptr, nullptr);
       assert(window);
 
-      glfwHideWindow(window);
       glfwSetWindowUserPointer(window, this);
 
       glfwSetWindowPosCallback(window, glfw_window_position_callback);
