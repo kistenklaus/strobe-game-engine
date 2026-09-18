@@ -5,22 +5,29 @@
 #include "strobe/core/lina/vec.hpp"
 #include "strobe/platform/window_events.hpp"
 #include "strobe/platform/window_events_utils.hpp"
+#include "strobe/platform/window_info.hpp"
 #include <GLFW/glfw3.h>
 #include <strobe/platform.hpp>
+#include <tracy/Tracy.hpp>
 
 namespace strobe::platform {
 
 struct WindowImpl {
 public:
-  explicit WindowImpl(uvec2 size, const char *title) {
+  explicit WindowImpl(const WindowInfo &info) {
     m_window = platform::run([&] {
       glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-      glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-      glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-      glfwWindowHint(GLFW_FLOATING, GLFW_FALSE);
 
-      GLFWwindow *window =
-          glfwCreateWindow(size.x(), size.y(), title, nullptr, nullptr);
+      glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+      glfwWindowHint(GLFW_FOCUSED, info.focus ? GLFW_TRUE : GLFW_FALSE);
+      glfwWindowHint(GLFW_FOCUS_ON_SHOW,
+                     info.focusOnShow ? GLFW_TRUE : GLFW_FALSE);
+      glfwWindowHint(GLFW_RESIZABLE, info.resizable ? GLFW_TRUE : GLFW_FALSE);
+      glfwWindowHint(GLFW_DECORATED, info.decorated ? GLFW_TRUE : GLFW_FALSE);
+      glfwWindowHint(GLFW_FLOATING, info.floating ? GLFW_TRUE : GLFW_FALSE);
+
+      GLFWwindow *window = glfwCreateWindow(info.size.x(), info.size.y(),
+                                            info.title, nullptr, nullptr);
       assert(window);
 
       glfwSetWindowUserPointer(window, this);
@@ -58,8 +65,8 @@ public:
   // Close flag
   bool should_close() const noexcept {
     GLFWwindow *window = m_window;
-
     return platform::run([window] noexcept {
+      ZoneScopedN("glfwWindowShouldClose");
       return glfwWindowShouldClose(window) != GLFW_FALSE;
     });
   }
@@ -68,6 +75,7 @@ public:
     GLFWwindow *window = m_window;
 
     platform::run([window, value] noexcept {
+      ZoneScopedN("glfwSetWindowShouldClose");
       glfwSetWindowShouldClose(window, value ? GLFW_TRUE : GLFW_FALSE);
     });
   }
@@ -76,8 +84,10 @@ public:
   void title(const char *title) noexcept {
     GLFWwindow *window = m_window;
 
-    platform::run(
-        [window, title] noexcept { glfwSetWindowTitle(window, title); });
+    platform::run([window, title] noexcept {
+      ZoneScopedN("glfwSetWindowTitle");
+      glfwSetWindowTitle(window, title);
+    });
   }
 
   // Geometry
@@ -85,6 +95,7 @@ public:
     GLFWwindow *window = m_window;
 
     return platform::run([window] noexcept {
+      ZoneScopedN("glfwGetWindowPos");
       int x;
       int y;
 
@@ -98,6 +109,7 @@ public:
     GLFWwindow *window = m_window;
 
     platform::run([window, position] noexcept {
+      ZoneScopedN("glfwSetWindowPos");
       glfwSetWindowPos(window, position.x(), position.y());
     });
   }
@@ -106,6 +118,7 @@ public:
     GLFWwindow *window = m_window;
 
     return platform::run([window] noexcept {
+      ZoneScopedN("glfwGetWindowSize");
       int width;
       int height;
 
@@ -122,6 +135,7 @@ public:
     GLFWwindow *window = m_window;
 
     platform::run([window, size] noexcept {
+      ZoneScopedN("glfwSetWindowSize");
       glfwSetWindowSize(window, static_cast<int>(size.x()),
                         static_cast<int>(size.y()));
     });
@@ -131,6 +145,7 @@ public:
     GLFWwindow *window = m_window;
 
     return platform::run([window] noexcept {
+      ZoneScopedN("glfwGetFramebufferSize");
       int width;
       int height;
 
@@ -147,6 +162,7 @@ public:
     GLFWwindow *window = m_window;
 
     return platform::run([window] noexcept {
+      ZoneScopedN("glfwGetWindowContentScale");
       float x;
       float y;
 
@@ -164,8 +180,10 @@ public:
 
     platform::run([window, value] noexcept {
       if (value) {
+        ZoneScopedN("glfwShowWindow");
         glfwShowWindow(window);
       } else {
+        ZoneScopedN("glfwHideWindow");
         glfwHideWindow(window);
       }
     });
@@ -390,6 +408,7 @@ private:
     GLFWwindow *window = m_window;
 
     return platform::run([window, attribute] noexcept {
+      ZoneScopedN("glfwGetWindowAttrib");
       return glfwGetWindowAttrib(window, attribute) != GLFW_FALSE;
     });
   }
@@ -398,12 +417,14 @@ private:
     GLFWwindow *window = m_window;
 
     platform::run([window, attribute, value] noexcept {
+      ZoneScopedN("glfwSetWindowAttrib");
       glfwSetWindowAttrib(window, attribute, value ? GLFW_TRUE : GLFW_FALSE);
     });
   }
 
   static void glfw_window_position_callback(GLFWwindow *window, int x,
                                             int y) noexcept {
+    ZoneScopedN("window-position-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_windowPosDispatcher.dispatch({x, y});
@@ -411,18 +432,21 @@ private:
 
   static void glfw_window_size_callback(GLFWwindow *window, int width,
                                         int height) noexcept {
+    ZoneScopedN("window-size-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_windowSizeDispatcher.dispatch({width, height});
   }
 
   static void glfw_window_close_callback(GLFWwindow *window) noexcept {
+    ZoneScopedN("window-close-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_windowCloseDispatcher.dispatch({});
   }
 
   static void glfw_window_refresh_callback(GLFWwindow *window) noexcept {
+    ZoneScopedN("window-refresh-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_windowRefreshDispatcher.dispatch({});
@@ -430,6 +454,7 @@ private:
 
   static void glfw_window_focus_callback(GLFWwindow *window,
                                          int focused) noexcept {
+    ZoneScopedN("window-focus-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_windowFocusDispatcher.dispatch(focused != GLFW_FALSE);
@@ -437,6 +462,7 @@ private:
 
   static void glfw_window_iconify_callback(GLFWwindow *window,
                                            int iconified) noexcept {
+    ZoneScopedN("window-iconfiy-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_windowIconifyDispatcher.dispatch(iconified != GLFW_FALSE);
@@ -444,6 +470,7 @@ private:
 
   static void glfw_window_maximize_callback(GLFWwindow *window,
                                             int maximized) noexcept {
+    ZoneScopedN("window-maximize-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_windowMaximizeDispatcher.dispatch(maximized != GLFW_FALSE);
@@ -451,6 +478,7 @@ private:
 
   static void glfw_framebuffer_size_callback(GLFWwindow *window, int width,
                                              int height) noexcept {
+    ZoneScopedN("framebuffer-size-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_framebufferSizeDispatcher.dispatch({width, height});
@@ -459,6 +487,7 @@ private:
   static void glfw_window_content_scale_callback(GLFWwindow *window,
                                                  float xscale,
                                                  float yscale) noexcept {
+    ZoneScopedN("window-content-scale-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_windowContentScaleDispatcher.dispatch({xscale, yscale});
@@ -466,6 +495,7 @@ private:
 
   static void glfw_key_callback(GLFWwindow *window, int key, int scancode,
                                 int action, int mods) noexcept {
+    ZoneScopedN("key-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_keyDispatcher.dispatch({
@@ -478,6 +508,7 @@ private:
 
   static void glfw_character_callback(GLFWwindow *window,
                                       unsigned int codepoint) noexcept {
+    ZoneScopedN("character-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_charDispatcher.dispatch(static_cast<char32_t>(codepoint));
@@ -486,6 +517,7 @@ private:
   static void glfw_character_mods_callback(GLFWwindow *window,
                                            unsigned int codepoint,
                                            int mods) noexcept {
+    ZoneScopedN("character-mods-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_charModDispatcher.dispatch({
@@ -496,6 +528,7 @@ private:
 
   static void glfw_cursor_position_callback(GLFWwindow *window, double xpos,
                                             double ypos) noexcept {
+    ZoneScopedN("cursor-position-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_cursorPosDispatcher.dispatch({xpos, ypos});
@@ -503,6 +536,7 @@ private:
 
   static void glfw_cursor_enter_callback(GLFWwindow *window,
                                          int entered) noexcept {
+    ZoneScopedN("cursor-enter-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_cursorEnterDispatcher.dispatch(entered != GLFW_FALSE);
@@ -510,6 +544,7 @@ private:
 
   static void glfw_mouse_button_callback(GLFWwindow *window, int button,
                                          int action, int mods) noexcept {
+    ZoneScopedN("mouse-button-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_mouseButtonDispatcher.dispatch({
@@ -521,6 +556,7 @@ private:
 
   static void glfw_scroll_callback(GLFWwindow *window, double xoffset,
                                    double yoffset) noexcept {
+    ZoneScopedN("scroll-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_scrollDispatcher.dispatch({xoffset, yoffset});
@@ -528,6 +564,7 @@ private:
 
   static void glfw_drop_callback(GLFWwindow *window, int count,
                                  const char **paths) noexcept {
+    ZoneScopedN("drop-callback");
     auto *self = static_cast<WindowImpl *>(glfwGetWindowUserPointer(window));
 
     self->m_dropDispatcher.dispatch({

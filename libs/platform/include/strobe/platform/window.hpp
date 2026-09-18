@@ -4,6 +4,7 @@
 #include "strobe/core/events/event_listener_handle.hpp"
 #include "strobe/core/lina/vec.hpp"
 #include "strobe/platform/window_events.hpp"
+#include "strobe/platform/window_info.hpp"
 
 #include <GLFW/glfw3.h>
 #include <cstdint>
@@ -12,7 +13,7 @@ namespace strobe::platform {
 
 class Window {
 public:
-  Window(uvec2 size, const char *name) noexcept;
+  Window(const WindowInfo &info) noexcept;
   Window(const Window &) = delete;
   Window(Window &&other) noexcept;
   Window &operator=(const Window &) = delete;

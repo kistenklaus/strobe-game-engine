@@ -17,7 +17,9 @@ public:
                        std::mutex *ioMutex) noexcept
       : m_io(io), m_ioMutex(ioMutex), m_size(window->size()),
         m_framebufferSize(window->framebuffer_size()),
-        m_shouldClose(window->should_close()),
+        m_shouldClose(window->should_close()), m_focused(window->focused()),
+        m_pos(window->position()), m_minimized(window->minimized()),
+        m_positionChanged(false), m_sizeChanged(false),
         m_focusListener(window->add_window_focus_listener(
             EventListenerRef<strobe::platform::WindowFocusEvent>::
                 fromMemberFunction<WindowState, &WindowState::on_focus>(this))),
@@ -30,7 +32,13 @@ public:
                                    &WindowState::on_framebuffer_size>(this))),
         m_closeListener(window->add_window_close_listener(
             EventListenerRef<strobe::platform::WindowCloseEvent>::
-                fromMemberFunction<WindowState, &WindowState::on_close>(
+                fromMemberFunction<WindowState, &WindowState::on_close>(this))),
+        m_posListener(window->add_window_position_listener(
+            EventListenerRef<strobe::platform::WindowPositionEvent>::
+                fromMemberFunction<WindowState, &WindowState::on_pos>(this))),
+        m_iconifyListener(window->add_window_iconify_listener(
+            EventListenerRef<strobe::platform::WindowIconifyEvent>::
+                fromMemberFunction<WindowState, &WindowState::on_iconify>(
                     this))) {}
 
   ~WindowState() noexcept {
@@ -38,6 +46,8 @@ public:
     m_sizeListener.release();
     m_framebufferSizeListener.release();
     m_closeListener.release();
+    m_posListener.release();
+    m_iconifyListener.release();
   }
 
   [[nodiscard]] uvec2 size() const noexcept {
@@ -67,8 +77,29 @@ public:
     return m_shouldClose.load(std::memory_order_relaxed);
   }
 
+  [[nodiscard]] bool focused() const noexcept {
+    return m_focused.load(std::memory_order_relaxed);
+  }
+
+  [[nodiscard]] ivec2 pos() const noexcept {
+    return m_pos.load(std::memory_order_relaxed);
+  }
+
+  [[nodiscard]] bool minimized() const noexcept {
+    return m_minimized.load(std::memory_order_relaxed);
+  }
+
+  bool consume_pos_changed() noexcept {
+    return m_positionChanged.exchange(false, std::memory_order_acquire);
+  }
+
+  bool consume_size_changed() noexcept {
+    return m_sizeChanged.exchange(false, std::memory_order_acquire);
+  }
+
 private:
   void on_focus(const strobe::platform::WindowFocusEvent &event) noexcept {
+    m_focused.store(event.focused(), std::memory_order_relaxed);
     std::lock_guard lock{*m_ioMutex};
     m_io->AddFocusEvent(event.focused());
   }
@@ -77,6 +108,7 @@ private:
     m_size.store(uvec2{static_cast<uint32_t>(event.width()),
                        static_cast<uint32_t>(event.height())},
                  std::memory_order_relaxed);
+    m_sizeChanged.store(true, std::memory_order_release);
   }
 
   void on_framebuffer_size(
@@ -90,6 +122,15 @@ private:
     m_shouldClose.store(true, std::memory_order_relaxed);
   }
 
+  void on_pos(const strobe::platform::WindowPositionEvent &event) noexcept {
+    m_pos.store(ivec2{event.x(), event.y()}, std::memory_order_relaxed);
+    m_positionChanged.store(true, std::memory_order_release);
+  }
+
+  void on_iconify(const strobe::platform::WindowIconifyEvent &event) noexcept {
+    m_minimized.store(event.iconified(), std::memory_order_relaxed);
+  }
+
 private:
   ImGuiIO *m_io;
   std::mutex *m_ioMutex;
@@ -97,11 +138,19 @@ private:
   std::atomic<uvec2> m_size;
   std::atomic<uvec2> m_framebufferSize;
   std::atomic<bool> m_shouldClose;
+  std::atomic<bool> m_focused;
+  std::atomic<ivec2> m_pos;
+  std::atomic<bool> m_minimized;
+
+  std::atomic<bool> m_positionChanged;
+  std::atomic<bool> m_sizeChanged;
 
   EventListenerHandle m_focusListener;
   EventListenerHandle m_sizeListener;
   EventListenerHandle m_framebufferSizeListener;
   EventListenerHandle m_closeListener;
+  EventListenerHandle m_posListener;
+  EventListenerHandle m_iconifyListener;
 };
 
 } // namespace strobe::imgui::platform

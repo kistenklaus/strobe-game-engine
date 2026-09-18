@@ -15,9 +15,14 @@ public:
   platform::Mouse mouse;
   platform::WindowState windowState;
 
-  explicit Viewport(uvec2 size, const char *name, ImGuiIO *io,
-                    std::mutex *ioMutex) noexcept
-      : m_owned_window(strobe::platform::Window{size, name}),
+  explicit Viewport(uvec2 size, const char *name, bool decorated, bool topMost,
+                    ImGuiIO *io, std::mutex *ioMutex) noexcept
+      : m_owned_window(strobe::platform::Window{{
+            .size = size,
+            .title = name,
+            .decorated = decorated,
+            .floating = topMost,
+        }}),
         window(&m_owned_window.value()), keyboard(window, io, ioMutex),
         mouse(window, io, ioMutex), windowState(window, io, ioMutex) {}
 

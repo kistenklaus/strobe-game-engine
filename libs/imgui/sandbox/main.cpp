@@ -7,16 +7,20 @@
 #include "strobe/platform/window.hpp"
 #include "strobe/rhi/objects/swapchain_image.hpp"
 #include "strobe/rhi/rhi.hpp"
+#include <common/TracySystem.hpp>
 #include <fmt/printf.h>
 
 using namespace strobe;
 
 int main() {
-  platform::Window window{uvec2(800, 600), "FLOATING"};
+
+  tracy::SetThreadName("main");
+
+  platform::Window window{{.size = uvec2(800, 600), .title = "FLOATING"}};
   window.resizable(true);
 
   rhi::Device device = rhi::create_device({
-      .debug_utils = true,
+      .debug_utils = false,
   });
 
   rhi::Queue queue = device.get_queue();
@@ -76,9 +80,6 @@ int main() {
       }
 
       auto *drawData = ImGui::GetDrawData();
-
-
-
 
       rhi::CommandBuffer cmd = cmdpool.alloc();
       cmd.begin();

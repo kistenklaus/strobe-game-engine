@@ -5,6 +5,7 @@
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <common/TracySystem.hpp>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -14,6 +15,7 @@
 #include <mutex>
 #include <semaphore>
 #include <thread>
+#include <tracy/Tracy.hpp>
 
 extern "C" int __real_main(int argc, char **argv);
 
@@ -148,6 +150,7 @@ void close_executor() noexcept {
 }
 
 int platform_main(int argc, char **argv) {
+  tracy::SetThreadName("platform");
   assert(g_executorState.load(std::memory_order_relaxed) ==
          ExecutorState::inactive);
   g_platformThread = std::this_thread::get_id();
@@ -215,5 +218,12 @@ void run(ExecuteFunction execute, void *userdata) noexcept {
 } // namespace strobe::platform::detail
 
 extern "C" int __wrap_main(int argc, char **argv) {
+  // #ifdef STROBE_TRACY
+  //   fmt::println("waiting for tracy");
+  //   while (!TracyIsConnected) {
+  //     std::this_thread::yield();
+  //   }
+  //   fmt::println("tracy connected");
+  // #endif
   return strobe::platform::detail::platform_main(argc, argv);
 }

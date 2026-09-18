@@ -12,6 +12,7 @@ target_include_directories(strobe-platform
 )
 target_link_libraries(strobe-platform
   PUBLIC strobe-core
+  PRIVATE strobe::tracy
 )
 target_link_glfw(strobe-platform PRIVATE)
 
