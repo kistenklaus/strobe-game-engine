@@ -5,6 +5,7 @@
 #include "strobe/rhi/objects/command_pool.hpp"
 #include "strobe/rhi/objects/compute_shader.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
+#include "strobe/rhi/objects/geometry_shader.hpp"
 #include "strobe/rhi/objects/image.hpp"
 #include "strobe/rhi/objects/image_view.hpp"
 #include "strobe/rhi/objects/object.hpp"
@@ -15,10 +16,12 @@
 #include "strobe/rhi/objects/swapchain.hpp"
 #include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
+#include "strobe/rhi/objects/geometry_shader.hpp"
 #include "strobe/rhi/types/blas_info.hpp"
 #include "strobe/rhi/types/buffer_info.hpp"
 #include "strobe/rhi/types/compute_shader_info.hpp"
 #include "strobe/rhi/types/fragment_shader_info.hpp"
+#include "strobe/rhi/types/geometry_shader_info.hpp"
 #include "strobe/rhi/types/image_info.hpp"
 #include "strobe/rhi/types/image_view_info.hpp"
 #include "strobe/rhi/types/memory_lifetime.hpp"
@@ -100,6 +103,17 @@ public:
    * \attention 1. \p info must describe a valid compute shader.
    */
   ComputeShader create_compute_shader(const ComputeShaderInfo &info) noexcept;
+
+  /**
+   * \brief Creates geometry shader.
+   * \code{cpp}
+   * GeometryShader create_geometry_shader(const GeometryShaderInfo& info) noexcept;
+   * \endcode
+   * 
+   * \attention 1. \p info must describe a valid geometry shader.
+   */
+  GeometryShader
+  create_geometry_shader(const GeometryShaderInfo &info) noexcept;
 
   /**
    * \brief Creates swapchain.

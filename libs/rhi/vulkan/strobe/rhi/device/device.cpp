@@ -42,6 +42,14 @@ Device::create_compute_shader(const ComputeShaderInfo &info) noexcept {
                                 &impl->allocs->shaderAlloc);
 }
 
+GeometryShader
+Device::create_geometry_shader(const GeometryShaderInfo &info) noexcept {
+  ZoneScopedN("Device::create_geometry_shader");
+  auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
+  return shader::create_geometry(impl->context, info,
+                                &impl->allocs->shaderAlloc);
+}
+
 Swapchain Device::create_swapchain(const SwapchainInfo &info) noexcept {
   ZoneScopedN("Device::create_swapchain");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);

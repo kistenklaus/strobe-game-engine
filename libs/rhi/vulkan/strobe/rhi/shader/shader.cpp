@@ -53,4 +53,13 @@ ComputeShader create_compute(Context context, const ComputeShaderInfo &info,
       &alloc->shaderAlloc, std::move(context), so));
 }
 
+GeometryShader create_geometry(Context context, const GeometryShaderInfo &info,
+                               handle_allocators *alloc) noexcept {
+  ZoneScopedN("shader/create-geometry");
+  const vulkan::ShaderObject so = create_shader_object(
+      context, ShaderStage::geometry, info.nextStage, info.spirv);
+  return detail::make_object<GeometryShader>(make_void_handle<ShaderObjectImpl>(
+      &alloc->shaderAlloc, std::move(context), so));
+}
+
 } // namespace strobe::rhi::shader

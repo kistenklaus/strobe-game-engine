@@ -5,9 +5,11 @@
 #include "strobe/rhi/objects/compute_shader.hpp"
 #include "strobe/rhi/objects/fragment_shader.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
+#include "strobe/rhi/objects/geometry_shader.hpp"
 #include "strobe/rhi/shader/shader_object_impl.hpp"
 #include "strobe/rhi/types/compute_shader_info.hpp"
 #include "strobe/rhi/types/fragment_shader_info.hpp"
+#include "strobe/rhi/types/geometry_shader_info.hpp"
 #include "strobe/rhi/types/vertex_shader_info.hpp"
 
 namespace strobe::rhi::shader {
@@ -26,5 +28,8 @@ FragmentShader create_fragment(Context context, const FragmentShaderInfo &info,
 
 ComputeShader create_compute(Context context, const ComputeShaderInfo &info,
                              handle_allocators *alloc);
+
+GeometryShader create_geometry(Context context, const GeometryShaderInfo &info,
+                               handle_allocators *alloc) noexcept;
 
 } // namespace strobe::rhi::shader
