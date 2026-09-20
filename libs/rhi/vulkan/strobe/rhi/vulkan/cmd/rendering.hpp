@@ -146,8 +146,7 @@ void cmd_set_sample_mask(const Context *context, CommandBuffer cmd,
                          SampleCount samples, uint64_t mask) noexcept;
 
 void cmd_set_sample_mask(const Context *context, CommandBuffer cmd,
-                         VkSampleCountFlagBits samples,
-                         uint64_t mask) noexcept;
+                         VkSampleCountFlagBits samples, uint64_t mask) noexcept;
 
 void cmd_set_alpha_to_coverage_enable(const Context *context, CommandBuffer cmd,
                                       bool alphaToCoverage) noexcept;
@@ -195,7 +194,9 @@ void cmd_set_alpha_to_one_enable(const Context *context, CommandBuffer cmd,
 void cmd_set_patch_control_points(const Context *context, CommandBuffer cmd,
                                   uint32_t patchControlPoints) noexcept;
 
-void cmd_bind_vertex_buffer(CommandBuffer cmd, BufferOffset buffer) noexcept;
+void cmd_bind_vertex_buffers(CommandBuffer cmd,
+                             span<const BufferOffset> bindings,
+                             uint32_t firstBindings = 0) noexcept;
 
 void cmd_bind_index_buffer(CommandBuffer cmd, BufferOffset buffer,
                            IndexType indexType) noexcept;

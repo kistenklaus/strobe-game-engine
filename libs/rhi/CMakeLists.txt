@@ -10,6 +10,7 @@ option(STROBE_RHI_TRACE_LOCKS "Enable tracy instrumentation locks" ON)
 add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   # strobe::rhi::vulkan
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/cmd/barrier.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/cmd/dispatch.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/cmd/rendering.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/cmd/transfer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/vulkan/context/context.cpp
@@ -143,13 +144,19 @@ target_link_libraries(strobe-rhi-vulkan
 target_link_glfw(strobe-rhi-vulkan PUBLIC)
 
 if (STROBE_TRACY AND STROBE_RHI_TRACE_DEVICE)
-  target_compile_definitions(strobe-rhi-vulkan PRIVATE STROBE_RHI_TRACE_DEVICE=ON)
+  target_compile_definitions(strobe-rhi-vulkan
+    PRIVATE STROBE_RHI_TRACE_DEVICE=ON
+  )
 endif()
 if (STROBE_TRACY AND STROBE_RHI_TRACE_VK)
-  target_compile_definitions(strobe-rhi-vulkan PRIVATE STROBE_RHI_TRACE_VK=ON)
+  target_compile_definitions(strobe-rhi-vulkan
+    PRIVATE STROBE_RHI_TRACE_VK=ON
+  )
 endif()
 if (STROBE_TRACY AND STROBE_RHI_TRACE_LOCKS)
-  target_compile_definitions(strobe-rhi-vulkan PRIVATE STROBE_RHI_TRACE_LOCKS=ON)
+  target_compile_definitions(strobe-rhi-vulkan
+    PRIVATE STROBE_RHI_TRACE_LOCKS=ON
+  )
 endif()
 
 if (STROBE_SAN)
@@ -166,28 +173,10 @@ add_executable(strobe-rhi-sandbox EXCLUDE_FROM_ALL
 target_link_libraries(strobe-rhi-sandbox
   PRIVATE strobe::rhi
   PRIVATE strobe-platform
-  PRIVATE strobe-window
   PRIVATE strobe::tracy
 
   PRIVATE Vulkan::Vulkan
   PRIVATE strobe::vma
 )
 
-
-add_executable(strobe-rhi-rep EXCLUDE_FROM_ALL
-  ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/rep.cpp
-)
-
-target_link_libraries(strobe-rhi-rep
-  PRIVATE strobe::rhi
-  PRIVATE strobe-platform
-  PRIVATE strobe-window
-  PRIVATE strobe::tracy
-
-  PRIVATE Vulkan::Vulkan
-  PRIVATE strobe::vma
-)
-
-target_include_directories(strobe-rhi-rep
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/vulkan
-)
+add_subdirectory(examples/fluid-box)

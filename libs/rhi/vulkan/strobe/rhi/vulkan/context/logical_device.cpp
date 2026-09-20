@@ -4,6 +4,7 @@
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/vulkan/context/create_info.hpp"
+#include <exception>
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <vulkan/vulkan_core.h>
@@ -180,6 +181,21 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
       }
     }
   }
+
+  if (!deviceInfo->features.shaderDemoteToHelperInvocation) {
+    fmt::println(
+        "strobe-rhi requires : vulkan13-shaderDemoteToHelperInvocation "
+        "feature, but it's not available!");
+    std::terminate();
+  }
+  vulkan13.shaderDemoteToHelperInvocation = VK_TRUE;
+
+  if (!deviceInfo->features.shaderDrawParameters) {
+    fmt::println("strobe-rhi requires vulkan11-shaderDrawParameters feature, "
+                 "but it's not available!");
+    std::terminate();
+  }
+  vulkan11.shaderDrawParameters = VK_TRUE;
 
   if (info->timeline_semaphore != disable &&
       deviceInfo->features.timelineSemaphore) {

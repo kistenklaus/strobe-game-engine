@@ -3,8 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
-#include <iostream>
-#include <tuple> // For std::get
+#include <tuple>
 #include <type_traits>
 
 namespace strobe {
@@ -284,9 +283,177 @@ struct vec {
     return std::ranges::equal(this->data, o.data);
   }
   bool operator!=(const vec &o) const noexcept { return !(*this == o); }
+
+  // Unary arithmetic.
+  [[nodiscard]] constexpr vec operator+() const noexcept { return *this; }
+
+  [[nodiscard]] constexpr vec operator-() const noexcept {
+    vec result;
+    for (std::size_t i = 0; i < N; ++i) {
+      result[i] = -data[i];
+    }
+    return result;
+  }
+
+  // Component-wise vector arithmetic.
+  [[nodiscard]] constexpr vec operator+(const vec &rhs) const noexcept {
+    vec result;
+    for (std::size_t i = 0; i < N; ++i) {
+      result[i] = data[i] + rhs[i];
+    }
+    return result;
+  }
+
+  [[nodiscard]] constexpr vec operator-(const vec &rhs) const noexcept {
+    vec result;
+    for (std::size_t i = 0; i < N; ++i) {
+      result[i] = data[i] - rhs[i];
+    }
+    return result;
+  }
+
+  [[nodiscard]] constexpr vec operator*(const vec &rhs) const noexcept {
+    vec result;
+    for (std::size_t i = 0; i < N; ++i) {
+      result[i] = data[i] * rhs[i];
+    }
+    return result;
+  }
+
+  [[nodiscard]] constexpr vec operator/(const vec &rhs) const noexcept {
+    vec result;
+    for (std::size_t i = 0; i < N; ++i) {
+      result[i] = data[i] / rhs[i];
+    }
+    return result;
+  }
+
+  // Vector/scalar arithmetic.
+  [[nodiscard]] constexpr vec operator+(T rhs) const noexcept {
+    vec result;
+    for (std::size_t i = 0; i < N; ++i) {
+      result[i] = data[i] + rhs;
+    }
+    return result;
+  }
+
+  [[nodiscard]] constexpr vec operator-(T rhs) const noexcept {
+    vec result;
+    for (std::size_t i = 0; i < N; ++i) {
+      result[i] = data[i] - rhs;
+    }
+    return result;
+  }
+
+  [[nodiscard]] constexpr vec operator*(T rhs) const noexcept {
+    vec result;
+    for (std::size_t i = 0; i < N; ++i) {
+      result[i] = data[i] * rhs;
+    }
+    return result;
+  }
+
+  [[nodiscard]] constexpr vec operator/(T rhs) const noexcept {
+    vec result;
+    for (std::size_t i = 0; i < N; ++i) {
+      result[i] = data[i] / rhs;
+    }
+    return result;
+  }
+
+  // Compound vector arithmetic.
+  constexpr vec &operator+=(const vec &rhs) noexcept {
+    for (std::size_t i = 0; i < N; ++i) {
+      data[i] += rhs[i];
+    }
+    return *this;
+  }
+
+  constexpr vec &operator-=(const vec &rhs) noexcept {
+    for (std::size_t i = 0; i < N; ++i) {
+      data[i] -= rhs[i];
+    }
+    return *this;
+  }
+
+  constexpr vec &operator*=(const vec &rhs) noexcept {
+    for (std::size_t i = 0; i < N; ++i) {
+      data[i] *= rhs[i];
+    }
+    return *this;
+  }
+
+  constexpr vec &operator/=(const vec &rhs) noexcept {
+    for (std::size_t i = 0; i < N; ++i) {
+      data[i] /= rhs[i];
+    }
+    return *this;
+  }
+
+  // Compound scalar arithmetic.
+  constexpr vec &operator+=(T rhs) noexcept {
+    for (T &x : data) {
+      x += rhs;
+    }
+    return *this;
+  }
+
+  constexpr vec &operator-=(T rhs) noexcept {
+    for (T &x : data) {
+      x -= rhs;
+    }
+    return *this;
+  }
+
+  constexpr vec &operator*=(T rhs) noexcept {
+    for (T &x : data) {
+      x *= rhs;
+    }
+    return *this;
+  }
+
+  constexpr vec &operator/=(T rhs) noexcept {
+    for (T &x : data) {
+      x /= rhs;
+    }
+    return *this;
+  }
 };
+template <std::size_t N, typename T>
+[[nodiscard]] constexpr vec<N, T> operator+(T lhs,
+                                             const vec<N, T> &rhs) noexcept {
+  return rhs + lhs;
+}
+
+template <std::size_t N, typename T>
+[[nodiscard]] constexpr vec<N, T> operator-(T lhs,
+                                             const vec<N, T> &rhs) noexcept {
+  vec<N, T> result;
+  for (std::size_t i = 0; i < N; ++i) {
+    result[i] = lhs - rhs[i];
+  }
+  return result;
+}
+
+template <std::size_t N, typename T>
+[[nodiscard]] constexpr vec<N, T> operator*(T lhs,
+                                             const vec<N, T> &rhs) noexcept {
+  return rhs * lhs;
+}
+
+template <std::size_t N, typename T>
+[[nodiscard]] constexpr vec<N, T> operator/(T lhs,
+                                             const vec<N, T> &rhs) noexcept {
+  vec<N, T> result;
+  for (std::size_t i = 0; i < N; ++i) {
+    result[i] = lhs / rhs[i];
+  }
+  return result;
+}
 
 } // namespace details
+
+
 
 using vec2 = details::vec<2, float>;
 using vec3 = details::vec<3, float>;
@@ -303,6 +470,7 @@ using uvec4 = details::vec<4, unsigned int>;
 using ivec2 = details::vec<2, int>;
 using ivec3 = details::vec<3, int>;
 using ivec4 = details::vec<4, int>;
+
 
 } // namespace strobe
 
@@ -335,4 +503,7 @@ constexpr T &&get(strobe::details::vec<N, T> &&v) noexcept {
   static_assert(Index < N, "Index out of range for vec");
   return std::move(v.data[Index]);
 }
+
+
+
 } // namespace std

@@ -572,14 +572,22 @@ void cmd_set_patch_control_points(const Context *context, CommandBuffer cmd,
   vulkan::vk_cmd_set_patch_control_points(context->pnf(), cmd.handle,
                                           patchControlPoints);
 }
-void cmd_bind_vertex_buffer(CommandBuffer cmd,
-                            BufferOffset verticies) noexcept {
+
+void cmd_bind_vertex_buffers(CommandBuffer cmd,
+                             span<const BufferOffset> bindings,
+                             uint32_t firstBinding) noexcept {
+  SmallVector<VkBuffer, 8> buffers{bindings.size()};
+  SmallVector<VkDeviceSize, 8> offsets{bindings.size()};
+  for (uint32_t i = 0; i < bindings.size(); ++i) {
+    buffers[i] = bindings[i].buffer.handle;
+    offsets[i] = bindings[i].offset;
+  }
   {
 #ifdef STROBE_RHI_TRACE_VK
     ZoneScopedN("vkCmdBindVertexBuffers");
 #endif
-    vkCmdBindVertexBuffers(cmd.handle, 0, 1, &verticies.buffer.handle,
-                           &verticies.offset);
+    vkCmdBindVertexBuffers(cmd.handle, firstBinding, bindings.size(),
+                           buffers.data(), offsets.data());
   }
 }
 

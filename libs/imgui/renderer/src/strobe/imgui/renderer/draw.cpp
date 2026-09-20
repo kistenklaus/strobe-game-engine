@@ -53,7 +53,8 @@ static void reset_rendering_state(rhi::CommandBuffer cmd, uvec2 viewport,
   };
   cmd.set_vertex_input(bindings, attributes);
 
-  cmd.bind_vertex_buffer(frame.vertex_buffer);
+  rhi::BufferOffset vbOffset{.buffer = frame.vertex_buffer, .offset = 0};
+  cmd.bind_vertex_buffers(&vbOffset);
   cmd.bind_index_buffer(frame.index_buffer, sizeof(ImDrawIdx) == 2
                                                 ? rhi::IndexType::uint16
                                                 : rhi::IndexType::uint32);

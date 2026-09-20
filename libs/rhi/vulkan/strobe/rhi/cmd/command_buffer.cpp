@@ -20,6 +20,7 @@
 #include "strobe/rhi/utils/image_layout_utils.hpp"
 #include "strobe/rhi/utils/resolve_mode_utils.hpp"
 #include "strobe/rhi/vulkan/cmd/barrier.hpp"
+#include "strobe/rhi/vulkan/cmd/dispatch.hpp"
 #include "strobe/rhi/vulkan/cmd/rendering.hpp"
 #include "strobe/rhi/vulkan/cmd/transfer.hpp"
 #include "strobe/rhi/vulkan/command_buffer.hpp"
@@ -580,16 +581,27 @@ void CommandBuffer::unbind_shaders(ShaderStage stages) noexcept {
   vulkan::cmd_unbind_shaders(impl->ctx, impl->cmd, stages);
 }
 
-void CommandBuffer::bind_vertex_buffer(const Buffer &buffer,
-                                       uint64_t offset) noexcept {
+void CommandBuffer::bind_vertex_buffers(span<const BufferOffset> bindings,
+                                        uint32_t firstBinding) noexcept {
   assert(m_handle);
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
-  ZoneScopedN("CommandBuffer::bind_vertex_buffer");
-  auto *buf_impl = object_handle_ptr<BufferImpl>(buffer);
-  buf_impl->commit();
-  vulkan::cmd_bind_vertex_buffer(
-      impl->cmd, {.buffer = buf_impl->buffer, .offset = offset});
-  impl->state.retain(buffer);
+  ZoneScopedN("CommandBuffer::bind_vertex_buffers");
+  SmallVector<VkBuffer, 8> buffers{bindings.size()};
+  SmallVector<VkDeviceSize, 8> offsets{bindings.size()};
+  for (uint32_t i = 0; i < bindings.size(); ++i) {
+    auto *buf_impl = object_handle_ptr<BufferImpl>(bindings[i].buffer);
+    buf_impl->commit();
+    buffers[i] = buf_impl->buffer.handle;
+    offsets[i] = bindings[i].offset;
+    impl->state.retain(bindings[i].buffer);
+  }
+  {
+#ifdef STROBE_RHI_TRACE_VK
+    ZoneScopedN("vkCmdBindVertexBuffers");
+#endif
+    vkCmdBindVertexBuffers(impl->cmd.handle, firstBinding, bindings.size(),
+                           buffers.data(), offsets.data());
+  }
 }
 
 void CommandBuffer::bind_index_buffer(const Buffer &buffer, IndexType type,
@@ -877,6 +889,15 @@ void CommandBuffer::draw_indexed(uint32_t indexCount, uint32_t instanceCount,
   impl->flush_pc();
   vulkan::cmd_draw_indexed(impl->cmd, indexCount, instanceCount, firstIndex,
                            vertexOffset, firstInstance);
+}
+
+void CommandBuffer::dispatch(uint32_t groupCountX, uint32_t groupCountY,
+                             uint32_t groupCountZ) noexcept {
+
+  ZoneScopedN("CommandBuffer::dispatch");
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  impl->flush_pc();
+  vulkan::cmd_dispatch(impl->cmd, groupCountX, groupCountY, groupCountZ);
 }
 
 void CommandBuffer::build(

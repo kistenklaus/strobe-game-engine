@@ -743,21 +743,23 @@ public:
   /**
    * \brief Binds vertex buffer.
    * \code{.cpp}
-   * void bind_vertex_buffer(const Buffer& buffer, uint64_t offset = 0)
-   * noexcept;
+   * void bind_vertex_buffers(span<const BufferOffset> bindings, uint32_t
+   * firstBinding = 0) noexcept;
    * \endcode
    *
    * Binds \p buffer as vertex input starting at \p offset.
    *
-   * \param buffer Vertex buffer.
-   * \param offset Byte offset into the buffer.
+   * \param bindings vertex buffer offsets.
+   * \param firstBinding first binding
    *
    * \attention 1. The command buffer must be recording.
    * \attention 2. \p buffer must support vertex-buffer usage.
    * \attention 3. \p offset must refer to a valid location within \p buffer.
    * \attention 4. The owning CommandPool must be externally synchronized.
+   * \attention 5. bindings must be non empty.
    */
-  void bind_vertex_buffer(const Buffer &buffer, uint64_t offset = 0) noexcept;
+  void bind_vertex_buffers(span<const BufferOffset> bindings,
+                           uint32_t firstBinding = 0) noexcept;
 
   void bind_index_buffer(const Buffer &buffer,
                          IndexType type = IndexType::uint32,
@@ -989,6 +991,16 @@ public:
   void draw_indexed(uint32_t indexCount, uint32_t instanceCount = 1,
                     uint32_t firstIndex = 0, int32_t vertexOffset = 0,
                     uint32_t firstInstance = 0) noexcept;
+
+  /**
+   * \brief records compute dispatch.
+   * \code{cpp}
+   * void dispatch(uint32_t groupCountX, uint32_t groupCountY = 1, uint32_t groupCountZ = 1) noexcept;
+   * \endcode
+   * TODO
+   */
+  void dispatch(uint32_t groupCountX, uint32_t groupCountY = 1,
+                uint32_t groupCountZ = 1) noexcept;
 
   /** @} */
 
