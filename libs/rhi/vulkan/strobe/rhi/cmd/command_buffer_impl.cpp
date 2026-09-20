@@ -42,5 +42,7 @@ void strobe::rhi::CommandBufferImpl::flush_pc() noexcept {
     };
     ZoneScopedN("vkCmdPushData");
     vulkan::vk_cmd_push_data(ctx->pnf(), cmd.handle, &info);
+    pushDirtyBegin = sizeof(pushData);
+    pushDirtyEnd = 0;
   }
 }

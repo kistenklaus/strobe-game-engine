@@ -37,11 +37,15 @@
 using namespace strobe;
 
 static constexpr uint32_t FRAMES_IN_FLIGHT = 2;
-static constexpr size_t PARTICLE_COUNT = 1 << 10;
+static constexpr size_t PARTICLE_COUNT = 1 << 20;
 static constexpr float PARTICLE_MASS = 1;
+static constexpr float LINEAR_DAMPING = 0.5f;
+static constexpr float RESTITUTION = 1.0f; // [0,1]
+static constexpr vec2 GRAVITY = vec2(0, 100);
+static constexpr float WINDOW_COUPLING = 1.0f; // 1/s
+
 static constexpr float SIM_DELTA_TIME_MS = 1.0f; // 1ms
 static constexpr float PARTICLE_VIS_RADIUS = 4.0f;
-static constexpr float WINDOW_MASS = 0.1;
 
 static std::atomic<vec2> g_windowPos;
 static std::atomic<vec2> g_windowExtent;
@@ -66,7 +70,6 @@ struct Particle {
   vec2 velocity;
 };
 static std::array<Particle, PARTICLE_COUNT> g_particles;
-// ....
 
 static void fluid_simulation_init() {
   g_viewportPos = vec2{0.0f};
@@ -90,31 +93,22 @@ static void fluid_simulation_init() {
         xdist(prng),
         ydist(prng),
     };
-    // float theta = 2.0f * std::numbers::pi_v<float> * udist(prng);
-    // particle.velocity = speed * vec2{
-    //                                 std::cos(theta),
-    //                                 std::sin(theta),
-    //                             };
+    float theta = 2.0f * std::numbers::pi_v<float> * udist(prng);
+    particle.velocity = speed * vec2{
+                                    std::cos(theta),
+                                    std::sin(theta),
+                                };
   }
 }
 
 static void update_external_acceleration(float dt) {
-  // Simulation domain always starts at local (0, 0).
   g_viewportPos = vec2{0.0f};
   g_viewportExtent = g_windowExtent.load(std::memory_order_relaxed);
-
-  // Track how the physical window/container moves through desktop space.
   const vec2 windowPos = g_windowPos.load(std::memory_order_relaxed);
-
-  const vec2 previousVelocity = g_windowVelocity;
-
-  g_windowVelocity = (windowPos - g_previousWindowPos) / dt;
-
-  g_windowAcceleration = (g_windowVelocity - previousVelocity) / dt;
-
+  const vec2 windowDisplacement = windowPos - g_previousWindowPos;
+  const vec2 windowVelocity = windowDisplacement / dt;
+  g_externalForce = WINDOW_COUPLING * windowVelocity + GRAVITY;
   g_previousWindowPos = windowPos;
-
-  g_externalForce = -g_windowAcceleration * WINDOW_MASS;
 }
 
 static void upload_particles(rhi::CommandBuffer cmd, rhi::Buffer particles) {
@@ -131,29 +125,37 @@ static void apply_forces(rhi::CommandBuffer &cmd,
     uint32_t particleCount;        // 0
     float deltaTime;               // 4
     float mass;                    // 8
-    uint32_t padding;              // 12
-    alignas(8) vec2 externalForce; // 16
-    vec2 viewportPos;              // 24
-    vec2 viewportExtent;           // 32
+    float linearDamping;           // 12
+    float restitution;             // 16
+    uint32_t padding;              // 20
+    alignas(8) vec2 externalForce; // 24
+    vec2 viewportPos;              // 32
+    vec2 viewportExtent;           // 40
+    // uint32_t particleIndex;        // 48
   };
+  static_assert(offsetof(PushConstants, particleCount) == 0);
+  static_assert(offsetof(PushConstants, deltaTime) == 4);
+  static_assert(offsetof(PushConstants, mass) == 8);
+  static_assert(offsetof(PushConstants, linearDamping) == 12);
+  static_assert(offsetof(PushConstants, restitution) == 16);
+  static_assert(offsetof(PushConstants, externalForce) == 24);
+  static_assert(offsetof(PushConstants, viewportPos) == 32);
+  static_assert(offsetof(PushConstants, viewportExtent) == 40);
 
   PushConstants pc{
       .particleCount = PARTICLE_COUNT,
       .deltaTime = SIM_DELTA_TIME_MS * 1e-3f,
       .mass = PARTICLE_MASS,
-      .padding = {},
+      .linearDamping = LINEAR_DAMPING,
+      .restitution = RESTITUTION,
+      .padding = 0,
       .externalForce = g_externalForce,
       .viewportPos = g_viewportPos,
       .viewportExtent = g_viewportExtent,
   };
 
-  static_assert(offsetof(PushConstants, externalForce) == 16);
-  static_assert(offsetof(PushConstants, viewportPos) == 24);
-  static_assert(offsetof(PushConstants, viewportExtent) == 32);
-  static_assert(sizeof(PushConstants) == 40);
-
   cmd.push(0, &pc, sizeof(pc));
-  cmd.push(40, particles);
+  cmd.push(48, particles);
   const uint32_t wgCount =
       (PARTICLE_COUNT + APPLY_FORCE_WG_SIZE - 1) / APPLY_FORCE_WG_SIZE;
   cmd.bind_shader(shader);
@@ -433,11 +435,22 @@ int main() {
   auto cmd = cmdpool.alloc();
   cmd.begin();
   upload_particles(cmd, particles);
+  cmd.memory_barrier({
+      .srcStage = rhi::PipelineStage::transfer,
+      .srcAccess = rhi::Access::transfer_write,
+      .dstStage = rhi::PipelineStage::compute_shader |
+                  rhi::PipelineStage::vertex_attribute_input,
+      .dstAccess = rhi::Access::shader_storage_read |
+                   rhi::Access::shader_storage_write |
+                   rhi::Access::vertex_attribute_read,
+  });
   cmd.end();
   queue.submit(&cmd).wait();
 
   rhi::ResourceDescriptor particleDescriptor =
-      device.create_storage_buffer_descriptor({.buffer = particles});
+      device.create_storage_buffer_descriptor({
+          .buffer = particles,
+      });
 
   struct Frame {
     rhi::Timepoint ready;

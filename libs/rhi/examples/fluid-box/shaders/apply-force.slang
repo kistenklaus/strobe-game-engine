@@ -1,7 +1,10 @@
+
 struct PushConstants {
   uint particleCount;
   float deltaTime;
   float mass;
+  float linearDamping;
+  float restitution;
   float2 externalForce;
   float2 viewportPos;
   float2 viewportExtent;
@@ -37,29 +40,39 @@ void main(uint3 threadId : SV_DispatchThreadID)
   float2 acceleration = externalForce / mass;
 
   p.velocity += acceleration * dt;
+  p.velocity *= exp(-pc.linearDamping * dt);
   p.position += p.velocity * dt;
 
   const float2 minPos = pc.viewportPos;
   const float2 maxPos = pc.viewportPos + pc.viewportExtent;
+  const float restitution = saturate(pc.restitution);
 
   if (p.position.x < minPos.x) {
     p.position.x = minPos.x;
-    p.velocity.x = -p.velocity.x;
+
+    if (p.velocity.x < 0.0)
+      p.velocity.x *= -restitution;
   }
 
   if (p.position.x > maxPos.x) {
     p.position.x = maxPos.x;
-    p.velocity.x = -p.velocity.x;
+
+    if (p.velocity.x > 0.0)
+      p.velocity.x *= -restitution;
   }
 
   if (p.position.y < minPos.y) {
     p.position.y = minPos.y;
-    p.velocity.y = -p.velocity.y;
+
+    if (p.velocity.y < 0.0)
+      p.velocity.y *= -restitution;
   }
 
   if (p.position.y > maxPos.y) {
     p.position.y = maxPos.y;
-    p.velocity.y = -p.velocity.y;
+
+    if (p.velocity.y > 0.0)
+      p.velocity.y *= -restitution;
   }
 
   particles[i] = p;
