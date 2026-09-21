@@ -19,18 +19,18 @@ public:
   VkDeviceAddress address() noexcept { return m_address; }
 
   void require(VkDeviceSize size) {
-    size = std::max(size, VkDeviceSize{1});
+    const uint64_t alignment = m_memoryPool.context()
+                             .ctx()
+                             ->deviceInfo()
+                             .properties.accelerationStructure
+                             .minAccelerationStructureScratchOffsetAlignment;
+    size = size + alignment - 1;
     if (size > m_scratchBuffer.size()) {
       // allocate new scratch buffer
-      uint64_t alignment = m_memoryPool.context()
-                               .ctx()
-                               ->deviceInfo()
-                               .properties.accelerationStructure
-                               .minAccelerationStructureScratchOffsetAlignment;
       m_scratchBuffer = buf::create_buffer(
           m_memoryPool,
           {
-              .size = size + alignment - 1,
+              .size = size,
               .bufferUsage =
                   BufferUsage::storage | BufferUsage::shader_device_address,
               .memoryUsage = MemoryUsage::automatic,

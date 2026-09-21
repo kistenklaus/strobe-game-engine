@@ -14,6 +14,7 @@
 #include "strobe/rhi/memory/memory_allocation_impl.hpp"
 #include "strobe/rhi/shader/shader_object_impl.hpp"
 #include "strobe/rhi/types/image_subresource_range.hpp"
+#include "strobe/rhi/types/tlas_instance.hpp"
 #include "strobe/rhi/utils/attachment_load_op_utils.hpp"
 #include "strobe/rhi/utils/attachment_store_op_utils.hpp"
 #include "strobe/rhi/utils/clear_value_utils.hpp"
@@ -958,7 +959,7 @@ void CommandBuffer::build(
   Buffer scratch = blas_impl->scratchBuffer.buffer();
   impl->state.retain(blas_impl->scratchBuffer.buffer());
   buildInfo->scratchData.deviceAddress =
-      object_handle_ptr<BufferImpl>(scratch)->address;
+      object_handle_ptr<ScratchBufferImpl>(blas_impl->scratchBuffer)->address();
 
   vulkan::vk_cmd_build_acceleration_structures(
       impl->ctx->pnf(), impl->cmd.handle, 1, buildInfo, &buildRange);
@@ -989,6 +990,7 @@ void CommandBuffer::build(
     assert(geometries[i].geometryType == VK_GEOMETRY_TYPE_AABBS_KHR);
 
     geometries[i].geometry.aabbs.stride = aabbGeometry.stride;
+    impl->state.retain(aabbGeometry.buffer);
     auto *buf_impl = object_handle_ptr<BufferImpl>(aabbGeometry.buffer);
     assert(buf_impl->is_bound());
     geometries[i].geometry.aabbs.data.deviceAddress =
@@ -1008,33 +1010,53 @@ void CommandBuffer::build(
 void CommandBuffer::build(const Tlas &tlas, BufferOffset instanceBuffer,
                           uint32_t count) noexcept {
   assert(m_handle);
+  assert(tlas);
+  assert(instanceBuffer.buffer);
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
   CmdZoneScopedN(impl, "CommandBuffer::build(Tlas)");
   impl->state.retain(tlas);
-
   auto *tlas_impl = object_handle_ptr<BvhImpl>(tlas);
   object_handle_ptr<BufferImpl>(tlas_impl->buffer)->commit();
   auto blasLck = tlas_impl->lockBuildInfo();
   auto [buildInfo, buildRange] = tlas_impl->buildInfo();
-
   buildInfo->srcAccelerationStructure = VK_NULL_HANDLE;
   buildInfo->dstAccelerationStructure = tlas_impl->accelerationStructure.handle;
   assert(buildInfo->geometryCount == 1);
+  assert(buildInfo->pGeometries);
+  assert(buildRange);
   auto *geometry =
       const_cast<VkAccelerationStructureGeometryKHR *>(buildInfo->pGeometries);
-
+  assert(geometry->geometryType == VK_GEOMETRY_TYPE_INSTANCES_KHR);
+  assert(geometry->geometry.instances.arrayOfPointers == VK_FALSE);
   impl->state.retain(instanceBuffer.buffer);
-  auto buf_impl = object_handle_ptr<BufferImpl>(instanceBuffer.buffer);
+  auto *buf_impl = object_handle_ptr<BufferImpl>(instanceBuffer.buffer);
   assert(buf_impl->is_bound());
-  geometry->geometry.instances.data = {.deviceAddress = buf_impl->address +
-                                                        instanceBuffer.offset};
+  assert(buf_impl->address != 0);
   assert(count <= tlas_impl->maxPrimitiveCount(0));
+  static_assert(sizeof(TlasInstance) ==
+                sizeof(VkAccelerationStructureInstanceKHR));
+
+  assert(instanceBuffer.offset < buf_impl->size);
+  assert(count <=
+         (buf_impl->size - instanceBuffer.offset) / sizeof(TlasInstance));
+
+  assert(buf_impl->address <=
+         std::numeric_limits<VkDeviceAddress>::max() - instanceBuffer.offset);
+
+  const VkDeviceAddress instanceAddress =
+      buf_impl->address + instanceBuffer.offset;
+
+  assert(instanceAddress % 16 == 0);
+
+  geometry->geometry.instances.data = {
+      .deviceAddress = instanceAddress,
+  };
   buildRange[0].primitiveCount = count;
 
   Buffer scratch = tlas_impl->scratchBuffer.buffer();
-  impl->state.retain(tlas_impl->scratchBuffer.buffer());
+  impl->state.retain(scratch);
   buildInfo->scratchData.deviceAddress =
-      object_handle_ptr<BufferImpl>(scratch)->address;
+      object_handle_ptr<ScratchBufferImpl>(tlas_impl->scratchBuffer)->address();
 
   vulkan::vk_cmd_build_acceleration_structures(
       impl->ctx->pnf(), impl->cmd.handle, 1, buildInfo, &buildRange);
