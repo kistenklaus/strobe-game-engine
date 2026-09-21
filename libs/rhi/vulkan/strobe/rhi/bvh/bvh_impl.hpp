@@ -1,11 +1,12 @@
 #pragma once
 
+#include "strobe/rhi/buf/buffer_impl.hpp"
 #include "strobe/rhi/bvh/bvh_geometry_info.hpp"
 #include "strobe/rhi/bvh/scratch_buffer.hpp"
 #include "strobe/rhi/context/context.hpp"
+#include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/vulkan/acceleration_structure.hpp"
-#include "strobe/rhi/vulkan/context/pnf.hpp"
 #include <mutex>
 #include <vulkan/vulkan_core.h>
 
@@ -42,19 +43,17 @@ struct BvhImpl {
                           m_geometryInfo.buildRange.data());
   }
 
+  uint32_t maxPrimitiveCount(uint32_t geo) const noexcept {
+    assert(geo < m_geometryInfo.maxPrimitiveCount.size());
+    return m_geometryInfo.maxPrimitiveCount[geo];
+  }
+
   VkDeviceAddress address() {
     std::lock_guard lck{m_geometryInfoMutex};
     if (m_address == 0) {
-      vulkan::Context *ctx = context.ctx();
-      VkAccelerationStructureDeviceAddressInfoKHR info{
-          .sType =
-              VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR,
-          .pNext = nullptr,
-          .accelerationStructure = accelerationStructure.handle,
-      };
-      m_address = vulkan::vk_get_acceleration_structure_device_address(
-          ctx->pnf(), ctx->device(), &info);
-      assert(m_address != 0);
+      object_handle_ptr<BufferImpl>(buffer)->commit();
+      m_address = vulkan::get_acceleration_structure_device_address(
+          context.ctx(), accelerationStructure);
     }
     return m_address;
   }

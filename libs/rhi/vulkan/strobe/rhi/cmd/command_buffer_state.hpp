@@ -12,6 +12,7 @@
 #include "strobe/rhi/objects/resource_descriptor_array.hpp"
 #include "strobe/rhi/objects/sampler_descriptor.hpp"
 #include "strobe/rhi/objects/sampler_descriptor_array.hpp"
+#include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
 
 namespace strobe::rhi {
@@ -30,7 +31,7 @@ struct CommandBufferState {
   CommandBufferState(const allocator &alloc) noexcept
       : m_boundVertexShaders(alloc), m_boundFragmentShaders(alloc),
         m_boundComputeShaders(alloc), m_boundBuffers(alloc),
-        m_boundImages(alloc), m_boundImageViews(alloc), m_boundBlas(alloc),
+        m_boundImages(alloc), m_boundImageViews(alloc), m_boundBlas(alloc), m_boundTlas(alloc),
         m_boundBufferDescriptors(alloc), m_boundBufferDescriptorArrays(alloc),
         m_boundSamplerDescriptors(alloc),
         m_boundSamplerDescriptorArrays(alloc) {}
@@ -182,6 +183,27 @@ struct CommandBufferState {
     bindings.push_back(obj);
   }
 
+  void retain(const Tlas &obj) {
+    auto &bindings = m_boundTlas;
+    if (bindings.size() > SEARCH_WINDOW_SIZE) {
+      auto it = bindings.end();
+      STROBE_UNROLL(SEARCH_WINDOW_SIZE)
+      for (size_t i = 0; i < SEARCH_WINDOW_SIZE; ++i) {
+        --it;
+        if (obj == *it) {
+          return;
+        }
+      }
+    } else {
+      for (const auto &bound : bindings) {
+        if (obj == bound) {
+          return;
+        }
+      }
+    }
+    bindings.push_back(obj);
+  }
+
   void retain(const ResourceDescriptor &obj) {
     auto &bindings = m_boundBufferDescriptors;
     if (bindings.size() > SEARCH_WINDOW_SIZE) {
@@ -274,6 +296,7 @@ private:
   Vector<Image, allocator> m_boundImages;
   Vector<ImageView, allocator> m_boundImageViews;
   Vector<Blas, allocator> m_boundBlas;
+  Vector<Tlas, allocator> m_boundTlas;
   Vector<ResourceDescriptor, allocator> m_boundBufferDescriptors;
   Vector<ResourceDescriptorArray, allocator> m_boundBufferDescriptorArrays;
   Vector<SamplerDescriptor, allocator> m_boundSamplerDescriptors;

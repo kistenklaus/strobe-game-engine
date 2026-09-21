@@ -903,12 +903,14 @@ void CommandBuffer::build(
     const Blas &blas,
     span<const TriangleGeometryData> triangleGeometries) noexcept {
   assert(m_handle);
-  ZoneScopedN("CommandBuffer::build(Blas, {TriangleGeometryData})");
   // Kind of a special case because the the construction is partially
   // cached. makes the code a bit more uggly =^(.
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  CmdZoneScopedN(impl, "CommandBuffer::build(Blas, {TriangleGeometryData})");
+  impl->state.retain(blas);
 
   auto *blas_impl = object_handle_ptr<BvhImpl>(blas);
+  object_handle_ptr<BufferImpl>(blas_impl->buffer)->commit();
   auto blasLck = blas_impl->lockBuildInfo();
   auto [buildInfo, buildRange] = blas_impl->buildInfo();
 
@@ -931,6 +933,7 @@ void CommandBuffer::build(
     geometries[i].geometry.triangles.vertexStride =
         triangleGeometry.positions.stride;
     buildRange[i].primitiveCount = triangleGeometry.triangleCount;
+    assert(buildRange[i].primitiveCount <= blas_impl->maxPrimitiveCount(i));
     if (geometries[i].geometry.triangles.indexType != VK_INDEX_TYPE_NONE_KHR) {
       assert(triangleGeometry.indices.has_value());
       impl->state.retain(triangleGeometry.indices->buffer);
@@ -964,12 +967,14 @@ void CommandBuffer::build(
 void CommandBuffer::build(
     const Blas &blas, span<const AabbGeometryData> aabbGeometries) noexcept {
   assert(m_handle);
-  ZoneScopedN("CommandBuffer::build(Blas, {AabbGeometryData})");
   // Kind of a special case because the the construction is partially
   // cached. makes the code a bit more uggly =^(.
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  CmdZoneScopedN(impl, "CommandBuffer::build(Blas, {AabbGeometryData})");
+  impl->state.retain(blas);
 
   auto *blas_impl = object_handle_ptr<BvhImpl>(blas);
+  object_handle_ptr<BufferImpl>(blas_impl->buffer)->commit();
   auto blasLck = blas_impl->lockBuildInfo();
   auto [buildInfo, buildRange] = blas_impl->buildInfo();
 
@@ -989,6 +994,7 @@ void CommandBuffer::build(
     geometries[i].geometry.aabbs.data.deviceAddress =
         buf_impl->address + aabbGeometry.offset;
     buildRange[i].primitiveCount = aabbGeometry.count;
+    assert(buildRange[i].primitiveCount <= blas_impl->maxPrimitiveCount(i));
   }
   Buffer scratch = blas_impl->scratchBuffer.scratch();
   impl->state.retain(scratch);
@@ -1005,8 +1011,10 @@ void CommandBuffer::build(const Tlas &tlas, BufferOffset instanceBuffer,
   assert(m_handle);
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
   CmdZoneScopedN(impl, "CommandBuffer::build(Tlas)");
+  impl->state.retain(tlas);
 
   auto *tlas_impl = object_handle_ptr<BvhImpl>(tlas);
+  object_handle_ptr<BufferImpl>(tlas_impl->buffer)->commit();
   auto blasLck = tlas_impl->lockBuildInfo();
   auto [buildInfo, buildRange] = tlas_impl->buildInfo();
 
@@ -1016,10 +1024,12 @@ void CommandBuffer::build(const Tlas &tlas, BufferOffset instanceBuffer,
   auto *geometry =
       const_cast<VkAccelerationStructureGeometryKHR *>(buildInfo->pGeometries);
 
+  impl->state.retain(instanceBuffer.buffer);
   auto buf_impl = object_handle_ptr<BufferImpl>(instanceBuffer.buffer);
   assert(buf_impl->is_bound());
   geometry->geometry.instances.data = {.deviceAddress = buf_impl->address +
                                                         instanceBuffer.offset};
+  assert(count <= tlas_impl->maxPrimitiveCount(0));
   buildRange[0].primitiveCount = count;
 
   Buffer scratch = tlas_impl->scratchBuffer.scratch();

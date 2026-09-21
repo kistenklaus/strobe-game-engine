@@ -16,7 +16,7 @@ public:
   Buffer scratch() { return m_scratchBuffer; }
 
   void require(VkDeviceSize size) {
-    if (size < m_scratchBuffer.size()) {
+    if (size > m_scratchBuffer.size()) {
       // allocate new scratch buffer
       m_scratchBuffer = buf::create_buffer(
           m_memoryPool,

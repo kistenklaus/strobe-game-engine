@@ -269,14 +269,15 @@ Blas create_blas(MemoryPool memoryPool, ScratchBuffer scratchBuffer,
 
   sizeInfo.first.buildFlags = info.buildFlags;
 
-  Buffer buffer =
-      buf::create_buffer(memoryPool,
-                         {
-                             .size = sizeInfo.second,
-                             .bufferUsage = BufferUsage::storage |
-                                            BufferUsage::shader_device_address,
-                         },
-                         lifetime, alloc->bufAllocators);
+  Buffer buffer = buf::create_buffer(
+      memoryPool,
+      {
+          .size = sizeInfo.second,
+          .bufferUsage = BufferUsage::shader_device_address |
+                         BufferUsage::acceleration_structure_storage,
+          .memoryUsage = info.memoryUsage,
+      },
+      lifetime, alloc->bufAllocators);
   auto *buf_impl = object_handle_ptr<BufferImpl>(buffer);
 
   vulkan::AccelerationStructure bvh = vulkan::create_acceleration_structure(
@@ -304,14 +305,15 @@ Tlas create_tlas(MemoryPool memoryPool, ScratchBuffer scratchBuffer,
       get_tlas_size(ctx, info.buildFlags, info.instanceCount);
   bvhInfo.buildFlags = info.buildFlags;
 
-  Buffer buffer =
-      buf::create_buffer(memoryPool,
-                         {
-                             .size = size,
-                             .bufferUsage = BufferUsage::storage |
-                                            BufferUsage::shader_device_address,
-                         },
-                         lifetime, alloc->bufAllocators);
+  Buffer buffer = buf::create_buffer(
+      memoryPool,
+      {
+          .size = size,
+          .bufferUsage = BufferUsage::shader_device_address |
+                         BufferUsage::acceleration_structure_storage,
+          .memoryUsage = info.memoryUsage,
+      },
+      lifetime, alloc->bufAllocators);
 
   auto *buf_impl = object_handle_ptr<BufferImpl>(buffer);
 
