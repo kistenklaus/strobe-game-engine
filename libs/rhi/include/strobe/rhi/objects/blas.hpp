@@ -1,6 +1,7 @@
 #pragma once
 
 #include "strobe/rhi/objects/object.hpp"
+#include <cstdint>
 namespace strobe::rhi {
 /**
  * \ingroup rhi
@@ -20,7 +21,19 @@ class Blas : public Object<Blas> {
   friend class Object<Blas>;
   static void pin(void *handle) noexcept;
   static void unpin(void *handle) noexcept;
+
+public:
   using Object::Object;
+
+  /**
+   * \brief address of the blas
+   * \code{cpp}
+   * uint64_t address() const noexcept;
+   * \endcode
+   *
+   * Returns the address of the Blas, or 0 if the object is null.
+   */
+  uint64_t address() const noexcept;
 };
 
 } // namespace strobe::rhi
