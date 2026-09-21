@@ -30,7 +30,6 @@
 #include <limits>
 #include <tracy/Tracy.hpp>
 #include <tracy/TracyVulkan.hpp>
-#include <utility>
 #include <vulkan/vulkan_core.h>
 
 #ifdef STROBE_RHI_TRACE_DEVICE
@@ -903,6 +902,7 @@ void CommandBuffer::dispatch(uint32_t groupCountX, uint32_t groupCountY,
 void CommandBuffer::build(
     const Blas &blas,
     span<const TriangleGeometryData> triangleGeometries) noexcept {
+  assert(m_handle);
   ZoneScopedN("CommandBuffer::build(Blas, {TriangleGeometryData})");
   // Kind of a special case because the the construction is partially
   // cached. makes the code a bit more uggly =^(.
@@ -963,6 +963,7 @@ void CommandBuffer::build(
 
 void CommandBuffer::build(
     const Blas &blas, span<const AabbGeometryData> aabbGeometries) noexcept {
+  assert(m_handle);
   ZoneScopedN("CommandBuffer::build(Blas, {AabbGeometryData})");
   // Kind of a special case because the the construction is partially
   // cached. makes the code a bit more uggly =^(.
@@ -999,10 +1000,36 @@ void CommandBuffer::build(
       impl->ctx->pnf(), impl->cmd.handle, 1, buildInfo, &buildRange);
 }
 
-void CommandBuffer::build([[maybe_unused]] const Tlas &blas,
-                          [[maybe_unused]] BufferOffset instanceBuffer,
-                          [[maybe_unused]] uint32_t count) noexcept {
-  std::unreachable();
+void CommandBuffer::build(const Tlas &tlas, BufferOffset instanceBuffer,
+                          uint32_t count) noexcept {
+  assert(m_handle);
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  CmdZoneScopedN(impl, "CommandBuffer::build(Tlas)");
+
+  auto *tlas_impl = object_handle_ptr<BvhImpl>(tlas);
+  auto blasLck = tlas_impl->lockBuildInfo();
+  auto [buildInfo, buildRange] = tlas_impl->buildInfo();
+
+  buildInfo->srcAccelerationStructure = VK_NULL_HANDLE;
+  buildInfo->dstAccelerationStructure = tlas_impl->accelerationStructure.handle;
+  assert(buildInfo->geometryCount == 1);
+  auto *geometry =
+      const_cast<VkAccelerationStructureGeometryKHR *>(buildInfo->pGeometries);
+
+  auto buf_impl = object_handle_ptr<BufferImpl>(instanceBuffer.buffer);
+  assert(buf_impl->is_bound());
+  geometry->geometry.instances.data = {.deviceAddress = buf_impl->address +
+                                                        instanceBuffer.offset};
+  buildRange[0].primitiveCount = count;
+
+  Buffer scratch = tlas_impl->scratchBuffer.scratch();
+  impl->state.retain(scratch);
+  auto *scratch_impl = object_handle_ptr<BufferImpl>(scratch);
+  scratch_impl->commit();
+  buildInfo->scratchData.deviceAddress = scratch_impl->address;
+
+  vulkan::vk_cmd_build_acceleration_structures(
+      impl->ctx->pnf(), impl->cmd.handle, 1, buildInfo, &buildRange);
 }
 
 void CommandBuffer::push(uint32_t offset, void *data, uint32_t size) noexcept {

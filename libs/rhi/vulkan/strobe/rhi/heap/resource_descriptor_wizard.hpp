@@ -1,6 +1,7 @@
 #pragma once
 
 #include "strobe/rhi/buf/buffer_impl.hpp"
+#include "strobe/rhi/bvh/bvh_impl.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap_impl.hpp"
@@ -18,6 +19,7 @@
 #include "strobe/rhi/utils/image_view_type_utils.hpp"
 #include "strobe/rhi/vulkan/context/pnf.hpp"
 #include <cassert>
+#include <exception>
 #include <limits>
 #include <type_traits>
 #include <utility>
@@ -398,8 +400,42 @@ public:
           vulkan_error(result, "Failed to write buffer resource descriptor.");
         }
       }
-    }
+    } else if (std::holds_alternative<TlasDescriptorInfo>(m_info)) {
+      auto &info = std::get<TlasDescriptorInfo>(m_info);
+      resource = info.tlas;
+      auto *tlas_impl = object_handle_ptr<BvhImpl>(info.tlas);
 
+      VkDeviceAddressRangeKHR address{
+          .address = tlas_impl->address(),
+          .size = 0,
+      };
+      VkResourceDescriptorInfoEXT resource{
+          .sType = VK_STRUCTURE_TYPE_RESOURCE_DESCRIPTOR_INFO_EXT,
+          .pNext = nullptr,
+          .type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
+          .data =
+              VkResourceDescriptorDataEXT{
+                  .pAddressRange = &address,
+              },
+      };
+      VkHostAddressRangeEXT descriptor{
+          .address = dst,
+          .size = stride,
+      };
+      {
+#ifdef STROBE_RHI_TRACE_VK
+        ZoneScopedN("vkWriteResourceDescriptors");
+#endif
+        const VkResult result = vulkan::vk_write_resource_descriptors(
+            ctx->pnf(), ctx->device(), 1, &resource, &descriptor);
+        if (result != VK_SUCCESS) {
+          vulkan_error(result, "Failed to write buffer resource descriptor.");
+        }
+      }
+    } else {
+      fmt::println("Invalid descriptor type variant");
+      std::terminate();
+    }
     Timepoint ready = fn(BufferRange{
         .buffer = heap_buf,
         .offset = offset,

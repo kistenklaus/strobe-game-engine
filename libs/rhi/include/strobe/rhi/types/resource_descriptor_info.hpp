@@ -2,6 +2,7 @@
 
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/image.hpp"
+#include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/types/format.hpp"
 #include "strobe/rhi/types/image_layout.hpp"
 #include "strobe/rhi/types/image_subresource_range.hpp"
@@ -113,6 +114,10 @@ struct StorageImageDescriptorInfo {
 };
 // [StorageImageDescriptorInfo]
 
+struct TlasDescriptorInfo {
+  Tlas tlas{};
+};
+
 /**
  * \ingroup rhi
  * \brief Resource descriptor information.
@@ -126,7 +131,8 @@ struct StorageImageDescriptorInfo {
 using ResourceDescriptorInfo =
     std::variant<StorageBufferDescriptorInfo, StorageTexelBufferDescriptorInfo,
                  UniformBufferDescriptorInfo, UniformTexelBufferDescriptorInfo,
-                 SampledImageDescriptorInfo, StorageImageDescriptorInfo>;
+                 SampledImageDescriptorInfo, StorageImageDescriptorInfo,
+                 TlasDescriptorInfo>;
 // [ResourceDescriptorInfo]
 
 } // namespace strobe::rhi

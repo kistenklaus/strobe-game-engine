@@ -16,7 +16,6 @@
 #include "strobe/rhi/objects/swapchain.hpp"
 #include "strobe/rhi/objects/tlas.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
-#include "strobe/rhi/objects/geometry_shader.hpp"
 #include "strobe/rhi/types/blas_info.hpp"
 #include "strobe/rhi/types/buffer_info.hpp"
 #include "strobe/rhi/types/compute_shader_info.hpp"
@@ -58,7 +57,8 @@ public:
   /**
    * \brief Creates fragment shader.
    * \code{.cpp}
-   * FragmentShader create_fragment_shader(const FragmentShaderInfo& info) noexcept;
+   * FragmentShader create_fragment_shader(const FragmentShaderInfo& info)
+   * noexcept;
    * \endcode
    *
    * Creates a fragment shader from \p info.
@@ -91,7 +91,8 @@ public:
   /**
    * \brief Creates compute shader.
    * \code{.cpp}
-   * ComputeShader create_compute_shader(const ComputeShaderInfo& info) noexcept;
+   * ComputeShader create_compute_shader(const ComputeShaderInfo& info)
+   * noexcept;
    * \endcode
    *
    * Creates a compute shader from \p info.
@@ -107,9 +108,10 @@ public:
   /**
    * \brief Creates geometry shader.
    * \code{cpp}
-   * GeometryShader create_geometry_shader(const GeometryShaderInfo& info) noexcept;
+   * GeometryShader create_geometry_shader(const GeometryShaderInfo& info)
+   * noexcept;
    * \endcode
-   * 
+   *
    * \attention 1. \p info must describe a valid geometry shader.
    */
   GeometryShader
@@ -134,7 +136,8 @@ public:
   /**
    * \brief Gets device queue.
    * \code{.cpp}
-   * Queue get_queue(QueueFlags flags = QueueFlags::graphics | QueueFlags::compute | QueueFlags::transfer) noexcept;
+   * Queue get_queue(QueueFlags flags = QueueFlags::graphics |
+   * QueueFlags::compute | QueueFlags::transfer) noexcept;
    * \endcode
    *
    * Returns a queue supporting the requested capabilities.
@@ -164,7 +167,8 @@ public:
   /**
    * \brief Creates buffer.
    * \code{.cpp}
-   * Buffer create_buffer(const BufferInfo& info, const MemoryLifetime& lifetime = {}) noexcept;
+   * Buffer create_buffer(const BufferInfo& info, const MemoryLifetime& lifetime
+   * = {}) noexcept;
    * \endcode
    *
    * Creates a buffer using the requested memory lifetime.
@@ -184,7 +188,8 @@ public:
   /**
    * \brief Creates image.
    * \code{.cpp}
-   * Image create_image(const ImageInfo& info, const MemoryLifetime = {}) noexcept;
+   * Image create_image(const ImageInfo& info, const MemoryLifetime = {})
+   * noexcept;
    * \endcode
    *
    * Creates an image using the requested memory lifetime.
@@ -204,7 +209,8 @@ public:
   /**
    * \brief Creates image view.
    * \code{.cpp}
-   * ImageView create_image_view(const Image& image, const ImageViewInfo& info) noexcept;
+   * ImageView create_image_view(const Image& image, const ImageViewInfo& info)
+   * noexcept;
    * \endcode
    *
    * Creates a view into \p image.
@@ -223,7 +229,8 @@ public:
   /**
    * \brief Creates BLAS.
    * \code{.cpp}
-   * Blas create_blas(const BlasInfo& info, const MemoryLifetime& = {}) noexcept;
+   * Blas create_blas(const BlasInfo& info, const MemoryLifetime& = {})
+   * noexcept;
    * \endcode
    *
    * Creates a bottom-level acceleration structure.
@@ -244,7 +251,8 @@ public:
   /**
    * \brief Creates TLAS.
    * \code{.cpp}
-   * Tlas create_tlas(const TlasInfo& info, const MemoryLifetime& lifetime = {}) noexcept;
+   * Tlas create_tlas(const TlasInfo& info, const MemoryLifetime& lifetime = {})
+   * noexcept;
    * \endcode
    *
    * Creates a top-level acceleration structure.
@@ -265,7 +273,8 @@ public:
   /**
    * \brief Copies buffer asynchronously.
    * \code{.cpp}
-   * Timepoint async_copy(BufferOffset dst, BufferOffset src, uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
+   * Timepoint async_copy(BufferOffset dst, BufferOffset src, uint64_t size =
+   * std::numeric_limits<uint64_t>::max()) noexcept;
    * \endcode
    *
    * Schedules a device-side copy from \p src to \p dst.
@@ -291,7 +300,8 @@ public:
   /**
    * \brief Uploads buffer asynchronously.
    * \code{.cpp}
-   * Timepoint async_upload(BufferOffset dst, void* src, uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
+   * Timepoint async_upload(BufferOffset dst, void* src, uint64_t size =
+   * std::numeric_limits<uint64_t>::max()) noexcept;
    * \endcode
    *
    * Schedules a host-to-device upload into \p dst.
@@ -319,13 +329,20 @@ public:
   /**
    * \brief Creates resource descriptor.
    * \code{.cpp}
-   * ResourceDescriptor create_resource_descriptor(const ResourceDescriptorInfo& info) noexcept;                       (1)
-   * ResourceDescriptor create_storage_buffer_descriptor(const StorageBufferDescriptorInfo& info) noexcept;            (2)
-   * ResourceDescriptor create_storage_texel_buffer_descriptor(const StorageTexelBufferDescriptorInfo& info) noexcept; (3)
-   * ResourceDescriptor create_uniform_buffer_descriptor(const UniformBufferDescriptorInfo& info) noexcept;            (4)
-   * ResourceDescriptor create_uniform_texel_buffer_descriptor(cont UniformTexelBufferDescriptorInfo& info) noexcept;  (5)
-   * ResourceDescriptor create_sampled_image_descriptor(const SampledImageDescriptorInfo& info) noexcept;              (6)
-   * ResourceDescriptor create_storage_image_descriptor(const StorageImageDescriptorInfo& info) noexcept;              (7)
+   * ResourceDescriptor create_resource_descriptor(const ResourceDescriptorInfo&
+   * info) noexcept;                       (1) ResourceDescriptor
+   * create_storage_buffer_descriptor(const StorageBufferDescriptorInfo& info)
+   * noexcept;            (2) ResourceDescriptor
+   * create_storage_texel_buffer_descriptor(const
+   * StorageTexelBufferDescriptorInfo& info) noexcept; (3) ResourceDescriptor
+   * create_uniform_buffer_descriptor(const UniformBufferDescriptorInfo& info)
+   * noexcept;            (4) ResourceDescriptor
+   * create_uniform_texel_buffer_descriptor(cont
+   * UniformTexelBufferDescriptorInfo& info) noexcept;  (5) ResourceDescriptor
+   * create_sampled_image_descriptor(const SampledImageDescriptorInfo& info)
+   * noexcept;              (6) ResourceDescriptor
+   * create_storage_image_descriptor(const StorageImageDescriptorInfo& info)
+   * noexcept;              (7)
    * \endcode
    *
    * Creates a descriptor from \p info.
@@ -364,6 +381,10 @@ public:
   }
   inline ResourceDescriptor create_storage_image_descriptor(
       const StorageImageDescriptorInfo &info) noexcept {
+    return create_resource_descriptor(info);
+  }
+  inline ResourceDescriptor
+  create_tlas_descriptor(const TlasDescriptorInfo &info) noexcept {
     return create_resource_descriptor(info);
   }
 
