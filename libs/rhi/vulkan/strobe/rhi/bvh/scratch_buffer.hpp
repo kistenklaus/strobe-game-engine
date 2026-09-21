@@ -14,7 +14,7 @@ public:
   using Object::Object;
   explicit ScratchBuffer(void *handle) noexcept : Object(handle) {}
 
-  Buffer scratch() const noexcept;
+  Buffer buffer() const noexcept;
   void require(uint64_t size) const noexcept;
 };
 

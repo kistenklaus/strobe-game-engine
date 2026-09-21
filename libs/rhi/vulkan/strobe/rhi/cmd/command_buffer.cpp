@@ -2,6 +2,7 @@
 #include "strobe/core/containers/small_vector.hpp"
 #include "strobe/rhi/buf/buffer_impl.hpp"
 #include "strobe/rhi/bvh/bvh_impl.hpp"
+#include "strobe/rhi/bvh/scratch_buffer_impl.hpp"
 #include "strobe/rhi/cmd/command_buffer_impl.hpp"
 #include "strobe/rhi/cmd/command_buffer_rendering_state.hpp"
 #include "strobe/rhi/handle.hpp"
@@ -954,11 +955,10 @@ void CommandBuffer::build(
           transform_impl->address + triangleGeometry.transform->offset;
     }
   }
-  Buffer scratch = blas_impl->scratchBuffer.scratch();
-  impl->state.retain(scratch);
-  auto *scratch_impl = object_handle_ptr<BufferImpl>(scratch);
-  scratch_impl->commit();
-  buildInfo->scratchData.deviceAddress = scratch_impl->address;
+  Buffer scratch = blas_impl->scratchBuffer.buffer();
+  impl->state.retain(blas_impl->scratchBuffer.buffer());
+  buildInfo->scratchData.deviceAddress =
+      object_handle_ptr<BufferImpl>(scratch)->address;
 
   vulkan::vk_cmd_build_acceleration_structures(
       impl->ctx->pnf(), impl->cmd.handle, 1, buildInfo, &buildRange);
@@ -996,11 +996,10 @@ void CommandBuffer::build(
     buildRange[i].primitiveCount = aabbGeometry.count;
     assert(buildRange[i].primitiveCount <= blas_impl->maxPrimitiveCount(i));
   }
-  Buffer scratch = blas_impl->scratchBuffer.scratch();
-  impl->state.retain(scratch);
-  auto *scratch_impl = object_handle_ptr<BufferImpl>(scratch);
-  scratch_impl->commit();
-  buildInfo->scratchData.deviceAddress = scratch_impl->address;
+  Buffer scratch = blas_impl->scratchBuffer.buffer();
+  impl->state.retain(blas_impl->scratchBuffer.buffer());
+  buildInfo->scratchData.deviceAddress =
+      object_handle_ptr<ScratchBufferImpl>(blas_impl->scratchBuffer)->address();
 
   vulkan::vk_cmd_build_acceleration_structures(
       impl->ctx->pnf(), impl->cmd.handle, 1, buildInfo, &buildRange);
@@ -1032,11 +1031,10 @@ void CommandBuffer::build(const Tlas &tlas, BufferOffset instanceBuffer,
   assert(count <= tlas_impl->maxPrimitiveCount(0));
   buildRange[0].primitiveCount = count;
 
-  Buffer scratch = tlas_impl->scratchBuffer.scratch();
-  impl->state.retain(scratch);
-  auto *scratch_impl = object_handle_ptr<BufferImpl>(scratch);
-  scratch_impl->commit();
-  buildInfo->scratchData.deviceAddress = scratch_impl->address;
+  Buffer scratch = tlas_impl->scratchBuffer.buffer();
+  impl->state.retain(tlas_impl->scratchBuffer.buffer());
+  buildInfo->scratchData.deviceAddress =
+      object_handle_ptr<BufferImpl>(scratch)->address;
 
   vulkan::vk_cmd_build_acceleration_structures(
       impl->ctx->pnf(), impl->cmd.handle, 1, buildInfo, &buildRange);

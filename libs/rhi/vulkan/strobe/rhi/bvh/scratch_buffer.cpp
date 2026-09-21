@@ -12,7 +12,7 @@ void ScratchBuffer::unpin(void *handle) noexcept {
   unpin_void_handle<ScratchBufferImpl>(handle);
 }
 
-Buffer ScratchBuffer::scratch() const noexcept {
+Buffer ScratchBuffer::buffer() const noexcept {
   return void_handle_ptr<ScratchBufferImpl>(m_handle)->scratch();
 }
 
