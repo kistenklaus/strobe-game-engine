@@ -1,28 +1,11 @@
 #include "apply-force.slang.spv.hpp"
+#include "density.slang.spv.hpp"
 #include "splat-frag.slang.spv.hpp"
 #include "splat-vert.slang.spv.hpp"
+#include "strobe/core/containers/vector.hpp"
 #include "strobe/core/lina/vec.hpp"
 #include "strobe/platform/window.hpp"
 #include "strobe/platform/window_events.hpp"
-#include "strobe/rhi/objects/device.hpp"
-#include "strobe/rhi/objects/image_view.hpp"
-#include "strobe/rhi/objects/resource_descriptor.hpp"
-#include "strobe/rhi/objects/sampler_descriptor.hpp"
-#include "strobe/rhi/objects/vertex_shader.hpp"
-#include "strobe/rhi/rhi.hpp"
-#include "strobe/rhi/types/access.hpp"
-#include "strobe/rhi/types/attachment_load_op.hpp"
-#include "strobe/rhi/types/blend_equation.hpp"
-#include "strobe/rhi/types/blend_factor.hpp"
-#include "strobe/rhi/types/blend_op.hpp"
-#include "strobe/rhi/types/buffer_usage.hpp"
-#include "strobe/rhi/types/color_component.hpp"
-#include "strobe/rhi/types/format.hpp"
-#include "strobe/rhi/types/image_aspect.hpp"
-#include "strobe/rhi/types/pipeline_stage.hpp"
-#include "strobe/rhi/types/primitive_topology.hpp"
-#include "strobe/rhi/types/sampler_address_mode.hpp"
-#include "strobe/rhi/types/vertex_input_rate.hpp"
 #include "tf-frag.slang.spv.hpp"
 #include "tf-vert.slang.spv.hpp"
 #include "tracy/Tracy.hpp"
@@ -32,15 +15,29 @@
 #include <cmath>
 #include <fmt/ostream.h>
 #include <random>
-#include <vulkan/vulkan_core.h>
+#include <strobe/rhi/rhi.hpp>
 
 using namespace strobe;
 
 static constexpr uint32_t FRAMES_IN_FLIGHT = 2;
-static constexpr size_t PARTICLE_COUNT = 1 << 20;
-static constexpr float PARTICLE_MASS = 1;
-static constexpr float LINEAR_DAMPING = 0.5f;
-static constexpr float RESTITUTION = 1.0f; // [0,1]
+static constexpr size_t PARTICLE_COUNT = 1 << 11;
+
+static constexpr float REST_DENSITY = 2.0f;
+static constexpr float PARTICLE_MASS = 625.0f;
+static constexpr float SMOOTHING_RADIUS = 60.0f;
+static constexpr float PRESSURE_STIFFNESS = 250'000.0f;
+static constexpr float VISCOSITY = 1'000.0f;
+static constexpr float LINEAR_DAMPING = 0.0f;
+static constexpr float RESTITUTION = 0.0f;
+
+static constexpr float WALL_RADIUS = 0.0f;
+static constexpr float WALL_STIFFNESS = 0.0f;
+static constexpr float WALL_DAMPING = 0.0f;
+
+// static constexpr float WALL_RADIUS = 0.15f * SMOOTHING_RADIUS;
+// static constexpr float WALL_STIFFNESS = 500.0f;
+// static constexpr float WALL_DAMPING = 2.0f;
+//
 static constexpr vec2 GRAVITY = vec2(0, 100);
 static constexpr float WINDOW_COUPLING = 1.0f; // 1/s
 
@@ -68,10 +65,14 @@ static constexpr size_t APPLY_FORCE_WG_SIZE = 256;
 struct Particle {
   vec2 position;
   vec2 velocity;
+  float density;
+  float _padding;
 };
-static std::array<Particle, PARTICLE_COUNT> g_particles;
+static strobe::Vector<Particle> g_particles;
 
 static void fluid_simulation_init() {
+  g_particles.resize(PARTICLE_COUNT, {});
+
   g_viewportPos = vec2{0.0f};
   g_viewportExtent = g_windowExtent.load(std::memory_order_relaxed);
 
@@ -86,18 +87,17 @@ static void fluid_simulation_init() {
   std::uniform_real_distribution<float> ydist{0.0f, g_viewportExtent.y()};
   std::uniform_real_distribution<float> udist{0.0f, 1.0f};
 
-  constexpr float speed = 100.0f;
-
   for (Particle &particle : g_particles) {
     particle.position = vec2{
         xdist(prng),
         ydist(prng),
     };
-    float theta = 2.0f * std::numbers::pi_v<float> * udist(prng);
-    particle.velocity = speed * vec2{
-                                    std::cos(theta),
-                                    std::sin(theta),
-                                };
+    // constexpr float speed = 100.0f;
+    // float theta = 2.0f * std::numbers::pi_v<float> * udist(prng);
+    // particle.velocity = speed * vec2{
+    //                                 std::cos(theta),
+    //                                 std::sin(theta),
+    //                             };
   }
 }
 
@@ -107,58 +107,92 @@ static void update_external_acceleration(float dt) {
   const vec2 windowPos = g_windowPos.load(std::memory_order_relaxed);
   const vec2 windowDisplacement = windowPos - g_previousWindowPos;
   const vec2 windowVelocity = windowDisplacement / dt;
-  g_externalForce = WINDOW_COUPLING * windowVelocity + GRAVITY;
+  g_externalForce =
+      (WINDOW_COUPLING * windowVelocity + GRAVITY) * PARTICLE_MASS;
   g_previousWindowPos = windowPos;
 }
 
 static void upload_particles(rhi::CommandBuffer cmd, rhi::Buffer particles) {
   const size_t size_bytes = g_particles.size() * sizeof(Particle);
-  assert(dst.size() >= size);
   cmd.update({particles}, g_particles.data(), size_bytes);
 }
 
+static void density(rhi::CommandBuffer &cmd,
+                    rhi::ResourceDescriptor &particlesRead,
+                    rhi::ResourceDescriptor &particlesWrite,
+                    rhi::ComputeShader &shader) {
+  struct PushConstants {
+    uint32_t particleCount;
+    float particleMass;
+    float smoothingRadius;
+  };
+
+  PushConstants pc{
+      .particleCount = PARTICLE_COUNT,
+      .particleMass = PARTICLE_MASS,
+      .smoothingRadius = SMOOTHING_RADIUS,
+  };
+
+  cmd.push(0, particlesRead);
+  cmd.push(4, particlesWrite);
+  cmd.push(8, &pc, sizeof(pc));
+
+  cmd.bind_shader(shader);
+
+  const uint32_t wgCount =
+      (PARTICLE_COUNT + APPLY_FORCE_WG_SIZE - 1) / APPLY_FORCE_WG_SIZE;
+  cmd.dispatch(wgCount);
+}
+
 static void apply_forces(rhi::CommandBuffer &cmd,
-                         rhi::ResourceDescriptor &particles,
+                         rhi::ResourceDescriptor &particlesRead,
+                         rhi::ResourceDescriptor &particlesWrite,
                          rhi::ComputeShader &shader) {
 
   struct PushConstants {
-    uint32_t particleCount;        // 0
-    float deltaTime;               // 4
-    float mass;                    // 8
-    float linearDamping;           // 12
-    float restitution;             // 16
-    uint32_t padding;              // 20
-    alignas(8) vec2 externalForce; // 24
-    vec2 viewportPos;              // 32
-    vec2 viewportExtent;           // 40
-    // uint32_t particleIndex;        // 48
+    uint32_t particleCount;
+    float deltaTime;
+    float particleMass;
+    float restDensity;
+    float pressureStiffness;
+    float viscosity;
+    float smoothingRadius;
+    float linearDamping;
+    float restitution;
+    // float wallRadius;
+    // float wallStiffness;
+    // float wallDamping;
+    alignas(8) vec2 externalForce;
+    alignas(8) vec2 viewportPos;
+    alignas(8) vec2 viewportExtent;
   };
-  static_assert(offsetof(PushConstants, particleCount) == 0);
-  static_assert(offsetof(PushConstants, deltaTime) == 4);
-  static_assert(offsetof(PushConstants, mass) == 8);
-  static_assert(offsetof(PushConstants, linearDamping) == 12);
-  static_assert(offsetof(PushConstants, restitution) == 16);
-  static_assert(offsetof(PushConstants, externalForce) == 24);
-  static_assert(offsetof(PushConstants, viewportPos) == 32);
-  static_assert(offsetof(PushConstants, viewportExtent) == 40);
 
   PushConstants pc{
       .particleCount = PARTICLE_COUNT,
       .deltaTime = SIM_DELTA_TIME_MS * 1e-3f,
-      .mass = PARTICLE_MASS,
+      .particleMass = PARTICLE_MASS,
+      .restDensity = REST_DENSITY,
+      .pressureStiffness = PRESSURE_STIFFNESS,
+      .viscosity = VISCOSITY,
+      .smoothingRadius = SMOOTHING_RADIUS,
       .linearDamping = LINEAR_DAMPING,
       .restitution = RESTITUTION,
-      .padding = 0,
+      // .wallRadius = WALL_RADIUS,
+      // .wallStiffness = WALL_STIFFNESS,
+      // .wallDamping = WALL_DAMPING,
       .externalForce = g_externalForce,
       .viewportPos = g_viewportPos,
       .viewportExtent = g_viewportExtent,
   };
 
-  cmd.push(0, &pc, sizeof(pc));
-  cmd.push(48, particles);
+  cmd.push(0, particlesRead);
+  cmd.push(4, particlesWrite);
+  cmd.push(8, &pc, sizeof(pc));
+
+  cmd.bind_shader(shader);
+
   const uint32_t wgCount =
       (PARTICLE_COUNT + APPLY_FORCE_WG_SIZE - 1) / APPLY_FORCE_WG_SIZE;
-  cmd.bind_shader(shader);
   cmd.dispatch(wgCount);
 }
 
@@ -423,13 +457,22 @@ int main() {
       .spirv = apply_force_slang_spv,
   });
 
+  rhi::ComputeShader densityShader = device.create_compute_shader({
+      .spirv = density_slang_spv,
+  });
+
   fluid_simulation_init();
 
-  constexpr size_t size_bytes = g_particles.size() * sizeof(Particle);
+  const size_t size_bytes = g_particles.size() * sizeof(Particle);
   rhi::Buffer particles = device.create_buffer({
       .size = size_bytes,
       .bufferUsage = rhi::BufferUsage::transfer_dst | rhi::BufferUsage::vertex |
                      rhi::BufferUsage::storage,
+      .memoryUsage = rhi::MemoryUsage::automatic,
+  });
+  rhi::Buffer particlesBack = device.create_buffer({
+      .size = size_bytes,
+      .bufferUsage = rhi::BufferUsage::storage,
       .memoryUsage = rhi::MemoryUsage::automatic,
   });
   auto cmd = cmdpool.alloc();
@@ -447,9 +490,13 @@ int main() {
   cmd.end();
   queue.submit(&cmd).wait();
 
-  rhi::ResourceDescriptor particleDescriptor =
+  rhi::ResourceDescriptor particlesDescriptor =
       device.create_storage_buffer_descriptor({
           .buffer = particles,
+      });
+  rhi::ResourceDescriptor particlesBackDescriptor =
+      device.create_storage_buffer_descriptor({
+          .buffer = particlesBack,
       });
 
   struct Frame {
@@ -544,7 +591,19 @@ int main() {
                          rhi::Access::shader_storage_write,
         });
       }
-      apply_forces(cmd, particleDescriptor, applyForceShader);
+      density(cmd, particlesDescriptor, particlesBackDescriptor, densityShader);
+
+      cmd.memory_barrier(rhi::MemoryBarrier{
+          .srcStage = rhi::PipelineStage::compute_shader,
+          .srcAccess = rhi::Access::shader_storage_read |
+                       rhi::Access::shader_storage_write,
+          .dstStage = rhi::PipelineStage::compute_shader,
+          .dstAccess = rhi::Access::shader_storage_read |
+                       rhi::Access::shader_storage_write,
+      });
+
+      apply_forces(cmd, particlesBackDescriptor, particlesDescriptor,
+                   applyForceShader);
     }
     last += steps * SIM_DELTA_TIME_MS;
 
@@ -574,6 +633,7 @@ int main() {
     cmd.end();
 
     queue.wait(image);
+
     frame.ready = queue.submit(&cmd);
     frame.ready.wait();
     queue.present(std::move(image));

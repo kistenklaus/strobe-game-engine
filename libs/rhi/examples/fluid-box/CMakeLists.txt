@@ -59,6 +59,18 @@ embed_slang_spirv(fluid-box-apply-force-compute-shader
     -spirv-unified-descriptor-heap-stride
 )
 
+embed_slang_spirv(fluid-box-density-compute-shader
+  PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/shaders
+  SOURCE density.slang
+  SLANG_FLAGS
+    -entry main
+    -stage compute
+    -target spirv
+    -profile spirv_1_6
+    -capability spvDescriptorHeapEXT
+    -spirv-unified-descriptor-heap-stride
+)
+
 add_executable(fluid-box EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 )
@@ -71,6 +83,7 @@ target_link_libraries(fluid-box
   PRIVATE fluid-box-tf-fragment-shader
   PRIVATE fluid-box-tf-vertex-shader
   PRIVATE fluid-box-apply-force-compute-shader
+  PRIVATE fluid-box-density-compute-shader
 )
 
 target_link_fmt(fluid-box PRIVATE)

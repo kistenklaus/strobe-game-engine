@@ -128,9 +128,12 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/device/device.cpp
   # strobe::rhi
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/rhi.cpp
-
-
 )
+
+target_precompile_headers(strobe-rhi-vulkan
+  PUBLIC <strobe/rhi/rhi.hpp>
+ )
+
 target_include_directories(strobe-rhi-vulkan
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/vulkan

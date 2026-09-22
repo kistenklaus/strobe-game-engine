@@ -2,6 +2,7 @@
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/swapchain/swapchain_impl.hpp"
 #include <limits>
+#include <thread>
 
 namespace strobe::rhi {
 

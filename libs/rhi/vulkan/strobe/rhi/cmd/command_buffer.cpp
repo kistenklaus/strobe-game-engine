@@ -588,7 +588,7 @@ void CommandBuffer::bind_vertex_buffers(span<const BufferOffset> bindings,
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
   ZoneScopedN("CommandBuffer::bind_vertex_buffers");
   SmallVector<VkBuffer, 8> buffers{bindings.size()};
-  SmallVector<VkDeviceSize, 8> offsets{bindings.size()};
+  SmallVector<VkDeviceSize, 8> offsets(bindings.size());
   for (uint32_t i = 0; i < bindings.size(); ++i) {
     auto *buf_impl = object_handle_ptr<BufferImpl>(bindings[i].buffer);
     buf_impl->commit();
