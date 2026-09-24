@@ -2,8 +2,11 @@
 #define PI 3.14159265358979323846
 
 struct PushConstants {
-  uint particleReadIndex;
-  uint particleWriteIndex;
+  uint particlePositionReadIndex;
+  uint particlePositionWriteIndex;
+  uint particleVelocityReadIndex;
+  uint particleVelocityWriteIndex;
+  uint particleDensityReadIndex;
 
   uint particleCount;
   float deltaTime;

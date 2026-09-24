@@ -1,5 +1,6 @@
-#include "apply-force.slang.spv.hpp"
 #include "density.slang.spv.hpp"
+#include "euler.slang.spv.hpp"
+#include "navier.slang.spv.hpp"
 #include "splat-frag.slang.spv.hpp"
 #include "splat-vert.slang.spv.hpp"
 #include "strobe/core/containers/vector.hpp"
@@ -20,25 +21,19 @@
 using namespace strobe;
 
 static constexpr uint32_t FRAMES_IN_FLIGHT = 2;
-static constexpr size_t PARTICLE_COUNT = 1 << 11;
+static constexpr size_t PARTICLE_COUNT = 1 << 9;
 
 static constexpr float REST_DENSITY = 2.0f;
-static constexpr float PARTICLE_MASS = 625.0f;
 static constexpr float SMOOTHING_RADIUS = 60.0f;
-static constexpr float PRESSURE_STIFFNESS = 250'000.0f;
+static constexpr float PRESSURE_STIFFNESS = 2'000'000.0f;
+// static constexpr float PRESSURE_STIFFNESS = 250'000.0f;
 static constexpr float VISCOSITY = 1'000.0f;
 static constexpr float LINEAR_DAMPING = 0.0f;
 static constexpr float RESTITUTION = 0.0f;
 
-static constexpr float WALL_RADIUS = 0.0f;
-static constexpr float WALL_STIFFNESS = 0.0f;
-static constexpr float WALL_DAMPING = 0.0f;
+static constexpr float PARTICLE_MASS = 625.0f;
+static constexpr vec2 GRAVITY = vec2(0, 800);
 
-// static constexpr float WALL_RADIUS = 0.15f * SMOOTHING_RADIUS;
-// static constexpr float WALL_STIFFNESS = 500.0f;
-// static constexpr float WALL_DAMPING = 2.0f;
-//
-static constexpr vec2 GRAVITY = vec2(0, 100);
 static constexpr float WINDOW_COUPLING = 1.0f; // 1/s
 
 static constexpr float SIM_DELTA_TIME_MS = 1.0f; // 1ms
@@ -60,18 +55,24 @@ static vec2 g_externalForce;
 
 static std::atomic<vec2> g_mousePos;
 
-static constexpr size_t APPLY_FORCE_WG_SIZE = 256;
+static constexpr size_t WG_SIZE = 256;
 
-struct Particle {
-  vec2 position;
-  vec2 velocity;
-  float density;
-  float _padding;
-};
-static strobe::Vector<Particle> g_particles;
+// struct Particle {
+//   vec2 position;
+//   vec2 velocity;
+//   float density;
+//   float _padding;
+// };
+static strobe::Vector<vec2> g_particlePositions;
+static strobe::Vector<vec2> g_particleVelocities;
+static strobe::Vector<float> g_particleDensities;
+static strobe::Vector<vec2> g_particleForces;
 
 static void fluid_simulation_init() {
-  g_particles.resize(PARTICLE_COUNT, {});
+  g_particlePositions.resize(PARTICLE_COUNT, {});
+  g_particleVelocities.resize(PARTICLE_COUNT, {});
+  g_particleDensities.resize(PARTICLE_COUNT, 0.0f);
+  g_particleForces.resize(PARTICLE_COUNT, {});
 
   g_viewportPos = vec2{0.0f};
   g_viewportExtent = g_windowExtent.load(std::memory_order_relaxed);
@@ -85,19 +86,12 @@ static void fluid_simulation_init() {
 
   std::uniform_real_distribution<float> xdist{0.0f, g_viewportExtent.x()};
   std::uniform_real_distribution<float> ydist{0.0f, g_viewportExtent.y()};
-  std::uniform_real_distribution<float> udist{0.0f, 1.0f};
 
-  for (Particle &particle : g_particles) {
-    particle.position = vec2{
+  for (vec2 &pos : g_particlePositions) {
+    pos = vec2{
         xdist(prng),
         ydist(prng),
     };
-    // constexpr float speed = 100.0f;
-    // float theta = 2.0f * std::numbers::pi_v<float> * udist(prng);
-    // particle.velocity = speed * vec2{
-    //                                 std::cos(theta),
-    //                                 std::sin(theta),
-    //                             };
   }
 }
 
@@ -107,92 +101,134 @@ static void update_external_acceleration(float dt) {
   const vec2 windowPos = g_windowPos.load(std::memory_order_relaxed);
   const vec2 windowDisplacement = windowPos - g_previousWindowPos;
   const vec2 windowVelocity = windowDisplacement / dt;
-  g_externalForce =
-      (WINDOW_COUPLING * windowVelocity + GRAVITY) * PARTICLE_MASS;
+  // g_externalForce =
+  //     (WINDOW_COUPLING * windowVelocity + GRAVITY) * PARTICLE_MASS;
+  g_externalForce = GRAVITY / PARTICLE_MASS;
   g_previousWindowPos = windowPos;
 }
 
-static void upload_particles(rhi::CommandBuffer cmd, rhi::Buffer particles) {
-  const size_t size_bytes = g_particles.size() * sizeof(Particle);
-  cmd.update({particles}, g_particles.data(), size_bytes);
+static void upload_particles(rhi::CommandBuffer cmd,
+                             rhi::Buffer particlePositions,
+                             rhi::Buffer particleVelocities) {
+  cmd.update({particlePositions}, g_particlePositions.data(),
+             PARTICLE_COUNT * sizeof(vec2));
+  cmd.update({particleVelocities}, g_particleVelocities.data(),
+             PARTICLE_COUNT * sizeof(vec2));
 }
 
 static void density(rhi::CommandBuffer &cmd,
-                    rhi::ResourceDescriptor &particlesRead,
-                    rhi::ResourceDescriptor &particlesWrite,
+                    rhi::ResourceDescriptor &particlePositions,
+                    rhi::ResourceDescriptor &particleVelocities,
+                    rhi::ResourceDescriptor &particleDensities,
                     rhi::ComputeShader &shader) {
-  struct PushConstants {
-    uint32_t particleCount;
-    float particleMass;
-    float smoothingRadius;
-  };
-
-  PushConstants pc{
-      .particleCount = PARTICLE_COUNT,
-      .particleMass = PARTICLE_MASS,
-      .smoothingRadius = SMOOTHING_RADIUS,
-  };
-
-  cmd.push(0, particlesRead);
-  cmd.push(4, particlesWrite);
-  cmd.push(8, &pc, sizeof(pc));
-
-  cmd.bind_shader(shader);
-
-  const uint32_t wgCount =
-      (PARTICLE_COUNT + APPLY_FORCE_WG_SIZE - 1) / APPLY_FORCE_WG_SIZE;
-  cmd.dispatch(wgCount);
-}
-
-static void apply_forces(rhi::CommandBuffer &cmd,
-                         rhi::ResourceDescriptor &particlesRead,
-                         rhi::ResourceDescriptor &particlesWrite,
-                         rhi::ComputeShader &shader) {
-
   struct PushConstants {
     uint32_t particleCount;
     float deltaTime;
     float particleMass;
-    float restDensity;
-    float pressureStiffness;
-    float viscosity;
     float smoothingRadius;
-    float linearDamping;
-    float restitution;
-    // float wallRadius;
-    // float wallStiffness;
-    // float wallDamping;
-    alignas(8) vec2 externalForce;
-    alignas(8) vec2 viewportPos;
-    alignas(8) vec2 viewportExtent;
+    uint _padding;
+    vec2 viewportPos;
+    vec2 viewportExtent;
   };
 
   PushConstants pc{
       .particleCount = PARTICLE_COUNT,
       .deltaTime = SIM_DELTA_TIME_MS * 1e-3f,
       .particleMass = PARTICLE_MASS,
+      .smoothingRadius = SMOOTHING_RADIUS,
+      ._padding = 0,
+      .viewportPos = g_viewportPos,
+      .viewportExtent = g_viewportExtent,
+  };
+
+  cmd.push(0, particlePositions);
+  cmd.push(4, particleVelocities);
+  cmd.push(8, particleDensities);
+  cmd.push(12, &pc, sizeof(pc));
+
+  cmd.bind_shader(shader);
+
+  const uint32_t wgCount = (PARTICLE_COUNT + WG_SIZE - 1) / WG_SIZE;
+  cmd.dispatch(wgCount);
+}
+
+static void navier(rhi::CommandBuffer &cmd,
+                   rhi::ResourceDescriptor &particlePositions,
+                   rhi::ResourceDescriptor &particleVelocities,
+                   rhi::ResourceDescriptor &particleDensities,
+                   rhi::ResourceDescriptor &particleForces,
+                   rhi::ComputeShader &shader) {
+  struct PushConstants {
+    uint32_t particleCount;
+    float deltaTime;
+
+    float restDensity;
+    float pressureStiffness;
+    float viscosity;
+    float smoothingRadius;
+    vec2 viewportPos;
+    vec2 viewportExtent;
+  };
+  PushConstants pc{
+      .particleCount = PARTICLE_COUNT,
+      .deltaTime = SIM_DELTA_TIME_MS * 1e-3,
       .restDensity = REST_DENSITY,
       .pressureStiffness = PRESSURE_STIFFNESS,
       .viscosity = VISCOSITY,
       .smoothingRadius = SMOOTHING_RADIUS,
+      .viewportPos = g_viewportExtent,
+      .viewportExtent = g_viewportExtent,
+  };
+  cmd.push(0, particlePositions);
+  cmd.push(4, particleVelocities);
+  cmd.push(8, particleDensities);
+  cmd.push(12, particleForces);
+  cmd.push(16, &pc, sizeof(pc));
+
+  cmd.bind_shader(shader);
+
+  const uint32_t wgCount = (PARTICLE_COUNT + WG_SIZE - 1) / WG_SIZE;
+  cmd.dispatch(wgCount);
+}
+
+static void euler(rhi::CommandBuffer &cmd,
+                  rhi::ResourceDescriptor &particlePositions,
+                  rhi::ResourceDescriptor &particleVelocities,
+                  rhi::ResourceDescriptor &particleForces,
+                  rhi::ComputeShader &shader) {
+
+  struct PushConstants {
+    uint32_t particleCount;
+    float deltaTime;
+    float particleMass;
+
+    float linearDamping;
+    float restitution;
+
+    vec2 externalForce;
+    vec2 viewportPos;
+    vec2 viewportExtent;
+  };
+
+  PushConstants pc{
+      .particleCount = PARTICLE_COUNT,
+      .deltaTime = SIM_DELTA_TIME_MS * 1e-3f,
+      .particleMass = PARTICLE_MASS,
       .linearDamping = LINEAR_DAMPING,
       .restitution = RESTITUTION,
-      // .wallRadius = WALL_RADIUS,
-      // .wallStiffness = WALL_STIFFNESS,
-      // .wallDamping = WALL_DAMPING,
       .externalForce = g_externalForce,
       .viewportPos = g_viewportPos,
       .viewportExtent = g_viewportExtent,
   };
 
-  cmd.push(0, particlesRead);
-  cmd.push(4, particlesWrite);
-  cmd.push(8, &pc, sizeof(pc));
+  cmd.push(0, particlePositions);
+  cmd.push(4, particleVelocities);
+  cmd.push(8, particleForces);
+  cmd.push(12, &pc, sizeof(pc));
 
   cmd.bind_shader(shader);
 
-  const uint32_t wgCount =
-      (PARTICLE_COUNT + APPLY_FORCE_WG_SIZE - 1) / APPLY_FORCE_WG_SIZE;
+  const uint32_t wgCount = (PARTICLE_COUNT + WG_SIZE - 1) / WG_SIZE;
   cmd.dispatch(wgCount);
 }
 
@@ -235,7 +271,7 @@ static void splat_particles(rhi::CommandBuffer &cmd, rhi::ImageView &target,
       },
       rhi::VertexBinding{
           .binding = 1,
-          .stride = sizeof(Particle), // particle center
+          .stride = sizeof(vec2),
           .inputRate = rhi::VertexInputRate::instance,
           .divisor = 1,
       },
@@ -251,7 +287,7 @@ static void splat_particles(rhi::CommandBuffer &cmd, rhi::ImageView &target,
           .location = 1, // <-- must be different
           .binding = 1,
           .format = rhi::Format::rg32_float,
-          .offset = offsetof(Particle, position),
+          .offset = 0,
       },
   };
 
@@ -453,31 +489,45 @@ int main() {
       .spirv = tf_frag_slang_spv,
   });
 
-  rhi::ComputeShader applyForceShader = device.create_compute_shader({
-      .spirv = apply_force_slang_spv,
-  });
-
   rhi::ComputeShader densityShader = device.create_compute_shader({
       .spirv = density_slang_spv,
   });
 
+  rhi::ComputeShader navierShader = device.create_compute_shader({
+      .spirv = navier_slang_spv,
+  });
+
+  rhi::ComputeShader eulerShader = device.create_compute_shader({
+      .spirv = euler_slang_spv,
+  });
+
   fluid_simulation_init();
 
-  const size_t size_bytes = g_particles.size() * sizeof(Particle);
-  rhi::Buffer particles = device.create_buffer({
-      .size = size_bytes,
+  rhi::Buffer particlePositions = device.create_buffer({
+      .size = PARTICLE_COUNT * sizeof(vec2),
       .bufferUsage = rhi::BufferUsage::transfer_dst | rhi::BufferUsage::vertex |
                      rhi::BufferUsage::storage,
       .memoryUsage = rhi::MemoryUsage::automatic,
   });
-  rhi::Buffer particlesBack = device.create_buffer({
-      .size = size_bytes,
+  rhi::Buffer particleVelocities = device.create_buffer({
+      .size = PARTICLE_COUNT * sizeof(vec2),
+      .bufferUsage = rhi::BufferUsage::transfer_dst | rhi::BufferUsage::storage,
+      .memoryUsage = rhi::MemoryUsage::automatic,
+  });
+  rhi::Buffer particleDensities = device.create_buffer({
+      .size = PARTICLE_COUNT * sizeof(float),
       .bufferUsage = rhi::BufferUsage::storage,
       .memoryUsage = rhi::MemoryUsage::automatic,
   });
+  rhi::Buffer particleForces = device.create_buffer({
+      .size = PARTICLE_COUNT * sizeof(vec2),
+      .bufferUsage = rhi::BufferUsage::storage,
+      .memoryUsage = rhi::MemoryUsage::automatic,
+  });
+
   auto cmd = cmdpool.alloc();
   cmd.begin();
-  upload_particles(cmd, particles);
+  upload_particles(cmd, particlePositions, particleVelocities);
   cmd.memory_barrier({
       .srcStage = rhi::PipelineStage::transfer,
       .srcAccess = rhi::Access::transfer_write,
@@ -490,13 +540,21 @@ int main() {
   cmd.end();
   queue.submit(&cmd).wait();
 
-  rhi::ResourceDescriptor particlesDescriptor =
+  rhi::ResourceDescriptor particlePositionsDesc =
       device.create_storage_buffer_descriptor({
-          .buffer = particles,
+          .buffer = particlePositions,
       });
-  rhi::ResourceDescriptor particlesBackDescriptor =
+  rhi::ResourceDescriptor particleVelocitiesDesc =
       device.create_storage_buffer_descriptor({
-          .buffer = particlesBack,
+          .buffer = particleVelocities,
+      });
+  rhi::ResourceDescriptor particleDensitiesDesc =
+      device.create_storage_buffer_descriptor({
+          .buffer = particleDensities,
+      });
+  rhi::ResourceDescriptor particleForcesDesc =
+      device.create_storage_buffer_descriptor({
+          .buffer = particleForces,
       });
 
   struct Frame {
@@ -574,7 +632,7 @@ int main() {
     const float now = get_time();
     const float delta = now - last;
 
-    const uint32_t steps = static_cast<uint32_t>(delta / SIM_DELTA_TIME_MS);
+    uint32_t steps = static_cast<uint32_t>(delta / SIM_DELTA_TIME_MS);
 
     if (steps > 0) {
       const float dt = steps * SIM_DELTA_TIME_MS * 1e-3f;
@@ -591,7 +649,8 @@ int main() {
                          rhi::Access::shader_storage_write,
         });
       }
-      density(cmd, particlesDescriptor, particlesBackDescriptor, densityShader);
+      density(cmd, particlePositionsDesc, particleVelocitiesDesc,
+              particleDensitiesDesc, densityShader);
 
       cmd.memory_barrier(rhi::MemoryBarrier{
           .srcStage = rhi::PipelineStage::compute_shader,
@@ -602,8 +661,20 @@ int main() {
                        rhi::Access::shader_storage_write,
       });
 
-      apply_forces(cmd, particlesBackDescriptor, particlesDescriptor,
-                   applyForceShader);
+      navier(cmd, particlePositionsDesc, particleVelocitiesDesc,
+             particleDensitiesDesc, particleForcesDesc, navierShader);
+
+      cmd.memory_barrier(rhi::MemoryBarrier{
+          .srcStage = rhi::PipelineStage::compute_shader,
+          .srcAccess = rhi::Access::shader_storage_read |
+                       rhi::Access::shader_storage_write,
+          .dstStage = rhi::PipelineStage::compute_shader,
+          .dstAccess = rhi::Access::shader_storage_read |
+                       rhi::Access::shader_storage_write,
+      });
+
+      euler(cmd, particlePositionsDesc, particleVelocitiesDesc,
+            particleForcesDesc, eulerShader);
     }
     last += steps * SIM_DELTA_TIME_MS;
 
@@ -615,8 +686,9 @@ int main() {
     });
     cmd.transition_image(frame.densityMapImage, rhi::ImageLayout::undefined,
                          rhi::ImageLayout::attachment);
-    splat_particles(cmd, frame.densityMapView, particles, unitCircleVerticies,
-                    splatVertexShader, splatFragmentShader);
+    splat_particles(cmd, frame.densityMapView, particlePositions,
+                    unitCircleVerticies, splatVertexShader,
+                    splatFragmentShader);
 
     cmd.transition_image(frame.densityMapImage, rhi::ImageLayout::attachment,
                          rhi::ImageLayout::read_only);
