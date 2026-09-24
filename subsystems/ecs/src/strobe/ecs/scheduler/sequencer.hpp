@@ -81,7 +81,7 @@ namespace strobe::ecs {
 class Sequencer {
 private:
   static constexpr uint32_t LOCATION_POOL_CHUNK_SIZE = 48;
-  using slot_bitset = StaticBitset<schedule::SLOT_COUNT>;
+  using slot_bitset = Bitset<schedule::SLOT_COUNT>;
 
   using allocator = strobe::ecs::scheduler::allocator_ref;
   using allocator_traits = AllocatorTraits<allocator>;

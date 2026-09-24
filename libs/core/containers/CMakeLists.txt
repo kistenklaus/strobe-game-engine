@@ -1,8 +1,14 @@
-set(STROBE_CORE_CONTAINERS_LIB ${STROBE_CORE_LIB}-containers CACHE INTERNAL "")
 
-add_library(${STROBE_CORE_CONTAINERS_LIB} INTERFACE)
 
-target_include_directories(${STROBE_CORE_CONTAINERS_LIB} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${STROBE_CORE_CONTAINERS_LIB} INTERFACE ${STROBE_CORE_MEMORY_LIB})
+add_library(strobe-core-container INTERFACE)
+
+target_include_directories(strobe-core-container
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src 
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_link_libraries(strobe-core-container 
+  INTERFACE ${STROBE_CORE_MEMORY_LIB}
+)
 
 add_subdirectory(test)
+add_subdirectory(bench)
