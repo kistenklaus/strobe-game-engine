@@ -12,7 +12,7 @@
 #include "strobe/core/containers/hash_map.hpp"
 #include "strobe/core/containers/linear_map.hpp"
 #include "strobe/core/containers/swizz_hash_map.hpp"
-#include "strobe/core/memory/Mallocator.hpp"
+#include "strobe/core/memory/mallocator.hpp"
 
 namespace strobe {
 namespace {

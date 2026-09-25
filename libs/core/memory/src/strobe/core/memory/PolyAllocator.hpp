@@ -2,8 +2,8 @@
 
 #include <cstddef>
 
-#include "strobe/core/memory/AllocatorReference.hpp"
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_ref.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 
 namespace strobe {
 

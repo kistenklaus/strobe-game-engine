@@ -1,13 +1,12 @@
 
 
-add_library(strobe-core-container INTERFACE)
+add_library(strobe-core-containers INTERFACE)
 
-target_include_directories(strobe-core-container
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src 
+target_include_directories(strobe-core-containers
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(strobe-core-container 
-  INTERFACE ${STROBE_CORE_MEMORY_LIB}
+target_link_libraries(strobe-core-containers
+  INTERFACE strobe-core-memory
 )
 
 add_subdirectory(test)

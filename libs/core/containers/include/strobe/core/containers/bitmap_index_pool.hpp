@@ -1,8 +1,8 @@
 #pragma once
 
 #include "strobe/core/containers/invalid_index.hpp"
-#include "strobe/core/memory/AllocatorTraits.hpp"
-#include "strobe/core/memory/Mallocator.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
+#include "strobe/core/memory/mallocator.hpp"
 
 #include <algorithm>
 #include <bit>
@@ -16,17 +16,17 @@
 namespace strobe {
 
 /**
- * \ingroup container
+ * \ingroup core
  * \brief bitset based index pool.
  *
  * A index pool based on a dynamic fixed size bitset, which allows
  * allocating index ranges.
  * Example
- * \code{cpp}
+ * \code{.cpp}
  * int index = pool.alloc(4);
  * \endcode
  * allocates the values index+0, index+1, index+2, index+3
- * \code{cpp}
+ * \code{.cpp}
  * pool.free(index, 4);
  * \endcode
  * to free the index range
@@ -53,6 +53,15 @@ public:
   BitmapIndexPool(BitmapIndexPool &&) = delete;
   BitmapIndexPool &operator=(BitmapIndexPool &&) = delete;
 
+  /**
+   * \brief Allocates a contiguous range of free indices.
+   * \code{.cpp}
+   * size_t alloc(uint32_t count = 1) noexcept;
+   * \endcode
+   * \param count Number of indices to allocate.
+   * \return The first allocated index, or `INVALID_INDEX` if unavailable.
+   * \attention 1. \\p count must be nonzero.
+   */
   [[nodiscard]] size_t alloc(uint32_t count = 1) noexcept {
     const size_t requested = count;
     if (requested == 0 || requested > m_freeCount) {
@@ -71,6 +80,15 @@ public:
     return index;
   }
 
+  /**
+   * \brief Releases a contiguous range of allocated indices.
+   * \code{.cpp}
+   * void free(size_t index, uint32_t count = 1) noexcept;
+   * \endcode
+   * \param index First index in the range.
+   * \param count Number of indices to release.
+   * \attention 1. The complete range must be allocated by this pool.
+   */
   void free(size_t index, uint32_t count = 1) noexcept {
     const size_t released = count;
     assert(released != 0);
@@ -94,6 +112,14 @@ public:
     m_firstFree = std::min(m_firstFree, index);
   }
 
+  /**
+   * \brief Resizes the managed index range.
+   * \code{.cpp}
+   * void resize(size_t newSize) noexcept;
+   * \endcode
+   * \param newSize Number of indices after resizing.
+   * \attention 1. Resizing discards existing allocation state.
+   */
   void resize(size_t newSize) noexcept {
     assert(newSize >= m_size);
     if (newSize <= m_size) {

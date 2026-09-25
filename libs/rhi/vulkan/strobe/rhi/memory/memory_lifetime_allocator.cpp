@@ -1,5 +1,5 @@
 #include "strobe/rhi/memory/memory_lifetime_allocator.hpp"
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 #include "strobe/core/memory/align.hpp"
 #include <cstddef>
 #include <type_traits>

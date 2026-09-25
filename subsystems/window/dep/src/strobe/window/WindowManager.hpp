@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string_view>
-#include <strobe/core/memory/Mallocator.hpp>
+#include <strobe/core/memory/mallocator.hpp>
 #include <strobe/core/memory/PolyAllocator.hpp>
 #include <strobe/lina.hpp>
 #include <strobe/memory.hpp>

@@ -4,6 +4,7 @@
 #include <cassert>
 #include <concepts>
 #include <cstddef>
+#include <fmt/format.h>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -16,47 +17,96 @@
 
 namespace strobe {
 
+/**
+ * \ingroup core
+ * \brief Contiguous map storing key-value pairs with linear lookup.
+ * \code{.cpp}
+ * template<std::equality_comparable K, typename V,
+ *          Allocator A = Mallocator>
+ * class LinearMap;
+ * \endcode
+ *
+ * Erasing an entry does not preserve insertion order.
+ *
+ * \attention 1. Insertion and reserve() may invalidate all iterators and
+ * references.
+ * \attention 2. Erasure moves the last entry into the erased position.
+ */
 template <std::equality_comparable K, typename V, Allocator A = Mallocator>
 class LinearMap {
   using ATraits = AllocatorTraits<A>;
 
- public:
+public:
   using key_type = K;
   using mapped_type = V;
   using value_type = std::pair<const K, V>;
   using size_type = std::size_t;
 
-  template <bool Const>
-  class Iterator {
+  /**
+   * \brief Iterator over map entries.
+   * \code{.cpp}
+   * template<bool Const>
+   * class Iterator;
+   * \endcode
+   *
+   * Iterators expose entries as a pair of key and value references.
+   */
+  template <bool Const> class Iterator {
     using Value = std::conditional_t<Const, const V, V>;
 
     friend class LinearMap;
-    template <bool>
-    friend class Iterator;
+    template <bool> friend class Iterator;
 
-    Iterator(const K* key, Value* value)
-        : m_key(key), m_value(value) {}
+    Iterator(const K *key, Value *value) : m_key(key), m_value(value) {}
 
-   public:
+  public:
     using iterator_category = std::input_iterator_tag;
     using iterator_concept = std::input_iterator_tag;
     using value_type = LinearMap::value_type;
     using difference_type = std::ptrdiff_t;
-    using reference = std::pair<const K&, Value&>;
+    using reference = std::pair<const K &, Value &>;
 
+    /**
+     * \brief Constructs, copies, or converts an iterator.
+     * \code{.cpp}
+     * Iterator() = default;
+     * Iterator(const Iterator&) = default;
+     * Iterator& operator=(const Iterator&) = default;
+     * Iterator(const Iterator<false>& other) requires Const;
+     * \endcode
+     *
+     * \param other Iterator to copy or convert.
+     */
     Iterator() = default;
-    Iterator(const Iterator&) = default;
-    Iterator& operator=(const Iterator&) = default;
+    Iterator(const Iterator &) = default;
+    Iterator &operator=(const Iterator &) = default;
 
-    Iterator(const Iterator<false>& other)
+    Iterator(const Iterator<false> &other)
       requires Const
         : m_key(other.m_key), m_value(other.m_value) {}
 
-    reference operator*() const {
-      return {*m_key, *m_value};
-    }
+    /**
+     * \brief Accesses the current entry.
+     * \code{.cpp}
+     * reference operator*() const;
+     * \endcode
+     *
+     * \return The current key-value pair.
+     *
+     * \attention 1. The iterator must refer to an entry.
+     */
+    reference operator*() const { return {*m_key, *m_value}; }
 
-    Iterator& operator++() {
+    /**
+     * \brief Advances the iterator.
+     * \code{.cpp}
+     * Iterator& operator++();
+     * Iterator operator++(int);
+     * \endcode
+     *
+     * \return The advanced iterator or its previous value.
+     */
+    Iterator &operator++() {
       ++m_key;
       ++m_value;
       return *this;
@@ -68,23 +118,48 @@ class LinearMap {
       return old;
     }
 
+    /**
+     * \brief Compares two iterators.
+     * \code{.cpp}
+     * template<bool OtherConst>
+     * bool operator==(const Iterator<OtherConst>& other) const;
+     * \endcode
+     *
+     * \param other Iterator to compare with.
+     * \return Whether both iterators refer to the same entry.
+     */
     template <bool OtherConst>
-    bool operator==(const Iterator<OtherConst>& other) const {
+    bool operator==(const Iterator<OtherConst> &other) const {
       return m_key == other.m_key;
     }
 
-   private:
-    const K* m_key = nullptr;
-    Value* m_value = nullptr;
+  private:
+    const K *m_key = nullptr;
+    Value *m_value = nullptr;
   };
 
   using iterator = Iterator<false>;
   using const_iterator = Iterator<true>;
 
-  explicit LinearMap(const A& allocator = {})
-      : m_allocator(allocator) {}
+  /**
+   * \brief Constructs, copies, moves, assigns, or destroys a map.
+   * \code{.cpp}
+   * explicit LinearMap(const A& allocator = {});
+   * LinearMap(const LinearMap& other);
+   * LinearMap(LinearMap&& other);
+   * LinearMap& operator=(const LinearMap& other);
+   * LinearMap& operator=(LinearMap&& other);
+   * ~LinearMap();
+   * \endcode
+   *
+   * \param allocator Allocator to use.
+   * \param other Map to copy or move from.
+   *
+   * Moved-from maps are empty.
+   */
+  explicit LinearMap(const A &allocator = {}) : m_allocator(allocator) {}
 
-  LinearMap(const LinearMap& other)
+  LinearMap(const LinearMap &other)
       : m_allocator(
             ATraits::select_on_container_copy_construction(other.m_allocator)) {
     reserve(other.m_size);
@@ -93,8 +168,7 @@ class LinearMap {
       append(other.m_keys[i], other.m_values[i]);
   }
 
-  LinearMap(LinearMap&& other)
-      noexcept(std::is_nothrow_move_constructible_v<A>)
+  LinearMap(LinearMap &&other) noexcept(std::is_nothrow_move_constructible_v<A>)
       : m_keys(std::exchange(other.m_keys, nullptr)),
         m_values(std::exchange(other.m_values, nullptr)),
         m_size(std::exchange(other.m_size, 0)),
@@ -102,11 +176,9 @@ class LinearMap {
         m_valueCapacity(std::exchange(other.m_valueCapacity, 0)),
         m_allocator(std::move(other.m_allocator)) {}
 
-  ~LinearMap() {
-    reset();
-  }
+  ~LinearMap() { reset(); }
 
-  LinearMap& operator=(const LinearMap& other) {
+  LinearMap &operator=(const LinearMap &other) {
     if (this == &other)
       return *this;
 
@@ -126,7 +198,7 @@ class LinearMap {
     return *this;
   }
 
-  LinearMap& operator=(LinearMap&& other) {
+  LinearMap &operator=(LinearMap &&other) {
     if (this == &other)
       return *this;
 
@@ -142,8 +214,7 @@ class LinearMap {
       reserve(other.m_size);
 
       for (size_type i = 0; i < other.m_size; ++i)
-        append(std::move(other.m_keys[i]),
-               std::move(other.m_values[i]));
+        append(std::move(other.m_keys[i]), std::move(other.m_values[i]));
 
       other.clear();
     }
@@ -151,30 +222,66 @@ class LinearMap {
     return *this;
   }
 
-  iterator find(const K& key) {
+  /**
+   * \brief Finds an entry by key.
+   * \code{.cpp}
+   * iterator find(const K& key);
+   * const_iterator find(const K& key) const;
+   * \endcode
+   *
+   * \param key Key to find.
+   * \return Iterator to the entry, or end() if absent.
+   */
+  iterator find(const K &key) { return iterator_at(find_index(key)); }
+
+  const_iterator find(const K &key) const {
     return iterator_at(find_index(key));
   }
 
-  const_iterator find(const K& key) const {
-    return iterator_at(find_index(key));
-  }
-
+  /**
+   * \brief Checks whether a key exists.
+   * \code{.cpp}
+   * bool contains(const K& key) const;
+   * \endcode
+   *
+   * \param key Key to find.
+   * \return Whether the key exists.
+   */
   [[nodiscard]]
-  bool contains(const K& key) const {
+  bool contains(const K &key) const {
     return find_index(key) != m_size;
   }
 
-  // Keep this spelling if existing Strobe callers use it.
+  /**
+   * \brief Checks whether a key exists.
+   * \code{.cpp}
+   * bool containsKey(const K& key) const;
+   * \endcode
+   *
+   * \param key Key to find.
+   * \return Whether the key exists.
+   */
   [[nodiscard]]
-  bool containsKey(const K& key) const {
+  bool containsKey(const K &key) const {
     return contains(key);
   }
 
+  /**
+   * \brief Inserts a value if the key is absent.
+   * \code{.cpp}
+   * template<typename Key, typename... Args>
+   * std::pair<iterator, bool> try_emplace(Key&& key, Args&&... args);
+   * \endcode
+   *
+   * \param key Key to insert.
+   * \param args Arguments forwarded to construct the value.
+   * \return Iterator to the entry and whether insertion occurred.
+   */
   template <typename Key, typename... Args>
     requires std::same_as<std::remove_cvref_t<Key>, K> &&
-             std::constructible_from<K, Key&&> &&
-             std::constructible_from<V, Args&&...>
-  std::pair<iterator, bool> try_emplace(Key&& key, Args&&... args) {
+             std::constructible_from<K, Key &&> &&
+             std::constructible_from<V, Args &&...>
+  std::pair<iterator, bool> try_emplace(Key &&key, Args &&...args) {
     const size_type index = find_index(key);
     if (index != m_size)
       return {iterator_at(index), false};
@@ -183,28 +290,51 @@ class LinearMap {
     return {iterator_at(m_size - 1), true};
   }
 
-  std::pair<iterator, bool> insert(const K& key, const V& value) {
+  /**
+   * \brief Inserts a key-value pair if the key is absent.
+   * \code{.cpp}
+   * std::pair<iterator, bool> insert(const K& key, const V& value);
+   * std::pair<iterator, bool> insert(const K& key, V&& value);
+   * std::pair<iterator, bool> insert(K&& key, const V& value);
+   * std::pair<iterator, bool> insert(K&& key, V&& value);
+   * \endcode
+   *
+   * \param key Key to insert.
+   * \param value Value to insert.
+   * \return Iterator to the entry and whether insertion occurred.
+   */
+  std::pair<iterator, bool> insert(const K &key, const V &value) {
     return try_emplace(key, value);
   }
 
-  std::pair<iterator, bool> insert(const K& key, V&& value) {
+  std::pair<iterator, bool> insert(const K &key, V &&value) {
     return try_emplace(key, std::move(value));
   }
 
-  std::pair<iterator, bool> insert(K&& key, const V& value) {
+  std::pair<iterator, bool> insert(K &&key, const V &value) {
     return try_emplace(std::move(key), value);
   }
 
-  std::pair<iterator, bool> insert(K&& key, V&& value) {
+  std::pair<iterator, bool> insert(K &&key, V &&value) {
     return try_emplace(std::move(key), std::move(value));
   }
 
+  /**
+   * \brief Inserts a value or assigns it to an existing key.
+   * \code{.cpp}
+   * template<typename Key, typename M>
+   * std::pair<iterator, bool> insert_or_assign(Key&& key, M&& value);
+   * \endcode
+   *
+   * \param key Key to insert or find.
+   * \param value Value to insert or assign.
+   * \return Iterator to the entry and whether insertion occurred.
+   */
   template <typename Key, typename M>
     requires std::same_as<std::remove_cvref_t<Key>, K> &&
-             std::constructible_from<K, Key&&> &&
-             std::constructible_from<V, M&&> &&
-             std::assignable_from<V&, M&&>
-  std::pair<iterator, bool> insert_or_assign(Key&& key, M&& value) {
+             std::constructible_from<K, Key &&> &&
+             std::constructible_from<V, M &&> && std::assignable_from<V &, M &&>
+  std::pair<iterator, bool> insert_or_assign(Key &&key, M &&value) {
     const size_type index = find_index(key);
 
     if (index != m_size) {
@@ -216,32 +346,58 @@ class LinearMap {
     return {iterator_at(m_size - 1), true};
   }
 
-  V& operator[](const K& key)
+  /**
+   * \brief Accesses or inserts a value by key.
+   * \code{.cpp}
+   * V& operator[](const K& key);
+   * V& operator[](K&& key);
+   * \endcode
+   *
+   * \param key Key to access.
+   * \return The mapped value.
+   *
+   * \attention 1. V must be default-initializable.
+   */
+  V &operator[](const K &key)
     requires std::default_initializable<V>
   {
     return (*try_emplace(key).first).second;
   }
 
-  V& operator[](K&& key)
+  V &operator[](K &&key)
     requires std::default_initializable<V>
   {
     return (*try_emplace(std::move(key)).first).second;
   }
 
-  // Erasure is unordered: the last entry moves into the erased position.
+  /**
+   * \brief Erases an entry.
+   * \code{.cpp}
+   * iterator erase(const_iterator pos);
+   * size_type erase(const K& key);
+   * \endcode
+   *
+   * \param pos Entry to erase.
+   * \param key Key to erase.
+   * \return The iterator at the erased position, or the number of erased
+   * entries.
+   *
+   * The last entry moves into the erased position.
+   *
+   * \attention 1. \p pos must refer to an entry in this map.
+   */
   iterator erase(const_iterator pos) {
     assert(m_size != 0);
     assert(pos.m_key >= m_keys && pos.m_key < m_keys + m_size);
     assert(pos.m_value == m_values + (pos.m_key - m_keys));
 
-    const size_type index =
-        static_cast<size_type>(pos.m_key - m_keys);
+    const size_type index = static_cast<size_type>(pos.m_key - m_keys);
 
     erase_index(index);
     return iterator_at(index);
   }
 
-  size_type erase(const K& key) {
+  size_type erase(const K &key) {
     const size_type index = find_index(key);
     if (index == m_size)
       return 0;
@@ -250,26 +406,67 @@ class LinearMap {
     return 1;
   }
 
+  /**
+   * \brief Returns the number of entries.
+   * \code{.cpp}
+   * size_type size() const noexcept;
+   * \endcode
+   *
+   * \return Number of entries.
+   */
   [[nodiscard]]
   size_type size() const noexcept {
     return m_size;
   }
 
+  /**
+   * \brief Checks whether the map is empty.
+   * \code{.cpp}
+   * bool empty() const noexcept;
+   * \endcode
+   *
+   * \return Whether size() is zero.
+   */
   [[nodiscard]]
   bool empty() const noexcept {
     return m_size == 0;
   }
 
+  /**
+   * \brief Returns the entry capacity.
+   * \code{.cpp}
+   * size_type capacity() const noexcept;
+   * \endcode
+   *
+   * \return Number of entries that fit without allocation.
+   */
   [[nodiscard]]
   size_type capacity() const noexcept {
     return std::min(m_keyCapacity, m_valueCapacity);
   }
 
+  /**
+   * \brief Returns a view of the keys.
+   * \code{.cpp}
+   * span<const K> keys() const noexcept;
+   * \endcode
+   *
+   * \return View of the stored keys.
+   */
   [[nodiscard]]
   span<const K> keys() const noexcept {
     return {m_keys, m_size};
   }
 
+  /**
+   * \brief Returns a view of the mapped values.
+   * \code{.cpp}
+   * span<V> values() noexcept;
+   * span<const V> values() const noexcept;
+   * \endcode
+   *
+   * \return View of the stored values.
+   */
   [[nodiscard]]
   span<V> values() noexcept {
     return {m_values, m_size};
@@ -280,30 +477,58 @@ class LinearMap {
     return {m_values, m_size};
   }
 
-  iterator begin() noexcept {
-    return {m_keys, m_values};
-  }
+  /**
+   * \brief Returns an iterator to the first entry.
+   * \code{.cpp}
+   * iterator begin() noexcept;
+   * const_iterator begin() const noexcept;
+   * \endcode
+   *
+  * \return Iterator to the first entry.
+  */
+  iterator begin() noexcept { return {m_keys, m_values}; }
+  const_iterator begin() const noexcept { return {m_keys, m_values}; }
 
-  iterator end() noexcept {
-    return iterator_at(m_size);
-  }
+  /**
+   * \brief Returns an iterator past the last entry.
+   * \code{.cpp}
+   * iterator end() noexcept;
+   * const_iterator end() const noexcept;
+   * \endcode
+   *
+   * \return Iterator past the last entry.
+   */
+  iterator end() noexcept { return iterator_at(m_size); }
+  const_iterator end() const noexcept { return iterator_at(m_size); }
 
-  const_iterator begin() const noexcept {
-    return {m_keys, m_values};
-  }
+  /**
+   * \brief Returns a const iterator to the first entry.
+   * \code{.cpp}
+   * const_iterator cbegin() const noexcept;
+   * \endcode
+   *
+   * \return Const iterator to the first entry.
+   */
+  const_iterator cbegin() const noexcept { return begin(); }
 
-  const_iterator end() const noexcept {
-    return iterator_at(m_size);
-  }
+  /**
+   * \brief Returns a const iterator past the last entry.
+   * \code{.cpp}
+   * const_iterator cend() const noexcept;
+   * \endcode
+   *
+   * \return Const iterator past the last entry.
+   */
+  const_iterator cend() const noexcept { return end(); }
 
-  const_iterator cbegin() const noexcept {
-    return begin();
-  }
-
-  const_iterator cend() const noexcept {
-    return end();
-  }
-
+  /**
+   * \brief Removes all entries.
+   * \code{.cpp}
+   * void clear() noexcept;
+   * \endcode
+   *
+   * Capacity is retained.
+   */
   void clear() noexcept {
     if (m_size != 0) {
       std::destroy_n(m_keys, m_size);
@@ -313,7 +538,16 @@ class LinearMap {
     m_size = 0;
   }
 
-  // count is an element count, as with std::unordered_map::reserve.
+  /**
+   * \brief Reserves capacity for entries.
+   * \code{.cpp}
+   * void reserve(size_type count);
+   * \endcode
+   *
+   * \param count Desired number of entries.
+   *
+   * \attention 1. \p count must not exceed max_size().
+   */
   void reserve(size_type count) {
     if (count <= capacity())
       return;
@@ -339,12 +573,10 @@ class LinearMap {
     clear();
 
     if (m_keys)
-      ATraits::template deallocate<K>(
-          m_allocator, m_keys, m_keyCapacity);
+      ATraits::template deallocate<K>(m_allocator, m_keys, m_keyCapacity);
 
     if (m_values)
-      ATraits::template deallocate<V>(
-          m_allocator, m_values, m_valueCapacity);
+      ATraits::template deallocate<V>(m_allocator, m_values, m_valueCapacity);
 
     m_keys = newKeys;
     m_values = newValues;
@@ -353,14 +585,13 @@ class LinearMap {
     m_valueCapacity = valueCapacity;
   }
 
- private:
+private:
   static constexpr size_type max_size() noexcept {
-    return std::min(
-        std::numeric_limits<size_type>::max() / sizeof(K),
-        std::numeric_limits<size_type>::max() / sizeof(V));
+    return std::min(std::numeric_limits<size_type>::max() / sizeof(K),
+                    std::numeric_limits<size_type>::max() / sizeof(V));
   }
 
-  size_type find_index(const K& key) const {
+  size_type find_index(const K &key) const {
     for (size_type i = 0; i < m_size; ++i) {
       if (m_keys[i] == key)
         return i;
@@ -384,7 +615,7 @@ class LinearMap {
   }
 
   template <typename Key, typename... Args>
-  void append(Key&& key, Args&&... args) {
+  void append(Key &&key, Args &&...args) {
     assert(m_size < max_size());
 
     if (m_size == capacity()) {
@@ -394,18 +625,16 @@ class LinearMap {
 
       const size_type current = capacity();
       const size_type next = current <= max_size() / 2
-          ? std::max<size_type>(1, current * 2)
-          : max_size();
+                                 ? std::max<size_type>(1, current * 2)
+                                 : max_size();
 
       reserve(next);
 
       std::construct_at(m_keys + m_size, std::move(stagedKey));
       std::construct_at(m_values + m_size, std::move(stagedValue));
     } else {
-      std::construct_at(
-          m_keys + m_size, std::forward<Key>(key));
-      std::construct_at(
-          m_values + m_size, std::forward<Args>(args)...);
+      std::construct_at(m_keys + m_size, std::forward<Key>(key));
+      std::construct_at(m_values + m_size, std::forward<Args>(args)...);
     }
 
     ++m_size;
@@ -424,7 +653,7 @@ class LinearMap {
     --m_size;
   }
 
-  void steal(LinearMap& other) noexcept {
+  void steal(LinearMap &other) noexcept {
     m_keys = std::exchange(other.m_keys, nullptr);
     m_values = std::exchange(other.m_values, nullptr);
     m_size = std::exchange(other.m_size, 0);
@@ -436,12 +665,10 @@ class LinearMap {
     clear();
 
     if (m_keys)
-      ATraits::template deallocate<K>(
-          m_allocator, m_keys, m_keyCapacity);
+      ATraits::template deallocate<K>(m_allocator, m_keys, m_keyCapacity);
 
     if (m_values)
-      ATraits::template deallocate<V>(
-          m_allocator, m_values, m_valueCapacity);
+      ATraits::template deallocate<V>(m_allocator, m_values, m_valueCapacity);
 
     m_keys = nullptr;
     m_values = nullptr;
@@ -449,8 +676,8 @@ class LinearMap {
     m_valueCapacity = 0;
   }
 
-  K* m_keys = nullptr;
-  V* m_values = nullptr;
+  K *m_keys = nullptr;
+  V *m_values = nullptr;
   size_type m_size = 0;
   size_type m_keyCapacity = 0;
   size_type m_valueCapacity = 0;
@@ -460,3 +687,37 @@ class LinearMap {
 };
 
 } // namespace strobe
+
+namespace fmt {
+
+/**
+ * \brief Formats a linear map as a brace-enclosed list of entries.
+ * \code{.cpp}
+ * template<std::equality_comparable K, typename V, strobe::Allocator A>
+ * struct formatter<strobe::LinearMap<K, V, A>>;
+ * \endcode
+ */
+template <std::equality_comparable K, typename V, strobe::Allocator A>
+struct formatter<strobe::LinearMap<K, V, A>> {
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto format(const strobe::LinearMap<K, V, A> &map,
+              FormatContext &ctx) const {
+    auto out = ctx.out();
+    *out++ = '{';
+    bool first = true;
+    for (const auto [key, value] : map) {
+      if (!first) {
+        *out++ = ',';
+        *out++ = ' ';
+      }
+      first = false;
+      out = fmt::format_to(out, "{}: {}", key, value);
+    }
+    *out++ = '}';
+    return out;
+  }
+};
+
+} // namespace fmt

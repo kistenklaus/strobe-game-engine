@@ -1,9 +1,6 @@
-set(STROBE_CORE_FS_TESTS ${STROBE_CORE_FS_LIB}-test)
-
-
 enable_testing()
 
-add_executable(${STROBE_CORE_FS_TESTS} EXCLUDE_FROM_ALL
+add_executable(strobe-core-fs-test EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/File.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/Path.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cp.cpp
@@ -15,8 +12,10 @@ add_executable(${STROBE_CORE_FS_TESTS} EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/stat.cpp
 )
 
-target_link_googletest(${STROBE_CORE_FS_TESTS} PRIVATE)
+target_link_googletest(strobe-core-fs-test PRIVATE)
 
-target_link_libraries(${STROBE_CORE_FS_TESTS} PRIVATE ${STROBE_CORE_FS_LIB})
+target_link_libraries(strobe-core-fs-test 
+  PRIVATE strobe-core-fs
+)
 
-strobe_discover_tests(${STROBE_CORE_FS_TESTS}) 
+strobe_discover_tests(strobe-core-fs-test) 

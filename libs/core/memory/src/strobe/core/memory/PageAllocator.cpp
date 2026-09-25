@@ -1,4 +1,4 @@
-#include "./PageAllocator.hpp"
+#include <strobe/core/memory/page_allocator.hpp>
 #include <algorithm>
 
 #if defined(_WIN32)
@@ -69,6 +69,14 @@ void* PageAllocator::allocate(std::size_t size, [[maybe_unused]] std::size_t ali
 
   return raw;
 #endif
+}
+
+std::pair<void*, std::size_t> PageAllocator::allocate_at_least(
+    std::size_t size, std::size_t alignment) {
+  const std::size_t page = strobe::page_size();
+  const std::size_t actualSize =
+      size == 0 ? 0 : memory::align_up(size, page);
+  return {allocate(size, alignment), actualSize};
 }
 
 void PageAllocator::deallocate(void* ptr, std::size_t size, [[maybe_unused]] std::size_t alignment) {

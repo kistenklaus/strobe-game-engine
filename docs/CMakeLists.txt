@@ -20,7 +20,11 @@ endif()
 
 if(NOT DEFINED STROBE_DOCS_DOXYGEN_INPUTS)
   set(STROBE_DOCS_DOXYGEN_INPUTS
-    "${PROJECT_SOURCE_DIR}/libs/rhi/include")
+    "${PROJECT_SOURCE_DIR}/libs/rhi/include"
+    "${PROJECT_SOURCE_DIR}/libs/core/containers/include"
+    "${PROJECT_SOURCE_DIR}/libs/core/events/include"
+    "${PROJECT_SOURCE_DIR}/libs/core/include"
+  )
 endif()
 
 set(_strobe_docs_source_dir

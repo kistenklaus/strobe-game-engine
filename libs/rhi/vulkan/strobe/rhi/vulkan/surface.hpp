@@ -1,6 +1,6 @@
 #pragma once
 
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 #include "strobe/rhi/vulkan/context/context.hpp"
 #include <vulkan/vulkan_core.h>
 namespace strobe::rhi::vulkan {

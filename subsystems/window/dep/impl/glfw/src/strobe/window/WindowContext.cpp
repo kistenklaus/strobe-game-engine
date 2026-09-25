@@ -2,7 +2,7 @@
 
 #include "GlfwWindow.hpp"
 #include "GlfwWindowContext.hpp"
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 #include "strobe/window/allocator.hpp"
 
 namespace strobe::window {

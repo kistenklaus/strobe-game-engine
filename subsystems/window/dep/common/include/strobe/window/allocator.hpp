@@ -1,7 +1,7 @@
 #pragma once
 
-#include "strobe/core/memory/AllocatorReference.hpp"
-#include "strobe/core/memory/Mallocator.hpp"
+#include "strobe/core/memory/allocator_ref.hpp"
+#include "strobe/core/memory/mallocator.hpp"
 namespace strobe::window {
 
 using allocator = strobe::Mallocator;

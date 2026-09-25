@@ -1,6 +1,6 @@
 enable_testing()
 
-add_executable(strobe-core-container-tests EXCLUDE_FROM_ALL
+add_executable(strobe-core-containers-test EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
 
   ${CMAKE_CURRENT_SOURCE_DIR}/bitmap_index_pool.cpp
@@ -32,9 +32,9 @@ add_executable(strobe-core-container-tests EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vector_deque.cpp
 )
 
-target_link_googletest(strobe-core-container-tests PRIVATE)
-target_link_libraries(strobe-core-container-tests
-  PRIVATE strobe-core-container
+target_link_googletest(strobe-core-containers-test PRIVATE)
+target_link_libraries(strobe-core-containers-test
+  PRIVATE strobe-core-containers
 )
 
-strobe_discover_tests(strobe-core-container-tests) 
+strobe_discover_tests(strobe-core-containers-test) 

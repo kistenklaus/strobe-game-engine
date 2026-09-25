@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <functional>
 #include <utility>
 
 TEST(BoxedArray, size_constructor_default_constructs_elements) {
@@ -86,4 +87,39 @@ TEST(BoxedArray, destroys_its_elements) {
     EXPECT_EQ(live, 2);
   }
   EXPECT_EQ(live, 0);
+}
+
+TEST(BoxedArray, front_and_back_access_elements) {
+  strobe::BoxedArray<int> values(std::array{3, 5, 7});
+
+  EXPECT_EQ(values.front(), 3);
+  EXPECT_EQ(values.back(), 7);
+  values.front() = 4;
+  values.back() = 8;
+  EXPECT_EQ(values[0], 4);
+  EXPECT_EQ(values[2], 8);
+}
+
+TEST(BoxedArray, comparisons_are_elementwise_and_lexicographical) {
+  strobe::BoxedArray<int> first(std::array{1, 2});
+  strobe::BoxedArray<int> equal(std::array{1, 2});
+  strobe::BoxedArray<int> greater(std::array{1, 3});
+
+  EXPECT_TRUE(first == equal);
+  EXPECT_FALSE(first != equal);
+  EXPECT_TRUE(first < greater);
+  EXPECT_TRUE(first <= greater);
+  EXPECT_TRUE(greater > first);
+  EXPECT_TRUE(greater >= first);
+  EXPECT_EQ(first <=> equal, std::strong_ordering::equal);
+}
+
+TEST(BoxedArray, hash_uses_element_values) {
+  strobe::BoxedArray<int> first(std::array{1, 2, 3});
+  strobe::BoxedArray<int> equal(std::array{1, 2, 3});
+  strobe::BoxedArray<int> different(std::array{1, 2, 4});
+
+  const std::hash<strobe::BoxedArray<int>> hash;
+  EXPECT_EQ(hash(first), hash(equal));
+  EXPECT_NE(hash(first), hash(different));
 }

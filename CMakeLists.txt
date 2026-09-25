@@ -47,7 +47,5 @@ if (STROBE_BUILD_DOCS)
   add_subdirectory(docs)
 endif()
 
-add_subdirectory(swizz_hash_map)
-
 
 

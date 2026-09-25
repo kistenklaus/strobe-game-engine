@@ -1,5 +1,5 @@
 
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 #include <atomic>
 #include <bit>
 #include <cassert>

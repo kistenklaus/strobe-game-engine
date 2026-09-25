@@ -92,7 +92,7 @@ TEST(Span, iterators_and_element_access) {
   EXPECT_TRUE(std::ranges::equal(
       std::ranges::subrange(view.rbegin(), view.rend()), std::array{7, 5, 3}));
 
-  EXPECT_THROW(view.at(3), std::out_of_range);
+  EXPECT_THROW((void)view.at(3), std::out_of_range);
 }
 
 TEST(Span, byte_views_cover_the_same_storage) {

@@ -86,7 +86,7 @@ private:
   using index_pool = BitmapIndexPool<strobe::rhi::allocator_ref>;
   uint32_t alloc_unlocked(uint32_t count) noexcept {
     const size_t index = m_indexPool.alloc(count);
-    if (index == index_pool::INVALID_INDEX) {
+    if (index == strobe::INVALID_INDEX) {
       return INVALID_INDEX;
     }
     assert(index <= std::numeric_limits<uint32_t>::max());

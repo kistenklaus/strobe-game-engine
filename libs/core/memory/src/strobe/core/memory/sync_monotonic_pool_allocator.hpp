@@ -4,7 +4,7 @@
 #include <cassert>
 #include <ratio>
 
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 
 namespace strobe {
 

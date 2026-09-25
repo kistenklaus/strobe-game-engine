@@ -1,6 +1,6 @@
 #include "strobe/rhi/vulkan/device_info/device_extensions.hpp"
 
-#include "strobe/core/memory/AllocatorReference.hpp"
+#include "strobe/core/memory/allocator_ref.hpp"
 #include "strobe/core/memory/inplace_monotonic_resource.hpp"
 #include "strobe/rhi/error/vulkan_error.hpp"
 

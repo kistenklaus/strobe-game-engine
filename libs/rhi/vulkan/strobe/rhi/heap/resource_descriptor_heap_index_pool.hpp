@@ -108,7 +108,7 @@ private:
 
   uint32_t alloc_unlocked(uint32_t count) noexcept {
     const std::size_t index = m_indexPool.alloc(count);
-    if (index == index_pool::INVALID_INDEX) {
+    if (index == strobe::INVALID_INDEX) {
       return INVALID_INDEX;
     }
     assert(index < INVALID_INDEX);

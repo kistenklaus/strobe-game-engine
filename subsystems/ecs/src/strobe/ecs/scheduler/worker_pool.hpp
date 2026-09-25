@@ -1,6 +1,6 @@
 #pragma once
 
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 #include "strobe/core/memory/cache_line.hpp"
 #include "strobe/ecs/scheduler/config.hpp"
 #include "strobe/ecs/scheduler/cpu_relax.hpp"

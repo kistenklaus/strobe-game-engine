@@ -1,7 +1,7 @@
 #pragma once
 
 #include "strobe/core/containers/bitset.hpp"
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 #include "strobe/ecs/allocator.hpp"
 #include "strobe/ecs/scheduler/allocator.hpp"
 #include "strobe/ecs/scheduler/config.hpp"

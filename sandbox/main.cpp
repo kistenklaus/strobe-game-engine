@@ -2,7 +2,7 @@
 #include "strobe/platform/platform.hpp"
 #include <strobe/core/fs/Path.hpp>
 #include <strobe/core/fs/mkdir.hpp>
-#include <strobe/core/memory/Mallocator.hpp>
+#include <strobe/core/memory/mallocator.hpp>
 #include <strobe/window/window.hpp>
 
 int main() {

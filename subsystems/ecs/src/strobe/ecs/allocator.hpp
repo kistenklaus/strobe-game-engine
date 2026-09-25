@@ -1,7 +1,7 @@
 #pragma once
 
-#include "strobe/core/memory/AllocatorReference.hpp"
-#include "strobe/core/memory/Mallocator.hpp"
+#include "strobe/core/memory/allocator_ref.hpp"
+#include "strobe/core/memory/mallocator.hpp"
 #include "strobe/core/memory/named_allocator.hpp"
 #include "strobe/core/type_traits/fixed_string.hpp"
 #include <fmt/printf.h>

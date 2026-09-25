@@ -3,7 +3,7 @@
 #include <strobe/lina.hpp>
 #include <thread>
 
-#include "strobe/core/memory/Mallocator.hpp"
+#include "strobe/core/memory/mallocator.hpp"
 #include "strobe/window/KeyboardEvent.hpp"
 
 using namespace strobe;

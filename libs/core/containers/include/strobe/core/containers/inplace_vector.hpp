@@ -4,15 +4,32 @@
 #include <concepts>
 #include <cstddef>
 #include <iterator>
+#include <functional>
 #include <memory>
 #include <span>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+#include <fmt/format.h>
 
 namespace strobe {
 
-template <typename T, std::size_t Capacity> class InplaceVector {
+/**
+ * \ingroup core
+ * \brief Fixed-capacity vector with inline storage.
+ * \code{.cpp}
+ * template<typename T, size_t Capacity>
+ * class InplaceVector;
+ * \endcode
+ *
+ * Stores up to \p Capacity elements without dynamic allocation.
+ *
+ * \attention 1. The vector cannot contain more than Capacity elements.
+ * \attention 2. Insertions and removals may invalidate iterators and
+ * references.
+ */
+template <typename T, std::size_t Capacity>
+class InplaceVector {
 public:
   using value_type = T;
   using size_type = std::size_t;
@@ -59,6 +76,20 @@ private:
   size_type m_size = 0;
 
 public:
+  /**
+   * \brief Constructs, copies, or moves a vector.
+   * \code{.cpp}
+   * constexpr InplaceVector() noexcept;
+   * InplaceVector(const InplaceVector& other);
+   * InplaceVector(InplaceVector&& other) noexcept(...);
+   * InplaceVector& operator=(const InplaceVector& other);
+   * InplaceVector& operator=(InplaceVector&& other) noexcept(...);
+   * ~InplaceVector();
+   * \endcode
+   * \param other Vector to copy or move from.
+   *
+   * Moved-from vectors are empty.
+   */
   constexpr InplaceVector() noexcept = default;
 
   InplaceVector(const InplaceVector &other)
@@ -181,30 +212,129 @@ public:
 
   ~InplaceVector() noexcept { clear(); }
 
-  [[nodiscard]] constexpr bool empty() const noexcept { return m_size == 0; }
+  /**
+   * \brief Checks whether the vector is empty.
+   * \code{.cpp}
+   * constexpr bool empty() const noexcept;
+   * \endcode
+   * \return Whether size() is zero.
+   */
+  [[nodiscard]] constexpr bool empty() const noexcept {
+    return m_size == 0;
+  }
 
-  [[nodiscard]] constexpr size_type size() const noexcept { return m_size; }
+  /**
+   * \brief Returns the number of elements.
+   * \code{.cpp}
+   * constexpr size_type size() const noexcept;
+   * \endcode
+   * \return Number of active elements.
+   */
+  [[nodiscard]] constexpr size_type size() const noexcept {
+    return m_size;
+  }
 
+  /**
+   * \brief Returns the element capacity.
+   * \code{.cpp}
+   * static constexpr size_type capacity() noexcept;
+   * \endcode
+   * \return Number of elements that fit.
+   */
   [[nodiscard]] static constexpr size_type capacity() noexcept {
     return Capacity;
   }
 
+  /**
+   * \brief Returns the maximum element count.
+   * \code{.cpp}
+   * static constexpr size_type max_size() noexcept;
+   * \endcode
+   * \return Capacity.
+   */
   [[nodiscard]] static constexpr size_type max_size() noexcept {
     return Capacity;
   }
 
-  [[nodiscard]] pointer data() noexcept { return ptr(0); }
+  /**
+   * \brief Returns the element storage.
+   * \code{.cpp}
+   * pointer data() noexcept;
+   * const_pointer data() const noexcept;
+   * \endcode
+   *
+   * \return Pointer to the first element.
+   */
+  [[nodiscard]] pointer data() noexcept {
+    return ptr(0);
+  }
 
-  [[nodiscard]] const_pointer data() const noexcept { return ptr(0); }
+  [[nodiscard]] const_pointer data() const noexcept {
+    return ptr(0);
+  }
 
-  [[nodiscard]] iterator begin() noexcept { return data(); }
-  [[nodiscard]] const_iterator begin() const noexcept { return data(); }
-  [[nodiscard]] const_iterator cbegin() const noexcept { return data(); }
+  /**
+   * \brief Returns an iterator to the first element.
+   * \code{.cpp}
+   * iterator begin() noexcept;
+   * const_iterator begin() const noexcept;
+   * \endcode
+   * \return Iterator to the first element.
+   */
+  [[nodiscard]] iterator begin() noexcept {
+    return data();
+  }
 
-  [[nodiscard]] iterator end() noexcept { return data() + m_size; }
-  [[nodiscard]] const_iterator end() const noexcept { return data() + m_size; }
-  [[nodiscard]] const_iterator cend() const noexcept { return data() + m_size; }
+  [[nodiscard]] const_iterator begin() const noexcept {
+    return data();
+  }
 
+  /**
+   * \brief Returns a const iterator to the first element.
+   * \code{.cpp}
+   * const_iterator cbegin() const noexcept;
+   * \endcode
+   * \return Const iterator to the first element.
+   */
+  [[nodiscard]] const_iterator cbegin() const noexcept {
+    return data();
+  }
+
+  /**
+   * \brief Returns an iterator past the last element.
+   * \code{.cpp}
+   * iterator end() noexcept;
+   * const_iterator end() const noexcept;
+   * \endcode
+   * \return Iterator past the last element.
+   */
+  [[nodiscard]] iterator end() noexcept {
+    return data() + m_size;
+  }
+
+  [[nodiscard]] const_iterator end() const noexcept {
+    return data() + m_size;
+  }
+
+  /**
+   * \brief Returns a const iterator past the last element.
+   * \code{.cpp}
+   * const_iterator cend() const noexcept;
+   * \endcode
+   * \return Const iterator past the last element.
+   */
+  [[nodiscard]] const_iterator cend() const noexcept {
+    return data() + m_size;
+  }
+
+  /**
+   * \brief Returns a reverse iterator to the last element.
+   * \code{.cpp}
+   * reverse_iterator rbegin() noexcept;
+   * const_reverse_iterator rbegin() const noexcept;
+   * \endcode
+   * \return Reverse iterator to the last element.
+   */
   [[nodiscard]] reverse_iterator rbegin() noexcept {
     return reverse_iterator{end()};
   }
@@ -213,10 +343,25 @@ public:
     return const_reverse_iterator{end()};
   }
 
+  /**
+   * \brief Returns a const reverse iterator to the last element.
+   * \code{.cpp}
+   * const_reverse_iterator crbegin() const noexcept;
+   * \endcode
+   * \return Const reverse iterator to the last element.
+   */
   [[nodiscard]] const_reverse_iterator crbegin() const noexcept {
     return const_reverse_iterator{cend()};
   }
 
+  /**
+   * \brief Returns a reverse iterator before the first element.
+   * \code{.cpp}
+   * reverse_iterator rend() noexcept;
+   * const_reverse_iterator rend() const noexcept;
+   * \endcode
+   * \return Reverse iterator before the first element.
+   */
   [[nodiscard]] reverse_iterator rend() noexcept {
     return reverse_iterator{begin()};
   }
@@ -225,16 +370,44 @@ public:
     return const_reverse_iterator{begin()};
   }
 
+  /**
+   * \brief Returns a const reverse iterator before the first element.
+   * \code{.cpp}
+   * const_reverse_iterator crend() const noexcept;
+   * \endcode
+   * \return Const reverse iterator before the first element.
+   */
   [[nodiscard]] const_reverse_iterator crend() const noexcept {
     return const_reverse_iterator{cbegin()};
   }
 
-  [[nodiscard]] std::span<T> span() noexcept { return {data(), m_size}; }
+  /**
+   * \brief Returns a view over the active elements.
+   * \code{.cpp}
+   * std::span<T> span() noexcept;
+   * std::span<const T> span() const noexcept;
+   * \endcode
+   *
+   * \return A span over the active elements.
+   */
+  [[nodiscard]] std::span<T> span() noexcept {
+    return {data(), m_size};
+  }
 
   [[nodiscard]] std::span<const T> span() const noexcept {
     return {data(), m_size};
   }
 
+  /**
+   * \brief Accesses an element without bounds checking.
+   * \code{.cpp}
+   * reference operator[](size_type index) noexcept;
+   * const_reference operator[](size_type index) const noexcept;
+   * \endcode
+   * \param index Element index.
+   * \return Reference to the element.
+   * \attention 1. \p index must be less than size().
+   */
   [[nodiscard]] reference operator[](size_type index) noexcept {
     assert(index < m_size);
     return data()[index];
@@ -245,6 +418,16 @@ public:
     return data()[index];
   }
 
+  /**
+   * \brief Accesses an element with bounds checking.
+   * \code{.cpp}
+   * reference at(size_type index);
+   * const_reference at(size_type index) const;
+   * \endcode
+   * \param index Element index.
+   * \return Reference to the element.
+   * \throws std::out_of_range when \p index is not less than size().
+   */
   [[nodiscard]] reference at(size_type index) {
     if (index >= m_size) {
       throw std::out_of_range{"InplaceVector::at"};
@@ -261,6 +444,15 @@ public:
     return data()[index];
   }
 
+  /**
+   * \brief Returns the first element.
+   * \code{.cpp}
+   * reference front() noexcept;
+   * const_reference front() const noexcept;
+   * \endcode
+   * \return Reference to the first element.
+   * \attention 1. The vector must not be empty.
+   */
   [[nodiscard]] reference front() noexcept {
     assert(m_size != 0);
     return data()[0];
@@ -271,6 +463,15 @@ public:
     return data()[0];
   }
 
+  /**
+   * \brief Returns the last element.
+   * \code{.cpp}
+   * reference back() noexcept;
+   * const_reference back() const noexcept;
+   * \endcode
+   * \return Reference to the last element.
+   * \attention 1. The vector must not be empty.
+   */
   [[nodiscard]] reference back() noexcept {
     assert(m_size != 0);
     return data()[m_size - 1];
@@ -281,7 +482,18 @@ public:
     return data()[m_size - 1];
   }
 
-  template <typename... Args> reference emplace_back(Args &&...args) {
+  /**
+   * \brief Constructs an element at the back.
+   * \code{.cpp}
+   * template<typename... Args>
+   * reference emplace_back(Args&&... args);
+   * \endcode
+   * \param args Arguments forwarded to T.
+   * \return Reference to the appended element.
+   * \attention 1. The vector must have fewer than Capacity elements.
+   */
+  template <typename... Args>
+  reference emplace_back(Args &&...args) {
     assert(m_size < Capacity);
 
     std::construct_at(ptr(m_size), std::forward<Args>(args)...);
@@ -290,10 +502,38 @@ public:
     return back();
   }
 
-  void push_back(const T &value) { emplace_back(value); }
+  /**
+   * \brief Appends a copy of an element.
+   * \code{.cpp}
+   * void push_back(const T& value);
+   * \endcode
+   * \param value Element to append.
+   * \attention 1. The vector must have fewer than Capacity elements.
+   */
+  void push_back(const T &value) {
+    emplace_back(value);
+  }
 
-  void push_back(T &&value) { emplace_back(std::move(value)); }
+  /**
+   * \brief Appends an element by move construction.
+   * \code{.cpp}
+   * void push_back(T&& value);
+   * \endcode
+   * \param value Element to append.
+   * \attention 1. The vector must have fewer than Capacity elements.
+   */
+  void push_back(T &&value) {
+    emplace_back(std::move(value));
+  }
 
+  /**
+   * \brief Removes the last element.
+   * \code{.cpp}
+   * void pop_back() noexcept;
+   * \endcode
+   *
+   * \attention 1. The vector must not be empty.
+   */
   void pop_back() noexcept {
     assert(m_size != 0);
 
@@ -304,11 +544,30 @@ public:
     }
   }
 
+  /**
+   * \brief Removes all elements.
+   * \code{.cpp}
+   * void clear() noexcept;
+   * \endcode
+   */
   void clear() noexcept {
     destroy_range(0, m_size);
     m_size = 0;
   }
 
+  /**
+   * \brief Changes the number of elements.
+   * \code{.cpp}
+   * void resize(size_type new_size);
+   * void resize(size_type new_size, const T& value);
+   * \endcode
+   *
+   * \param new_size New number of elements.
+   * \param value Value used to initialize appended elements.
+   *
+   * \attention 1. \p new_size must not exceed Capacity.
+   * \attention 2. The first overload requires T to be default-initializable.
+   */
   void resize(size_type new_size)
     requires std::default_initializable<T>
   {
@@ -341,3 +600,63 @@ public:
 };
 
 } // namespace strobe
+
+namespace std {
+
+/**
+ * \brief Hashes an inline vector when its element type is hashable.
+ * \code{.cpp}
+ * template<typename T, size_t Capacity>
+ * struct hash<strobe::InplaceVector<T, Capacity>>;
+ * \endcode
+ */
+template <typename T, size_t Capacity>
+  requires requires(const T &value) {
+    { std::hash<T>{}(value) } -> std::convertible_to<size_t>;
+  }
+struct hash<strobe::InplaceVector<T, Capacity>> {
+  size_t operator()(const strobe::InplaceVector<T, Capacity> &value) const
+      noexcept(noexcept(std::hash<T>{}(*value.begin()))) {
+    size_t result = static_cast<size_t>(1469598103934665603ull);
+    for (const T &element : value) {
+      result ^= std::hash<T>{}(element) +
+                static_cast<size_t>(0x9e3779b97f4a7c15ull) +
+                (result << 6) + (result >> 2);
+    }
+    return result;
+  }
+};
+
+} // namespace std
+
+namespace fmt {
+
+/**
+ * \brief Formats an inline vector as a bracketed list.
+ * \code{.cpp}
+ * template<typename T, size_t Capacity>
+ * struct formatter<strobe::InplaceVector<T, Capacity>>;
+ * \endcode
+ */
+template <typename T, size_t Capacity>
+struct formatter<strobe::InplaceVector<T, Capacity>> {
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto format(const strobe::InplaceVector<T, Capacity> &value,
+              FormatContext &ctx) const {
+    auto out = ctx.out();
+    *out++ = '[';
+    for (std::size_t i = 0; i < value.size(); ++i) {
+      if (i != 0) {
+        *out++ = ',';
+        *out++ = ' ';
+      }
+      out = fmt::format_to(out, "{}", value[i]);
+    }
+    *out++ = ']';
+    return out;
+  }
+};
+
+} // namespace fmt

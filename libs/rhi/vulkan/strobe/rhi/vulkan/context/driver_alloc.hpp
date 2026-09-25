@@ -1,7 +1,7 @@
 #pragma once
 
-#include "strobe/core/memory/AllocatorTraits.hpp"
-#include "strobe/core/memory/Mallocator.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
+#include "strobe/core/memory/mallocator.hpp"
 
 #include <algorithm>
 #include <cstddef>

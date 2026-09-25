@@ -1,18 +1,11 @@
-set(STROBE_CORE_EVENTS_LIB ${STROBE_CORE_LIB}-events CACHE INTERNAL "")
+add_library(strobe-core-events INTERFACE)
 
-add_library(${STROBE_CORE_EVENTS_LIB} INTERFACE)
-
-target_include_directories(${STROBE_CORE_EVENTS_LIB}
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src
+target_include_directories(strobe-core-events
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(${STROBE_CORE_EVENTS_LIB}
+target_link_libraries(strobe-core-events
   INTERFACE ${STROBE_CORE_MEMORY_LIB}
-)
-target_link_libraries(${STROBE_CORE_EVENTS_LIB}
-  INTERFACE ${STROBE_CORE_SYNC_LIB}
-)
-target_link_libraries(${STROBE_CORE_EVENTS_LIB}
   INTERFACE ${STROBE_CORE_CONTAINER_LIB}
 )
 

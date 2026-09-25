@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Path.hpp"
-#include <strobe/core/memory/AllocatorTraits.hpp>
+#include <strobe/core/memory/allocator_traits.hpp>
 
 namespace strobe::fs {
 

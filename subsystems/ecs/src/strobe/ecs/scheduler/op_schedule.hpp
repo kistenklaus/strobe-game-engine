@@ -1,7 +1,7 @@
 #pragma once
 
 #include "strobe/core/containers/vector.hpp"
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 #include "strobe/core/memory/monotonic_pool_allocator.hpp"
 #include "strobe/ecs/allocator.hpp"
 #include "strobe/ecs/scheduler/scheduler.hpp"

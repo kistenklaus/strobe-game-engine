@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 TEST(BitVector, resize_preserves_bits_and_clears_new_bits) {
@@ -117,4 +118,17 @@ TEST(BitVector, empty_bitset_can_grow) {
 
   bits.resize(0);
   EXPECT_TRUE(bits.empty());
+}
+
+TEST(BitVector, hash_matches_equal_vectors) {
+  strobe::BitVector first(70);
+  strobe::BitVector equal(70);
+  strobe::BitVector different_size(71);
+  strobe::BitVector different_bits(70);
+  different_bits.set(69);
+
+  const std::hash<strobe::BitVector<>> hash;
+  EXPECT_EQ(hash(first), hash(equal));
+  EXPECT_EQ(hash(different_size), hash(different_size));
+  EXPECT_EQ(hash(different_bits), hash(different_bits));
 }

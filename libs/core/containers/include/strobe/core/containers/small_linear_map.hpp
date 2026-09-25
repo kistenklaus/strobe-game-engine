@@ -4,6 +4,7 @@
 #include <cassert>
 #include <concepts>
 #include <cstddef>
+#include <fmt/format.h>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -16,6 +17,21 @@
 
 namespace strobe {
 
+/**
+ * \ingroup core
+ * \brief Linear map with small-buffer optimization.
+ * \code{.cpp}
+ * template<std::equality_comparable K, typename V,
+ *          size_t MinSVOCapacity = 8, Allocator A = Mallocator>
+ * class SmallLinearMap;
+ * \endcode
+ *
+ * Entries are stored contiguously and erasure does not preserve order.
+ *
+ * \attention 1. Insertion and reserve() may invalidate all iterators and
+ * references.
+ * \attention 2. Erasure moves the last entry into the erased position.
+ */
 template <std::equality_comparable K, typename V,
           std::size_t MinSVOCapacity = 8, Allocator A = Mallocator>
 class SmallLinearMap {
@@ -24,6 +40,15 @@ class SmallLinearMap {
 public:
   using size_type = std::size_t;
 
+  /**
+   * \brief Iterator over map entries.
+   * \code{.cpp}
+   * template<bool Const>
+   * class Iterator;
+   * \endcode
+   *
+   * Iterators expose entries as a pair of key and value references.
+   */
   template <bool Const> class Iterator {
     using Value = std::conditional_t<Const, const V, V>;
 
@@ -39,6 +64,16 @@ public:
     using difference_type = std::ptrdiff_t;
     using reference = std::pair<const K &, Value &>;
 
+    /**
+     * \brief Constructs, copies, or converts an iterator.
+     * \code{.cpp}
+     * Iterator() = default;
+     * Iterator(const Iterator&) = default;
+     * Iterator& operator=(const Iterator&) = default;
+     * Iterator(const Iterator<false>& other) requires Const;
+     * \endcode
+     * \param other Iterator to copy or convert.
+     */
     Iterator() = default;
     Iterator(const Iterator &) = default;
     Iterator &operator=(const Iterator &) = default;
@@ -47,8 +82,24 @@ public:
       requires Const
         : m_key(other.m_key), m_value(other.m_value) {}
 
+    /**
+     * \brief Accesses the current entry.
+     * \code{.cpp}
+     * reference operator*() const;
+     * \endcode
+     * \return The current key-value pair.
+     * \attention 1. The iterator must refer to an entry.
+     */
     reference operator*() const { return {*m_key, *m_value}; }
 
+    /**
+     * \brief Advances the iterator.
+     * \code{.cpp}
+     * Iterator& operator++();
+     * Iterator operator++(int);
+     * \endcode
+     * \return The advanced iterator or its previous value.
+     */
     Iterator &operator++() {
       ++m_key;
       ++m_value;
@@ -61,6 +112,15 @@ public:
       return old;
     }
 
+    /**
+     * \brief Compares two iterators.
+     * \code{.cpp}
+     * template<bool OtherConst>
+     * bool operator==(const Iterator<OtherConst>& other) const;
+     * \endcode
+     * \param other Iterator to compare with.
+     * \return Whether both iterators refer to the same entry.
+     */
     template <bool OtherConst>
     bool operator==(const Iterator<OtherConst> &other) const {
       return m_key == other.m_key;
@@ -74,6 +134,21 @@ public:
   using iterator = Iterator<false>;
   using const_iterator = Iterator<true>;
 
+  /**
+   * \brief Constructs, copies, moves, assigns, or destroys a map.
+   * \code{.cpp}
+   * explicit SmallLinearMap(const A& allocator = {});
+   * SmallLinearMap(const SmallLinearMap& other);
+   * SmallLinearMap(SmallLinearMap&& other);
+   * SmallLinearMap& operator=(const SmallLinearMap& other);
+   * SmallLinearMap& operator=(SmallLinearMap&& other);
+   * ~SmallLinearMap();
+   * \endcode
+   * \param allocator Allocator to use.
+   * \param other Map to copy or move from.
+   *
+   * Moved-from maps are empty.
+   */
   explicit SmallLinearMap(const A &allocator = {}) : m_allocator(allocator) {}
 
   SmallLinearMap(const SmallLinearMap &other)
@@ -137,6 +212,18 @@ public:
     return *this;
   }
 
+  /**
+   * \brief Inserts a key-value pair if the key is absent.
+   * \code{.cpp}
+   * std::pair<iterator, bool> insert(const K& key, const V& value);
+   * std::pair<iterator, bool> insert(const K& key, V&& value);
+   * std::pair<iterator, bool> insert(K&& key, const V& value);
+   * std::pair<iterator, bool> insert(K&& key, V&& value);
+   * \endcode
+   * \param key Key to insert.
+   * \param value Value to insert.
+   * \return Iterator to the entry and whether insertion occurred.
+   */
   std::pair<iterator, bool> insert(const K &key, const V &value) {
     const size_type index = find_index(key);
     if (index != m_size)
@@ -173,6 +260,16 @@ public:
     return {iterator(key_data() + m_size - 1, value_data() + m_size - 1), true};
   }
 
+  /**
+   * \brief Erases an entry by key.
+   * \code{.cpp}
+   * bool erase(const K& key);
+   * \endcode
+   * \param key Key to erase.
+   * \return Whether an entry was erased.
+   *
+   * The last entry moves into the erased position.
+   */
   bool erase(const K &key) {
     const size_type index = find_index(key);
     if (index == m_size)
@@ -191,21 +288,50 @@ public:
     return true;
   }
 
+  /**
+   * \brief Checks whether a key exists.
+   * \code{.cpp}
+   * bool containsKey(const K& key) const;
+   * \endcode
+   * \param key Key to find.
+   * \return Whether the key exists.
+   */
   [[nodiscard]]
   bool containsKey(const K &key) const {
     return find_index(key) != m_size;
   }
 
+  /**
+   * \brief Returns the number of entries.
+   * \code{.cpp}
+   * size_type size() const noexcept;
+   * \endcode
+   * \return Number of entries.
+   */
   [[nodiscard]]
   size_type size() const noexcept {
     return m_size;
   }
 
+  /**
+   * \brief Checks whether the map is empty.
+   * \code{.cpp}
+   * bool empty() const noexcept;
+   * \endcode
+   * \return Whether size() is zero.
+   */
   [[nodiscard]]
   bool empty() const noexcept {
     return m_size == 0;
   }
 
+  /**
+   * \brief Returns the entry capacity.
+   * \code{.cpp}
+   * size_type capacity() const noexcept;
+   * \endcode
+   * \return Number of entries that fit without allocation.
+   */
   [[nodiscard]]
   size_type capacity() const noexcept {
     if (!m_heapKeys)
@@ -214,11 +340,26 @@ public:
     return std::min(m_keyCapacity, m_valueCapacity);
   }
 
+  /**
+   * \brief Returns a view of the keys.
+   * \code{.cpp}
+   * span<const K> keys() const noexcept;
+   * \endcode
+   * \return View of the stored keys.
+   */
   [[nodiscard]]
   span<const K> keys() const noexcept {
     return {key_data(), m_size};
   }
 
+  /**
+   * \brief Returns a view of the mapped values.
+   * \code{.cpp}
+   * span<V> values() noexcept;
+   * span<const V> values() const noexcept;
+   * \endcode
+   * \return View of the stored values.
+   */
   [[nodiscard]]
   span<V> values() noexcept {
     return {value_data(), m_size};
@@ -229,28 +370,73 @@ public:
     return {value_data(), m_size};
   }
 
+  /**
+   * \brief Returns an iterator to the first entry.
+   * \code{.cpp}
+   * iterator begin() noexcept;
+   * const_iterator begin() const noexcept;
+   * \endcode
+   * \return Iterator to the first entry.
+   */
   iterator begin() noexcept { return {key_data(), value_data()}; }
 
+  /**
+   * \brief Returns an iterator past the last entry.
+   * \code{.cpp}
+   * iterator end() noexcept;
+   * const_iterator end() const noexcept;
+   * \endcode
+  * \return Iterator past the last entry.
+  */
   iterator end() noexcept {
     return {key_data() + m_size, value_data() + m_size};
   }
-
   const_iterator begin() const noexcept { return {key_data(), value_data()}; }
-
   const_iterator end() const noexcept {
     return {key_data() + m_size, value_data() + m_size};
   }
 
+  /**
+   * \brief Returns a const iterator to the first entry.
+   * \code{.cpp}
+   * const_iterator cbegin() const noexcept;
+   * \endcode
+   * \return Const iterator to the first entry.
+   */
   const_iterator cbegin() const noexcept { return begin(); }
 
+  /**
+   * \brief Returns a const iterator past the last entry.
+   * \code{.cpp}
+   * const_iterator cend() const noexcept;
+   * \endcode
+   * \return Const iterator past the last entry.
+   */
   const_iterator cend() const noexcept { return end(); }
 
+  /**
+   * \brief Removes all entries.
+   * \code{.cpp}
+   * void clear() noexcept;
+   * \endcode
+   *
+   * Capacity is retained.
+   */
   void clear() noexcept {
     std::destroy_n(key_data(), m_size);
     std::destroy_n(value_data(), m_size);
     m_size = 0;
   }
 
+  /**
+   * \brief Reserves capacity for entries.
+   * \code{.cpp}
+   * void reserve(size_type count);
+   * \endcode
+   * \param count Desired number of entries.
+   *
+   * \attention 1. \p count must not exceed max_size().
+   */
   void reserve(size_type count) {
     if (count <= capacity())
       return;
@@ -400,3 +586,39 @@ private:
 };
 
 } // namespace strobe
+
+namespace fmt {
+
+/**
+ * \brief Formats a small linear map as a brace-enclosed list of entries.
+ * \code{.cpp}
+ * template<std::equality_comparable K, typename V, size_t MinSVOCapacity,
+ *          strobe::Allocator A>
+ * struct formatter<strobe::SmallLinearMap<K, V, MinSVOCapacity, A>>;
+ * \endcode
+ */
+template <std::equality_comparable K, typename V, size_t MinSVOCapacity,
+          strobe::Allocator A>
+struct formatter<strobe::SmallLinearMap<K, V, MinSVOCapacity, A>> {
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto format(const strobe::SmallLinearMap<K, V, MinSVOCapacity, A> &map,
+              FormatContext &ctx) const {
+    auto out = ctx.out();
+    *out++ = '{';
+    bool first = true;
+    for (const auto [key, value] : map) {
+      if (!first) {
+        *out++ = ',';
+        *out++ = ' ';
+      }
+      first = false;
+      out = fmt::format_to(out, "{}: {}", key, value);
+    }
+    *out++ = '}';
+    return out;
+  }
+};
+
+} // namespace fmt

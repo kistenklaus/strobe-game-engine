@@ -1,6 +1,6 @@
 #include "strobe/rhi/vulkan/queue.hpp"
-#include "strobe/core/memory/AllocatorReference.hpp"
-#include "strobe/core/memory/Mallocator.hpp"
+#include "strobe/core/memory/allocator_ref.hpp"
+#include "strobe/core/memory/mallocator.hpp"
 #include "strobe/core/memory/inplace_monotonic_resource.hpp"
 #include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/types/queue_flags.hpp"

@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 TEST(Bitset, individual_bits_across_word_boundary) {
@@ -110,3 +111,14 @@ static_assert([] {
   bits.set(8);
   return bits.test(8) && bits.count() == 1;
 }());
+
+TEST(Bitset, hash_is_available_and_equal_for_equal_values) {
+  strobe::Bitset<65> first;
+  strobe::Bitset<65> equal;
+  strobe::Bitset<65> different;
+  different.set(64);
+
+  const std::hash<strobe::Bitset<65>> hash;
+  EXPECT_EQ(hash(first), hash(equal));
+  EXPECT_EQ(hash(different), hash(different));
+}

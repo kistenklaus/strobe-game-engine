@@ -2,7 +2,7 @@
 
 #include "strobe/core/containers/string.hpp"
 #include "strobe/core/fs/utility.hpp"
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 #include <algorithm>
 #include <cstring>
 #include <iterator>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 #include "strobe/rhi/buf/buffer_impl.hpp"
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/heap/resource_descriptor_array_impl.hpp"

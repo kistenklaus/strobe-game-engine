@@ -2,7 +2,7 @@
 
 #include "strobe/core/containers/vector.hpp"
 #include "strobe/core/containers/vector_deque.hpp"
-#include "strobe/core/memory/AllocatorReference.hpp"
+#include "strobe/core/memory/allocator_ref.hpp"
 #include "strobe/core/memory/inplace_monotonic_resource.hpp"
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/context/context.hpp"

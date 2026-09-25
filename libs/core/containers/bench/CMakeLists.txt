@@ -10,7 +10,7 @@ target_link_googlebenchmark(strobe-core-container-bench PUBLIC)
 # target_compile_options(strobe-core-container-bench PRIVATE -mavx2)
 
 target_link_libraries(strobe-core-container-bench
-  PRIVATE strobe-core-container
+  PRIVATE strobe-core-containers
 )
 
 target_include_directories(strobe-core-container-bench

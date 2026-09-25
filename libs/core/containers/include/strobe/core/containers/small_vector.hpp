@@ -1,7 +1,7 @@
 #pragma once
 
-#include "strobe/core/memory/AllocatorTraits.hpp"
-#include "strobe/core/memory/Mallocator.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
+#include "strobe/core/memory/mallocator.hpp"
 
 #include <algorithm>
 #include <array>
@@ -9,6 +9,8 @@
 #include <concepts>
 #include <cstddef>
 #include <cstring>
+#include <fmt/format.h>
+#include <functional>
 #include <initializer_list>
 #include <iterator>
 #include <limits>
@@ -20,6 +22,15 @@
 
 namespace strobe {
 
+/**
+ * \ingroup core
+ * \brief Vector with small-buffer optimization.
+ * \code{.cpp}
+ * template<typename T, size_t MinSVOCapacity = 8,
+ *          Allocator A = Mallocator>
+ * class SmallVector;
+ * \endcode
+ */
 template <typename T, std::size_t MinSVOCapacity = 8,
           Allocator A = strobe::Mallocator>
 class SmallVector {
@@ -48,6 +59,27 @@ public:
   // Construction
   // ================================================================
 
+  /**
+   * \brief Constructs, copies, or moves a vector.
+   * \code{.cpp}
+   * explicit SmallVector(const A& alloc = {});
+   * explicit SmallVector(size_type size, const A& alloc = {});
+   * SmallVector(size_type size, const T& value, const A& alloc = {});
+   * SmallVector(std::initializer_list<T> values, const A& alloc = {});
+   * template<std::ranges::range R> explicit SmallVector(const R& range, const A& alloc = {});
+   * SmallVector(const SmallVector& other);
+   * SmallVector(SmallVector&& other);
+   * SmallVector& operator=(const SmallVector& other);
+   * SmallVector& operator=(SmallVector&& other);
+   * SmallVector& operator=(std::initializer_list<T> values);
+   * ~SmallVector();
+   * \endcode
+   * \param size Initial number of elements.
+   * \param value Value used to initialize elements.
+   * \param range Source range.
+   * \param values Source initializer list.
+   * \param other Vector to copy or move from.
+   */
   explicit SmallVector(const A &alloc = {}) : m_allocator(alloc) {
     reset_to_inline();
   }
@@ -246,6 +278,14 @@ public:
     return *this;
   }
 
+  /**
+   * \brief Assigns values from an initializer list.
+   * \code{.cpp}
+   * SmallVector& operator=(std::initializer_list<T> values);
+   * \endcode
+   * \param values Source elements.
+   * \return This vector.
+   */
   SmallVector &operator=(std::initializer_list<T> values) {
     assign(values);
     return *this;
@@ -255,6 +295,15 @@ public:
   // Element access
   // ================================================================
 
+  /**
+   * \brief Accesses an element without bounds checking.
+   * \code{.cpp}
+   * T& operator[](size_type index) noexcept;
+   * const T& operator[](size_type index) const noexcept;
+   * \endcode
+   * \param index Element index.
+   * \attention 1. \p index must be less than size().
+   */
   T &operator[](size_type index) noexcept {
     assert(index < m_size);
     return m_buffer[index];
@@ -265,6 +314,16 @@ public:
     return m_buffer[index];
   }
 
+  /**
+   * \brief Accesses an element with bounds checking.
+   * \code{.cpp}
+   * T& at(size_type index);
+   * const T& at(size_type index) const;
+   * \endcode
+   * \param index Element index.
+   * \return The requested element.
+   * \throws std::out_of_range if \\p index is outside the vector.
+   */
   T &at(size_type index) {
     if (index >= m_size) {
       throw std::out_of_range{"SmallVector::at"};
@@ -281,6 +340,15 @@ public:
     return m_buffer[index];
   }
 
+  /**
+   * \brief Returns the first element.
+   * \code{.cpp}
+   * T& front() noexcept;
+   * const T& front() const noexcept;
+   * \endcode
+   * \return Reference to the first element.
+   * \attention 1. The vector must not be empty.
+   */
   T &front() noexcept {
     assert(m_size != 0);
     return m_buffer[0];
@@ -291,6 +359,15 @@ public:
     return m_buffer[0];
   }
 
+  /**
+   * \brief Returns the last element.
+   * \code{.cpp}
+   * T& back() noexcept;
+   * const T& back() const noexcept;
+   * \endcode
+   * \return Reference to the last element.
+   * \attention 1. The vector must not be empty.
+   */
   T &back() noexcept {
     assert(m_size != 0);
     return m_buffer[m_size - 1];
@@ -301,34 +378,83 @@ public:
     return m_buffer[m_size - 1];
   }
 
+  /**
+   * \brief Returns mutable element storage.
+   * \code{.cpp}
+   * T* data() noexcept;
+   * \endcode
+   * \return Pointer to the first element.
+   */
   T *data() noexcept { return m_buffer; }
 
+  /**
+   * \brief Returns read-only element storage.
+   * \code{.cpp}
+   * const T* data() const noexcept;
+   * \endcode
+   * \return Pointer to the first element.
+   */
   const T *data() const noexcept { return m_buffer; }
 
   // ================================================================
   // Capacity
   // ================================================================
 
+  /**
+   * \brief Checks whether the vector is empty.
+   * \code{.cpp}
+   * bool empty() const noexcept;
+   * \endcode
+   * \return Whether size() is zero.
+   */
   [[nodiscard]]
   bool empty() const noexcept {
     return m_size == 0;
   }
 
+  /**
+   * \brief Returns the number of elements.
+   * \code{.cpp}
+   * size_type size() const noexcept;
+   * \endcode
+   * \return Number of elements.
+   */
   [[nodiscard]]
   size_type size() const noexcept {
     return m_size;
   }
 
+  /**
+   * \brief Returns the element capacity.
+   * \code{.cpp}
+   * size_type capacity() const noexcept;
+   * \endcode
+   * \return Number of elements that fit without allocation.
+   */
   [[nodiscard]]
   size_type capacity() const noexcept {
     return m_capacity;
   }
 
+  /**
+   * \brief Returns the inline element capacity.
+   * \code{.cpp}
+   * static constexpr size_type inline_capacity() noexcept;
+   * \endcode
+   * \return Number of inline elements.
+   */
   [[nodiscard]]
   static constexpr size_type inline_capacity() noexcept {
     return MinSVOCapacity;
   }
 
+  /**
+   * \brief Checks whether inline storage is active.
+   * \code{.cpp}
+   * bool using_inline_storage() const noexcept;
+   * \endcode
+   * \return Whether elements use inline storage.
+   */
   [[nodiscard]]
   bool using_inline_storage() const noexcept {
     if constexpr (MinSVOCapacity == 0) {
@@ -338,11 +464,25 @@ public:
     }
   }
 
+  /**
+   * \brief Returns the maximum supported size.
+   * \code{.cpp}
+   * constexpr size_type max_size() const noexcept;
+   * \endcode
+   * \return Maximum number of elements.
+   */
   [[nodiscard]]
   constexpr size_type max_size() const noexcept {
     return std::numeric_limits<size_type>::max() / sizeof(T);
   }
 
+  /**
+   * \brief Reserves element capacity.
+   * \code{.cpp}
+   * void reserve(size_type newCapacity);
+   * \endcode
+   * \param newCapacity Desired capacity.
+   */
   void reserve(size_type newCapacity) {
     if (newCapacity <= m_capacity) {
       return;
@@ -351,6 +491,12 @@ public:
     reallocate(newCapacity);
   }
 
+  /**
+   * \brief Reduces capacity to fit the current size.
+   * \code{.cpp}
+   * void shrink_to_fit();
+   * \endcode
+   */
   void shrink_to_fit() {
     if (using_inline_storage()) {
       return;
@@ -385,12 +531,25 @@ public:
   // Modifiers
   // ================================================================
 
+  /**
+   * \brief Removes all elements.
+   * \code{.cpp}
+   * void clear() noexcept;
+   * \endcode
+   */
   void clear() noexcept {
     destroy_n(m_buffer, m_size);
 
     m_size = 0;
   }
 
+  /**
+   * \brief Appends a copy of an element.
+   * \code{.cpp}
+   * void push_back(const T& value);
+   * \endcode
+   * \param value Element to append.
+   */
   void push_back(const T &value) {
     if (m_size == m_capacity) {
       // Preserve correctness when `value` aliases this vector.
@@ -406,6 +565,13 @@ public:
     ++m_size;
   }
 
+  /**
+   * \brief Appends an element by move construction.
+   * \code{.cpp}
+   * void push_back(T&& value);
+   * \endcode
+   * \param value Element to append.
+   */
   void push_back(T &&value) {
     if (m_size == m_capacity) {
       // Preserve correctness if value aliases an existing element.
@@ -421,6 +587,14 @@ public:
     ++m_size;
   }
 
+  /**
+   * \brief Constructs an element at the back.
+   * \code{.cpp}
+   * template<typename... Args> T& emplace_back(Args&&... args);
+   * \endcode
+   * \param args Arguments forwarded to the element constructor.
+   * \return Reference to the appended element.
+   */
   template <typename... Args> T &emplace_back(Args &&...args) {
     if (m_size == m_capacity) {
       // Args may point into the current buffer.
@@ -436,6 +610,13 @@ public:
     return m_buffer[m_size++];
   }
 
+  /**
+   * \brief Removes the last element.
+   * \code{.cpp}
+   * void pop_back() noexcept;
+   * \endcode
+   * \attention 1. The vector must not be empty.
+   */
   void pop_back() noexcept {
     assert(m_size != 0);
 
@@ -446,14 +627,38 @@ public:
     }
   }
 
+  /**
+   * \brief Inserts an element at the front.
+   * \code{.cpp}
+   * void push_front(const T& value);
+   * \endcode
+   * \param value Element to insert.
+   */
   void push_front(const T &value) { insert(cbegin(), value); }
 
+  /**
+   * \brief Removes the first element.
+   * \code{.cpp}
+   * void pop_front();
+   * \endcode
+   * \attention 1. The vector must not be empty.
+   */
   void pop_front() {
     assert(m_size != 0);
 
     erase(cbegin());
   }
 
+  /**
+   * \brief Changes the number of elements.
+   * \code{.cpp}
+   * void resize(size_type newSize);
+   * void resize(size_type newSize, const T& value);
+   * \endcode
+   * \param newSize New number of elements.
+   * \param value Value used to initialize appended elements.
+   * \attention 1. The first overload requires T to be default constructible.
+   */
   void resize(size_type newSize)
     requires std::is_default_constructible_v<T>
   {
@@ -505,6 +710,14 @@ public:
   // Assign
   // ================================================================
 
+  /**
+   * \brief Replaces the contents with repeated values.
+   * \code{.cpp}
+   * void assign(size_type count, const T& value);
+   * \endcode
+   * \param count Number of elements.
+   * \param value Element to copy.
+   */
   void assign(size_type count, const T &value) {
     clear();
 
@@ -519,10 +732,25 @@ public:
     m_size = count;
   }
 
+  /**
+   * \brief Replaces the contents from an initializer list.
+   * \code{.cpp}
+   * void assign(std::initializer_list<T> values);
+   * \endcode
+   * \param values Source elements.
+   */
   void assign(std::initializer_list<T> values) {
     assign(values.begin(), values.end());
   }
 
+  /**
+   * \brief Replaces the contents from an iterator range.
+   * \code{.cpp}
+   * template<std::input_iterator It, std::sentinel_for<It> Sent> void assign(It first, Sent last);
+   * \endcode
+   * \param first Range beginning.
+   * \param last Range end.
+   */
   template <std::input_iterator It, std::sentinel_for<It> Sent>
     requires std::same_as<std::iter_value_t<It>, value_type>
   void assign(It first, Sent last) {
@@ -542,6 +770,13 @@ public:
     *this = std::move(temporary);
   }
 
+  /**
+   * \brief Replaces the contents from a range.
+   * \code{.cpp}
+   * template<std::ranges::range R> void assign(const R& range);
+   * \endcode
+   * \param range Source range.
+   */
   template <std::ranges::range R>
     requires std::same_as<std::ranges::range_value_t<R>, value_type>
   void assign(const R &range) {
@@ -554,6 +789,15 @@ public:
   // Insert
   // ================================================================
 
+  /**
+   * \brief Inserts an element before a position.
+   * \code{.cpp}
+   * iterator insert(const_iterator pos, const T& value);
+   * \endcode
+   * \param pos Insertion position.
+   * \param value Element to insert.
+   * \return Iterator to the inserted element.
+   */
   iterator insert(const_iterator pos, const T &value) {
     assert(valid_iterator(pos));
 
@@ -566,12 +810,30 @@ public:
     return begin() + index;
   }
 
+  /**
+   * \brief Inserts an element at an index.
+   * \code{.cpp}
+   * iterator insert(size_type index, const T& value);
+   * \endcode
+   * \param index Insertion index.
+   * \param value Element to insert.
+   * \return Iterator to the inserted element.
+   */
   iterator insert(size_type index, const T &value) {
     assert(index <= m_size);
 
     return insert(iterator_from_index(index), value);
   }
 
+  /**
+   * \brief Inserts a range before a position.
+   * \code{.cpp}
+   * template<std::ranges::range R> iterator insert(const_iterator pos, const R& range);
+   * \endcode
+   * \param pos Insertion position.
+   * \param range Elements to insert.
+   * \return Iterator to the first inserted element.
+   */
   template <std::ranges::range R>
     requires std::same_as<std::ranges::range_value_t<R>, value_type>
   iterator insert(const_iterator pos, const R &range) {
@@ -598,6 +860,14 @@ public:
   // Erase
   // ================================================================
 
+  /**
+   * \brief Erases one element.
+   * \code{.cpp}
+   * iterator erase(const_iterator pos);
+   * \endcode
+   * \param pos Element to erase.
+   * \return Iterator following the erased element.
+   */
   iterator erase(const_iterator pos) {
     assert(m_size != 0);
     assert(valid_iterator(pos));
@@ -622,6 +892,15 @@ public:
     return begin() + index;
   }
 
+  /**
+   * \brief Erases a range of elements.
+   * \code{.cpp}
+   * iterator erase(const_iterator first, const_iterator last);
+   * \endcode
+   * \param first Range beginning.
+   * \param last Range end.
+   * \return Iterator following the erased range.
+   */
   iterator erase(const_iterator first, const_iterator last) {
     assert(valid_iterator(first));
     assert(valid_iterator(last));
@@ -657,6 +936,13 @@ public:
   // Append
   // ================================================================
 
+  /**
+   * \brief Appends the elements of a range.
+   * \code{.cpp}
+   * template<std::ranges::range R> void append(const R& range);
+   * \endcode
+   * \param range Source range.
+   */
   template <std::ranges::range R>
     requires std::same_as<std::ranges::range_value_t<R>, value_type>
   void append(const R &range) {
@@ -681,23 +967,61 @@ public:
   // Stack compatibility
   // ================================================================
 
+  /**
+   * \brief Pushes an element onto the back.
+   * \code{.cpp}
+   * void push(const T& value);
+   * \endcode
+   * \param value Element to push.
+   */
   void push(const T &value) { push_back(value); }
 
+  /**
+   * \brief Returns the last element.
+   * \code{.cpp}
+   * T& top();
+   * const T& top() const;
+   * \endcode
+   * \return Reference to the last element.
+   * \attention 1. The vector must not be empty.
+   */
   T &top() { return back(); }
 
   const T &top() const { return back(); }
 
+  /**
+   * \brief Removes the last element.
+   * \code{.cpp}
+   * void pop();
+   * \endcode
+   * \attention 1. The vector must not be empty.
+   */
   void pop() { pop_back(); }
 
   // ================================================================
   // Set-like compatibility
   // ================================================================
 
-  [[nodiscard]]
-  bool contains(const T &value) const {
+  /**
+   * \brief Checks whether a value is present.
+   * \code{.cpp}
+   * bool contains(const T& value) const;
+   * \endcode
+   * \param value Value to find.
+   * \return Whether the value occurs.
+   */
+  [[nodiscard]] bool contains(const T &value) const {
     return std::find(cbegin(), cend(), value) != cend();
   }
 
+  /**
+   * \brief Adds a value if it is absent.
+   * \code{.cpp}
+   * bool add(const T& value);
+   * \endcode
+   * \param value Value to add.
+   * \return Whether insertion occurred.
+   */
   bool add(const T &value) {
     if (contains(value)) {
       return false;
@@ -707,7 +1031,15 @@ public:
     return true;
   }
 
-  // Order is not preserved.
+  /**
+   * \brief Removes a value if present.
+   * \code{.cpp}
+   * bool remove(const T& value);
+   * \endcode
+   * \param value Value to remove.
+   * \return Whether removal occurred.
+   * \attention 1. Removing a value does not preserve order.
+   */
   bool remove(const T &value) {
     iterator it = std::find(begin(), end(), value);
 
@@ -732,10 +1064,33 @@ public:
   // FIFO compatibility
   // ================================================================
 
+  /**
+   * \brief Enqueues an element at the back.
+   * \code{.cpp}
+   * void enqueue(const T& value);
+   * \endcode
+   * \param value Element to enqueue.
+   */
   void enqueue(const T &value) { push_back(value); }
 
+  /**
+   * \brief Returns the first element without removing it.
+   * \code{.cpp}
+   * const T& peek() const;
+   * \endcode
+   * \return Reference to the first element.
+   * \attention 1. The vector must not be empty.
+   */
   const T &peek() const { return front(); }
 
+  /**
+   * \brief Removes and returns the first element.
+   * \code{.cpp}
+   * T dequeue();
+   * \endcode
+   * \return The removed element.
+   * \attention 1. The vector must not be empty.
+   */
   T dequeue() {
     assert(m_size != 0);
 
@@ -750,18 +1105,56 @@ public:
   // Iterators
   // ================================================================
 
+  /**
+   * \brief Returns an iterator to the first element.
+   * \code{.cpp}
+   * iterator begin() noexcept;
+   * const_iterator begin() const noexcept;
+   * \endcode
+   * \return Iterator to the first element.
+   */
   iterator begin() noexcept { return m_buffer; }
 
   const_iterator begin() const noexcept { return m_buffer; }
 
+  /**
+   * \brief Returns a const iterator to the first element.
+   * \code{.cpp}
+   * const_iterator cbegin() const noexcept;
+   * \endcode
+   * \return Const iterator to the first element.
+   */
   const_iterator cbegin() const noexcept { return m_buffer; }
 
+  /**
+   * \brief Returns an iterator past the last element.
+   * \code{.cpp}
+   * iterator end() noexcept;
+   * const_iterator end() const noexcept;
+   * \endcode
+   * \return Iterator past the last element.
+   */
   iterator end() noexcept { return iterator_from_index(m_size); }
 
   const_iterator end() const noexcept { return iterator_from_index(m_size); }
 
+  /**
+   * \brief Returns a const iterator past the last element.
+   * \code{.cpp}
+   * const_iterator cend() const noexcept;
+   * \endcode
+   * \return Const iterator past the last element.
+   */
   const_iterator cend() const noexcept { return iterator_from_index(m_size); }
 
+  /**
+   * \brief Returns a reverse iterator to the last element.
+   * \code{.cpp}
+   * reverse_iterator rbegin() noexcept;
+   * const_reverse_iterator rbegin() const noexcept;
+   * \endcode
+   * \return Reverse iterator to the last element.
+   */
   reverse_iterator rbegin() noexcept { return reverse_iterator{end()}; }
 
   reverse_iterator rend() noexcept { return reverse_iterator{begin()}; }
@@ -770,20 +1163,48 @@ public:
     return const_reverse_iterator{end()};
   }
 
+  /**
+   * \brief Returns a reverse iterator before the first element.
+   * \code{.cpp}
+   * reverse_iterator rend() noexcept;
+   * const_reverse_iterator rend() const noexcept;
+   * \endcode
+   * \return Reverse iterator before the first element.
+   */
   const_reverse_iterator rend() const noexcept {
     return const_reverse_iterator{begin()};
   }
 
+  /**
+   * \brief Returns a const reverse iterator to the last element.
+   * \code{.cpp}
+   * const_reverse_iterator crbegin() const noexcept;
+   * \endcode
+   * \return Const reverse iterator to the last element.
+   */
   const_reverse_iterator crbegin() const noexcept {
     return const_reverse_iterator{cend()};
   }
 
+  /**
+   * \brief Returns a const reverse iterator before the first element.
+   * \code{.cpp}
+   * const_reverse_iterator crend() const noexcept;
+   * \endcode
+   * \return Const reverse iterator before the first element.
+   */
   const_reverse_iterator crend() const noexcept {
     return const_reverse_iterator{cbegin()};
   }
 
-  [[nodiscard]]
-  A get_allocator() const {
+  /**
+   * \brief Returns the vector allocator.
+   * \code{.cpp}
+   * A get_allocator() const;
+   * \endcode
+   * \return A copy of the allocator.
+   */
+  [[nodiscard]] A get_allocator() const {
     return m_allocator;
   }
 
@@ -1184,3 +1605,64 @@ private:
 };
 
 } // namespace strobe
+
+namespace std {
+
+/**
+ * \brief Hashes a small vector when its element type is hashable.
+ * \code{.cpp}
+ * template<typename T, size_t MinSVOCapacity, strobe::Allocator A>
+ * struct hash<strobe::SmallVector<T, MinSVOCapacity, A>>;
+ * \endcode
+ */
+template <typename T, size_t MinSVOCapacity, strobe::Allocator A>
+  requires requires(const T &value) {
+    { std::hash<T>{}(value) } -> std::convertible_to<size_t>;
+  }
+struct hash<strobe::SmallVector<T, MinSVOCapacity, A>> {
+  size_t operator()(
+      const strobe::SmallVector<T, MinSVOCapacity, A> &value) const
+      noexcept(noexcept(std::hash<T>{}(*value.begin()))) {
+    size_t result = static_cast<size_t>(1469598103934665603ull);
+    for (const T &element : value) {
+      result ^= std::hash<T>{}(element) +
+                static_cast<size_t>(0x9e3779b97f4a7c15ull) +
+                (result << 6) + (result >> 2);
+    }
+    return result;
+  }
+};
+
+} // namespace std
+
+namespace fmt {
+
+/**
+ * \brief Formats a small vector as a bracketed list.
+ * \code{.cpp}
+ * template<typename T, size_t MinSVOCapacity, strobe::Allocator A>
+ * struct formatter<strobe::SmallVector<T, MinSVOCapacity, A>>;
+ * \endcode
+ */
+template <typename T, size_t MinSVOCapacity, strobe::Allocator A>
+struct formatter<strobe::SmallVector<T, MinSVOCapacity, A>> {
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto format(const strobe::SmallVector<T, MinSVOCapacity, A> &value,
+              FormatContext &ctx) const {
+    auto out = ctx.out();
+    *out++ = '[';
+    for (std::size_t i = 0; i < value.size(); ++i) {
+      if (i != 0) {
+        *out++ = ',';
+        *out++ = ' ';
+      }
+      out = fmt::format_to(out, "{}", value[i]);
+    }
+    *out++ = ']';
+    return out;
+  }
+};
+
+} // namespace fmt

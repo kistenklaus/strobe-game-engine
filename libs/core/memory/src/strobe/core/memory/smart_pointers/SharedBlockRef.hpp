@@ -2,7 +2,7 @@
 
 #include <concepts>
 #include <memory>
-#include <strobe/core/memory/AllocatorTraits.hpp>
+#include <strobe/core/memory/allocator_traits.hpp>
 #include <utility>
 
 #include "strobe/core/memory/ReferenceCounter.hpp"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 #include "strobe/core/memory/monotonic_pool_allocator.hpp"
 #include "strobe/ecs/allocator.hpp"
 #include "strobe/ecs/lifetime/lifetime_hook.hpp"

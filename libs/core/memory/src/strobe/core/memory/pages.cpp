@@ -1,4 +1,4 @@
-#include "./pages.hpp"
+#include <strobe/core/memory/pages.hpp>
 
 #if defined(_WIN32)
 #include <windows.h>

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <array>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -259,6 +260,55 @@ TEST(HashMap, ClearAllowsReuse) {
 
   map.insert(3, "three");
   EXPECT_EQ((*map.find(3)).second, "three");
+}
+
+TEST(HashMap, StandardStyleModifiersAndLookup) {
+  HashMap<int, std::string> map;
+  map.insert({{1, "one"}, {2, "two"}});
+  map.emplace(3, "three");
+
+  EXPECT_EQ(map.at(1), "one");
+  EXPECT_THROW((void)map.at(9), std::out_of_range);
+  EXPECT_EQ(map.count(2), 1);
+  EXPECT_EQ(map.count(9), 0);
+
+  auto [assigned, inserted] = map.insert_or_assign(2, "changed");
+  EXPECT_FALSE(inserted);
+  EXPECT_EQ((*assigned).second, "changed");
+
+  auto [first, last] = map.equal_range(2);
+  ASSERT_NE(first, map.end());
+  EXPECT_EQ(std::distance(first, last), 1);
+  map.erase(first, last);
+  EXPECT_FALSE(map.contains(2));
+}
+
+TEST(HashMap, RehashBucketObserversSwapAndEquality) {
+  HashMap<int, int> first;
+  first.insert(1, 10);
+  first.insert(2, 20);
+  HashMap<int, int> equal(first);
+
+  EXPECT_EQ(first, equal);
+  first.rehash(64);
+  EXPECT_GE(first.bucket_count(), 64);
+  EXPECT_LE(first.bucket_size(first.bucket(1)), 1u);
+  EXPECT_GT(first.max_bucket_count(), 0);
+  EXPECT_GT(first.max_size(), 0);
+  EXPECT_GT(first.max_load_factor(), 0.0f);
+  EXPECT_GT(first.load_factor(), 0.0f);
+  first.max_load_factor(0.5f);
+  EXPECT_FLOAT_EQ(first.max_load_factor(), 0.5f);
+  EXPECT_LE(first.load_factor(), first.max_load_factor());
+
+  HashMap<int, int> other;
+  other.insert(9, 90);
+  first.swap(other);
+  EXPECT_TRUE(first.contains(9));
+  EXPECT_TRUE(other.contains(1));
+
+  other.shrink_to_fit();
+  EXPECT_GE(other.bucket_count(), other.size());
 }
 
 TEST(HashMap, CopyIsIndependent) {

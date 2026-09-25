@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <fmt/format.h>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -80,12 +81,17 @@ inline constexpr bool swizz_hash_is_avalanching = [] {
 
 namespace strobe {
 
-// Assumes nonthrowing allocation, construction, movement, and destruction.
-// GroupWidth=32 requires compiling every use of that specialization with AVX2.
-// Mutation and concurrent access require external synchronization.
-// NOTE: Consider this implementation as a replacement to a HashMap, for
-// small keys and more complicated access patterns (like many misses).
-// In practice only measuring will really help.
+/**
+ * \ingroup core
+ * \brief SIMD-accelerated hash table with open addressing.
+ *
+ * This map is intended for workloads with small keys and frequent misses.
+ * GroupWidth 32 requires AVX2 support; mutation and concurrent access require
+ * external synchronization.
+ *
+ * \attention 1. Allocation, construction, movement, and destruction must not
+ * throw.
+ */
 template <typename K, typename V, typename Hash = std::hash<K>,
           typename Equal = std::equal_to<K>, Allocator A = Mallocator,
           std::size_t GroupWidth = 16>
@@ -134,6 +140,12 @@ public:
   using hasher = Hash;
   using key_equal = Equal;
   using allocator_type = A;
+  /**
+   * \brief Number of control bytes probed as one SIMD group.
+   * \code{.cpp}
+   * static constexpr size_type group_width = GroupWidth;
+   * \endcode
+   */
   static constexpr size_type group_width = GroupWidth;
 
   template <bool Const> class Iterator {
@@ -155,6 +167,16 @@ public:
     };
     using pointer = ArrowProxy;
 
+    /**
+     * \brief Constructs or copies an iterator.
+     * \code{.cpp}
+     * Iterator() = default;
+     * Iterator(const Iterator&) = default;
+     * Iterator& operator=(const Iterator&) = default;
+     * template<bool Other> Iterator(const Iterator<Other>& other) requires Const;
+     * \endcode
+     * \param other Iterator to copy or convert.
+     */
     Iterator() = default;
     Iterator(const Iterator &) = default;
     Iterator &operator=(const Iterator &) = default;
@@ -163,12 +185,36 @@ public:
     Iterator(const Iterator<Other> &other) noexcept
         : m_map(other.m_map), m_index(other.m_index) {}
 
+    /**
+     * \brief Accesses the current entry.
+     * \code{.cpp}
+     * reference operator*() const noexcept;
+     * \endcode
+     * \return The current key-value pair.
+     * \attention 1. The iterator must refer to an entry.
+     */
     reference operator*() const noexcept {
       assert(m_map && m_index < m_map->capacity());
       assert(m_map->m_storage.control()[m_index] < EMPTY);
       return {m_map->m_storage.keys[m_index], m_map->m_storage.values[m_index]};
     }
+    /**
+     * \brief Accesses the current entry through an arrow proxy.
+     * \code{.cpp}
+     * pointer operator->() const noexcept;
+     * \endcode
+     * \return Proxy for the current key-value pair.
+     * \attention 1. The iterator must refer to an entry.
+     */
     ArrowProxy operator->() const noexcept { return {**this}; }
+    /**
+     * \brief Advances the iterator.
+     * \code{.cpp}
+     * Iterator& operator++() noexcept;
+     * Iterator operator++(int) noexcept;
+     * \endcode
+     * \return The advanced iterator or its previous value.
+     */
     Iterator &operator++() noexcept {
       assert(m_map && m_index < m_map->capacity());
       m_index = m_map->next_full(m_index + 1);
@@ -179,6 +225,14 @@ public:
       ++*this;
       return old;
     }
+    /**
+     * \brief Compares two iterators.
+     * \code{.cpp}
+     * template<bool Other> bool operator==(const Iterator<Other>& other) const noexcept;
+     * \endcode
+     * \param other Iterator to compare with.
+     * \return Whether both iterators refer to the same position.
+     */
     template <bool Other>
     bool operator==(const Iterator<Other> &other) const noexcept {
       return m_map == other.m_map && m_index == other.m_index;
@@ -192,6 +246,22 @@ public:
   using iterator = Iterator<false>;
   using const_iterator = Iterator<true>;
 
+  /**
+   * \brief Constructs, copies, moves, assigns, or destroys a map.
+   * \code{.cpp}
+   * explicit SwizzHashMap(const A& allocator = {}, const Hash& hash = {}, const Equal& equal = {});
+   * SwizzHashMap(const SwizzHashMap& other);
+   * SwizzHashMap(SwizzHashMap&& other) noexcept;
+   * SwizzHashMap& operator=(const SwizzHashMap& other);
+   * SwizzHashMap& operator=(SwizzHashMap&& other) noexcept;
+   * ~SwizzHashMap();
+   * \endcode
+   * \param allocator Allocator to use.
+   * \param hash Hash function.
+   * \param equal Key equality predicate.
+   * \param other Map to copy or move from.
+   * Moved-from maps are empty.
+   */
   explicit SwizzHashMap(const A &allocator = {}, const Hash &hash = {},
                         const Equal &equal = {})
       : m_hash(hash), m_equal(equal), m_allocator(allocator) {}
@@ -260,6 +330,16 @@ public:
     return *this;
   }
 
+  /**
+   * \brief Inserts a value if the key is absent.
+   * \code{.cpp}
+   * template<typename... Args> std::pair<iterator, bool> try_emplace(const K& key, Args&&... args);
+   * template<typename... Args> std::pair<iterator, bool> try_emplace(K&& key, Args&&... args);
+   * \endcode
+   * \param key Key to insert.
+   * \param args Arguments forwarded to construct the mapped value.
+   * \return Iterator to the entry and whether insertion occurred.
+   */
   template <typename... Args>
     requires std::constructible_from<V, Args &&...>
   std::pair<iterator, bool> try_emplace(const K &key, Args &&...args) {
@@ -271,6 +351,23 @@ public:
     return try_emplace_impl(std::move(key), std::forward<Args>(args)...);
   }
 
+  /**
+   * \brief Inserts a key-value entry if the key is absent.
+   * \code{.cpp}
+   * std::pair<iterator, bool> insert(const K& key, const V& value);
+   * std::pair<iterator, bool> insert(const K& key, V&& value);
+   * std::pair<iterator, bool> insert(K&& key, const V& value);
+   * std::pair<iterator, bool> insert(K&& key, V&& value);
+   * std::pair<iterator, bool> insert(const value_type& entry);
+   * std::pair<iterator, bool> insert(value_type&& entry);
+   * template<typename Key, typename Value> std::pair<iterator, bool> insert(const std::pair<Key, Value>& entry);
+   * template<typename Key, typename Value> std::pair<iterator, bool> insert(std::pair<Key, Value>&& entry);
+   * \endcode
+   * \param key Key to insert.
+   * \param value Mapped value to insert.
+   * \param entry Entry to insert.
+   * \return Iterator to the entry and whether insertion occurred.
+   */
   std::pair<iterator, bool> insert(const K &key, const V &value) {
     return try_emplace(key, value);
   }
@@ -299,6 +396,16 @@ public:
                        std::forward<Value>(entry.second));
   }
 
+  /**
+   * \brief Inserts or assigns a mapped value.
+   * \code{.cpp}
+   * template<typename M> std::pair<iterator, bool> insert_or_assign(const K& key, M&& value);
+   * template<typename M> std::pair<iterator, bool> insert_or_assign(K&& key, M&& value);
+   * \endcode
+   * \param key Key to insert or find.
+   * \param value Value to insert or assign.
+   * \return Iterator to the entry and whether insertion occurred.
+   */
   template <typename M>
     requires(std::constructible_from<V, M &&> &&
              std::is_assignable_v<V &, M &&>)
@@ -312,6 +419,16 @@ public:
     return insert_or_assign_impl(std::move(key), std::forward<M>(value));
   }
 
+  /**
+   * \brief Accesses or inserts a mapped value.
+   * \code{.cpp}
+   * V& operator[](const K& key);
+   * V& operator[](K&& key);
+   * \endcode
+   * \param key Key to access.
+   * \return Reference to the mapped value.
+   * \attention 1. V must be default-initializable.
+   */
   V &operator[](const K &key)
     requires std::default_initializable<V>
   {
@@ -323,6 +440,17 @@ public:
     return try_emplace(std::move(key)).first->second;
   }
 
+  /**
+   * \brief Finds an entry by key.
+   * \code{.cpp}
+   * iterator find(const K& key);
+   * const_iterator find(const K& key) const;
+   * template<typename Q> iterator find(const Q& key);
+   * template<typename Q> const_iterator find(const Q& key) const;
+   * \endcode
+   * \param key Key or transparent lookup key.
+   * \return Iterator to the entry, or end() if absent.
+   */
   iterator find(const K &key) { return iterator(this, find_index(key)); }
   const_iterator find(const K &key) const {
     return const_iterator(this, find_index(key));
@@ -338,6 +466,17 @@ public:
     return const_iterator(this, find_index(key));
   }
 
+  /**
+   * \brief Finds a mapped value by key.
+   * \code{.cpp}
+   * V* find_value(const K& key);
+   * const V* find_value(const K& key) const;
+   * template<typename Q> V* find_value(const Q& key);
+   * template<typename Q> const V* find_value(const Q& key) const;
+   * \endcode
+   * \param key Key or transparent lookup key.
+   * \return Pointer to the mapped value, or nullptr if absent.
+   */
   [[nodiscard]] V *find_value(const K &key) {
     const size_type i = find_index(key);
     return i == capacity() ? nullptr : m_storage.values + i;
@@ -359,6 +498,15 @@ public:
     return i == capacity() ? nullptr : m_storage.values + i;
   }
 
+  /**
+   * \brief Checks whether a key exists.
+   * \code{.cpp}
+   * bool contains(const K& key) const;
+   * template<typename Q> bool contains(const Q& key) const;
+   * \endcode
+   * \param key Key or transparent lookup key.
+   * \return Whether the key exists.
+   */
   [[nodiscard]] bool contains(const K &key) const {
     return find_index(key) != capacity();
   }
@@ -367,7 +515,24 @@ public:
   [[nodiscard]] bool contains(const Q &key) const {
     return find_index(key) != capacity();
   }
+  /**
+   * \brief Checks whether a key exists.
+   * \code{.cpp}
+   * bool containsKey(const K& key) const;
+   * \endcode
+   * \param key Key to find.
+   * \return Whether the key exists.
+   */
   [[nodiscard]] bool containsKey(const K &key) const { return contains(key); }
+  /**
+   * \brief Counts entries matching a key.
+   * \code{.cpp}
+   * size_type count(const K& key) const;
+   * template<typename Q> size_type count(const Q& key) const;
+   * \endcode
+   * \param key Key or transparent lookup key.
+   * \return 1 if present, otherwise 0.
+   */
   [[nodiscard]] size_type count(const K &key) const {
     return contains(key) ? 1 : 0;
   }
@@ -377,8 +542,16 @@ public:
     return contains(key) ? 1 : 0;
   }
 
-  // Deliberately assertion-based: this container is intended for
-  // -fno-exceptions.
+  /**
+   * \brief Accesses a mapped value with assertion-based checking.
+   * \code{.cpp}
+   * V& at(const K& key);
+   * const V& at(const K& key) const;
+   * \endcode
+   * \param key Key to access.
+   * \return Reference to the mapped value.
+   * \attention 1. The key must exist; failure triggers an assertion.
+   */
   V &at(const K &key) {
     V *value = find_value(key);
     assert(value != nullptr);
@@ -390,6 +563,19 @@ public:
     return *value;
   }
 
+  /**
+   * \brief Erases entries by key or iterator.
+   * \code{.cpp}
+   * size_type erase(const K& key);
+   * template<typename Q> size_type erase(const Q& key);
+   * iterator erase(const_iterator pos);
+   * iterator erase(iterator pos);
+   * \endcode
+   * \param key Key or transparent lookup key.
+   * \param pos Entry to erase.
+   * \return Number of erased entries, or iterator following the erased entry.
+   * \attention 1. Iterator arguments must refer to an entry in this map.
+   */
   size_type erase(const K &key) { return erase_key(key); }
   template <typename Q>
     requires detail::SwizzTransparentLookup<Hash, Equal, K, Q>
@@ -405,6 +591,13 @@ public:
   }
   iterator erase(iterator pos) { return erase(const_iterator(pos)); }
 
+  /**
+   * \brief Removes all entries.
+   * \code{.cpp}
+   * void clear() noexcept;
+   * \endcode
+   * Capacity is retained.
+   */
   void clear() noexcept {
     destroy_elements(m_storage);
     if (m_storage.blocks)
@@ -413,8 +606,14 @@ public:
     m_deleted = 0;
   }
 
-  // Reserve elements. Existing tombstones must not force a rebuild before
-  // count.
+  /**
+   * \brief Reserves capacity for entries.
+   * \code{.cpp}
+   * void reserve(size_type count);
+   * \endcode
+   * \param count Desired number of entries.
+   * \attention 1. \p count must not exceed max_size().
+   */
   void reserve(size_type count) {
     assert(count <= max_size());
     if (count > load_limit(capacity())) {
@@ -423,7 +622,14 @@ public:
       rehash_slots(capacity());
     }
   }
-  // rehash() takes slots, like the bucket-count argument of std::unordered_map.
+  /**
+   * \brief Rebuilds the table with at least the requested slot count.
+   * \code{.cpp}
+   * void rehash(size_type slots);
+   * \endcode
+   * \param slots Requested slot count.
+   * \attention 1. \p slots must not exceed the maximum slot count.
+   */
   void rehash(size_type slots) {
     assert(slots <= max_slot_count());
     if (slots == 0 && m_size == 0) {
@@ -436,45 +642,173 @@ public:
     if (next != capacity() || m_deleted != 0)
       rehash_slots(next);
   }
+  /**
+   * \brief Removes deleted-slot tombstones.
+   * \code{.cpp}
+   * void compact();
+   * \endcode
+   */
   void compact() {
     if (m_deleted != 0)
       rehash_slots(capacity());
   }
+  /**
+   * \brief Shrinks the table to the current element count.
+   * \code{.cpp}
+   * void shrink_to_fit();
+   * \endcode
+   */
   void shrink_to_fit() { rehash(0); }
 
+  /**
+   * \brief Returns the number of entries.
+   * \code{.cpp}
+   * size_type size() const noexcept;
+   * \endcode
+   * \return Number of entries.
+   */
   [[nodiscard]] size_type size() const noexcept { return m_size; }
+
+  /**
+   * \brief Checks whether the map is empty.
+   * \code{.cpp}
+   * bool empty() const noexcept;
+   * \endcode
+   * \return Whether size() is zero.
+   */
   [[nodiscard]] bool empty() const noexcept { return m_size == 0; }
+
+  /**
+   * \brief Returns the slot capacity.
+   * \code{.cpp}
+   * size_type capacity() const noexcept;
+   * \endcode
+   * \return Number of hash-table slots.
+   */
   [[nodiscard]] size_type capacity() const noexcept {
     return m_storage.capacity;
   }
+  /**
+   * \brief Returns the slot count.
+   * \code{.cpp}
+   * size_type bucket_count() const noexcept;
+   * \endcode
+   * \return Number of slots.
+   */
   [[nodiscard]] size_type bucket_count() const noexcept { return capacity(); }
+
+  /**
+   * \brief Returns the current load factor.
+   * \code{.cpp}
+   * float load_factor() const noexcept;
+   * \endcode
+   * \return Ratio of entries to slots.
+   */
   [[nodiscard]] float load_factor() const noexcept {
     return capacity() ? float(m_size) / float(capacity()) : 0.0f;
   }
+  /**
+   * \brief Returns the maximum load factor.
+   * \code{.cpp}
+   * static constexpr float max_load_factor() noexcept;
+   * \endcode
+   * \return Maximum supported load factor.
+   */
   [[nodiscard]] static constexpr float max_load_factor() noexcept {
     return 0.875f;
   }
+  /**
+   * \brief Returns the maximum entry count.
+   * \code{.cpp}
+   * static constexpr size_type max_size() noexcept;
+   * \endcode
+   * \return Maximum number of entries.
+   */
   [[nodiscard]] static constexpr size_type max_size() noexcept {
     return load_limit(max_slot_count());
   }
+  /**
+   * \brief Returns the allocator.
+   * \code{.cpp}
+   * A get_allocator() const;
+   * \endcode
+   * \return A copy of the allocator.
+   */
   [[nodiscard]] A get_allocator() const { return m_allocator; }
+
+  /**
+   * \brief Returns the hash function.
+   * \code{.cpp}
+   * Hash hash_function() const;
+   * \endcode
+   * \return A copy of the hash function.
+   */
   [[nodiscard]] Hash hash_function() const { return m_hash; }
+
+  /**
+   * \brief Returns the key equality predicate.
+   * \code{.cpp}
+   * Equal key_eq() const;
+   * \endcode
+   * \return A copy of the equality predicate.
+   */
   [[nodiscard]] Equal key_eq() const { return m_equal; }
+
+  /**
+   * \brief Returns the allocated storage size.
+   * \code{.cpp}
+   * size_type allocated_bytes() const noexcept;
+   * \endcode
+   * \return Allocated bytes used by controls, keys, and values.
+   */
   [[nodiscard]] size_type allocated_bytes() const noexcept {
     return m_storage.blockAllocation * sizeof(ControlBlock) +
            m_storage.keyAllocation * sizeof(K) +
            m_storage.valueAllocation * sizeof(V);
   }
 
+  /**
+   * \brief Returns an iterator to the first entry.
+   * \code{.cpp}
+   * iterator begin() noexcept;
+   * const_iterator begin() const noexcept;
+   * \endcode
+   * \return Iterator to the first entry.
+   */
   iterator begin() noexcept { return iterator(this, next_full(0)); }
-  iterator end() noexcept { return iterator(this, capacity()); }
   const_iterator begin() const noexcept {
     return const_iterator(this, next_full(0));
   }
+
+  /**
+   * \brief Returns an iterator past the last entry.
+   * \code{.cpp}
+   * iterator end() noexcept;
+   * const_iterator end() const noexcept;
+   * \endcode
+   * \return Iterator past the last entry.
+   */
+  iterator end() noexcept { return iterator(this, capacity()); }
   const_iterator end() const noexcept {
     return const_iterator(this, capacity());
   }
+
+  /**
+   * \brief Returns a const iterator to the first entry.
+   * \code{.cpp}
+   * const_iterator cbegin() const noexcept;
+   * \endcode
+   * \return Const iterator to the first entry.
+   */
   const_iterator cbegin() const noexcept { return begin(); }
+
+  /**
+   * \brief Returns a const iterator past the last entry.
+   * \code{.cpp}
+   * const_iterator cend() const noexcept;
+   * \endcode
+   * \return Const iterator past the last entry.
+   */
   const_iterator cend() const noexcept { return end(); }
 
 private:
@@ -807,3 +1141,40 @@ private:
 };
 
 } // namespace strobe
+
+namespace fmt {
+
+/**
+ * \brief Formats a SIMD hash map as a brace-enclosed entry list.
+ * \code{.cpp}
+ * template<typename K, typename V, typename Hash, typename Equal,
+ *          strobe::Allocator A, size_t GroupWidth>
+ * struct formatter<strobe::SwizzHashMap<K, V, Hash, Equal, A, GroupWidth>>;
+ * \endcode
+ */
+template <typename K, typename V, typename Hash, typename Equal,
+          strobe::Allocator A, std::size_t GroupWidth>
+struct formatter<strobe::SwizzHashMap<K, V, Hash, Equal, A, GroupWidth>> {
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto format(
+      const strobe::SwizzHashMap<K, V, Hash, Equal, A, GroupWidth> &map,
+      FormatContext &ctx) const {
+    auto out = ctx.out();
+    *out++ = '{';
+    bool first = true;
+    for (const auto [key, value] : map) {
+      if (!first) {
+        *out++ = ',';
+        *out++ = ' ';
+      }
+      first = false;
+      out = fmt::format_to(out, "{}: {}", key, value);
+    }
+    *out++ = '}';
+    return out;
+  }
+};
+
+} // namespace fmt

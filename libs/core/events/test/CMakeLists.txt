@@ -1,16 +1,16 @@
-set(STROBE_CORE_EVENTS_TESTS ${STROBE_CORE_EVENTS_LIB}-test)
-
 enable_testing()
 
-add_executable(${STROBE_CORE_EVENTS_TESTS} EXCLUDE_FROM_ALL
+add_executable(strobe-core-events-test EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/EventDispatcher.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/event_dispatcher.cpp
 )
 
-target_link_googletest(${STROBE_CORE_EVENTS_TESTS} PUBLIC)
+target_link_googletest(strobe-core-events-test PUBLIC)
 
-target_link_libraries(${STROBE_CORE_EVENTS_TESTS} PUBLIC ${STROBE_CORE_EVENTS_LIB})
-target_link_libraries(${STROBE_CORE_EVENTS_TESTS} PUBLIC ${STROBE_CORE_CONTAINERS_LIB})
+target_link_libraries(strobe-core-events-test
+  PUBLIC strobe-core-events
+  PUBLIC strobe-core-containers
+)
 
-strobe_discover_tests(${STROBE_CORE_EVENTS_TESTS}) 
+strobe_discover_tests(strobe-core-events-test)
 

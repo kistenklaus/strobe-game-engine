@@ -1,7 +1,7 @@
 #pragma once
 
-#include "strobe/core/memory/AllocatorReference.hpp"
-#include "strobe/core/memory/AllocatorTraits.hpp"
+#include "strobe/core/memory/allocator_ref.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
 #include "strobe/core/memory/mpsc_monotonic_pool_resource.hpp"
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/cmd/command_buffer_impl.hpp"

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "strobe/core/memory/AllocatorTraits.hpp"
-#include "strobe/core/memory/PageAllocator.hpp"
+#include "strobe/core/memory/allocator_traits.hpp"
+#include "strobe/core/memory/page_allocator.hpp"
 #include <array>
 #include <bit>
 #include <bitset>
@@ -76,6 +76,7 @@ public:
   }
 
   void deallocate(void *ptr, std::size_t size, std::size_t) {
+    assert(size != 0);
     size = std::bit_ceil(size);
     if (size == 0 || size > Capacity) {
       throw std::runtime_error("Invalid size for deallocate");

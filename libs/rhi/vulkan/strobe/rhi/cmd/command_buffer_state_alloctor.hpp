@@ -1,6 +1,6 @@
 #pragma once
 
-#include "strobe/core/memory/AllocatorReference.hpp"
+#include "strobe/core/memory/allocator_ref.hpp"
 #include "strobe/core/memory/ranked_sync_resource.hpp"
 #include "strobe/rhi/allocator.hpp"
 

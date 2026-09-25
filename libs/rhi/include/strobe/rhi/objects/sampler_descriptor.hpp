@@ -9,7 +9,7 @@ namespace strobe::rhi {
  * Defined in header <strobe/rhi/rhi.hpp>
  * \code{.cpp}
  * class SamplerDescriptor : public Object<SamplerDescriptor>;
- *
+ * \endcode
  */
 class SamplerDescriptor : public Object<SamplerDescriptor> {
   friend class Object<SamplerDescriptor>;

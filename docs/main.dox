@@ -2,5 +2,6 @@
  * \mainpage Strobe Documentation
  *
  * \section strobe_libraries Libraries
+ * - \ref core "core": Reusable template library
  * - \ref rhi "RHI": The Render Hardware Interface is abstraction around graphics APIs.
  */
