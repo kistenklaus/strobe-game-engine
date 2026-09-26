@@ -19,7 +19,7 @@ static_assert(AllocatorTraits<Mallocator>::is_always_equal);
 TEST(Mallocator, AllocatesAndReleasesAlignedStorage) {
   Mallocator allocator;
 
-  constexpr std::size_t size = 137;
+  constexpr std::size_t size = 192;
   constexpr std::size_t alignment = 64;
   void *memory = allocator.allocate(size, alignment);
 

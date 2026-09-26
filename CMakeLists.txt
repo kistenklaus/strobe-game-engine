@@ -42,7 +42,6 @@ add_subdirectory(libs/rhi)
 add_subdirectory(libs/imgui)
 
 
-# add_subdirectory(sandbox)
 if (STROBE_BUILD_DOCS)
   add_subdirectory(docs)
 endif()

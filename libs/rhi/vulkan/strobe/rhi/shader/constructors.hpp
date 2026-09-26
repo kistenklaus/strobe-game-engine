@@ -1,7 +1,7 @@
 #pragma once
 
 #include "strobe/core/memory/allocator_ref.hpp"
-#include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/core/memory/small_monotonic_resource.hpp"
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/objects/vertex_shader.hpp"
@@ -13,7 +13,7 @@ VertexShader create_vertex_shader(Context context,
                                   const VertexShaderInfo &info) {
 
   using scratch_allocator =
-      InplaceMonotonicResource<strobe::rhi::scratch_allocator, 1 << 10>;
+      SmallMonotonicResource<strobe::rhi::scratch_allocator, 1 << 10>;
   using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
 
   scratch_allocator scratch{};

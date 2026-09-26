@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdlib>
 #ifdef _MSC_VER
@@ -18,8 +18,9 @@ public:
 
   void *allocate(std::size_t size, std::size_t align) noexcept {
     ZoneScopedN("Mallocator::allocate");
-    align = std::max(align, alignof(std::max_align_t));
-    size = (size + align - 1) & ~(align - 1);
+    assert(size != 0);
+    assert(align != 0 && (align & (align - 1)) == 0);
+    assert(size % align == 0);
 #ifdef _MSC_VER
     void *ptr = _aligned_malloc(size, align);
 #else

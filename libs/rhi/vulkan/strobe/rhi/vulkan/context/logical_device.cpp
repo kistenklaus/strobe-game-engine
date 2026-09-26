@@ -1,6 +1,6 @@
 #include "strobe/rhi/vulkan/context/logical_device.hpp"
 #include "strobe/core/containers/vector.hpp"
-#include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/core/memory/small_monotonic_resource.hpp"
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/vulkan/context/create_info.hpp"
@@ -19,7 +19,7 @@ VkDevice create_logical_device(VkPhysicalDevice physicalDevice,
                                DriverAlloc *driverAlloc) {
   ZoneScopedN("context/create-logical-device");
   using scratch_allocator =
-      InplaceMonotonicResource<strobe::rhi::scratch_allocator, 1 << 14>;
+      SmallMonotonicResource<strobe::rhi::scratch_allocator, 1 << 14>;
 
   using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
 

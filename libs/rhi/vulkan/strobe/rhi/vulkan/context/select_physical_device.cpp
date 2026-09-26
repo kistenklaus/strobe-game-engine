@@ -1,7 +1,7 @@
 #include "strobe/rhi/vulkan/context/select_physical_device.hpp"
 #include "strobe/core/containers/vector.hpp"
 #include "strobe/core/memory/allocator_ref.hpp"
-#include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/core/memory/small_monotonic_resource.hpp"
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/vulkan/context/context_properties.hpp"
 #include "strobe/rhi/vulkan/context/create_info.hpp"
@@ -307,7 +307,7 @@ select_physical_device(VkInstance instance, const ContextCreateInfo *info,
                        const strobe::rhi::allocator_ref alloc) {
   ZoneScopedN("context/select-physical-device");
   using scratch_allocator =
-      InplaceMonotonicResource<strobe::rhi::scratch_allocator, 1 << 14>;
+      SmallMonotonicResource<strobe::rhi::scratch_allocator, 1 << 14>;
   using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
 
   scratch_allocator scratch{};

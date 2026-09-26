@@ -2,7 +2,6 @@
 
 #include "strobe/core/memory/allocator_traits.hpp"
 #include "strobe/core/memory/mallocator.hpp"
-#include <fmt/printf.h>
 
 #include <algorithm>
 #include <cassert>
@@ -13,6 +12,25 @@
 
 namespace strobe {
 
+/**
+ * \ingroup core
+ * \brief Single-threaded variable-size monotonic allocation resource.
+ * \code{.cpp}
+ * template<Allocator Upstream>
+ * class MonotonicResource;
+ * \endcode
+ *
+ * Allocations advance through upstream-backed chunks. Individual deallocation
+ * is ignored; all chunks are released together by release() or destruction.
+ * The first regular chunk uses the bootstrap size, and later regular chunks
+ * use the normal size. Requests larger than the regular capacity receive a
+ * dedicated chunk.
+ *
+ * \tparam Upstream Allocator used for all chunks.
+ *
+ * \attention 1. Allocation, deallocation, release(), and destruction must not
+ * execute concurrently.
+ */
 template <Allocator Upstream> class MonotonicResource {
 private:
   using upstream_type = Upstream;
@@ -29,9 +47,41 @@ private:
   };
 
 public:
+  /**
+   * \brief Default size of the first regular chunk.
+   * \code{.cpp}
+   * static constexpr std::size_t DEFAULT_BOOTSTRAP_CHUNK_SIZE;
+   * \endcode
+   */
   static constexpr std::size_t DEFAULT_BOOTSTRAP_CHUNK_SIZE = 4096;
+
+  /**
+   * \brief Default size of regular chunks after the bootstrap chunk.
+   * \code{.cpp}
+   * static constexpr std::size_t DEFAULT_NORMAL_CHUNK_SIZE;
+   * \endcode
+   */
   static constexpr std::size_t DEFAULT_NORMAL_CHUNK_SIZE = 4096;
 
+  /**
+   * \brief Constructs an empty monotonic resource.
+   * \code{.cpp}
+   * explicit MonotonicResource(
+   *     const Upstream& upstream = {},
+   *     std::size_t bootstrap_chunk_size = DEFAULT_BOOTSTRAP_CHUNK_SIZE,
+   *     std::size_t normal_chunk_size = DEFAULT_NORMAL_CHUNK_SIZE);
+   * ~MonotonicResource();
+   * MonotonicResource(const MonotonicResource&) = delete;
+   * MonotonicResource& operator=(const MonotonicResource&) = delete;
+   * MonotonicResource(MonotonicResource&&) = delete;
+   * MonotonicResource& operator=(MonotonicResource&&) = delete;
+   * \endcode
+   *
+   * \param upstream Allocator used to obtain and release chunks.
+   * \param bootstrap_chunk_size Capacity of the first regular chunk.
+   * \param normal_chunk_size Capacity of subsequent regular chunks.
+   * \attention 1. Both chunk sizes must be nonzero.
+   */
   explicit MonotonicResource(
       const upstream_type &upstream = {},
       std::size_t bootstrap_chunk_size = DEFAULT_BOOTSTRAP_CHUNK_SIZE,
@@ -50,6 +100,20 @@ public:
 
   ~MonotonicResource() { release(); }
 
+  /**
+   * \brief Allocates storage from the current or a new chunk.
+   * \code{.cpp}
+   * [[nodiscard]] void* allocate(std::size_t size, std::size_t alignment);
+   * \endcode
+   *
+   * \param size Number of bytes requested.
+   * \param alignment Required alignment.
+   * \return Aligned storage for the request.
+   * \throws std::bad_alloc If the requested chunk size overflows.
+   * \attention 1. \p size must be nonzero.
+   * \attention 2. \p alignment must be a nonzero power of two.
+   */
+  [[nodiscard]]
   void *allocate(std::size_t size, std::size_t alignment) {
     assert(size > 0);
     assert(alignment > 0);
@@ -79,10 +143,32 @@ public:
     return ptr;
   }
 
-  void deallocate(void *, std::size_t, std::size_t) noexcept {
+  /**
+   * \brief Ignores an individual deallocation.
+   * \code{.cpp}
+   * void deallocate(void* pointer, std::size_t size,
+   *                 std::size_t alignment) noexcept;
+   * \endcode
+   *
+   * \param pointer Previously allocated storage.
+   * \param size Original allocation size.
+   * \param alignment Original allocation alignment.
+   * \attention 1. The storage remains reserved until release() or destruction.
+   */
+  void deallocate([[maybe_unused]] void *pointer,
+                  [[maybe_unused]] std::size_t size,
+                  [[maybe_unused]] std::size_t alignment) noexcept {
     // Monotonic resource: individual frees are intentionally ignored.
   }
 
+  /**
+   * \brief Releases all chunks and resets the resource.
+   * \code{.cpp}
+   * void release() noexcept;
+   * \endcode
+   *
+   * \attention 1. All outstanding allocations become invalid.
+   */
   void release() noexcept {
     Chunk *chunk = m_chunks;
 
@@ -103,13 +189,6 @@ public:
     m_chunks = nullptr;
     m_current = nullptr;
     m_bootstrap_pending = true;
-  }
-
-  void finish_bootstrap_chunk() noexcept {
-    // Intentionally abandon the active chunk tail and force the next regular
-    // allocation to use normal_chunk_size instead of bootstrap_chunk_size.
-    m_current = nullptr;
-    m_bootstrap_pending = false;
   }
 
 private:
@@ -229,6 +308,7 @@ private:
 
     void *memory = upstream_traits::allocate(m_upstream, allocation_size,
                                              allocation_alignment);
+    assert(memory != nullptr);
 
     Chunk *chunk = static_cast<Chunk *>(memory);
 
@@ -269,8 +349,6 @@ private:
 
   bool m_bootstrap_pending = true;
 };
-
-static_assert(Allocator<MonotonicResource<strobe::Mallocator>>);
 
 static_assert(Allocator<MonotonicResource<strobe::Mallocator>>);
 

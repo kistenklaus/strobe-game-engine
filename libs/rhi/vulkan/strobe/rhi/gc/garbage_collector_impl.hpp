@@ -3,7 +3,7 @@
 #include "strobe/core/containers/vector.hpp"
 #include "strobe/core/containers/vector_deque.hpp"
 #include "strobe/core/memory/allocator_ref.hpp"
-#include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/core/memory/small_monotonic_resource.hpp"
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/objects/command_buffer.hpp"
@@ -351,7 +351,7 @@ private:
 private:
   Context m_context;
   using scratch_allocator =
-      InplaceMonotonicResource<strobe::rhi::scratch_allocator, 1 << 10>;
+      SmallMonotonicResource<strobe::rhi::scratch_allocator, 1 << 10>;
   using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
   scratch_allocator m_scratch;
   Vector<TimelineRetireBuffer> m_retireBuffers;

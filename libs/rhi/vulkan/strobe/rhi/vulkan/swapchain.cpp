@@ -1,5 +1,5 @@
 #include "strobe/rhi/vulkan/swapchain.hpp"
-#include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/core/memory/small_monotonic_resource.hpp"
 #include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/vulkan/context/pnf.hpp"
 
@@ -99,7 +99,7 @@ uint32_t get_swapchain_images(Context *context, Swapchain swapchain,
   }
   static constexpr size_t SCRATCH_SIZE = sizeof(VkImage) * 16;
   using scratch_allocator =
-      InplaceMonotonicResource<strobe::Mallocator, SCRATCH_SIZE>;
+      SmallMonotonicResource<strobe::Mallocator, SCRATCH_SIZE>;
   using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
   scratch_allocator scratch{};
 

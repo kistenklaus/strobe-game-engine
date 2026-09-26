@@ -1,7 +1,7 @@
 #include "strobe/rhi/vulkan/queue.hpp"
 #include "strobe/core/memory/allocator_ref.hpp"
 #include "strobe/core/memory/mallocator.hpp"
-#include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/core/memory/small_monotonic_resource.hpp"
 #include "strobe/rhi/error/vulkan_error.hpp"
 #include "strobe/rhi/types/queue_flags.hpp"
 #include <stdexcept>
@@ -15,7 +15,7 @@ void queue_submit(Queue queue, const SubmitInfo &info) {
   static constexpr size_t SCRATCH_SIZE =
       sizeof(VkSemaphoreSubmitInfo) * 8 + sizeof(VkCommandBufferSubmitInfo) * 2;
   using scratch_allocator =
-      InplaceMonotonicResource<strobe::Mallocator, SCRATCH_SIZE>;
+      SmallMonotonicResource<strobe::Mallocator, SCRATCH_SIZE>;
   using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
   scratch_allocator scratch{};
 

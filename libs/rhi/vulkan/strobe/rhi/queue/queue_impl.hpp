@@ -2,7 +2,7 @@
 
 #include "strobe/core/containers/small_vector.hpp"
 #include "strobe/core/containers/vector.hpp"
-#include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/core/memory/small_monotonic_resource.hpp"
 #include "strobe/core/memory/null_allocator.hpp"
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/cmd/command_buffer_impl.hpp"
@@ -194,7 +194,7 @@ private:
   static constexpr std::size_t MAX_SUBMIT_BATCH_SIZE = 16;
 
   using bump_allocator =
-      InplaceMonotonicResource<strobe::rhi::scratch_allocator, 1 << 13>;
+      SmallMonotonicResource<strobe::rhi::scratch_allocator, 1 << 13>;
   using bump_allocator_ref = AllocatorReference<bump_allocator>;
 
   struct QueueSubmission {

@@ -8,31 +8,112 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <ratio>
 #include <tuple>
 #include <utility>
 
 namespace strobe {
 
+/**
+ * \ingroup core
+ * \brief Routes variable-size allocations to fixed-size MPSC pools.
+ * \code{.cpp}
+ * template<Allocator Upstream, uint32_t MinRank = 4,
+ *          uint32_t MaxRank = 10,
+ *          typename GrowthFactor = std::ratio<2, 1>>
+ * class RankedMPSCResource;
+ * \endcode
+ *
+ * Requests are rounded up to the smallest power-of-two rank satisfying both
+ * their size and alignment. Requests above the largest configured rank are
+ * forwarded to the upstream allocator.
+ *
+ * \tparam Upstream Allocator used by the rank pools and oversized requests.
+ * \tparam MinRank Smallest managed power-of-two exponent.
+ * \tparam MaxRank Largest managed power-of-two exponent.
+ * \tparam GrowthFactor Growth ratio used by each rank pool.
+ *
+ * \attention 1. Allocation calls must be externally serialized.
+ * \attention 2. Deallocation may be called concurrently by multiple threads.
+ */
 template <Allocator Upstream, uint32_t MinRank = 4, uint32_t MaxRank = 10,
           typename GrowthFactor = std::ratio<2, 1>>
 class RankedMPSCResource {
 public:
+  static_assert(MaxRank < std::numeric_limits<std::size_t>::digits);
+
+  /**
+   * \brief Type of the upstream allocator.
+   * \code{.cpp}
+   * using upstream_allocator = Upstream;
+   * \endcode
+   */
   using upstream_allocator = Upstream;
+
+  /**
+   * \brief Traits used for oversized allocations.
+   * \code{.cpp}
+   * using upstream_traits = AllocatorTraits<upstream_allocator>;
+   * \endcode
+   */
   using upstream_traits = AllocatorTraits<upstream_allocator>;
 
   static_assert(MinRank <= MaxRank);
   static_assert(GrowthFactor::num > GrowthFactor::den);
 
+  /**
+   * \brief Smallest managed rank.
+   * \code{.cpp}
+   * static constexpr uint32_t min_rank;
+   * \endcode
+   */
   static constexpr uint32_t min_rank = MinRank;
+
+  /**
+   * \brief Largest managed rank.
+   * \code{.cpp}
+   * static constexpr uint32_t max_rank;
+   * \endcode
+   */
   static constexpr uint32_t max_rank = MaxRank;
 
+  /**
+   * \brief Smallest managed allocation size.
+   * \code{.cpp}
+   * static constexpr std::size_t min_size;
+   * \endcode
+   */
   static constexpr std::size_t min_size = std::size_t{1} << MinRank;
 
+  /**
+   * \brief Largest managed allocation size.
+   * \code{.cpp}
+   * static constexpr std::size_t max_size;
+   * \endcode
+   */
   static constexpr std::size_t max_size = std::size_t{1} << MaxRank;
 
+  /**
+   * \brief Number of managed rank pools.
+   * \code{.cpp}
+   * static constexpr std::size_t pool_count;
+   * \endcode
+   */
   static constexpr std::size_t pool_count = MaxRank - MinRank + 1;
 
+  /**
+   * \brief Constructs all rank pools.
+   * \code{.cpp}
+   * explicit RankedMPSCResource(const Upstream& upstream);
+   * RankedMPSCResource(const RankedMPSCResource&) = delete;
+   * RankedMPSCResource& operator=(const RankedMPSCResource&) = delete;
+   * RankedMPSCResource(RankedMPSCResource&& other) = default;
+   * RankedMPSCResource& operator=(RankedMPSCResource&& other) = default;
+   * \endcode
+   *
+   * \param upstream Allocator used by all rank pools.
+   */
   explicit RankedMPSCResource(const Upstream &upstream)
       : m_upstream(upstream),
         m_pools(make_pools(upstream, std::make_index_sequence<pool_count>{})) {}
@@ -43,12 +124,41 @@ public:
   RankedMPSCResource(RankedMPSCResource &&) = default;
   RankedMPSCResource &operator=(RankedMPSCResource &&) = default;
 
-  void *allocate(std::size_t size, std::size_t align) {
+  /**
+   * \brief Allocates storage routed to the appropriate rank pool.
+   * \code{.cpp}
+   * [[nodiscard]] void* allocate(std::size_t size, std::size_t align);
+   * \endcode
+   *
+   * \param size Number of bytes requested.
+   * \param align Required power-of-two alignment.
+   * \return Storage satisfying both \p size and \p align.
+   *
+   * \attention 1. \p size and \p align must be nonzero.
+   * \attention 2. \p align must be a power of two.
+   * \attention 3. Allocation calls must be externally serialized.
+   */
+  [[nodiscard]] void *allocate(std::size_t size, std::size_t align) {
     return allocate_at_least(size, align).first;
   }
 
-  std::pair<void *, std::size_t> allocate_at_least(std::size_t size,
-                                                   std::size_t align) {
+  /**
+   * \brief Allocates storage and reports the size provided.
+   * \code{.cpp}
+   * [[nodiscard]] std::pair<void*, std::size_t>
+   * allocate_at_least(std::size_t size, std::size_t align);
+   * \endcode
+   *
+   * \param size Minimum number of bytes requested.
+   * \param align Required power-of-two alignment.
+   * \return A pointer and the number of bytes available at that pointer.
+   *
+   * \attention 1. \p size and \p align must be nonzero.
+   * \attention 2. \p align must be a power of two.
+   * \attention 3. Allocation calls must be externally serialized.
+   */
+  [[nodiscard]] std::pair<void *, std::size_t>
+  allocate_at_least(std::size_t size, std::size_t align) {
     assert(size != 0);
     assert(align != 0);
     assert(std::has_single_bit(align));
@@ -69,6 +179,20 @@ public:
     };
   }
 
+  /**
+   * \brief Releases storage previously allocated by this resource.
+   * \code{.cpp}
+   * void deallocate(void* ptr, std::size_t size, std::size_t align) noexcept;
+   * \endcode
+   *
+   * \param ptr Pointer returned by allocate() or allocate_at_least().
+   * \param size Size originally requested for the allocation.
+   * \param align Alignment originally requested for the allocation.
+   *
+   * \attention 1. The arguments must describe an allocation returned by this
+   * resource and must be passed unchanged.
+   * \attention 2. Deallocation may be called concurrently by multiple threads.
+   */
   void deallocate(void *ptr, std::size_t size, std::size_t align) noexcept {
     assert(ptr != nullptr);
     assert(size != 0);

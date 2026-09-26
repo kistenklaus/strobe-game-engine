@@ -1,5 +1,5 @@
 #include "strobe/rhi/vulkan/device_info/queue_family_properties.hpp"
-#include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/core/memory/small_monotonic_resource.hpp"
 
 namespace strobe::rhi::vulkan {
 
@@ -8,7 +8,7 @@ details::query_queue_family_properties(
     VkInstance instance, VkPhysicalDevice physicalDevice,
     const strobe::rhi::allocator_ref &alloc) noexcept {
   using scratch_allocator =
-      InplaceMonotonicResource<strobe::rhi::scratch_allocator, 1 << 14>;
+      SmallMonotonicResource<strobe::rhi::scratch_allocator, 1 << 14>;
   using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
 
   scratch_allocator scratch{};

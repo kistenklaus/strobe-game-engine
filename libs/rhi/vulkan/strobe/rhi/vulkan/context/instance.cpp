@@ -1,7 +1,7 @@
 #include "strobe/rhi/vulkan/context/instance.hpp"
 #include "strobe/core/containers/vector.hpp"
 #include "strobe/core/memory/allocator_ref.hpp"
-#include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/core/memory/small_monotonic_resource.hpp"
 #include "strobe/rhi/error/vulkan_error.hpp"
 #include <vulkan/vulkan_core.h>
 
@@ -72,7 +72,7 @@ VkInstance create_instance(const ContextCreateInfo *info,
                            ContextProperties *props, DriverAlloc *alloc) {
   ZoneScopedN("context/create-instance");
   using scatch_allocator =
-      InplaceMonotonicResource<strobe::Mallocator, 1 << 14>;
+      SmallMonotonicResource<strobe::Mallocator, 1 << 14>;
   using scatch_traits = AllocatorTraits<scatch_allocator>;
   using scatch_allocator_ref = AllocatorReference<scatch_allocator>;
   scatch_allocator scatch{};

@@ -1,6 +1,6 @@
 #include "strobe/rhi/vulkan/cmd/rendering.hpp"
 #include "strobe/core/containers/small_vector.hpp"
-#include "strobe/core/memory/inplace_monotonic_resource.hpp"
+#include "strobe/core/memory/small_monotonic_resource.hpp"
 #include "strobe/rhi/allocator.hpp"
 #include "strobe/rhi/utils/blend_factor_utils.hpp"
 #include "strobe/rhi/utils/blend_op_utils.hpp"
@@ -345,7 +345,7 @@ void cmd_set_vertex_input(const Context *context, CommandBuffer cmd,
       sizeof(VkVertexInputBindingDescription2EXT) * 8 +
       sizeof(VkVertexInputAttributeDescription2EXT) * 8;
   using scratch_allocator =
-      InplaceMonotonicResource<strobe::rhi::scratch_allocator, SCRATCH_SIZE>;
+      SmallMonotonicResource<strobe::rhi::scratch_allocator, SCRATCH_SIZE>;
   scratch_allocator scratch{};
   using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
   Vector<VkVertexInputBindingDescription2EXT, scratch_allocator_ref>

@@ -7,7 +7,7 @@ add_library(strobe-core-memory EXCLUDE_FROM_ALL
 )
 
 target_include_directories(strobe-core-memory 
-  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src 
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
@@ -17,3 +17,4 @@ target_link_libraries(strobe-core-memory
 )
 
 add_subdirectory(test)
+add_subdirectory(bench)

@@ -23,6 +23,7 @@ if(NOT DEFINED STROBE_DOCS_DOXYGEN_INPUTS)
     "${PROJECT_SOURCE_DIR}/libs/rhi/include"
     "${PROJECT_SOURCE_DIR}/libs/core/containers/include"
     "${PROJECT_SOURCE_DIR}/libs/core/events/include"
+    "${PROJECT_SOURCE_DIR}/libs/core/memory/include"
     "${PROJECT_SOURCE_DIR}/libs/core/include"
   )
 endif()

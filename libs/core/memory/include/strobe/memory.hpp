@@ -1,16 +1,26 @@
 #pragma once
 
 #include <strobe/core/memory/allocator_ref.hpp>
+#include <strobe/core/memory/arc.hpp>
+#include <strobe/core/memory/box.hpp>
 #include <strobe/core/memory/allocator_traits.hpp>
-#include <strobe/core/memory/BuddyResource.hpp>
+#include <strobe/core/memory/buddy_resource.hpp>
 #include <strobe/core/memory/mallocator.hpp>
+#include <strobe/core/memory/small_monotonic_resource.hpp>
+#include <strobe/core/memory/mpmc_monotonic_pool_resource.hpp>
+#include <strobe/core/memory/monotonic_pool_allocator.hpp>
+#include <strobe/core/memory/monotonic_resource.hpp>
+#include <strobe/core/memory/mpsc_monotonic_pool_resource.hpp>
+#include <strobe/core/memory/ranked_mpsc_resource.hpp>
+#include <strobe/core/memory/ranked_mpmc_resource.hpp>
+#include <strobe/core/memory/ranked_sync_resource.hpp>
+#include <strobe/core/memory/rc.hpp>
+#include <strobe/core/memory/sync_monotonic_pool_resource.hpp>
+#include <strobe/core/memory/sync_monotonic_resource.hpp>
+#include <strobe/core/memory/sync_resource.hpp>
 #include <strobe/core/memory/named_allocator.hpp>
 #include <strobe/core/memory/null_allocator.hpp>
 #include <strobe/core/memory/page_allocator.hpp>
-#include <strobe/core/memory/PolyAllocator.hpp>
+#include <strobe/core/memory/poly_allocator.hpp>
 #include <strobe/core/memory/align.hpp>
 #include <strobe/core/memory/pages.hpp>
-#include <strobe/core/memory/trivially_destructible_after_move.hpp>
-
-#include <strobe/core/memory/smart_pointers/SharedBlock.hpp>
-#include <strobe/core/memory/smart_pointers/SharedPtr.hpp>

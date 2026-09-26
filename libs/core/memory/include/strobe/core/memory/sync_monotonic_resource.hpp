@@ -14,6 +14,23 @@
 
 namespace strobe {
 
+/**
+ * \ingroup core
+ * \brief Concurrent variable-size monotonic allocation resource.
+ * \code{.cpp}
+ * template<Allocator Upstream>
+ * class SyncMonotonicResource;
+ * \endcode
+ *
+ * Successful allocations from the current chunk use atomic bump allocation.
+ * Chunk creation is serialized internally. Individual deallocation is ignored;
+ * all chunks are released together by release() or destruction.
+ *
+ * \tparam Upstream Allocator used for all chunks.
+ *
+ * \attention 1. release() and destruction require exclusive access with
+ * respect to all allocation calls.
+ */
 template <Allocator Upstream>
 class SyncMonotonicResource {
 private:
@@ -44,14 +61,43 @@ private:
       "ConcurrentMonotonicResource requires lock-free atomic pointers");
 
 public:
-  static constexpr std::size_t DEFAULT_BOOTSTRAP_CHUNK_SIZE =
-      4096;
+  /**
+   * \brief Default capacity of the first regular chunk.
+   * \code{.cpp}
+   * static constexpr std::size_t DEFAULT_BOOTSTRAP_CHUNK_SIZE;
+   * \endcode
+   */
+  static constexpr std::size_t DEFAULT_BOOTSTRAP_CHUNK_SIZE = 4096;
 
-  static constexpr std::size_t DEFAULT_NORMAL_CHUNK_SIZE =
-      4096;
+  /**
+   * \brief Default capacity of subsequent regular chunks.
+   * \code{.cpp}
+   * static constexpr std::size_t DEFAULT_NORMAL_CHUNK_SIZE;
+   * \endcode
+   */
+  static constexpr std::size_t DEFAULT_NORMAL_CHUNK_SIZE = 4096;
 
+  /**
+   * \brief Constructs an empty concurrent monotonic resource.
+   * \code{.cpp}
+   * explicit SyncMonotonicResource(
+   *     const Upstream& upstream = {},
+   *     std::size_t bootstrap_chunk_size = DEFAULT_BOOTSTRAP_CHUNK_SIZE,
+   *     std::size_t normal_chunk_size = DEFAULT_NORMAL_CHUNK_SIZE);
+   * ~SyncMonotonicResource();
+   * SyncMonotonicResource(const SyncMonotonicResource&) = delete;
+   * SyncMonotonicResource& operator=(const SyncMonotonicResource&) = delete;
+   * SyncMonotonicResource(SyncMonotonicResource&&) = delete;
+   * SyncMonotonicResource& operator=(SyncMonotonicResource&&) = delete;
+   * \endcode
+   *
+   * \param upstream Allocator used to obtain and release chunks.
+   * \param bootstrap_chunk_size Capacity of the first regular chunk.
+   * \param normal_chunk_size Capacity of subsequent regular chunks.
+   * \attention 1. Both chunk sizes must be nonzero.
+   */
   explicit SyncMonotonicResource(
-      const upstream_type &upstream,
+      const upstream_type &upstream = {},
       std::size_t bootstrap_chunk_size =
           DEFAULT_BOOTSTRAP_CHUNK_SIZE,
       std::size_t normal_chunk_size =
@@ -81,9 +127,19 @@ public:
     release();
   }
 
-  void *allocate(
-      std::size_t size,
-      std::size_t alignment) {
+  /**
+   * \brief Allocates aligned storage from the current or a new chunk.
+   * \code{.cpp}
+   * [[nodiscard]] void* allocate(std::size_t size, std::size_t alignment);
+   * \endcode
+   *
+   * \param size Number of bytes requested.
+   * \param alignment Required nonzero power-of-two alignment.
+   * \return Aligned storage for the request.
+   * \throws std::bad_alloc If the chunk allocation size overflows.
+   * \attention 1. Allocation may run concurrently with other allocations.
+   */
+  [[nodiscard]] void *allocate(std::size_t size, std::size_t alignment) {
     assert(size > 0);
     assert(alignment > 0);
     assert(is_power_of_two(alignment));
@@ -111,17 +167,31 @@ public:
         alignment);
   }
 
-  void deallocate(
-      void *,
-      std::size_t,
-      std::size_t) noexcept {
+  /**
+   * \brief Ignores an individual deallocation.
+   * \code{.cpp}
+   * void deallocate(void* pointer, std::size_t size,
+   *                 std::size_t alignment) noexcept;
+   * \endcode
+   *
+   * \param pointer Previously allocated storage.
+   * \param size Original allocation size.
+   * \param alignment Original allocation alignment.
+   * \attention 1. Storage remains reserved until release() or destruction.
+   */
+  void deallocate([[maybe_unused]] void *, [[maybe_unused]] std::size_t,
+                  [[maybe_unused]] std::size_t) noexcept {
     // Individual deallocation is intentionally ignored.
   }
 
-  /*
-   * Requires exclusive access:
+  /**
+   * \brief Releases all chunks and resets the resource.
+   * \code{.cpp}
+   * void release() noexcept;
+   * \endcode
    *
-   * No allocate() call may be active or begin concurrently with release().
+   * \attention 1. All outstanding allocations become invalid.
+   * \attention 2. No allocate() call may be active or begin concurrently.
    */
   void release() noexcept {
     std::lock_guard lock{
@@ -158,24 +228,6 @@ public:
 
     m_chunks = nullptr;
     m_bootstrap_pending = true;
-  }
-
-  /*
-   * Requires exclusive access with respect to allocate().
-   *
-   * The active bootstrap chunk remains owned by the resource, but its
-   * remaining tail is intentionally abandoned.
-   */
-  void finish_bootstrap_chunk() noexcept {
-    std::lock_guard lock{
-        m_chunk_mutex
-    };
-
-    m_current.store(
-        nullptr,
-        std::memory_order_relaxed);
-
-    m_bootstrap_pending = false;
   }
 
 private:
@@ -416,6 +468,8 @@ private:
             m_upstream,
             allocation_size,
             allocation_alignment);
+
+    assert(memory != nullptr);
 
     Chunk *chunk =
         static_cast<Chunk *>(memory);

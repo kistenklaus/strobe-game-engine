@@ -15,7 +15,7 @@
 namespace strobe {
 
 template <Allocator Upstream, std::size_t InlineBytes>
-class InplaceMonotonicResource {
+class SmallMonotonicResource {
 private:
   using upstream_type = Upstream;
   using upstream_traits = AllocatorTraits<upstream_type>;
@@ -33,7 +33,7 @@ private:
 public:
   static constexpr std::size_t DEFAULT_NORMAL_CHUNK_SIZE = 4096;
 
-  explicit InplaceMonotonicResource(
+  explicit SmallMonotonicResource(
       const upstream_type &upstream = {},
       std::size_t normal_chunk_size = DEFAULT_NORMAL_CHUNK_SIZE)
       : m_upstream(upstream), m_normal_chunk_size(normal_chunk_size) {
@@ -42,16 +42,16 @@ public:
     reset_inline_storage();
   }
 
-  InplaceMonotonicResource(const InplaceMonotonicResource &) = delete;
+  SmallMonotonicResource(const SmallMonotonicResource &) = delete;
 
-  InplaceMonotonicResource &
-  operator=(const InplaceMonotonicResource &) = delete;
+  SmallMonotonicResource &
+  operator=(const SmallMonotonicResource &) = delete;
 
-  InplaceMonotonicResource(InplaceMonotonicResource &&) = delete;
+  SmallMonotonicResource(SmallMonotonicResource &&) = delete;
 
-  InplaceMonotonicResource &operator=(InplaceMonotonicResource &&) = delete;
+  SmallMonotonicResource &operator=(SmallMonotonicResource &&) = delete;
 
-  ~InplaceMonotonicResource() { release(); }
+  ~SmallMonotonicResource() { release(); }
 
   [[nodiscard]]
   void *allocate(std::size_t size, std::size_t alignment) {
@@ -298,6 +298,6 @@ private:
   bool m_inline_active = InlineBytes != 0;
 };
 
-static_assert(Allocator<InplaceMonotonicResource<strobe::Mallocator, 4096>>);
+static_assert(Allocator<SmallMonotonicResource<strobe::Mallocator, 4096>>);
 
 } // namespace strobe
