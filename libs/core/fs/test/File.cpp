@@ -1,18 +1,18 @@
-#include "strobe/core/fs/Path.hpp"
 #include "strobe/core/fs/exists.hpp"
+#include "strobe/core/fs/path.hpp"
 #include "strobe/core/fs/rm.hpp"
 #include <algorithm>
 #include <cstring>
 #include <gtest/gtest.h>
 
-#include <strobe/core/fs/File.hpp>
+#include <strobe/core/fs/file.hpp>
 
 // Basic allocation and deallocation
 TEST(File, Create) {
-  strobe::fs::rm("file-open-test", strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("file-open-test", strobe::fs::RmFlags::force);
 
-  strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
-                                          strobe::fs::FileAccessBits::Write);
+  auto file = strobe::fs::open("file-open-test", strobe::fs::FileAccess::create |
+                                                 strobe::fs::FileAccess::write);
   ASSERT_TRUE(file);
   ASSERT_TRUE(file.isOpen());
 
@@ -23,10 +23,11 @@ TEST(File, Create) {
 
 // Basic allocation and deallocation
 TEST(File, Write) {
-  strobe::fs::rm("file-open-test", strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("file-open-test", strobe::fs::RmFlags::force);
 
-  strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
-                                          strobe::fs::FileAccessBits::Write);
+  auto file =
+      strobe::fs::open("file-open-test", strobe::fs::FileAccess::create |
+                                             strobe::fs::FileAccess::write);
   ASSERT_TRUE(file);
   ASSERT_TRUE(file.isOpen());
 
@@ -47,14 +48,15 @@ TEST(File, Write) {
 
 // Basic allocation and deallocation
 TEST(File, Read) {
-  strobe::fs::rm("file-open-test", strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("file-open-test", strobe::fs::RmFlags::force);
 
   char text[] = "foobar";
   std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                              std::strlen(text));
   {
-    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
-                                            strobe::fs::FileAccessBits::Write);
+    auto file =
+        strobe::fs::open("file-open-test", strobe::fs::FileAccess::create |
+                                               strobe::fs::FileAccess::write);
     ASSERT_TRUE(file);
     ASSERT_TRUE(file.isOpen());
 
@@ -69,8 +71,9 @@ TEST(File, Read) {
   ASSERT_TRUE(strobe::fs::exists("file-open-test"));
 
   {
-    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
-                                            strobe::fs::FileAccessBits::Write);
+    auto file =
+        strobe::fs::open("file-open-test", strobe::fs::FileAccess::create |
+                                               strobe::fs::FileAccess::write);
 
     std::size_t bytesRead = 0;
     std::vector<std::byte> out(bytes.size());
@@ -86,13 +89,14 @@ TEST(File, Read) {
 
 // Basic allocation and deallocation
 TEST(File, Seek) {
-  strobe::fs::rm("file-open-test", strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("file-open-test", strobe::fs::RmFlags::force);
 
   char text[] = "foobar";
   std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                              std::strlen(text));
-  strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
-                                          strobe::fs::FileAccessBits::Write);
+  auto file =
+      strobe::fs::open("file-open-test", strobe::fs::FileAccess::create |
+                                             strobe::fs::FileAccess::write);
   ASSERT_TRUE(file);
   ASSERT_TRUE(file.isOpen());
 
@@ -144,14 +148,15 @@ TEST(File, Seek) {
 
 // Basic allocation and deallocation
 TEST(File, Append) {
-  strobe::fs::rm("file-open-test", strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("file-open-test", strobe::fs::RmFlags::force);
 
   {
     char text[] = "foobar";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                                std::strlen(text));
-    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
-                                            strobe::fs::FileAccessBits::Write);
+    auto file =
+        strobe::fs::open("file-open-test", strobe::fs::FileAccess::create |
+                                               strobe::fs::FileAccess::write);
     ASSERT_TRUE(file);
     ASSERT_TRUE(file.isOpen());
 
@@ -166,8 +171,9 @@ TEST(File, Append) {
     char text[] = "foobar";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                                std::strlen(text));
-    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Append |
-                                            strobe::fs::FileAccessBits::Write);
+    auto file =
+        strobe::fs::open("file-open-test", strobe::fs::FileAccess::append |
+                                               strobe::fs::FileAccess::write);
     ASSERT_TRUE(file);
     ASSERT_TRUE(file.isOpen());
 
@@ -178,7 +184,7 @@ TEST(File, Append) {
     }
   }
 
-  strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Read);
+  auto file = strobe::fs::open("file-open-test", strobe::fs::FileAccess::read);
   ASSERT_TRUE(file);
 
   file.seek(0, strobe::fs::FileSeekFlags::Set);
@@ -205,14 +211,15 @@ TEST(File, Append) {
 
 // Basic allocation and deallocation
 TEST(File, Trunc) {
-  strobe::fs::rm("file-open-test", strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("file-open-test", strobe::fs::RmFlags::force);
 
   {
     char text[] = "foobar";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                                std::strlen(text));
-    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
-                                            strobe::fs::FileAccessBits::Write);
+    auto file =
+        strobe::fs::open("file-open-test", strobe::fs::FileAccess::create |
+                                               strobe::fs::FileAccess::write);
     ASSERT_TRUE(file);
     ASSERT_TRUE(file.isOpen());
 
@@ -227,8 +234,9 @@ TEST(File, Trunc) {
     char text[] = "foobar";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                                std::strlen(text));
-    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Trunc |
-                                            strobe::fs::FileAccessBits::Write);
+    auto file =
+        strobe::fs::open("file-open-test", strobe::fs::FileAccess::trunc |
+                                               strobe::fs::FileAccess::write);
     ASSERT_TRUE(file);
     ASSERT_TRUE(file.isOpen());
 
@@ -239,7 +247,7 @@ TEST(File, Trunc) {
     }
   }
 
-  strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Read);
+  auto file = strobe::fs::open("file-open-test", strobe::fs::FileAccess::read);
   ASSERT_TRUE(file);
 
   file.seek(0, strobe::fs::FileSeekFlags::Set);
@@ -266,14 +274,15 @@ TEST(File, Trunc) {
 
 // Basic allocation and deallocation
 TEST(File, Exclusive) {
-  strobe::fs::rm("file-open-test", strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("file-open-test", strobe::fs::RmFlags::force);
 
   {
     char text[] = "foobar";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                                std::strlen(text));
-    strobe::fs::File file("file-open-test", strobe::fs::FileAccessBits::Create |
-                                            strobe::fs::FileAccessBits::Write);
+    auto file =
+        strobe::fs::open("file-open-test", strobe::fs::FileAccess::create |
+                                               strobe::fs::FileAccess::write);
     ASSERT_TRUE(file);
     ASSERT_TRUE(file.isOpen());
 
@@ -285,10 +294,11 @@ TEST(File, Exclusive) {
   }
 
   {
-    EXPECT_ANY_THROW(strobe::fs::File file("file-open-test",
-                                       strobe::fs::FileAccessBits::Create |
-                                           strobe::fs::FileAccessBits::Exclusive |
-                                           strobe::fs::FileAccessBits::Write););
+    EXPECT_ANY_THROW(
+        auto file = strobe::fs::open("file-open-test",
+                                     strobe::fs::FileAccess::create |
+                                         strobe::fs::FileAccess::exclusive |
+                                         strobe::fs::FileAccess::write););
   }
 
   strobe::fs::rm("file-open-test");

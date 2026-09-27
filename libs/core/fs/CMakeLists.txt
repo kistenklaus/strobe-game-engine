@@ -8,6 +8,8 @@ if (WIN32)
     ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/win/mv.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/win/rm.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/win/stat.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/win/file.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/win/directory.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/utility.cpp
   )
 else()
@@ -18,6 +20,8 @@ else()
     ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/unix/mv.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/unix/rm.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/unix/stat.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/unix/file.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/unix/directory.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/strobe/core/fs/utility.cpp
   )
 endif()
@@ -27,8 +31,8 @@ add_library(strobe-core-fs STATIC EXCLUDE_FROM_ALL
 )
 
 target_include_directories(strobe-core-fs 
-  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src 
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 
@@ -38,4 +42,4 @@ target_link_libraries(strobe-core-fs
 )
 target_link_fmt(strobe-core-fs PUBLIC)
 
-# add_subdirectory(test)
+add_subdirectory(test)

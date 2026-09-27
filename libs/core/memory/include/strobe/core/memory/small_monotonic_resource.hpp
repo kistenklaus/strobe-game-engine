@@ -14,6 +14,21 @@
 
 namespace strobe {
 
+/**
+ * \ingroup core
+ * \brief Monotonic resource with inline bootstrap storage.
+ * \code{.cpp}
+ * template<Allocator Upstream, std::size_t InlineBytes>
+ * class SmallMonotonicResource;
+ * \endcode
+ *
+ * Allocations use the embedded buffer first, then obtain upstream-backed
+ * chunks. Individual deallocation is ignored; all allocations are released
+ * together by destruction or \p release().
+ *
+ * \tparam Upstream Allocator used for storage beyond the inline buffer.
+ * \tparam InlineBytes Number of bytes embedded in the resource.
+ */
 template <Allocator Upstream, std::size_t InlineBytes>
 class SmallMonotonicResource {
 private:
@@ -31,8 +46,33 @@ private:
   };
 
 public:
+  /**
+   * \brief Default size of an upstream-backed regular chunk.
+   * \ingroup core
+   * \code{.cpp}
+   * static constexpr std::size_t DEFAULT_NORMAL_CHUNK_SIZE = 4096;
+   * \endcode
+   */
   static constexpr std::size_t DEFAULT_NORMAL_CHUNK_SIZE = 4096;
 
+  /**
+   * \brief Constructs, moves, assigns, and destroys the resource.
+   * \ingroup core
+   * \code{.cpp}
+   * explicit SmallMonotonicResource(
+   *     const Upstream& upstream = {},
+   *     std::size_t normal_chunk_size = DEFAULT_NORMAL_CHUNK_SIZE);
+   * SmallMonotonicResource(const SmallMonotonicResource&) = delete;
+   * SmallMonotonicResource(SmallMonotonicResource&&) = delete;
+   * SmallMonotonicResource& operator=(const SmallMonotonicResource&) = delete;
+   * SmallMonotonicResource& operator=(SmallMonotonicResource&&) = delete;
+   * ~SmallMonotonicResource();
+   * \endcode
+   *
+   * \param upstream Allocator used after inline storage is exhausted.
+   * \param normal_chunk_size Capacity of regular upstream-backed chunks.
+   * \attention \p normal_chunk_size must be greater than zero.
+   */
   explicit SmallMonotonicResource(
       const upstream_type &upstream = {},
       std::size_t normal_chunk_size = DEFAULT_NORMAL_CHUNK_SIZE)
@@ -53,6 +93,19 @@ public:
 
   ~SmallMonotonicResource() { release(); }
 
+  /**
+   * \brief Allocates monotonically from the inline or upstream storage.
+   * \ingroup core
+   * \code{.cpp}
+   * void* allocate(std::size_t size, std::size_t alignment);
+   * \endcode
+   *
+   * \param size Number of bytes to allocate.
+   * \param alignment Required power-of-two alignment.
+   * \return Aligned storage for the allocation.
+   * \throws std::bad_alloc If upstream storage cannot be obtained.
+   * \attention Individual allocations cannot be reclaimed.
+   */
   [[nodiscard]]
   void *allocate(std::size_t size, std::size_t alignment) {
     assert(size > 0);
@@ -105,12 +158,32 @@ public:
     return ptr;
   }
 
+  /**
+   * \brief Ignores an individual deallocation.
+   * \ingroup core
+   * \code{.cpp}
+   * void deallocate(void* ptr, std::size_t size, std::size_t alignment) noexcept;
+   * \endcode
+   *
+   * \param ptr Allocation previously returned by this resource.
+   * \param size Original allocation size.
+   * \param alignment Original allocation alignment.
+   */
   void deallocate(void *, std::size_t, std::size_t) noexcept {
     /*
      * Individual deallocation is intentionally ignored.
      */
   }
 
+  /**
+   * \brief Releases all upstream-backed chunks and resets inline storage.
+   * \ingroup core
+   * \code{.cpp}
+   * void release() noexcept;
+   * \endcode
+   *
+   * \attention All pointers returned by \p allocate() are invalidated.
+   */
   void release() noexcept {
     Chunk *chunk = m_chunks;
 
@@ -135,14 +208,26 @@ public:
     reset_inline_storage();
   }
 
-  /*
-   * Abandon the unused part of the inline/bootstrap buffer.
+  /**
+   * \brief Abandons the remaining inline bootstrap storage.
+   * \ingroup core
+   * \code{.cpp}
+   * void finish_bootstrap_chunk() noexcept;
+   * \endcode
    *
-   * The next allocation will use an upstream-backed regular or
-   * dedicated chunk.
+   * Subsequent allocations use upstream-backed regular or dedicated chunks.
    */
   void finish_bootstrap_chunk() noexcept { m_inline_active = false; }
 
+  /**
+   * \brief Returns the inline storage capacity.
+   * \ingroup core
+   * \code{.cpp}
+   * static constexpr std::size_t inline_capacity() noexcept;
+   * \endcode
+   *
+   * \return Number of bytes embedded in the resource.
+   */
   [[nodiscard]]
   static constexpr std::size_t inline_capacity() noexcept {
     return InlineBytes;

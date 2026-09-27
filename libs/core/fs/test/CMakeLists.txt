@@ -2,7 +2,8 @@ enable_testing()
 
 add_executable(strobe-core-fs-test EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/File.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/Path.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/directory.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/path.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cp.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/exists.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp

@@ -476,8 +476,13 @@ public:
    * String& append(view_type value);
    * String& append(const C* value);
    * String& append(size_type count, C value);
+   * template<std::input_iterator InputIt>
+   * String& append(InputIt first, InputIt last);
    * \endcode
    * \param value Characters to append.
+   * \param count Number of repeated characters.
+   * \param first Range beginning.
+   * \param last Range end.
    * \return This string.
    */
   String &append(view_type value) {
@@ -511,6 +516,14 @@ public:
       m_chars.resize(old_size + count + 1);
       traits_type::assign(data() + old_size, count, value);
       data()[old_size + count] = C{};
+    }
+    return *this;
+  }
+
+  template <std::input_iterator InputIt>
+  String &append(InputIt first, InputIt last) {
+    for (; first != last; ++first) {
+      push_back(static_cast<C>(*first));
     }
     return *this;
   }

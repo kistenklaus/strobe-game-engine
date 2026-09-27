@@ -45,6 +45,16 @@ TEST(String, append_resize_and_clear) {
   EXPECT_EQ(text.c_str()[0], '\0');
 }
 
+TEST(String, append_iterator_range) {
+  strobe::String<> text("ab");
+  std::string_view suffix = "cde";
+
+  text.append(suffix.begin(), suffix.end());
+
+  EXPECT_EQ(text.view(), "abcde");
+  EXPECT_EQ(text.c_str()[text.size()], '\0');
+}
+
 TEST(String, reserve_preserves_contents) {
   strobe::String<> text("hello");
   text.reserve(text.capacity() + 32);

@@ -1,13 +1,14 @@
-#include "../mkdir.hpp"
-#include "strobe/core/fs/Path.hpp"
+#include "strobe/core/fs/mkdir.hpp"
+#include "strobe/core/fs/path.hpp"
 #include "strobe/core/fs/exists.hpp"
 #include "strobe/core/fs/stat.hpp"
-#include "strobe/core/fs/utility.hpp"
+#include "strobe/core/fs/detail/utility.hpp"
 
 #include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <fmt/format.h>
+#include <stdexcept>
 #include <system_error>
 
 #ifdef __linux__
@@ -69,36 +70,49 @@ static void mkdir_and_parents(std::span<char> path) {
 
 void mkdir(PathView path, MkdirFlags flags) {
   const char *cpath = path.c_str();
-  if (flags & MkdirFlagBits::Parents) {
+  if ((flags & MkdirFlags::parents) != MkdirFlags::none) {
+    if (path.span().empty() || path.size() == 0) {
+      throw std::invalid_argument("Cannot create an empty path");
+    }
 #ifdef __linux__
     char pathBuffer[PATH_MAX];
-    if (path.size() + 1 >= PATH_MAX) {
+    const bool has_trailing_separator = path.c_str()[path.size() - 1] == '/';
+    const std::size_t required_size =
+        path.size() + (has_trailing_separator ? 1 : 2);
+    if (required_size > PATH_MAX) {
       throw std::runtime_error("Normalized path exceeds PATH_MAX");
     }
     std::size_t pathSize = path.size();
     std::memcpy(pathBuffer, path.c_str(), (path.size() + 1) * sizeof(char));
-    if (pathBuffer[pathSize - 1] != '/') {
+    if (!has_trailing_separator) {
       pathBuffer[pathSize] = '/';
       pathSize += 1;
     }
     std::size_t normalizedSize =
         details::normalize_path_inplace(std::span<char>(pathBuffer, pathSize));
-    assert(normalizedSize + 1 < PATH_MAX);
+    if (normalizedSize + 1 >= PATH_MAX) {
+      throw std::runtime_error("Normalized path exceeds PATH_MAX");
+    }
     pathBuffer[normalizedSize] = '\0';
-#elifdef __APPLE__
+#elif defined(__APPLE__)
     char pathBuffer[PATH_MAX];
-    if (path.size() + 1 >= PATH_MAX) {
+    const bool has_trailing_separator = path.c_str()[path.size() - 1] == '/';
+    const std::size_t required_size =
+        path.size() + (has_trailing_separator ? 1 : 2);
+    if (required_size > PATH_MAX) {
       throw std::runtime_error("Normalized path exceeds PATH_MAX");
     }
     std::size_t pathSize = path.size();
     std::memcpy(pathBuffer, path.c_str(), (path.size() + 1) * sizeof(char));
-    if (pathBuffer[pathSize - 1] != '/') {
+    if (!has_trailing_separator) {
       pathBuffer[pathSize] = '/';
       pathSize += 1;
     }
     std::size_t normalizedSize =
         details::normalize_path_inplace(std::span<char>(pathBuffer, pathSize));
-    assert(normalizedSize + 1 < PATH_MAX);
+    if (normalizedSize + 1 >= PATH_MAX) {
+      throw std::runtime_error("Normalized path exceeds PATH_MAX");
+    }
     pathBuffer[normalizedSize] = '\0';
 #endif
     mkdir_and_parents(std::span<char>(pathBuffer, normalizedSize + 1));

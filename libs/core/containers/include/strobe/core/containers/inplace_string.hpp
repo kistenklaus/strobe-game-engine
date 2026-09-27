@@ -557,6 +557,26 @@ public:
   }
 
   /**
+   * \brief Appends characters from an iterator range.
+   * \code{.cpp}
+   * template<std::input_iterator InputIt>
+   * constexpr InplaceString& append(InputIt first, InputIt last);
+   * \endcode
+   *
+   * \param first Range beginning.
+   * \param last Range end.
+   * \return This string.
+   * \attention 1. The resulting string must fit within Capacity.
+   */
+  template <std::input_iterator InputIt>
+  constexpr InplaceString &append(InputIt first, InputIt last) {
+    for (; first != last; ++first) {
+      push_back(static_cast<C>(*first));
+    }
+    return *this;
+  }
+
+  /**
    * \brief Appends a string view.
    * \code{.cpp}
    * constexpr InplaceString& operator+=(view_type value);

@@ -1,5 +1,5 @@
 #include "strobe/core/fs/cp.hpp"
-#include "strobe/core/fs/File.hpp"
+#include "strobe/core/fs/file.hpp"
 #include "strobe/core/fs/exists.hpp"
 #include "strobe/core/fs/mkdir.hpp"
 #include "strobe/core/fs/rm.hpp"
@@ -8,12 +8,12 @@
 
 // Basic allocation and deallocation
 TEST(cp, cp_empty_file) {
-  strobe::fs::rm("testfile", strobe::fs::RmFlagBits::Force);
-  strobe::fs::rm("testfile-foo", strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("testfile", strobe::fs::RmFlags::force);
+  strobe::fs::rm("testfile-foo", strobe::fs::RmFlags::force);
 
   {
-    strobe::fs::File file("testfile", strobe::fs::FileAccessBits::Create |
-                                      strobe::fs::FileAccessBits::Write);
+    auto file = strobe::open("testfile", strobe::fs::FileAccess::create |
+                                      strobe::fs::FileAccess::write);
   }
 
   ASSERT_TRUE(strobe::fs::exists("testfile"));
@@ -33,15 +33,15 @@ TEST(cp, cp_empty_file) {
 
 // Basic allocation and deallocation
 TEST(cp, cp_file_content) {
-  strobe::fs::rm("testfile", strobe::fs::RmFlagBits::Force);
-  strobe::fs::rm("testfile-foo", strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("testfile", strobe::fs::RmFlags::force);
+  strobe::fs::rm("testfile-foo", strobe::fs::RmFlags::force);
 
   char text[] = "foobar";
   std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                              std::strlen(text));
   {
-    strobe::fs::File file("testfile", strobe::fs::FileAccessBits::Create |
-                                      strobe::fs::FileAccessBits::Write);
+    auto file = strobe::open("testfile", strobe::fs::FileAccess::create |
+                                      strobe::fs::FileAccess::write);
 
     std::size_t written = 0;
     while (written != bytes.size()) {
@@ -62,7 +62,7 @@ TEST(cp, cp_file_content) {
   ASSERT_TRUE(strobe::fs::stat("testfile-foo").isFile());
 
   {
-    strobe::fs::File file("testfile-foo", strobe::fs::FileAccessBits::Read);
+    auto file = strobe::open("testfile-foo", strobe::fs::FileAccess::read);
     std::size_t bytesRead = 0;
     std::vector<std::byte> out(bytes.size());
     while (bytesRead != bytes.size()) {
@@ -78,16 +78,16 @@ TEST(cp, cp_file_content) {
 
 // Basic allocation and deallocation
 TEST(cp, cp_file_into_dir) {
-  strobe::fs::rm("testfile", strobe::fs::RmFlagBits::Force);
-  strobe::fs::rm("testdir", strobe::fs::RmFlagBits::Force |
-                                strobe::fs::RmFlagBits::Recursive);
+  strobe::fs::rm("testfile", strobe::fs::RmFlags::force);
+  strobe::fs::rm("testdir", strobe::fs::RmFlags::force |
+                                strobe::fs::RmFlags::recursive);
 
   char text[] = "foobar";
   std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                              std::strlen(text));
   {
-    strobe::fs::File file("testfile", strobe::fs::FileAccessBits::Create |
-                                      strobe::fs::FileAccessBits::Write);
+    auto file = strobe::open("testfile", strobe::fs::FileAccess::create |
+                                      strobe::fs::FileAccess::write);
 
     std::size_t written = 0;
     while (written != bytes.size()) {
@@ -113,7 +113,7 @@ TEST(cp, cp_file_into_dir) {
   ASSERT_TRUE(strobe::fs::stat("testdir/testfile").isFile());
 
   {
-    strobe::fs::File file("testdir/testfile", strobe::fs::FileAccessBits::Read);
+    auto file = strobe::open("testdir/testfile", strobe::fs::FileAccess::read);
     std::size_t bytesRead = 0;
     std::vector<std::byte> out(bytes.size());
     while (bytesRead != bytes.size()) {
@@ -123,19 +123,19 @@ TEST(cp, cp_file_into_dir) {
     ASSERT_TRUE(std::ranges::equal(out, bytes));
   }
 
-  strobe::fs::rm("testdir", strobe::fs::RmFlagBits::Recursive);
-  strobe::fs::rm("testfile", strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("testdir", strobe::fs::RmFlags::recursive);
+  strobe::fs::rm("testfile", strobe::fs::RmFlags::force);
 }
 
 // Basic allocation and deallocation
 TEST(cp, cp_file_into_dir_without_force) {
-  strobe::fs::rm("testfile", strobe::fs::RmFlagBits::Force);
-  strobe::fs::rm("testdir", strobe::fs::RmFlagBits::Force |
-                                strobe::fs::RmFlagBits::Recursive);
+  strobe::fs::rm("testfile", strobe::fs::RmFlags::force);
+  strobe::fs::rm("testdir", strobe::fs::RmFlags::force |
+                                strobe::fs::RmFlags::recursive);
 
   {
-    strobe::fs::File file("testfile", strobe::fs::FileAccessBits::Create |
-                                      strobe::fs::FileAccessBits::Write);
+    auto file = strobe::open("testfile", strobe::fs::FileAccess::create |
+                                      strobe::fs::FileAccess::write);
   }
 
   ASSERT_TRUE(strobe::fs::exists("testfile"));
@@ -147,8 +147,8 @@ TEST(cp, cp_file_into_dir_without_force) {
   ASSERT_TRUE(strobe::fs::stat("testdir").isDirectory());
 
   {
-    strobe::fs::File file("testdir/testfile", strobe::fs::FileAccessBits::Create |
-                                              strobe::fs::FileAccessBits::Write);
+    auto file = strobe::open("testdir/testfile", strobe::fs::FileAccess::create |
+                                              strobe::fs::FileAccess::write);
   }
 
   strobe::fs::cp("testfile", "testdir"); // does not require force!
@@ -159,48 +159,48 @@ TEST(cp, cp_file_into_dir_without_force) {
   ASSERT_TRUE(strobe::fs::exists("testdir/testfile"));
   ASSERT_TRUE(strobe::fs::stat("testdir/testfile").isFile());
 
-  strobe::fs::rm("testdir", strobe::fs::RmFlagBits::Recursive);
-  strobe::fs::rm("testfile", strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("testdir", strobe::fs::RmFlags::recursive);
+  strobe::fs::rm("testfile", strobe::fs::RmFlags::force);
 }
 
 TEST(cp, cp_empty_dir) {
-  strobe::fs::rm("testdir-a", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
-  strobe::fs::rm("testdir-b", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("testdir-a", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
+  strobe::fs::rm("testdir-b", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
 
   strobe::fs::mkdir("testdir-a");
   ASSERT_TRUE(strobe::fs::exists("testdir-a"));
   ASSERT_TRUE(strobe::fs::stat("testdir-a").isDirectory());
 
-  strobe::fs::cp("testdir-a", "testdir-b", strobe::fs::CpFlagBits::Recursive);
+  strobe::fs::cp("testdir-a", "testdir-b", strobe::fs::CpFlags::recursive);
 
   ASSERT_TRUE(strobe::fs::exists("testdir-a"));
   ASSERT_TRUE(strobe::fs::stat("testdir-a").isDirectory());
   ASSERT_TRUE(strobe::fs::exists("testdir-b"));
   ASSERT_TRUE(strobe::fs::stat("testdir-b").isDirectory());
 
-  strobe::fs::rm("testdir-a", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
-  strobe::fs::rm("testdir-b", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("testdir-a", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
+  strobe::fs::rm("testdir-b", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
 }
 
 TEST(cp, cp_dir) {
-  strobe::fs::rm("testdir-a", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
-  strobe::fs::rm("testdir-b", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("testdir-a", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
+  strobe::fs::rm("testdir-b", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
 
-  strobe::fs::mkdir("testdir-a/foo/bar", strobe::fs::MkdirFlagBits::Parents);
+  strobe::fs::mkdir("testdir-a/foo/bar", strobe::fs::MkdirFlags::parents);
   char text[] = "foobar";
   std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                              std::strlen(text));
   {
-    strobe::fs::File file("testdir-a/abc", strobe::fs::FileAccessBits::Write |
-                                           strobe::fs::FileAccessBits::Create |
-                                           strobe::fs::FileAccessBits::Exclusive |
-                                           strobe::fs::FileAccessBits::Trunc);
+    auto file = strobe::open("testdir-a/abc", strobe::fs::FileAccess::write |
+                                           strobe::fs::FileAccess::create |
+                                           strobe::fs::FileAccess::exclusive |
+                                           strobe::fs::FileAccess::trunc);
     std::size_t written = 0;
     while (written != bytes.size()) {
       std::size_t w = file.write(bytes.subspan(written));
@@ -210,7 +210,7 @@ TEST(cp, cp_dir) {
   ASSERT_TRUE(strobe::fs::exists("testdir-a"));
   ASSERT_TRUE(strobe::fs::stat("testdir-a").isDirectory());
 
-  strobe::fs::cp("testdir-a", "testdir-b", strobe::fs::CpFlagBits::Recursive);
+  strobe::fs::cp("testdir-a", "testdir-b", strobe::fs::CpFlags::recursive);
 
   ASSERT_TRUE(strobe::fs::exists("testdir-a"));
   ASSERT_TRUE(strobe::fs::stat("testdir-a").isDirectory());
@@ -220,7 +220,7 @@ TEST(cp, cp_dir) {
   ASSERT_TRUE(strobe::fs::exists("testdir-b/abc"));
   ASSERT_TRUE(strobe::fs::stat("testdir-b/abc").isFile());
   {
-    strobe::fs::File file("testdir-b/abc", strobe::fs::FileAccessBits::Read);
+    auto file = strobe::open("testdir-b/abc", strobe::fs::FileAccess::read);
 
     std::size_t bytesRead = 0;
     std::vector<std::byte> out(bytes.size());
@@ -236,27 +236,27 @@ TEST(cp, cp_dir) {
   ASSERT_TRUE(strobe::fs::exists("testdir-b/foo/bar"));
   ASSERT_TRUE(strobe::fs::stat("testdir-b/foo/bar").isDirectory());
 
-  strobe::fs::rm("testdir-a", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
-  strobe::fs::rm("testdir-b", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("testdir-a", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
+  strobe::fs::rm("testdir-b", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
 }
 
 TEST(cp, cp_dir_into_dir) {
-  strobe::fs::rm("testdir-a", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
-  strobe::fs::rm("testdir-b", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("testdir-a", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
+  strobe::fs::rm("testdir-b", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
 
-  strobe::fs::mkdir("testdir-a/foo/bar", strobe::fs::MkdirFlagBits::Parents);
+  strobe::fs::mkdir("testdir-a/foo/bar", strobe::fs::MkdirFlags::parents);
   char text[] = "foobar";
   std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
                              std::strlen(text));
   {
-    strobe::fs::File file("testdir-a/abc", strobe::fs::FileAccessBits::Write |
-                                           strobe::fs::FileAccessBits::Create |
-                                           strobe::fs::FileAccessBits::Exclusive |
-                                           strobe::fs::FileAccessBits::Trunc);
+    auto file = strobe::open("testdir-a/abc", strobe::fs::FileAccess::write |
+                                           strobe::fs::FileAccess::create |
+                                           strobe::fs::FileAccess::exclusive |
+                                           strobe::fs::FileAccess::trunc);
     std::size_t written = 0;
     while (written != bytes.size()) {
       std::size_t w = file.write(bytes.subspan(written));
@@ -270,7 +270,7 @@ TEST(cp, cp_dir_into_dir) {
   ASSERT_TRUE(strobe::fs::exists("testdir-b"));
   ASSERT_TRUE(strobe::fs::stat("testdir-b").isDirectory());
 
-  strobe::fs::cp("testdir-a", "testdir-b", strobe::fs::CpFlagBits::Recursive);
+  strobe::fs::cp("testdir-a", "testdir-b", strobe::fs::CpFlags::recursive);
 
   return;
 
@@ -292,7 +292,7 @@ TEST(cp, cp_dir_into_dir) {
   ASSERT_TRUE(strobe::fs::stat("testdir-b/testdir-a/foo/bar").isDirectory());
 
   {
-    strobe::fs::File file("testdir-b/testdir-a/abc", strobe::fs::FileAccessBits::Read);
+    auto file = strobe::open("testdir-b/testdir-a/abc", strobe::fs::FileAccess::read);
 
     std::size_t bytesRead = 0;
     std::vector<std::byte> out(bytes.size());
@@ -303,18 +303,18 @@ TEST(cp, cp_dir_into_dir) {
     ASSERT_TRUE(std::ranges::equal(out, bytes));
   }
 
-  strobe::fs::rm("testdir-a", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
-  strobe::fs::rm("testdir-b", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("testdir-a", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
+  strobe::fs::rm("testdir-b", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
 }
 
 TEST(cp, cp_dir_existing_dir) {
 
-  strobe::fs::rm("testdir-a", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
-  strobe::fs::rm("testdir-b", strobe::fs::RmFlagBits::Recursive |
-                                  strobe::fs::RmFlagBits::Force);
+  strobe::fs::rm("testdir-a", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
+  strobe::fs::rm("testdir-b", strobe::fs::RmFlags::recursive |
+                                  strobe::fs::RmFlags::force);
 
   strobe::fs::mkdir("testdir-a");
   strobe::fs::mkdir("testdir-a/foo");
@@ -326,9 +326,9 @@ TEST(cp, cp_dir_existing_dir) {
 
   {
 
-    strobe::fs::File file("testdir-a/abc", strobe::fs::FileAccessBits::Create |
-                                           strobe::fs::FileAccessBits::Write |
-                                           strobe::fs::FileAccessBits::Trunc);
+    auto file = strobe::open("testdir-a/abc", strobe::fs::FileAccess::create |
+                                           strobe::fs::FileAccess::write |
+                                           strobe::fs::FileAccess::trunc);
 
     char text[] = "testdir-a/abc";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
@@ -342,9 +342,9 @@ TEST(cp, cp_dir_existing_dir) {
 
   {
 
-    strobe::fs::File file("testdir-a/foo/xyz", strobe::fs::FileAccessBits::Create |
-                                               strobe::fs::FileAccessBits::Write |
-                                               strobe::fs::FileAccessBits::Trunc);
+    auto file = strobe::open("testdir-a/foo/xyz", strobe::fs::FileAccess::create |
+                                               strobe::fs::FileAccess::write |
+                                               strobe::fs::FileAccess::trunc);
 
     char text[] = "testdir-a/foo/xyz";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
@@ -357,9 +357,9 @@ TEST(cp, cp_dir_existing_dir) {
   }
 
   {
-    strobe::fs::File file("testdir-b/abc", strobe::fs::FileAccessBits::Create |
-                                           strobe::fs::FileAccessBits::Write |
-                                           strobe::fs::FileAccessBits::Trunc);
+    auto file = strobe::open("testdir-b/abc", strobe::fs::FileAccess::create |
+                                           strobe::fs::FileAccess::write |
+                                           strobe::fs::FileAccess::trunc);
 
     char text[] = "testdir-b/abc";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
@@ -372,9 +372,9 @@ TEST(cp, cp_dir_existing_dir) {
   }
 
   {
-    strobe::fs::File file("testdir-b/baz", strobe::fs::FileAccessBits::Create |
-                                           strobe::fs::FileAccessBits::Write |
-                                           strobe::fs::FileAccessBits::Trunc);
+    auto file = strobe::open("testdir-b/baz", strobe::fs::FileAccess::create |
+                                           strobe::fs::FileAccess::write |
+                                           strobe::fs::FileAccess::trunc);
 
     char text[] = "testdir-b/baz";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
@@ -386,7 +386,7 @@ TEST(cp, cp_dir_existing_dir) {
     }
   }
 
-  strobe::fs::cp("testdir-a", "testdir-b", strobe::fs::CpFlagBits::Recursive);
+  strobe::fs::cp("testdir-a", "testdir-b", strobe::fs::CpFlags::recursive);
 
   ASSERT_TRUE(strobe::fs::exists("testdir-a"));
   ASSERT_TRUE(strobe::fs::exists("testdir-a/foo"));
@@ -404,7 +404,7 @@ TEST(cp, cp_dir_existing_dir) {
 
   {
 
-    strobe::fs::File file("testdir-b/testdir-a/abc", strobe::fs::FileAccessBits::Read);
+    auto file = strobe::open("testdir-b/testdir-a/abc", strobe::fs::FileAccess::read);
 
     char text[] = "testdir-a/abc";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
@@ -420,8 +420,8 @@ TEST(cp, cp_dir_existing_dir) {
 
   {
 
-    strobe::fs::File file("testdir-b/testdir-a/foo/xyz",
-                      strobe::fs::FileAccessBits::Read);
+    auto file = strobe::open("testdir-b/testdir-a/foo/xyz",
+                      strobe::fs::FileAccess::read);
 
     char text[] = "testdir-a/foo/xyz";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
@@ -436,7 +436,7 @@ TEST(cp, cp_dir_existing_dir) {
   }
 
   {
-    strobe::fs::File file("testdir-a/abc", strobe::fs::FileAccessBits::Read);
+    auto file = strobe::open("testdir-a/abc", strobe::fs::FileAccess::read);
 
     char text[] = "testdir-a/abc";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
@@ -451,7 +451,7 @@ TEST(cp, cp_dir_existing_dir) {
   }
 
   {
-    strobe::fs::File file("testdir-b/baz", strobe::fs::FileAccessBits::Read);
+    auto file = strobe::open("testdir-b/baz", strobe::fs::FileAccess::read);
 
     char text[] = "testdir-b/baz";
     std::span<std::byte> bytes(reinterpret_cast<std::byte *>(text),
@@ -465,6 +465,6 @@ TEST(cp, cp_dir_existing_dir) {
     ASSERT_TRUE(std::ranges::equal(out, bytes));
   }
 
-  strobe::fs::rm("testdir-a", strobe::fs::RmFlagBits::Recursive);
-  strobe::fs::rm("testdir-b", strobe::fs::RmFlagBits::Recursive);
+  strobe::fs::rm("testdir-a", strobe::fs::RmFlags::recursive);
+  strobe::fs::rm("testdir-b", strobe::fs::RmFlags::recursive);
 }

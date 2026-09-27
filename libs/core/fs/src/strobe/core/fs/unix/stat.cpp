@@ -1,4 +1,4 @@
-#include "../stat.hpp"
+#include "strobe/core/fs/stat.hpp"
 #include <fmt/format.h>
 #include <sys/stat.h>
 #include <system_error>
@@ -8,7 +8,7 @@ namespace strobe::fs {
 Stat stat(PathView path, StatFlags flags) {
   Stat out;
   struct stat stat;
-  if (flags & StatFlagBits::FollowSymLink) {
+  if ((flags & StatFlags::follow_symlink) != StatFlags::none) {
     if (::stat(path.c_str(), &stat) == -1) {
       throw std::system_error(
           errno, std::generic_category(),

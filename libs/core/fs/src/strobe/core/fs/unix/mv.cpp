@@ -1,4 +1,4 @@
-#include "../mv.hpp"
+#include "strobe/core/fs/mv.hpp"
 #include <cerrno>
 #include <cstring>
 #include <dirent.h>
@@ -17,7 +17,7 @@ void mv(PathView src, PathView dst, MvFlags flags) {
   // Stat destination
   struct stat dst_stat;
   if (::stat(dst.c_str(), &dst_stat) == 0) {
-    if ((flags & MvFlagBits::Force) == MvFlagBits::Force) {
+    if ((flags & MvFlags::force) != MvFlags::none) {
       // If destination is a directory, do NOT remove it — that’s not what mv -f
       // does!
       if (!S_ISDIR(dst_stat.st_mode)) {
@@ -45,8 +45,8 @@ void mv(PathView src, PathView dst, MvFlags flags) {
   // Save timestamps if needed (must be done before rename to avoid
   // rename-induced atime changes)
   struct timeval times[2];
-  bool preserveTimestamps = (flags & MvFlagBits::PreserveTimestamps) ==
-                            MvFlagBits::PreserveTimestamps;
+  bool preserveTimestamps =
+      (flags & MvFlags::preserve_timestamps) != MvFlags::none;
   if (preserveTimestamps) {
 #ifdef __APPLE__
     times[0].tv_sec = src_stat.st_atimespec.tv_sec;

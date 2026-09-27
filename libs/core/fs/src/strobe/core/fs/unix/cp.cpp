@@ -1,4 +1,4 @@
-#include "../cp.hpp"
+#include "strobe/core/fs/cp.hpp"
 #include "fmt/format.h"
 #include <cerrno>
 #include <cstdio>
@@ -268,7 +268,7 @@ static void cp_dir(int src_fd, int dst_fd, bool preserve) {
 }
 
 void cp(PathView src, PathView dst, CpFlags flags) {
-  bool preserve = flags & CpFlagBits::Preserve;
+  const bool preserve = (flags & CpFlags::preserve) != CpFlags::none;
 
   if (std::strcmp(src.c_str(), dst.c_str_name()) == 0) {
     throw std::runtime_error(
@@ -285,7 +285,7 @@ void cp(PathView src, PathView dst, CpFlags flags) {
   }
   bool src_is_dir = S_ISDIR(src_stat.st_mode);
 
-  if (src_is_dir && !(flags & CpFlagBits::Recursive)) {
+  if (src_is_dir && (flags & CpFlags::recursive) == CpFlags::none) {
     throw std::runtime_error(
         fmt::format("Failed to copy '{}' to '{}'. Missing recursive flag",
                     src.c_str(), dst.c_str()));

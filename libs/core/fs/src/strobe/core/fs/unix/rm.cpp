@@ -1,4 +1,4 @@
-#include "../rm.hpp"
+#include "strobe/core/fs/rm.hpp"
 #include "strobe/core/fs/exists.hpp"
 #include "strobe/core/fs/stat.hpp"
 #include <cstring>
@@ -83,7 +83,7 @@ static void rm_dir_content_recursive(int fd) {
 
 void rm(PathView path, const Stat *stat, RmFlags flags) {
   if (stat->isDirectory()) {
-    if (!(flags & RmFlagBits::Recursive)) {
+    if ((flags & RmFlags::recursive) == RmFlags::none) {
       throw std::invalid_argument(
           fmt::format("Cannot remove '{}': Is a directory", path.c_str()));
       return;

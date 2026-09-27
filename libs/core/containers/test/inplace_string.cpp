@@ -47,6 +47,16 @@ TEST(InplaceString, append_and_resize) {
   EXPECT_EQ(text.c_str()[0], '\0');
 }
 
+TEST(InplaceString, append_iterator_range) {
+  strobe::InplaceString<8> text("ab");
+  std::string_view suffix = "cde";
+
+  text.append(suffix.begin(), suffix.end());
+
+  EXPECT_EQ(text.view(), "abcde");
+  EXPECT_EQ(text.c_str()[text.size()], '\0');
+}
+
 TEST(InplaceString, insert_erase_and_replace) {
   strobe::InplaceString<16> text("ac");
 

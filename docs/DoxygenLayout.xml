@@ -168,7 +168,7 @@
       <dictionaries visible="no" title=""/>
       <enums visible="no" title=""/>
       <enumvalues visible="no" title=""/>
-      <functions visible="yes" title=""/>
+      <functions visible="no" title=""/>
       <variables visible="no" title="Constants"/>
       <signals visible="no" title=""/>
       <publicslots visible="no" title=""/>

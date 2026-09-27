@@ -1,6 +1,6 @@
 #include "strobe/ecs/ecs.hpp"
 #include "strobe/platform/platform.hpp"
-#include <strobe/core/fs/Path.hpp>
+#include <strobe/core/fs/path.hpp>
 #include <strobe/core/fs/mkdir.hpp>
 #include <strobe/core/memory/mallocator.hpp>
 #include <strobe/window/window.hpp>
