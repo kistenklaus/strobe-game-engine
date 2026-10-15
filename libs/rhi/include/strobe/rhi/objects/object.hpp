@@ -98,19 +98,7 @@ public:
 private:
   template <typename T> friend T detail::make_object(void *) noexcept;
 
-  /**
-   * \brief Wraps internal handle.
-   *
-   * Constructs a derived RHI object from an owned internal handle.
-   *
-   * \param handle Internal object handle.
-   *
-   * \return RHI object owning \p handle.
-   *
-   * \attention 1. \p handle must reference a valid implementation of
-   * \p Derived.
-   * \attention 2. Ownership of \p handle is transferred to the returned object.
-   */
+
   static Derived from_handle(void *handle) noexcept {
     Derived object;
     object.m_handle = handle;

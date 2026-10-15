@@ -79,14 +79,14 @@ CommandPool Device::create_cmdpool() noexcept {
 }
 
 Buffer Device::create_buffer(const BufferInfo &info,
-                             const MemoryLifetime &lifetime) noexcept {
+                             const MemoryLifetime &lifetime) const noexcept {
   ZoneScopedN("Device::create_buffer");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return buf::create_buffer(impl->memory, info, lifetime,
                             &impl->allocs->bufAlloc);
 }
 Image Device::create_image(const ImageInfo &info,
-                           const MemoryLifetime &lifetime) noexcept {
+                           const MemoryLifetime &lifetime) const noexcept {
   ZoneScopedN("Device::create_image");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return img::create_image(impl->memory, info, lifetime,

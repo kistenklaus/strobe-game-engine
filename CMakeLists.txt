@@ -40,11 +40,11 @@ add_subdirectory(libs/core)
 add_subdirectory(libs/platform)
 add_subdirectory(libs/rhi)
 add_subdirectory(libs/imgui)
+add_subdirectory(libs/flow)
+add_subdirectory(libs/rdg)
 
 
 if (STROBE_BUILD_DOCS)
   add_subdirectory(docs)
 endif()
-
-
 

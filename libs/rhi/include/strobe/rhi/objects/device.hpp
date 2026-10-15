@@ -168,7 +168,7 @@ public:
    * \brief Creates buffer.
    * \code{.cpp}
    * Buffer create_buffer(const BufferInfo& info, const MemoryLifetime& lifetime
-   * = {}) noexcept;
+   * = {}) const noexcept;
    * \endcode
    *
    * Creates a buffer using the requested memory lifetime.
@@ -183,13 +183,13 @@ public:
    * allocation.
    */
   Buffer create_buffer(const BufferInfo &info,
-                       const MemoryLifetime &lifetime = {}) noexcept;
+                       const MemoryLifetime &lifetime = {}) const noexcept;
 
   /**
    * \brief Creates image.
    * \code{.cpp}
    * Image create_image(const ImageInfo& info, const MemoryLifetime = {})
-   * noexcept;
+   * const noexcept;
    * \endcode
    *
    * Creates an image using the requested memory lifetime.
@@ -204,7 +204,7 @@ public:
    * allocation.
    */
   Image create_image(const ImageInfo &info,
-                     const MemoryLifetime &lifetime = {}) noexcept;
+                     const MemoryLifetime &lifetime = {}) const noexcept;
 
   /**
    * \brief Creates image view.

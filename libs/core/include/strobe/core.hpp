@@ -3,6 +3,7 @@
 // precompile header
 #include "strobe/core/containers.hpp"
 #include "strobe/core/events/event_dispatcher.hpp"
+#include "strobe/core/graph.hpp"
 
 /**
  * \defgroup core core-template-library
