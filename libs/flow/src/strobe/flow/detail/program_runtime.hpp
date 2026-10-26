@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <condition_variable>
+#include <cstring>
 #include <exception>
 #include <mutex>
 #include <new>
@@ -41,6 +42,7 @@ public:
   explicit ProgramRuntime(const ProgramData &data)
       : m_external_bindings(data.externals.size(), nullptr, allocator_ref{}),
         m_semaphore_tokens(data.semaphore_names.size(), 0, allocator_ref{}) {
+    m_feedback_in_flight.resize(data.feedback_regions.size(), 0);
     m_activation_capacity = data.activation_layout.capacity;
     m_activation_stride = data.activation_layout.stride;
     m_activation_generations_offset = data.activation_layout.generations_offset;
@@ -80,6 +82,7 @@ public:
     m_activation_occupied.resize(data.activation_layout.capacity, false);
     m_activation_running.resize(data.activation_layout.capacity, false);
     m_activation_sequences.resize(data.activation_layout.capacity, 0);
+    m_activation_refresh_values.resize(data.activation_layout.capacity, 0);
 
     try {
       m_cutoffs.reserve(data.cutoffs.size());
@@ -160,6 +163,38 @@ public:
                           base + data.activation_layout.changed_values_offset),
                       data.values.size(), std::uint8_t{0});
         }
+      }
+      if (!data.immediate_data.empty()) {
+        m_immediate_storage_alignment =
+            std::max(data.immediate_alignment, alignof(void *));
+        m_immediate_storage_size = data.immediate_data.size();
+        const auto remainder =
+            m_immediate_storage_size % m_immediate_storage_alignment;
+        if (remainder != 0) {
+          if (m_immediate_storage_size >
+              std::numeric_limits<std::size_t>::max() -
+                  (m_immediate_storage_alignment - remainder)) {
+            throw std::length_error("Flow immediate storage size overflow");
+          }
+          m_immediate_storage_size += m_immediate_storage_alignment - remainder;
+        }
+        m_immediate_storage = allocator_ref{}.allocate(
+            m_immediate_storage_size, m_immediate_storage_alignment);
+        if (m_immediate_storage == nullptr) {
+          throw std::bad_alloc();
+        }
+        std::memcpy(m_immediate_storage, data.immediate_data.data(),
+                    data.immediate_data.size());
+      }
+      m_immediate_pointers.reserve(data.immediates.size());
+      m_immediate_counts.reserve(data.immediates.size());
+      for (const auto &immediate : data.immediates) {
+        m_immediate_pointers.push_back(
+            m_immediate_storage == nullptr
+                ? nullptr
+                : static_cast<std::byte *>(m_immediate_storage) +
+                      immediate.offset);
+        m_immediate_counts.push_back(immediate.element_count);
       }
     } catch (...) {
       release_allocations();
@@ -269,6 +304,63 @@ public:
     return true;
   }
 
+  bool try_consume_tokens(const ProgramData &data,
+                          const CompiledFeedbackRegion &region) {
+    std::lock_guard lock(m_mutex);
+    if (region.acquires.offset + region.acquires.count >
+        data.feedback_region_acquires.size()) {
+      throw std::logic_error("feedback region acquire range is invalid");
+    }
+    Vector<std::uint32_t, allocator_ref> required(m_semaphore_tokens.size(), 0,
+                                                  allocator_ref{});
+    for (std::uint32_t index = 0; index < region.acquires.count; ++index) {
+      const auto acquire =
+          data.feedback_region_acquires[region.acquires.offset + index];
+      if (acquire >= data.acquires.size() ||
+          data.acquires[acquire].semaphore >= m_semaphore_tokens.size()) {
+        throw std::logic_error("feedback region acquire is invalid");
+      }
+      ++required[data.acquires[acquire].semaphore];
+    }
+    for (std::uint32_t semaphore = 0; semaphore < required.size();
+         ++semaphore) {
+      if (m_semaphore_tokens[semaphore] < required[semaphore]) {
+        return false;
+      }
+    }
+    for (std::uint32_t semaphore = 0; semaphore < required.size();
+         ++semaphore) {
+      m_semaphore_tokens[semaphore] -= required[semaphore];
+    }
+    return true;
+  }
+
+  void reserve_feedback_region(std::uint32_t region,
+                               std::uint32_t max_in_flight) {
+    if (max_in_flight == 0) {
+      throw std::logic_error("feedback max_in_flight is zero");
+    }
+    std::unique_lock lock(m_mutex);
+    if (region >= m_feedback_in_flight.size()) {
+      throw std::logic_error("feedback region is out of range");
+    }
+    m_available.wait(
+        lock, [&] { return m_feedback_in_flight[region] < max_in_flight; });
+    ++m_feedback_in_flight[region];
+  }
+
+  void release_feedback_region(std::uint32_t region) {
+    {
+      std::lock_guard lock(m_mutex);
+      if (region >= m_feedback_in_flight.size() ||
+          m_feedback_in_flight[region] == 0) {
+        throw std::logic_error("feedback region reservation is invalid");
+      }
+      --m_feedback_in_flight[region];
+    }
+    m_available.notify_all();
+  }
+
   std::uint32_t begin_execution(const ProgramData &data) {
     std::unique_lock lock(m_mutex);
     std::uint32_t activation = 0;
@@ -290,6 +382,7 @@ public:
     }
     m_activation_occupied[activation] = true;
     m_activation_running[activation] = true;
+    m_activation_refresh_values[activation] = 0;
     m_activation_sequences[activation] = m_next_activation++;
     auto **value_pointers = activation_values(data, activation);
     auto **arguments = activation_arguments(data, activation);
@@ -344,6 +437,15 @@ public:
       }
     }
     return activation;
+  }
+
+  void refresh_active_values_on_access(std::uint32_t activation) {
+    std::lock_guard lock(m_mutex);
+    if (activation >= m_activation_refresh_values.size() ||
+        !m_activation_occupied[activation]) {
+      throw std::logic_error("activation is not active");
+    }
+    m_activation_refresh_values[activation] = 1;
   }
 
   void resume_execution(std::uint32_t activation) {
@@ -537,9 +639,31 @@ public:
     std::lock_guard lock(m_mutex);
     auto **values = activation_values(data, activation);
     const auto selected = use_feedback ? phi.feedback : phi.initial;
-    if (selected >= data.values.size() || phi.output >= data.values.size() ||
-        values[selected] == nullptr) {
-      throw std::logic_error("phi input has no retained runtime value");
+    if (selected >= data.values.size() || phi.output >= data.values.size()) {
+      throw std::logic_error("phi value is out of range");
+    }
+    const auto resource = data.values[selected].resource;
+    const auto *previous = activation_previous_generations(data, activation);
+    const auto generation = use_feedback &&
+                                    resource < data.resource_slots.size() &&
+                                    previous[resource]
+                                ? previous[resource]
+                            : resource < m_active_generations.size()
+                                ? m_active_generations[resource]
+                                : std::optional<ResourceGeneration>{};
+    if ((values[selected] == nullptr ||
+         m_activation_refresh_values[activation] != 0) &&
+        generation) {
+      values[selected] = pointer(generation->resource, generation->slot);
+    }
+    if (values[selected] == nullptr) {
+      const bool active = resource < m_active_generations.size() &&
+                          m_active_generations[resource].has_value();
+      throw std::logic_error(
+          "phi input has no retained runtime value: sequence=" +
+          std::to_string(m_activation_sequences[activation]) +
+          ", feedback=" + std::to_string(use_feedback) + ", resource=" +
+          std::to_string(resource) + ", active=" + std::to_string(active));
     }
     values[phi.output] = values[selected];
     activation_changed(data, activation)[phi.output] = 1;
@@ -639,13 +763,36 @@ public:
     if (node.accesses.offset + node.accesses.count > data.accesses.size()) {
       throw std::logic_error("compiled node accesses are out of range");
     }
-    for (std::uint32_t index = 0; index < node.accesses.count; ++index) {
+    if (node.argument_count > node.accesses.count) {
+      throw std::logic_error("compiled node argument count is invalid");
+    }
+    for (std::uint32_t index = 0; index < node.argument_count; ++index) {
       const auto flat = node.accesses.offset + index;
       const auto &access = data.accesses[flat];
       const auto value =
           access.output != null_value_id ? access.output : access.input;
-      if (value == null_value_id || value >= data.values.size() ||
-          values[value] == nullptr) {
+      if (value == null_value_id || value >= data.values.size()) {
+        throw std::logic_error("compiled access value is out of range");
+      }
+      const auto resource = data.values[value].resource;
+      if ((values[value] == nullptr ||
+           (m_activation_refresh_values[activation] != 0 &&
+            activation_changed(data, activation)[value] == 0)) &&
+          resource < m_active_generations.size() &&
+          m_active_generations[resource]) {
+        const auto &generation = *m_active_generations[resource];
+        values[value] = pointer(generation.resource, generation.slot);
+      }
+      if (values[value] == nullptr) {
+        for (std::size_t cutoff = 0; cutoff < data.cutoffs.size(); ++cutoff) {
+          if (data.cutoffs[cutoff].output == value &&
+              m_cutoffs[cutoff].initialized) {
+            values[value] = m_cutoffs[cutoff].storage;
+            break;
+          }
+        }
+      }
+      if (values[value] == nullptr) {
         throw std::logic_error("compiled access has no runtime value " +
                                std::to_string(value) + " for resource " +
                                std::to_string(access.resource));
@@ -657,7 +804,23 @@ public:
   span<void *const> arguments(const ProgramData &data, std::uint32_t activation,
                               const CompiledNode &node) {
     return {activation_arguments(data, activation) + node.accesses.offset,
-            node.accesses.count};
+            node.argument_count};
+  }
+
+  span<void *const> immediates(const CompiledCallback &callback) {
+    if (callback.immediates.count == 0) {
+      return {};
+    }
+    return {m_immediate_pointers.data() + callback.immediates.offset,
+            callback.immediates.count};
+  }
+
+  span<const std::uint32_t> immediate_counts(const CompiledCallback &callback) {
+    if (callback.immediates.count == 0) {
+      return {};
+    }
+    return {m_immediate_counts.data() + callback.immediates.offset,
+            callback.immediates.count};
   }
 
   std::optional<ResourceGeneration> active_generation(const ProgramData &data,
@@ -891,6 +1054,11 @@ private:
                                  m_activation_storage_alignment);
       m_activation_storage = nullptr;
     }
+    if (m_immediate_storage != nullptr) {
+      allocator_ref{}.deallocate(m_immediate_storage, m_immediate_storage_size,
+                                 m_immediate_storage_alignment);
+      m_immediate_storage = nullptr;
+    }
   }
 
   std::optional<ResourceGeneration> try_acquire_locked(ResourceId resource) {
@@ -993,6 +1161,9 @@ private:
   void *m_activation_storage = nullptr;
   std::size_t m_activation_storage_size = 0;
   std::size_t m_activation_storage_alignment = 1;
+  void *m_immediate_storage = nullptr;
+  std::size_t m_immediate_storage_size = 0;
+  std::size_t m_immediate_storage_alignment = 1;
   std::uint32_t m_activation_capacity = 0;
   std::size_t m_activation_stride = 0;
   std::size_t m_activation_generations_offset = 0;
@@ -1000,7 +1171,10 @@ private:
   Vector<RuntimeResource, allocator_ref> m_resources;
   Vector<RuntimeSlot, allocator_ref> m_slots;
   Vector<void *, allocator_ref> m_external_bindings;
+  Vector<void *, allocator_ref> m_immediate_pointers;
+  Vector<std::uint32_t, allocator_ref> m_immediate_counts;
   Vector<std::uint64_t, allocator_ref> m_semaphore_tokens;
+  Vector<std::uint32_t, allocator_ref> m_feedback_in_flight;
   Vector<std::optional<ResourceGeneration>, allocator_ref> m_active_generations;
   Vector<bool, allocator_ref> m_completed_once;
   Vector<bool, allocator_ref> m_once_claimed;
@@ -1008,6 +1182,7 @@ private:
   Vector<bool, allocator_ref> m_activation_occupied;
   Vector<bool, allocator_ref> m_activation_running;
   Vector<std::uint64_t, allocator_ref> m_activation_sequences;
+  Vector<std::uint8_t, allocator_ref> m_activation_refresh_values;
   Vector<RuntimeCutoff, allocator_ref> m_cutoffs;
   std::exception_ptr m_error;
   std::uint64_t m_next_activation = 0;

@@ -1,9 +1,13 @@
 #pragma once
 
+#include "strobe/flow/argument_group.hpp"
+#include "strobe/flow/argument_span.hpp"
+
+#include "strobe/flow/access.hpp"
 #include "strobe/flow/compile_context.hpp"
-#include "strobe/flow/compile_options.hpp"
 #include "strobe/flow/compiler_plugins.hpp"
 #include "strobe/flow/detail/op_stream.hpp"
+#include "strobe/flow/feedback_options.hpp"
 #include "strobe/flow/lifetime.hpp"
 #include "strobe/flow/op_source.hpp"
 #include "strobe/flow/program.hpp"
@@ -18,22 +22,16 @@ OpStream &active_stream();
 /**
  * \brief Starts a thread-local recording with its compilation configuration.
  * \code{.cpp}
- * void begin(const CompileOptions& options = {});
- * void begin(const CompilerPlugins& plugins,
- *            const CompileOptions& options = {});
- * void begin(const CompileOptions& options,
- *            const CompilerPlugins& plugins);
+ * void begin();
+ * void begin(const CompilerPlugins& plugins);
  * \endcode
  *
- * \param options Compilation options copied into the recording.
  * \param plugins Compiler plugin table copied into the recording.
  * \attention 1 No recording may already be active on the calling thread.
  */
-void begin(const CompileOptions &options = {});
+void begin();
 
-void begin(const CompilerPlugins &plugins, const CompileOptions &options = {});
-
-void begin(const CompileOptions &options, const CompilerPlugins &plugins);
+void begin(const CompilerPlugins &plugins);
 
 /**
  * \brief Declares an owned resource in the active recording.
@@ -56,7 +54,9 @@ template <typename T> Resource<T> resource() {
  * \endcode
  *
  * \param name Name used to bind the object on the compiled program.
- * \return The borrowed resource handle.
+ * \return The borrowed resource handle. Repeated declarations of the same
+ * name and type return the same handle.
+ * \attention 1 A name previously declared with another type is invalid.
  */
 template <typename T> Resource<T> external(std::string_view name) {
   return detail::active_stream().external<T>(name);
@@ -103,15 +103,19 @@ Resource<T> cutoff(const Resource<T> &input) {
  * \brief Connects a phi resource to its value for later activations.
  * \code{.cpp}
  * template<typename T>
- * void feedback(const Resource<T>& phi, const Resource<T>& value);
+ * void feedback(const Resource<T>& phi, const Resource<T>& value,
+ *               const FeedbackOptions& options = {});
  * \endcode
  *
  * \param phi Phi output to connect.
  * \param value Feedback value selected after the first activation.
+ * \param options Execution configuration for the feedback loop.
+ * \attention 1 An explicit max_in_flight value must be greater than zero.
  */
 template <typename T>
-void feedback(const Resource<T> &phi, const Resource<T> &value) {
-  detail::active_stream().feedback(phi, value);
+void feedback(const Resource<T> &phi, const Resource<T> &value,
+              const FeedbackOptions &options = {}) {
+  detail::active_stream().feedback(phi, value, options);
 }
 
 /**
@@ -194,6 +198,11 @@ template <typename T> std::size_t discard(const Resource<T> &resource) {
  * std::size_t construct(const Resource<T>& resource,
  *                       OpMetadata metadata,
  *                       Args&&... args);
+ *
+ * template<typename T, typename... Accesses>
+ * std::size_t construct(const Resource<T>& resource,
+ *                       IntrinsicOp intrinsic,
+ *                       Accesses&&... accesses);
  * \endcode
  *
  * The arguments may directly construct T, or may consist of resource accesses
@@ -201,7 +210,8 @@ template <typename T> std::size_t discard(const Resource<T> &resource) {
  *
  * \param resource Resource defined by the construction.
  * \param metadata Operation metadata retained in the program.
- * \param args Constructor arguments, or accesses followed by a callback.
+ * \param args Constructor arguments, accesses followed by a callback, or an
+ * intrinsic followed by its input accesses.
  * \return The recorded operation index.
  */
 template <typename T, typename... Args>
@@ -230,9 +240,11 @@ std::size_t construct(const Resource<T> &resource, OpMetadata metadata,
  * \brief Records an operation and its declared resource accesses.
  * \code{.cpp}
  * template<typename... Args>
+ *   requires (sizeof...(Args) > 0)
  * std::size_t op(Args&&... args);
  *
  * template<typename... Args>
+ *   requires (sizeof...(Args) > 0)
  * std::size_t op(OpMetadata metadata, Args&&... args);
  * \endcode
  *
@@ -243,11 +255,14 @@ std::size_t construct(const Resource<T> &resource, OpMetadata metadata,
  * \param args Resource accesses followed by the callback.
  * \return The recorded operation index.
  */
-template <typename... Args> std::size_t op(Args &&...args) {
+template <typename... Args>
+  requires(sizeof...(Args) > 0)
+std::size_t op(Args &&...args) {
   return detail::active_stream().op(std::forward<Args>(args)...);
 }
 
 template <typename... Args>
+  requires(sizeof...(Args) > 0)
 std::size_t op(OpMetadata metadata, Args &&...args) {
   return detail::active_stream().op_with_metadata(std::move(metadata),
                                                   std::forward<Args>(args)...);
@@ -295,5 +310,19 @@ Program end();
  * \return The recorded operation sequence.
  */
 const Vector<detail::Operation, allocator_ref> &ops();
+
+/**
+ * \brief Formats the active input operation stream as assembly-like text.
+ * \code{.cpp}
+ * String<allocator_ref> to_pretty();
+ * \endcode
+ *
+ * External resource declarations precede the operation list. Each recorded
+ * operation occupies one line.
+ *
+ * \return Formatted input operation stream.
+ * \throws std::logic_error if no recording exists on the calling thread.
+ */
+String<allocator_ref> to_pretty();
 
 } // namespace strobe::flow

@@ -64,7 +64,7 @@ Swapchain Device::create_swapchain(const SwapchainInfo &info) noexcept {
                                 &impl->allocs->swapAlloc);
 }
 
-Queue Device::get_queue([[maybe_unused]] QueueFlags flags) noexcept {
+Queue Device::get_queue([[maybe_unused]] QueueFlags flags) const noexcept {
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->universalQueue;
 }

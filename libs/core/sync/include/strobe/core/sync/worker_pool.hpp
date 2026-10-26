@@ -222,7 +222,7 @@ private:
         fmt::format_to_n(debug_name, std::size(debug_name) - 1,
                          FMT_STRING("strobe-worker{}"), workerId);
     assert(result.size < std::size(debug_name));
-    *result.out = '\n';
+    *result.out = '\0';
 
     tracy::SetThreadNameWithHint(debug_name, 1);
 

@@ -8,6 +8,7 @@
 #include <strobe/core/graph.hpp>
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
 #include <stdexcept>
 #include <utility>
@@ -35,7 +36,8 @@ inline OperationKind program_kind(NodeKind kind) {
 }
 
 inline ProgramData emit_program(ActivationLayoutIR activation_layout,
-                                detail::OpStream &stream) {
+                                detail::OpStream &stream,
+                                CompileContext &context) {
   auto &schedule = activation_layout.input;
   const auto &layout = schedule.input;
   const auto &slots = layout.input;
@@ -154,6 +156,42 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
         .output = phi.output,
     });
   }
+  for (const auto &source : values.phis) {
+    if (source.condition != null_value_id) {
+      continue;
+    }
+    const auto existing = std::find_if(
+        data.feedback_regions.begin(), data.feedback_regions.end(),
+        [&](const CompiledFeedbackRegion &region) {
+          return region.declaration_position == source.declaration_position &&
+                 region.feedback_position == source.feedback_position;
+        });
+    if (existing == data.feedback_regions.end()) {
+      data.feedback_regions.push_back(CompiledFeedbackRegion{
+          .declaration_position = source.declaration_position,
+          .feedback_position = source.feedback_position,
+          .phis = {},
+          .nodes = {},
+          .acquires = {},
+          .max_in_flight = source.max_in_flight,
+      });
+    } else if (existing->max_in_flight != source.max_in_flight) {
+      throw std::logic_error("feedback relations in one region have "
+                             "conflicting max_in_flight");
+    }
+  }
+  for (auto &region : data.feedback_regions) {
+    region.phis.offset =
+        static_cast<std::uint32_t>(data.feedback_region_phis.size());
+    for (std::uint32_t phi = 0; phi < values.phis.size(); ++phi) {
+      const auto &source = values.phis[phi];
+      if (region.declaration_position == source.declaration_position &&
+          region.feedback_position == source.feedback_position) {
+        data.feedback_region_phis.push_back(phi);
+        ++region.phis.count;
+      }
+    }
+  }
   for (const auto &acquire : stream.acquires()) {
     std::uint32_t semaphore = 0;
     for (; semaphore < data.semaphore_names.size(); ++semaphore) {
@@ -222,6 +260,7 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
       data.accesses.push_back(CompiledAccess{
           .resource = access.resource,
           .mode = access.mode,
+          .purpose = access.purpose,
           .input = access.input,
           .output = access.output,
       });
@@ -241,17 +280,88 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
     const auto next_activation =
         append_remapped(data.temporal_successors, temporal_successors[source]);
     CallbackId callback = null_callback_id;
-    if (node.source_operation != null_source_operation_id) {
+    if (node.resolved_operation != null_resolved_operation_id) {
+      auto resolved =
+          context.release_resolved_operation(node.resolved_operation);
       callback = static_cast<CallbackId>(data.callbacks.size());
-      const auto &recorded = stream.ops()[node.source_operation];
       CompiledCallback compiled_callback;
-      compiled_callback.metadata = recorded.metadata;
-      compiled_callback.external = recorded.external;
-      compiled_callback.argument_types = recorded.argument_types;
-      compiled_callback.argument_accesses = recorded.argument_accesses;
-      compiled_callback.runtime =
-          stream.release_callback(node.source_operation);
+      compiled_callback.metadata = std::move(resolved.metadata);
+      compiled_callback.external = std::move(resolved.external);
+      compiled_callback.argument_types = std::move(resolved.argument_types);
+      compiled_callback.argument_accesses =
+          std::move(resolved.argument_accesses);
+      const auto argument_group_offset = data.argument_groups.size();
+      for (const auto group : resolved.argument_groups) {
+        data.argument_groups.push_back(group);
+      }
+      compiled_callback.argument_groups = {
+          .offset = static_cast<std::uint32_t>(argument_group_offset),
+          .count = static_cast<std::uint32_t>(resolved.argument_groups.size())};
+      const auto argument_element_offset = data.argument_elements.size();
+      for (const auto element : resolved.argument_elements) {
+        data.argument_elements.push_back(element);
+      }
+      compiled_callback.argument_elements = {
+          .offset = static_cast<std::uint32_t>(argument_element_offset),
+          .count = static_cast<std::uint32_t>(resolved.argument_elements.size())};
+      const auto immediate_offset = data.immediates.size();
+      for (const auto &immediate : resolved.immediates) {
+        const auto aligned =
+            (data.immediate_data.size() + immediate.alignment - 1) &
+            ~(immediate.alignment - 1);
+        data.immediate_data.resize(aligned + immediate.size);
+        if (immediate.size != 0) {
+          std::memcpy(data.immediate_data.data() + aligned,
+                      resolved.immediate_data.data() + immediate.offset,
+                      immediate.size);
+        }
+        data.immediates.push_back({immediate.type, aligned, immediate.size,
+                                   immediate.alignment, immediate.element_size,
+                                   immediate.element_count});
+        data.immediate_alignment =
+            std::max(data.immediate_alignment, immediate.alignment);
+      }
+      compiled_callback.immediates = {
+          .offset = static_cast<std::uint32_t>(immediate_offset),
+          .count = static_cast<std::uint32_t>(resolved.immediates.size())};
+      compiled_callback.runtime = std::move(resolved.runtime);
       data.callbacks.push_back(std::move(compiled_callback));
+    } else if (node.source_operation != null_source_operation_id) {
+      const auto &recorded = stream.ops()[node.source_operation];
+      if (!recorded.intrinsic) {
+        callback = static_cast<CallbackId>(data.callbacks.size());
+        CompiledCallback compiled_callback;
+        compiled_callback.metadata = recorded.metadata;
+        compiled_callback.external = recorded.external;
+        compiled_callback.argument_types = recorded.argument_types;
+        compiled_callback.argument_accesses = recorded.argument_accesses;
+        const auto argument_group_offset = data.argument_groups.size();
+        for (const auto group : recorded.argument_groups) {
+          data.argument_groups.push_back(group);
+        }
+        compiled_callback.argument_groups = {
+            .offset = static_cast<std::uint32_t>(argument_group_offset),
+            .count = static_cast<std::uint32_t>(recorded.argument_groups.size())};
+        const auto argument_element_offset = data.argument_elements.size();
+        for (const auto element : recorded.argument_elements) {
+          data.argument_elements.push_back(element);
+        }
+        compiled_callback.argument_elements = {
+            .offset = static_cast<std::uint32_t>(argument_element_offset),
+            .count = static_cast<std::uint32_t>(recorded.argument_elements.size())};
+        auto runtime = stream.release_callback(node.source_operation);
+        if (runtime) {
+          compiled_callback.runtime = [runtime = std::move(runtime)](
+                                          Lifetime lifetime, span<void *const>,
+                                          span<const std::uint32_t>,
+                                          span<const ArgumentGroup>,
+                                          span<const std::uint32_t>,
+                                          span<void *const> arguments) mutable {
+            runtime(lifetime, arguments);
+          };
+        }
+        data.callbacks.push_back(std::move(compiled_callback));
+      }
     }
     data.nodes.push_back(CompiledNode{
         .source = source,
@@ -265,6 +375,7 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
                                                         output_offset)},
         .accesses = {.offset = static_cast<std::uint32_t>(access_offset),
                      .count = node.accesses.count},
+        .argument_count = node.argument_count,
         .predecessors = immediate_predecessors,
         .successors = immediate_successors,
         .temporal_predecessors = prior_activation,
@@ -280,6 +391,48 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
     }
     if (node.kind == NodeKind::yield) {
       data.yields.push_back(runtime);
+    }
+  }
+
+  for (auto &region : data.feedback_regions) {
+    region.nodes.offset =
+        static_cast<std::uint32_t>(data.feedback_region_nodes.size());
+    for (NodeId source = 0; source < values.nodes.size(); ++source) {
+      const auto &node = values.nodes[source];
+      bool is_region_phi = false;
+      for (std::uint32_t index = 0; index < region.phis.count; ++index) {
+        const auto phi = data.feedback_region_phis[region.phis.offset + index];
+        is_region_phi |= values.phis[phi].node == source;
+      }
+      const bool inside =
+          node.source_operation != null_source_operation_id &&
+          node.source_operation >= region.declaration_position &&
+          node.source_operation < region.feedback_position;
+      if ((!inside && !is_region_phi) ||
+          (graph.get(graph::NodeId{source}).classification.loop_invariant &&
+           !is_region_phi && node.kind != NodeKind::acquire)) {
+        continue;
+      }
+      data.feedback_region_nodes.push_back(runtime_of[source]);
+      ++region.nodes.count;
+    }
+    std::sort(data.feedback_region_nodes.begin() + region.nodes.offset,
+              data.feedback_region_nodes.end());
+
+    region.acquires.offset =
+        static_cast<std::uint32_t>(data.feedback_region_acquires.size());
+    for (std::uint32_t acquire = 0; acquire < data.acquires.size(); ++acquire) {
+      const auto node = data.acquires[acquire].node;
+      const auto begin =
+          data.feedback_region_nodes.begin() + region.nodes.offset;
+      const auto end = begin + region.nodes.count;
+      if (std::find(begin, end, node) != end) {
+        data.feedback_region_acquires.push_back(acquire);
+        ++region.acquires.count;
+      }
+    }
+    if (region.acquires.count == 0) {
+      throw std::logic_error("feedback region has no compiled acquire");
     }
   }
 

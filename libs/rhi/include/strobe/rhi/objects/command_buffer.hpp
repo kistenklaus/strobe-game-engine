@@ -24,6 +24,7 @@
 #include "strobe/rhi/types/index_type.hpp"
 #include "strobe/rhi/types/logic_op.hpp"
 #include "strobe/rhi/types/memory_barrier.hpp"
+#include "strobe/rhi/types/pipeline_barrier.hpp"
 #include "strobe/rhi/types/polygon_mode.hpp"
 #include "strobe/rhi/types/primitive_topology.hpp"
 #include "strobe/rhi/types/rect.hpp"
@@ -89,6 +90,22 @@ public:
    * \attention 3. The owning CommandPool must be externally synchronized.
    */
   void end();
+
+  /**
+   * \brief Records pipeline barrier
+   * \code{.cpp}
+   * void pipeline_barrier(const PipelineBarrier& barrier) noexcept;
+   * \endcode
+   *
+   * Establishes the memory described in by \p barrier.
+   *
+   * \param barrier pipeline barrier info.
+   *
+   * \attention 1. The command buffer must be recording.
+   * \attention 2. The owning CommandPool must be externally synchronized.
+   *
+   */
+  void pipeline_barrier(const PipelineBarrier& barrier) noexcept;
 
   /**
    * \brief Records memory barrier.

@@ -18,6 +18,7 @@
 #include "strobe/flow/detail/compiler/hoist_loop_invariants.hpp"
 #include "strobe/flow/detail/compiler/lower_cutoffs.hpp"
 #include "strobe/flow/detail/compiler/lower_values.hpp"
+#include "strobe/flow/detail/compiler/normalized_ir.hpp"
 #include "strobe/flow/detail/compiler/resolve_phis.hpp"
 #include "strobe/flow/detail/compiler/schedule_lifetimes.hpp"
 #include "strobe/flow/detail/compiler/validate_ir.hpp"
@@ -37,12 +38,26 @@ inline void run_compiler_plugins(IR &ir, CompileContext &context,
     compiler::validate(ir);
   }
 }
-inline Program compile(OpStream &stream, const CompileOptions &options,
-                       const CompilerPlugins &plugins) {
+inline Program compile(OpStream &stream, const CompilerPlugins &plugins) {
+  constexpr bool verbose = false;
+  if (verbose) {
+    fmt::println("OpStream:\n{}\n", to_pretty(stream));
+  }
+
   CompileContext context;
   auto normalized = compiler::canonicalize(stream);
+  if (verbose) {
+    fmt::println("NormalizedIR:\n{}\n", to_pretty(normalized));
+  }
   run_compiler_plugins(normalized, context, plugins.normalized);
+  if (verbose) {
+    fmt::println("(Plugged) NormalizedIR:\n{}\n", to_pretty(normalized));
+  }
   auto values = compiler::lower_values(std::move(normalized));
+  if (verbose) {
+    fmt::println("ValueIR:\n{}\n", to_pretty(values));
+  }
+
   run_compiler_plugins(values, context, plugins.values);
   auto resolved = compiler::resolve_phis(std::move(values));
   compiler::validate_feedback_loops(resolved);
@@ -62,26 +77,29 @@ inline Program compile(OpStream &stream, const CompileOptions &options,
   auto lifetimes = compiler::analyze_lifetimes(std::move(storage));
   run_compiler_plugins(lifetimes, context, plugins.lifetimes);
   auto interference = compiler::build_interference(std::move(lifetimes));
-  auto slots = compiler::assign_slots(std::move(interference), options);
+  auto slots = compiler::assign_slots(std::move(interference));
   auto layout = compiler::allocate_storage(std::move(slots));
   run_compiler_plugins(layout, context, plugins.storage_layout);
   auto schedule = compiler::schedule_lifetimes(std::move(layout));
-  auto activations =
-      compiler::allocate_activation_states(std::move(schedule), options);
+  auto activations = compiler::allocate_activation_states(std::move(schedule));
   run_compiler_plugins(activations, context, plugins.activation_layout);
-  auto data = compiler::emit_program(std::move(activations), stream);
+  compiler::validate_no_intrinsics(activations);
+  auto data = compiler::emit_program(std::move(activations), stream, context);
   run_compiler_plugins(data, context, plugins.program);
   data.plugin_data = std::move(context);
-  return Program(std::move(data));
+  if (verbose) {
+    fmt::println("ProgramData:\n{}\n", to_pretty(data));
+  }
+  Program program(std::move(data));
+  if (verbose) {
+    fmt::println("JobPlan:\n{}\n",
+                 to_pretty(program.job_plan(), program.data()));
+  }
+  return program;
 }
 
-inline Program compile(OpStream &stream, const CompileOptions &options = {}) {
-  return compile(stream, options, CompilerPlugins{});
-}
-
-inline Program compile(OpStream &stream, const CompilerPlugins &plugins,
-                       const CompileOptions &options = {}) {
-  return compile(stream, options, plugins);
+inline Program compile(OpStream &stream) {
+  return compile(stream, CompilerPlugins{});
 }
 
 } // namespace strobe::flow::detail

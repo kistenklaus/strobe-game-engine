@@ -97,7 +97,11 @@ inline NormalizedIR canonicalize(const detail::OpStream &stream) {
           .source_operation = null_source_operation_id,
           .accesses = {.offset = static_cast<std::uint32_t>(access_offset),
                        .count = 3},
+          .argument_groups = {},
+          .argument_elements = {},
+          .argument_count = 0,
           .semantics = OpSemantics::none,
+          .intrinsic = std::nullopt,
       });
       result.phis.push_back(NormalizedPhi{
           .node = node,
@@ -108,6 +112,7 @@ inline NormalizedIR canonicalize(const detail::OpStream &stream) {
           .declaration_position = static_cast<SourceOperationId>(phi.position),
           .feedback_position =
               static_cast<SourceOperationId>(*phi.feedback_position),
+          .max_in_flight = phi.max_in_flight,
       });
     }
 
@@ -116,11 +121,20 @@ inline NormalizedIR canonicalize(const detail::OpStream &stream) {
     }
     const auto &operation = stream.ops()[position];
     const auto access_offset = result.accesses.size();
+    const auto argument_group_offset = result.argument_groups.size();
+    const auto argument_element_offset = result.argument_elements.size();
     for (const auto &access : operation.accesses) {
       result.accesses.push_back(NormalizedAccess{
           .resource = access.resource,
           .mode = access.mode,
+          .purpose = access.purpose,
       });
+    }
+    for (const auto group : operation.argument_groups) {
+      result.argument_groups.push_back(group);
+    }
+    for (const auto element : operation.argument_elements) {
+      result.argument_elements.push_back(element);
     }
     operation_nodes.push_back(static_cast<NodeId>(result.nodes.size()));
     result.nodes.push_back(NormalizedNode{
@@ -129,7 +143,18 @@ inline NormalizedIR canonicalize(const detail::OpStream &stream) {
         .accesses = {.offset = static_cast<std::uint32_t>(access_offset),
                      .count =
                          static_cast<std::uint32_t>(operation.accesses.size())},
+        .argument_groups = {
+            .offset = static_cast<std::uint32_t>(argument_group_offset),
+            .count = static_cast<std::uint32_t>(
+                operation.argument_groups.size())},
+        .argument_elements = {
+            .offset = static_cast<std::uint32_t>(argument_element_offset),
+            .count = static_cast<std::uint32_t>(
+                operation.argument_elements.size())},
+        .argument_count =
+            static_cast<std::uint32_t>(operation.argument_types.size()),
         .semantics = operation.metadata.semantics,
+        .intrinsic = operation.intrinsic,
     });
   }
 

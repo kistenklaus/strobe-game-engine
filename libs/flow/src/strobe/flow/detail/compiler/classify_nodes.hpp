@@ -44,6 +44,9 @@ inline ClassifiedIR classify_nodes(OrderedIR ordered) {
       if (access.resource >= ir.resources.size()) {
         throw std::logic_error("access resource is out of range");
       }
+      if (access.purpose == AccessPurpose::serialization) {
+        continue;
+      }
       if (ir.resources[access.resource].kind != ResourceKind::external) {
         continue;
       }

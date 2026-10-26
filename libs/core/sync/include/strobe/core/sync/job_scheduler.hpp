@@ -37,6 +37,30 @@ public:
   static constexpr uint32_t SLOT_COUNT = strobe::sync::schedule::SLOT_COUNT;
 
 private:
+  static constexpr uint64_t PIN_MASK = (uint64_t{1} << 31) - 1;
+  static constexpr uint64_t COMPLETED_BIT = uint64_t{1} << 31;
+  static constexpr uint32_t GENERATION_SHIFT = 32;
+
+  static constexpr uint64_t lifecycle_state(uint32_t generation, bool completed,
+                                            uint32_t pins = 0) noexcept {
+    return (uint64_t{generation} << GENERATION_SHIFT) |
+           (completed ? COMPLETED_BIT : uint64_t{0}) | pins;
+  }
+
+  static constexpr uint32_t lifecycle_generation(uint64_t state) noexcept {
+    return static_cast<uint32_t>(state >> GENERATION_SHIFT);
+  }
+
+  static constexpr uint32_t lifecycle_pins(uint64_t state) noexcept {
+    return static_cast<uint32_t>(state & PIN_MASK);
+  }
+
+  static constexpr bool lifecycle_completed(uint64_t state) noexcept {
+    return (state & COMPLETED_BIT) != 0;
+  }
+
+  struct JobSlot;
+
   struct JobFn {
     friend class JobScheduler;
 
@@ -145,21 +169,8 @@ private:
         ctx->submit(&fn);
       }
 
-      // Release slot.
       JobScheduler *scheduler = slot->scheduler;
-
-      slot->completedGeneration.store(slot->generation,
-                                      std::memory_order_release);
-      slot->completedGeneration.notify_all();
-
-      JobSlot *head = scheduler->m_freeSlots.load(std::memory_order_relaxed);
-
-      do {
-        slot->next = head;
-      } while (!scheduler->m_freeSlots.compare_exchange_weak(
-          head, slot, std::memory_order_release, std::memory_order_relaxed));
-
-      scheduler->m_freeSlotCount.release();
+      scheduler->complete_slot(slot);
     }
 
   private:
@@ -180,7 +191,8 @@ private:
 
   struct JobSlot {
     JobSlot(allocator alloc, JobScheduler *scheduler)
-        : fn(), scoreboard(alloc), generation(0), scheduler(scheduler) {}
+        : fn(), scoreboard(alloc), lifecycle(lifecycle_state(0, true)),
+          scheduler(scheduler) {}
 
     static JobSlot *from_scoreboard_ptr(JobScoreboard *scoreboard) noexcept {
       auto *bytes = reinterpret_cast<std::byte *>(scoreboard);
@@ -194,7 +206,7 @@ private:
 
     JobFn fn;
     JobScoreboard scoreboard;
-    std::atomic<uint32_t> generation;
+    std::atomic<uint64_t> lifecycle;
     std::atomic<uint32_t> completedGeneration = 0;
 
     JobScheduler *scheduler;
@@ -202,6 +214,61 @@ private:
   };
 
   static_assert(std::is_standard_layout_v<JobSlot>);
+  static_assert(std::atomic<uint64_t>::is_always_lock_free);
+
+  bool try_pin(JobSlot *slot, uint32_t generation) noexcept {
+    uint64_t state = slot->lifecycle.load(std::memory_order_acquire);
+    while (lifecycle_generation(state) == generation &&
+           !lifecycle_completed(state)) {
+      assert(lifecycle_pins(state) != PIN_MASK);
+      if (slot->lifecycle.compare_exchange_weak(state, state + 1,
+                                                std::memory_order_acquire,
+                                                std::memory_order_relaxed)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void unpin(JobSlot *slot) noexcept {
+    const uint64_t previous =
+        slot->lifecycle.fetch_sub(1, std::memory_order_acq_rel);
+    assert(lifecycle_pins(previous) != 0);
+    if (lifecycle_completed(previous) && lifecycle_pins(previous) == 1) {
+      recycle_slot(slot);
+    }
+  }
+
+  void complete_slot(JobSlot *slot) noexcept {
+    [[maybe_unused]] const uint64_t state =
+        slot->lifecycle.load(std::memory_order_acquire);
+    const uint32_t generation = lifecycle_generation(state);
+    assert(!lifecycle_completed(state));
+
+    slot->completedGeneration.store(generation, std::memory_order_release);
+    slot->completedGeneration.notify_all();
+
+    const uint64_t previous =
+        slot->lifecycle.fetch_or(COMPLETED_BIT, std::memory_order_acq_rel);
+    assert(!lifecycle_completed(previous));
+    if (lifecycle_pins(previous) == 0) {
+      recycle_slot(slot);
+    }
+  }
+
+  void recycle_slot(JobSlot *slot) noexcept {
+    [[maybe_unused]] const uint64_t state =
+        slot->lifecycle.load(std::memory_order_acquire);
+    assert(lifecycle_completed(state));
+    assert(lifecycle_pins(state) == 0);
+
+    JobSlot *head = m_freeSlots.load(std::memory_order_relaxed);
+    do {
+      slot->next = head;
+    } while (!m_freeSlots.compare_exchange_weak(
+        head, slot, std::memory_order_release, std::memory_order_relaxed));
+    m_freeSlotCount.release();
+  }
 
 public:
   JobScheduler(const allocator &alloc, uint32_t workerCount) noexcept
@@ -273,18 +340,23 @@ public:
 
     assert(slotIndex < SLOT_COUNT);
 
-    ++slot->generation;
-    assert(slot->generation != 0);
+    const uint64_t oldState = slot->lifecycle.load(std::memory_order_acquire);
+    assert(lifecycle_completed(oldState));
+    assert(lifecycle_pins(oldState) == 0);
+    const uint32_t generation = lifecycle_generation(oldState) + 1;
+    assert(generation != 0);
 
     slot->fn.release();
     slot->fn.m_liveInvocations.store(0, std::memory_order_relaxed);
     slot->fn.m_invocationCounter.store(0, std::memory_order_relaxed);
 
     slot->scoreboard.reset();
+    slot->lifecycle.store(lifecycle_state(generation, false),
+                          std::memory_order_release);
 
     job_id id;
     id.m_index = slotIndex;
-    id.m_gen = slot->generation;
+    id.m_gen = generation;
 
     return id;
   }
@@ -296,12 +368,16 @@ public:
 
     JobSlot *slot = m_slots + id.m_index;
 
-    assert(slot->generation == id.m_gen);
+    [[maybe_unused]] const uint64_t targetState =
+        slot->lifecycle.load(std::memory_order_acquire);
+    assert(lifecycle_generation(targetState) == id.m_gen);
+    assert(!lifecycle_completed(targetState));
 
     JobSlot *sourceSlot = m_slots + dependency.m_index;
 
-    if (sourceSlot->generation == dependency.m_gen) {
+    if (try_pin(sourceSlot, dependency.m_gen)) {
       slot->scoreboard.addSource(&sourceSlot->scoreboard);
+      unpin(sourceSlot);
     }
   }
 
@@ -311,7 +387,10 @@ public:
 
     JobSlot *slot = m_slots + id.m_index;
 
-    assert(slot->generation == id.m_gen);
+    [[maybe_unused]] const uint64_t state =
+        slot->lifecycle.load(std::memory_order_acquire);
+    assert(lifecycle_generation(state) == id.m_gen);
+    assert(!lifecycle_completed(state));
 
     slot->fn.emplace(std::forward<Fn>(fn));
 
@@ -364,7 +443,8 @@ public:
     while (true) {
       const auto completed =
           slot->completedGeneration.load(std::memory_order_acquire);
-      if (completed == id.m_gen || slot->generation != id.m_gen) {
+      const uint64_t state = slot->lifecycle.load(std::memory_order_acquire);
+      if (completed == id.m_gen || lifecycle_generation(state) != id.m_gen) {
         return;
       }
       slot->completedGeneration.wait(completed, std::memory_order_acquire);

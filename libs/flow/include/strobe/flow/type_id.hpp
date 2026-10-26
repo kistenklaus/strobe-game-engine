@@ -1,5 +1,7 @@
 #pragma once
 
+#include <fmt/format.h>
+
 #include <cstdint>
 #include <string_view>
 
@@ -58,3 +60,25 @@ template <typename T> consteval TypeId type_id() noexcept {
 }
 
 } // namespace strobe::flow
+
+namespace fmt {
+
+/**
+ * \brief Formats a Flow type identifier.
+ * \code{.cpp}
+ * template<>
+ * struct formatter<strobe::flow::TypeId>;
+ * \endcode
+ */
+template <> struct formatter<strobe::flow::TypeId> {
+  constexpr auto parse(format_parse_context &context) {
+    return context.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(strobe::flow::TypeId type, FormatContext &context) const {
+    return fmt::format_to(context.out(), "type(0x{:016x})", type.value);
+  }
+};
+
+} // namespace fmt

@@ -170,14 +170,10 @@ public:
       ConsumerNode *node = list;
       list = list->next;
       JobScoreboard *consumer = node->consumer;
-      assert(consumer !=
-             nullptr); // TODO <- this failed once !! AHHH treiber fuckoff
+      assert(consumer != nullptr);
       if (consumer->notifySourceReady()) {
         node->next = readyHead;
         readyHead = node;
-      } else {
-        node->next = nullptr;
-        node->consumer = nullptr;
       }
     }
 

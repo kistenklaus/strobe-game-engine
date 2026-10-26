@@ -1,9 +1,11 @@
 #pragma once
 
 #include "strobe/flow/allocator.hpp"
+#include "strobe/flow/detail/job_plan.hpp"
 #include "strobe/flow/detail/program_data.hpp"
 #include "strobe/flow/op_source.hpp"
 #include "strobe/flow/resource_id.hpp"
+#include "strobe/flow/type_id.hpp"
 
 #include <strobe/core/memory/box.hpp>
 #include <strobe/core/sync/job_scheduler.hpp>
@@ -12,6 +14,7 @@
 #include <cstdint>
 #include <optional>
 #include <string_view>
+#include <type_traits>
 
 namespace strobe::flow {
 
@@ -62,6 +65,16 @@ public:
   detail::ProgramData &data() noexcept;
 
   /**
+   * \brief Accesses the compiled scheduler job plan.
+   * \code{.cpp}
+   * const detail::JobPlan& job_plan() const noexcept;
+   * \endcode
+   *
+   * \return The scheduler job plan derived from the program data.
+   */
+  const detail::JobPlan &job_plan() const noexcept;
+
+  /**
    * \brief Returns the number of recorded operations represented by the
    * program.
    * \code{.cpp}
@@ -104,11 +117,15 @@ public:
    * \param pointer Object supplied for subsequent submissions.
    * \attention 1 The object must remain alive until all work using the binding
    * has completed.
+   * \attention 2 The void-pointer overload does not validate the object type.
+   * The typed overload rejects a type different from the recorded external.
    */
   void bind_external(std::string_view name, void *pointer);
 
   template <typename T> void bind_external(std::string_view name, T *pointer) {
-    bind_external(name, static_cast<void *>(pointer));
+    static_assert(!std::is_const_v<T> && !std::is_volatile_v<T>,
+                  "Flow external bindings must be mutable objects");
+    bind_external_typed(name, static_cast<void *>(pointer), type_id<T>());
   }
 
   /**
@@ -243,6 +260,7 @@ public:
   sync::job_id submit(sync::JobScheduler *scheduler);
 
 private:
+  void bind_external_typed(std::string_view name, void *pointer, TypeId type);
   detail::ProgramRuntime &runtime() const;
   void execute_node(std::uint32_t activation, detail::NodeId node, bool prepare,
                     bool force = false);
@@ -251,11 +269,25 @@ private:
                                  std::uint32_t invocation);
   void execute_control(detail::ControlId control, std::uint32_t activation);
   void release_after_node(std::uint32_t activation, detail::NodeId node);
+  void execute_initialization(std::uint32_t activation);
+  void execute_feedback_node(std::uint32_t activation, detail::NodeId node);
+  void execute_job(std::uint32_t activation, detail::JobId job);
+  void execute_feedback_job(std::uint32_t activation, detail::JobId job);
+  sync::job_id submit_feedback_regions(sync::JobScheduler *scheduler);
 
   detail::ProgramData m_data;
+  detail::JobPlan m_job_plan;
   Box<detail::ProgramRuntime, allocator_ref> m_runtime;
   detail::NodeId m_resume_node = 0;
   std::optional<std::uint32_t> m_resume_activation;
+  Vector<std::uint64_t, allocator_ref> m_feedback_iterations;
+  Vector<std::uint64_t, allocator_ref> m_activation_iterations;
+  Vector<Vector<sync::job_id, allocator_ref>, allocator_ref> m_feedback_jobs;
+  Vector<Vector<bool, allocator_ref>, allocator_ref> m_feedback_job_valid;
+  Vector<sync::job_id, allocator_ref> m_feedback_completions;
+  Vector<bool, allocator_ref> m_feedback_completion_valid;
+  std::optional<sync::job_id> m_initialization_completion;
+  bool m_initialization_submitted = false;
   sync::JobScheduler *m_scheduler = nullptr;
   std::optional<sync::job_id> m_last_completion;
 };

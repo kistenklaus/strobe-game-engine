@@ -1,6 +1,5 @@
 #pragma once
 
-#include "strobe/flow/compile_options.hpp"
 #include "strobe/flow/detail/compiler/activation_layout_ir.hpp"
 
 #include <algorithm>
@@ -11,12 +10,7 @@
 
 namespace strobe::flow::detail::compiler {
 
-inline ActivationLayoutIR
-allocate_activation_states(LifetimeScheduleIR input,
-                           const CompileOptions &options = {}) {
-  if (options.max_slots == 0) {
-    throw std::invalid_argument("Flow max_slots must be greater than zero");
-  }
+inline ActivationLayoutIR allocate_activation_states(LifetimeScheduleIR input) {
   const auto &layout = input.input;
   const auto &slots = layout.input;
   const auto &interference = slots.input;
@@ -26,19 +20,29 @@ allocate_activation_states(LifetimeScheduleIR input,
   const auto &components = activation.input;
   const auto &values =
       components.input.classified.ordered.dependencies.lowered.resolved.values;
-  bool drains_tokens = false;
-  for (const auto &node : values.nodes) {
-    drains_tokens |= node.kind == NodeKind::acquire;
+  std::uint32_t capacity = 0;
+  for (std::size_t phi = 0; phi < values.phis.size(); ++phi) {
+    const auto &region = values.phis[phi];
+    if (region.condition != null_value_id) {
+      continue;
+    }
+    bool first_in_region = true;
+    for (std::size_t prior = 0; prior < phi; ++prior) {
+      first_in_region &=
+          values.phis[prior].declaration_position !=
+              region.declaration_position ||
+          values.phis[prior].feedback_position != region.feedback_position;
+    }
+    if (!first_in_region) {
+      continue;
+    }
+    if (capacity > std::numeric_limits<std::uint32_t>::max() -
+                       region.max_in_flight) {
+      throw std::length_error("Flow activation capacity overflow");
+    }
+    capacity += region.max_in_flight;
   }
-  bool replaces_persistent_value = false;
-  for (const auto &lifetime : lifetimes.resources) {
-    replaces_persistent_value |= lifetime.storage == StorageClass::persistent &&
-                                 lifetime.memoized_reconstruction;
-  }
-  const auto capacity = drains_tokens && replaces_persistent_value
-                            ? options.max_slots - 1
-                        : drains_tokens ? options.max_slots
-                                        : 1U;
+  capacity = std::max(capacity, 1U);
   if (capacity == 0) {
     throw std::invalid_argument("Flow activation capacity must be nonzero");
   }

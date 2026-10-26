@@ -27,6 +27,10 @@
 
 namespace strobe::flow::detail {
 
+template <std::size_t Count>
+using callback_access_indices =
+    std::make_index_sequence<Count == 0 ? 0 : Count - 1>;
+
 class OpStream {
 public:
   OpStream() = default;
@@ -94,6 +98,7 @@ public:
         .condition = std::nullopt,
         .position = m_ops.size(),
         .feedback_position = std::nullopt,
+        .max_in_flight = 2,
     });
     m_defined.push_back(true);
     return Resource<T>(id);
@@ -105,11 +110,18 @@ public:
     if (name.empty()) {
       throw std::invalid_argument("external resource name cannot be empty");
     }
-    if (std::any_of(m_externals.begin(), m_externals.end(),
-                    [&](const ExternalInfo &external) {
-                      return external.name.view() == name;
-                    })) {
-      throw std::invalid_argument("external resource name must be unique");
+    const auto existing = std::find_if(m_externals.begin(), m_externals.end(),
+                                       [&](const ExternalInfo &external) {
+                                         return external.name.view() == name;
+                                       });
+    if (existing != m_externals.end()) {
+      const auto resource = existing->resource;
+      if (resource >= m_resources.size() ||
+          m_resources[resource].type != type_id<T>()) {
+        throw std::invalid_argument(
+            "external resource name has a different type");
+      }
+      return Resource<T>(resource);
     }
     if (m_resources.size() >= std::numeric_limits<ResourceId>::max()) {
       throw std::length_error("resource id space exhausted");
@@ -197,7 +209,8 @@ public:
   }
 
   template <typename T>
-  void feedback(const Resource<T> &phi, const Resource<T> &value) {
+  void feedback(const Resource<T> &phi, const Resource<T> &value,
+                const FeedbackOptions &options = {}) {
     validate(phi);
     validate(value);
     const auto &phi_resource = m_resources[phi.m_id];
@@ -217,9 +230,14 @@ public:
     if (info.feedback) {
       throw std::logic_error("phi already has a feedback resource");
     }
+    if (options.max_in_flight == 0) {
+      throw std::invalid_argument(
+          "feedback max_in_flight must be greater than zero");
+    }
     info.feedback = value.m_id;
     info.condition = std::nullopt;
     info.feedback_position = m_ops.size();
+    info.max_in_flight = options.max_in_flight;
   }
 
   template <typename Body>
@@ -235,6 +253,7 @@ public:
     info.feedback = condition.m_id;
     info.condition = condition.m_id;
     info.feedback_position = m_ops.size();
+    info.max_in_flight = 1;
   }
 
   template <typename Then, typename Else>
@@ -263,6 +282,13 @@ public:
         throw std::logic_error(
             "if body cannot construct or discard a resource");
       }
+      if (std::any_of(m_ops[operation].accesses.begin(),
+                      m_ops[operation].accesses.end(),
+                      [](const AccessInfo &access) {
+                        return access.mode == AccessMode::consume;
+                      })) {
+        throw std::logic_error("if body cannot consume a resource");
+      }
     }
     m_ifs.push_back(IfInfo{
         .condition = condition.m_id,
@@ -284,17 +310,20 @@ public:
     if constexpr (std::is_constructible_v<T, std::decay_t<Args>...>) {
       return construct_value(resource, std::move(metadata),
                              std::forward<Args>(args)...);
-    } else {
+    } else if constexpr (sizeof...(Args) == 0) {
       static_assert(sizeof...(Args) > 0,
                     "construct requires values or a callback");
+      return 0;
+    } else {
       validate_construction(resource);
       auto values =
           std::tuple<std::decay_t<Args>...>(std::forward<Args>(args)...);
       const auto index = append_construction<T>(
           resource, std::move(metadata), std::move(values),
-          std::make_index_sequence<sizeof...(Args) - 1>{});
+          callback_access_indices<sizeof...(Args)>{});
       m_resources[resource.m_id].construction = index;
-      m_defined[resource.m_id] = true;
+      update_defined_resources(
+          {m_ops[index].accesses.data(), m_ops[index].accesses.size()});
       return index;
     }
   }
@@ -310,6 +339,8 @@ private:
     operation.accesses.push_back({resource.m_id, AccessMode::write});
     operation.argument_types.push_back(type_id<T>());
     operation.argument_accesses.push_back(AccessMode::write);
+    operation.argument_elements.push_back(0);
+    operation.argument_groups.push_back({0, 1, 0, 1});
     operation.invoke = [values = std::tuple<std::decay_t<Args>...>(
                             std::forward<Args>(args)...)](
                            Lifetime, span<void *const> storage) mutable {
@@ -323,7 +354,8 @@ private:
     };
     const auto index = append(std::move(operation));
     m_resources[resource.m_id].construction = index;
-    m_defined[resource.m_id] = true;
+    update_defined_resources(
+        {m_ops[index].accesses.data(), m_ops[index].accesses.size()});
     return index;
   }
 
@@ -337,17 +369,20 @@ public:
         std::tuple<std::decay_t<Args>...>(std::forward<Args>(args)...);
     const auto index =
         append_construction<T>(resource, OpMetadata{}, std::move(values),
-                               std::make_index_sequence<sizeof...(Args) - 1>{});
+                               callback_access_indices<sizeof...(Args)>{});
     m_resources[resource.m_id].construction = index;
-    m_defined[resource.m_id] = true;
+    update_defined_resources(
+        {m_ops[index].accesses.data(), m_ops[index].accesses.size()});
     return index;
   }
 
   template <typename T, typename... Accesses>
   std::size_t construct(const Resource<T> &resource, ExternalOp source,
                         Accesses &&...accesses) {
-    static_assert((is_access<Accesses> && ...),
+    static_assert((is_recorded_access<Accesses> && ...),
                   "external construct inputs must be resource accesses");
+    static_assert(valid_access_order<Accesses...>(),
+                  "serialization accesses must be trailing");
     validate_construction(resource);
     validate_external_op(source);
     Operation operation;
@@ -358,12 +393,41 @@ public:
     operation.accesses.push_back({resource.m_id, AccessMode::write});
     operation.argument_types.push_back(type_id<T>());
     operation.argument_accesses.push_back(AccessMode::write);
+    operation.argument_elements.push_back(0);
+    operation.argument_groups.push_back({0, 1, 0, 1});
     (append_external_access(operation, std::forward<Accesses>(accesses)), ...);
     validate_unique_accesses(
         {operation.accesses.data(), operation.accesses.size()});
     const auto index = append(std::move(operation));
     m_resources[resource.m_id].construction = index;
-    m_defined[resource.m_id] = true;
+    update_defined_resources(
+        {m_ops[index].accesses.data(), m_ops[index].accesses.size()});
+    return index;
+  }
+
+  template <typename T, typename... Accesses>
+  std::size_t construct(const Resource<T> &resource, IntrinsicOp source,
+                        Accesses &&...accesses) {
+    static_assert((is_recorded_access<Accesses> && ...),
+                  "intrinsic construct inputs must be resource accesses");
+    static_assert(valid_access_order<Accesses...>(),
+                  "serialization accesses must be trailing");
+    validate_construction(resource);
+    Operation operation;
+    operation.kind = OperationKind::construct;
+    operation.intrinsic = std::move(source);
+    operation.accesses.push_back({resource.m_id, AccessMode::write});
+    operation.argument_types.push_back(type_id<T>());
+    operation.argument_accesses.push_back(AccessMode::write);
+    operation.argument_elements.push_back(0);
+    operation.argument_groups.push_back({0, 1, 0, 1});
+    (append_external_access(operation, std::forward<Accesses>(accesses)), ...);
+    validate_unique_accesses(
+        {operation.accesses.data(), operation.accesses.size()});
+    const auto index = append(std::move(operation));
+    m_resources[resource.m_id].construction = index;
+    update_defined_resources(
+        {m_ops[index].accesses.data(), m_ops[index].accesses.size()});
     return index;
   }
 
@@ -388,27 +452,30 @@ public:
 
   void validate() const;
 
-  template <typename... Args> std::size_t op(Args &&...args) {
-    static_assert(sizeof...(Args) > 0, "op requires a callback");
+  template <typename... Args>
+    requires(sizeof...(Args) > 0)
+  std::size_t op(Args &&...args) {
     auto values =
         std::tuple<std::decay_t<Args>...>(std::forward<Args>(args)...);
     return append(OpMetadata{}, std::move(values),
-                  std::make_index_sequence<sizeof...(Args) - 1>{});
+                  callback_access_indices<sizeof...(Args)>{});
   }
 
   template <typename... Args>
+    requires(sizeof...(Args) > 0)
   std::size_t op_with_metadata(OpMetadata metadata, Args &&...args) {
-    static_assert(sizeof...(Args) > 0, "op requires a callback");
     auto values =
         std::tuple<std::decay_t<Args>...>(std::forward<Args>(args)...);
     return append(std::move(metadata), std::move(values),
-                  std::make_index_sequence<sizeof...(Args) - 1>{});
+                  callback_access_indices<sizeof...(Args)>{});
   }
 
   template <typename... Accesses>
   std::size_t op(ExternalOp source, Accesses &&...accesses) {
-    static_assert((is_access<Accesses> && ...),
+    static_assert((is_recorded_access<Accesses> && ...),
                   "external op arguments must be resource accesses");
+    static_assert(valid_access_order<Accesses...>(),
+                  "serialization accesses must be trailing");
     validate_external_op(source);
     Operation operation;
     operation.metadata = std::move(source.metadata);
@@ -418,11 +485,25 @@ public:
     validate_unique_accesses(
         {operation.accesses.data(), operation.accesses.size()});
     const auto index = append(std::move(operation));
-    for (const auto &access : m_ops[index].accesses) {
-      if (access.mode != AccessMode::read) {
-        m_defined[access.resource] = true;
-      }
-    }
+    update_defined_resources(
+        {m_ops[index].accesses.data(), m_ops[index].accesses.size()});
+    return index;
+  }
+
+  template <typename... Accesses>
+  std::size_t op(IntrinsicOp source, Accesses &&...accesses) {
+    static_assert((is_recorded_access<Accesses> && ...),
+                  "intrinsic op arguments must be resource accesses");
+    static_assert(valid_access_order<Accesses...>(),
+                  "serialization accesses must be trailing");
+    Operation operation;
+    operation.intrinsic = std::move(source);
+    (append_external_access(operation, std::forward<Accesses>(accesses)), ...);
+    validate_unique_accesses(
+        {operation.accesses.data(), operation.accesses.size()});
+    const auto index = append(std::move(operation));
+    update_defined_resources(
+        {m_ops[index].accesses.data(), m_ops[index].accesses.size()});
     return index;
   }
 
@@ -491,11 +572,66 @@ private:
 
   static void validate_external_op(const ExternalOp &source);
 
+  void update_defined_resources(span<const AccessInfo> accesses) {
+    for (const auto &access : accesses) {
+      if (access.purpose != AccessPurpose::argument ||
+          access.mode == AccessMode::read) {
+        continue;
+      }
+      m_defined[access.resource] = access.mode != AccessMode::consume;
+    }
+  }
+
   template <typename T, AccessMode Mode>
   void append_external_access(Operation &operation, Access<T, Mode> access) {
-    operation.accesses.push_back(describe(access));
-    operation.argument_types.push_back(type_id<T>());
-    operation.argument_accesses.push_back(Mode);
+    const auto offset =
+        static_cast<std::uint32_t>(operation.argument_types.size());
+    const auto element_offset =
+        static_cast<std::uint32_t>(operation.argument_elements.size());
+    if (access.m_resource) {
+      operation.accesses.push_back(describe(access));
+      operation.argument_types.push_back(type_id<T>());
+      operation.argument_accesses.push_back(Mode);
+      operation.argument_elements.push_back(offset);
+      operation.argument_groups.push_back({offset, 1, element_offset, 1});
+    } else {
+      operation.argument_elements.push_back(null_argument_element);
+      operation.argument_groups.push_back({offset, 0, element_offset, 1});
+    }
+  }
+
+  template <typename T, AccessMode Mode>
+  void append_external_access(Operation &operation,
+                              AccessRange<T, Mode> access) {
+    const auto offset =
+        static_cast<std::uint32_t>(operation.argument_types.size());
+    const auto element_offset =
+        static_cast<std::uint32_t>(operation.argument_elements.size());
+    for (const auto &resource : access.m_resources) {
+      if (resource) {
+        const auto argument =
+            static_cast<std::uint32_t>(operation.argument_types.size());
+        operation.accesses.push_back(describe(Access<T, Mode>(resource)));
+        operation.argument_types.push_back(type_id<T>());
+        operation.argument_accesses.push_back(Mode);
+        operation.argument_elements.push_back(argument);
+      } else {
+        operation.argument_elements.push_back(null_argument_element);
+      }
+    }
+    operation.argument_groups.push_back(
+        {offset,
+         static_cast<std::uint32_t>(operation.argument_types.size() - offset),
+         element_offset,
+         static_cast<std::uint32_t>(access.m_resources.size())});
+  }
+
+  template <typename T>
+  void append_external_access(Operation &operation,
+                              SerializationAccess<T> access) {
+    if (access.m_resource) {
+      operation.accesses.push_back(describe(access));
+    }
   }
 
   template <typename T, AccessMode Mode>
@@ -512,47 +648,101 @@ private:
         throw std::logic_error("cannot read an undefined resource value");
       }
     }
-    return {access.m_resource.m_id, Mode};
+    return {access.m_resource.m_id, Mode, AccessPurpose::argument};
+  }
+
+  template <typename T>
+  AccessInfo describe(const SerializationAccess<T> &access) const {
+    validate(access.m_resource);
+    const auto &resource = m_resources[access.m_resource.m_id];
+    if (!resource.construction && !resource.phi && !resource.cutoff &&
+        !resource.external) {
+      throw std::logic_error(
+          "resource must be defined before recording serialization");
+    }
+    if (!m_defined[access.m_resource.m_id]) {
+      throw std::logic_error("cannot serialize an undefined resource value");
+    }
+    return {access.m_resource.m_id, AccessMode::read_write,
+            AccessPurpose::serialization};
+  }
+
+  template <typename... Accesses> static consteval bool valid_access_order() {
+    if constexpr (sizeof...(Accesses) == 0) {
+      return true;
+    } else {
+      bool saw_serialization = false;
+      bool valid = true;
+      ((is_serialization_access<Accesses>
+            ? saw_serialization = true
+            : valid = valid && !saw_serialization),
+       ...);
+      return valid;
+    }
+  }
+
+  template <typename Tuple, std::size_t... I>
+  static consteval std::size_t argument_count(std::index_sequence<I...>) {
+    static_assert(
+        (is_any_access<decltype(std::get<I>(std::declval<Tuple &>()))> && ...),
+        "operation inputs must be resource accesses");
+    static_assert(
+        valid_access_order<decltype(std::get<I>(std::declval<Tuple &>()))...>(),
+        "serialization accesses must be trailing");
+    return (
+        std::size_t{0} + ... +
+        (is_access<decltype(std::get<I>(std::declval<Tuple &>()))> ? 1u : 0u));
   }
 
   template <typename Tuple, std::size_t... I>
   std::size_t append(OpMetadata metadata, Tuple values,
                      std::index_sequence<I...>) {
+    constexpr auto count = argument_count<Tuple>(std::index_sequence<I...>{});
+    return append_callback(std::move(metadata), std::move(values),
+                           std::make_index_sequence<count>{},
+                           std::index_sequence<I...>{});
+  }
+
+  template <typename Tuple, std::size_t... A, std::size_t... I>
+  std::size_t append_callback(OpMetadata metadata, Tuple values,
+                              std::index_sequence<A...>,
+                              std::index_sequence<I...>) {
     using Callback = decltype(std::get<sizeof...(I)>(values));
     constexpr bool invocable =
         std::is_invocable_v<Callback &,
-                            decltype(std::get<I>(values).get(nullptr))...>;
+                            decltype(std::get<A>(values).get(nullptr))...>;
     static_assert(invocable,
                   "op callback arguments must match its resource accesses");
     if constexpr (invocable) {
       static_assert(
           std::is_same_v<void, std::invoke_result_t<
-                                   Callback &, decltype(std::get<I>(values).get(
+                                   Callback &, decltype(std::get<A>(values).get(
                                                    nullptr))...>>,
           "op callbacks must return void");
     }
 
     Operation operation;
     operation.metadata = std::move(metadata);
-    ((operation.accesses.push_back(describe(std::get<I>(values))),
-      operation.argument_types.push_back(
-          std::remove_cvref_t<decltype(std::get<I>(values))>::argument_type),
-      operation.argument_accesses.push_back(operation.accesses.back().mode)),
+    (operation.accesses.push_back(describe(std::get<I>(values))), ...);
+    ((operation.argument_types.push_back(
+          std::remove_cvref_t<decltype(std::get<A>(values))>::argument_type),
+      operation.argument_accesses.push_back(operation.accesses[A].mode),
+      operation.argument_elements.push_back(static_cast<std::uint32_t>(A)),
+      operation.argument_groups.push_back(
+          {static_cast<std::uint32_t>(A), 1,
+           static_cast<std::uint32_t>(A), 1})),
      ...);
     validate_unique_accesses(
         {operation.accesses.data(), operation.accesses.size()});
     operation.invoke = [values = std::move(values)](
                            Lifetime, span<void *const> storage) mutable {
-      validate_storage(storage, sizeof...(I));
+      validate_storage(storage, sizeof...(A));
       std::invoke(std::get<sizeof...(I)>(values),
-                  std::get<I>(values).get(storage[I])...);
+                  std::get<A>(values).get(storage[A])...);
     };
     const auto index = append(std::move(operation));
-    for (const auto &access : m_ops[index].accesses) {
-      if (access.mode != AccessMode::read) {
-        m_defined[access.resource] = true;
-      }
-    }
+    update_defined_resources(
+        {m_ops[index].accesses.data(), m_ops[index].accesses.size()});
     return index;
   }
 
@@ -560,15 +750,24 @@ private:
   std::size_t append_construction(const Resource<T> &resource,
                                   OpMetadata metadata, Tuple values,
                                   std::index_sequence<I...>) {
-    static_assert((is_access<decltype(std::get<I>(values))> && ...),
-                  "construct inputs must be resource accesses");
+    constexpr auto count = argument_count<Tuple>(std::index_sequence<I...>{});
+    return append_construction_callback<T>(
+        resource, std::move(metadata), std::move(values),
+        std::make_index_sequence<count>{}, std::index_sequence<I...>{});
+  }
+
+  template <typename T, typename Tuple, std::size_t... A, std::size_t... I>
+  std::size_t append_construction_callback(const Resource<T> &resource,
+                                           OpMetadata metadata, Tuple values,
+                                           std::index_sequence<A...>,
+                                           std::index_sequence<I...>) {
     using Callback = decltype(std::get<sizeof...(I)>(values));
     constexpr bool lifetime_invocable =
         std::is_invocable_v<Callback &, T *, Lifetime,
-                            decltype(std::get<I>(values).get(nullptr))...>;
+                            decltype(std::get<A>(values).get(nullptr))...>;
     constexpr bool legacy_invocable =
         std::is_invocable_v<Callback &, T *,
-                            decltype(std::get<I>(values).get(nullptr))...>;
+                            decltype(std::get<A>(values).get(nullptr))...>;
     static_assert(
         lifetime_invocable || legacy_invocable,
         "construct callback must accept T*, optionally Lifetime, followed by "
@@ -577,14 +776,14 @@ private:
       static_assert(
           std::is_same_v<void,
                          std::invoke_result_t<Callback &, T *, Lifetime,
-                                              decltype(std::get<I>(values).get(
+                                              decltype(std::get<A>(values).get(
                                                   nullptr))...>>,
           "construct callbacks must return void");
     } else if constexpr (legacy_invocable) {
       static_assert(
           std::is_same_v<void,
                          std::invoke_result_t<Callback &, T *,
-                                              decltype(std::get<I>(values).get(
+                                              decltype(std::get<A>(values).get(
                                                   nullptr))...>>,
           "construct callbacks must return void");
     }
@@ -595,28 +794,37 @@ private:
     operation.accesses.push_back({resource.m_id, AccessMode::write});
     operation.argument_types.push_back(type_id<T>());
     operation.argument_accesses.push_back(AccessMode::write);
-    ((operation.accesses.push_back(describe(std::get<I>(values))),
-      operation.argument_types.push_back(
-          std::remove_cvref_t<decltype(std::get<I>(values))>::argument_type),
-      operation.argument_accesses.push_back(operation.accesses.back().mode)),
+    operation.argument_elements.push_back(0);
+    operation.argument_groups.push_back({0, 1, 0, 1});
+    (operation.accesses.push_back(describe(std::get<I>(values))), ...);
+    ((operation.argument_types.push_back(
+          std::remove_cvref_t<decltype(std::get<A>(values))>::argument_type),
+      operation.argument_accesses.push_back(operation.accesses[A + 1].mode),
+      operation.argument_elements.push_back(static_cast<std::uint32_t>(A + 1)),
+      operation.argument_groups.push_back(
+          {static_cast<std::uint32_t>(A + 1), 1,
+           static_cast<std::uint32_t>(A + 1), 1})),
      ...);
     validate_unique_accesses(
         {operation.accesses.data(), operation.accesses.size()});
     operation.invoke =
         [values = std::move(values)](Lifetime lifetime,
                                      span<void *const> storage) mutable {
-          validate_storage(storage, sizeof...(I) + 1);
+          validate_storage(storage, sizeof...(A) + 1);
           if constexpr (lifetime_invocable) {
             std::invoke(std::get<sizeof...(I)>(values),
                         static_cast<T *>(storage[0]), lifetime,
-                        std::get<I>(values).get(storage[I + 1])...);
+                        std::get<A>(values).get(storage[A + 1])...);
           } else {
             std::invoke(std::get<sizeof...(I)>(values),
                         static_cast<T *>(storage[0]),
-                        std::get<I>(values).get(storage[I + 1])...);
+                        std::get<A>(values).get(storage[A + 1])...);
           }
         };
-    return append(std::move(operation));
+    const auto index = append(std::move(operation));
+    update_defined_resources(
+        {m_ops[index].accesses.data(), m_ops[index].accesses.size()});
+    return index;
   }
 
   std::size_t append(Operation operation);
@@ -630,5 +838,7 @@ private:
   Vector<IfInfo, allocator_ref> m_ifs;
   Vector<Operation, allocator_ref> m_ops;
 };
+
+String<allocator_ref> to_pretty(const OpStream &stream);
 
 } // namespace strobe::flow::detail

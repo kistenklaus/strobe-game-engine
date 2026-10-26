@@ -1,6 +1,7 @@
 #pragma once
 
 #include "strobe/flow/access_mode.hpp"
+#include "strobe/flow/access_purpose.hpp"
 #include "strobe/flow/allocator.hpp"
 #include "strobe/flow/compile_context.hpp"
 #include "strobe/flow/detail/operation_kind.hpp"
@@ -78,6 +79,7 @@ struct CompiledNode {
   IndexRange inputs;
   IndexRange outputs;
   IndexRange accesses;
+  std::uint32_t argument_count = 0;
   IndexRange predecessors;
   IndexRange successors;
   IndexRange temporal_predecessors;
@@ -95,6 +97,7 @@ struct CompiledValue {
 struct CompiledAccess {
   ResourceId resource;
   AccessMode mode;
+  AccessPurpose purpose = AccessPurpose::argument;
   ValueId input;
   ValueId output;
 };
@@ -114,6 +117,15 @@ struct CompiledPhi {
 struct CompiledAcquire {
   NodeId node;
   std::uint32_t semaphore;
+};
+
+struct CompiledFeedbackRegion {
+  std::uint32_t declaration_position;
+  std::uint32_t feedback_position;
+  IndexRange phis;
+  IndexRange nodes;
+  IndexRange acquires;
+  std::uint32_t max_in_flight = 2;
 };
 
 enum class ControlKind : std::uint8_t {
@@ -162,8 +174,19 @@ struct ResourceGeneration {
   std::uint64_t generation = 0;
 };
 
-using RuntimeCallback =
-    std::move_only_function<void(Lifetime, span<void *const>)>;
+struct CompiledImmediate {
+  TypeId type;
+  std::size_t offset;
+  std::size_t size;
+  std::size_t alignment;
+  std::size_t element_size;
+  std::uint32_t element_count;
+};
+
+using RuntimeCallback = std::move_only_function<void(
+    Lifetime, span<void *const>, span<const std::uint32_t>,
+    span<const ArgumentGroup>, span<const std::uint32_t>,
+    span<void *const>)>;
 
 struct CompiledCallback {
   CompiledCallback() = default;
@@ -176,6 +199,9 @@ struct CompiledCallback {
   std::optional<ExternalOp> external;
   Vector<TypeId, allocator_ref> argument_types;
   Vector<AccessMode, allocator_ref> argument_accesses;
+  IndexRange argument_groups;
+  IndexRange argument_elements;
+  IndexRange immediates;
   RuntimeCallback runtime;
 };
 
@@ -193,6 +219,10 @@ struct ProgramData {
   Vector<CompiledAccess, allocator_ref> accesses;
   Vector<CompiledExternal, allocator_ref> externals;
   Vector<CompiledPhi, allocator_ref> phis;
+  Vector<CompiledFeedbackRegion, allocator_ref> feedback_regions;
+  Vector<std::uint32_t, allocator_ref> feedback_region_phis;
+  Vector<NodeId, allocator_ref> feedback_region_nodes;
+  Vector<std::uint32_t, allocator_ref> feedback_region_acquires;
   Vector<CompiledAcquire, allocator_ref> acquires;
   Vector<CompiledControl, allocator_ref> controls;
   Vector<CompiledControlStep, allocator_ref> control_steps;
@@ -203,6 +233,11 @@ struct ProgramData {
   Vector<String<allocator_ref>, allocator_ref> semaphore_names;
   Vector<CompiledCutoff, allocator_ref> cutoffs;
   Vector<CompiledCallback, allocator_ref> callbacks;
+  Vector<CompiledImmediate, allocator_ref> immediates;
+  Vector<ArgumentGroup, allocator_ref> argument_groups;
+  Vector<std::uint32_t, allocator_ref> argument_elements;
+  Vector<std::byte, allocator_ref> immediate_data;
+  std::size_t immediate_alignment = 1;
   Vector<NodeId, allocator_ref> roots;
   Vector<NodeId, allocator_ref> yields;
   Vector<TypeId, allocator_ref> resource_types;
@@ -218,5 +253,7 @@ struct ProgramData {
   std::size_t source_resource_count = 0;
   std::size_t source_external_count = 0;
 };
+
+String<allocator_ref> to_pretty(const ProgramData &data);
 
 } // namespace strobe::flow::detail

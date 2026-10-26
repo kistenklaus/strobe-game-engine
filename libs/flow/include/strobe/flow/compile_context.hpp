@@ -1,20 +1,61 @@
 #pragma once
 
+#include "strobe/flow/access_mode.hpp"
 #include "strobe/flow/allocator.hpp"
+#include "strobe/flow/argument_group.hpp"
+#include "strobe/flow/lifetime.hpp"
+#include "strobe/flow/op_source.hpp"
 #include "strobe/flow/type_id.hpp"
 
+#include <strobe/core/containers/span.hpp>
 #include <strobe/core/containers/string.hpp>
 #include <strobe/core/containers/vector.hpp>
 
 #include <concepts>
 #include <cstddef>
+#include <functional>
+#include <limits>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string_view>
 #include <type_traits>
 #include <utility>
 
 namespace strobe::flow {
+
+namespace detail {
+
+using ResolvedOperationId = std::uint32_t;
+inline constexpr ResolvedOperationId null_resolved_operation_id =
+    std::numeric_limits<ResolvedOperationId>::max();
+
+struct ResolvedOperation {
+  struct Immediate {
+    TypeId type;
+    std::size_t offset;
+    std::size_t size;
+    std::size_t alignment;
+    std::size_t element_size;
+    std::uint32_t element_count;
+  };
+
+  OpMetadata metadata;
+  std::optional<ExternalOp> external;
+  Vector<TypeId, allocator_ref> argument_types;
+  Vector<AccessMode, allocator_ref> argument_accesses;
+  Vector<ArgumentGroup, allocator_ref> argument_groups;
+  Vector<std::uint32_t, allocator_ref> argument_elements;
+  Vector<Immediate, allocator_ref> immediates;
+  Vector<std::byte, allocator_ref> immediate_data;
+  std::move_only_function<void(Lifetime, span<void *const>,
+                               span<const std::uint32_t>,
+                               span<const ArgumentGroup>,
+                               span<const std::uint32_t>, span<void *const>)>
+      runtime;
+};
+
+} // namespace detail
 
 /**
  * \brief Owns typed sidecar state for one Flow compilation.
@@ -27,6 +68,34 @@ namespace strobe::flow {
  */
 class CompileContext {
 public:
+  /**
+   * \brief Registers an implementation for a compiler-produced node.
+   * \code{.cpp}
+   * detail::ResolvedOperationId
+   * resolve_operation(detail::ResolvedOperation operation);
+   * \endcode
+   *
+   * \param operation Runtime or external implementation and its argument
+   * contract.
+   * \return Stable handle carried by compiler IR nodes.
+   */
+  detail::ResolvedOperationId
+  resolve_operation(detail::ResolvedOperation operation);
+
+  /**
+   * \brief Transfers a registered implementation to program emission.
+   * \code{.cpp}
+   * detail::ResolvedOperation release_resolved_operation(
+   *     detail::ResolvedOperationId operation);
+   * \endcode
+   *
+   * \param operation Handle returned by `resolve_operation`.
+   * \return Registered runtime implementation and argument contract.
+   * \attention 1 Each registered implementation can be released once.
+   */
+  detail::ResolvedOperation
+  release_resolved_operation(detail::ResolvedOperationId operation);
+
   /**
    * \brief Constructs or destroys a per-compilation context.
    * \code{.cpp}
@@ -144,6 +213,7 @@ private:
   const Entry *find(std::string_view id) const;
 
   Vector<Entry, allocator_ref> m_entries;
+  Vector<detail::ResolvedOperation, allocator_ref> m_resolved_operations;
 };
 
 } // namespace strobe::flow

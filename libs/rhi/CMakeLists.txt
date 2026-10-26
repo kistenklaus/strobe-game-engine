@@ -51,6 +51,7 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   # strobe::rhi shader
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/compute_shader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/fragment_shader.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/geometry_shader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/shader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/shader/vertex_shader.cpp
   # strobe::rhi sync
@@ -130,9 +131,9 @@ add_library(strobe-rhi-vulkan EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/strobe/rhi/rhi.cpp
 )
 
-target_precompile_headers(strobe-rhi-vulkan
-  PUBLIC <strobe/rhi/rhi.hpp>
- )
+# target_precompile_headers(strobe-rhi-vulkan
+#   PUBLIC <strobe/rhi/rhi.hpp>
+#  )
 
 target_include_directories(strobe-rhi-vulkan
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include

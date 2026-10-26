@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -21,6 +22,61 @@ TEST(FlowLifetime, StoresACompactLogicalRange) {
   static_assert(sizeof(flow::Lifetime) == sizeof(std::uint32_t) * 2);
   EXPECT_EQ(lifetime.begin, 7);
   EXPECT_EQ(lifetime.end, 19);
+}
+
+TEST(FlowVariadicArguments, FlattensResourcesAndPreservesOneLogicalGroup) {
+  Stream stream;
+  std::array<flow::Resource<int>, 3> resources{
+      stream.resource<int>(), stream.resource<int>(), stream.resource<int>()};
+  for (std::size_t index = 0; index < resources.size(); ++index) {
+    stream.construct(resources[index], static_cast<int>(index));
+  }
+
+  stream.op(flow::intrinsic("test", "variadic"),
+            flow::read_span(strobe::span<const flow::Resource<int>>{resources}));
+
+  const auto &operation = stream.ops().back();
+  ASSERT_EQ(operation.accesses.size(), resources.size());
+  ASSERT_EQ(operation.argument_types.size(), resources.size());
+  ASSERT_EQ(operation.argument_groups.size(), 1);
+  EXPECT_EQ(operation.argument_groups[0].offset, 0);
+  EXPECT_EQ(operation.argument_groups[0].count, resources.size());
+  for (std::size_t index = 0; index < resources.size(); ++index) {
+    EXPECT_EQ(operation.accesses[index].resource, index);
+    EXPECT_EQ(operation.accesses[index].mode, flow::AccessMode::read);
+  }
+}
+
+TEST(FlowVariadicArguments, AllowsAnEmptyFixedArgumentGroup) {
+  Stream stream;
+  stream.op(flow::intrinsic("test", "empty-variadic"),
+            flow::read_span(strobe::span<const flow::Resource<int>>{}));
+
+  const auto &operation = stream.ops().back();
+  EXPECT_TRUE(operation.accesses.empty());
+  ASSERT_EQ(operation.argument_groups.size(), 1);
+  EXPECT_EQ(operation.argument_groups[0].offset, 0);
+  EXPECT_EQ(operation.argument_groups[0].count, 0);
+}
+
+TEST(FlowOptionalArguments, RecordsPresentAndAbsentResourceGroups) {
+  Stream stream;
+  auto resource = stream.resource<int>();
+  stream.construct(resource, 7);
+
+  stream.op(flow::intrinsic("test", "optional"),
+            flow::read(resource), flow::read(flow::Resource<int>{}));
+
+  const auto &operation = stream.ops().back();
+  ASSERT_EQ(operation.accesses.size(), 1);
+  ASSERT_EQ(operation.argument_groups.size(), 2);
+  EXPECT_EQ(operation.argument_groups[0].offset, 0);
+  EXPECT_EQ(operation.argument_groups[0].count, 1);
+  EXPECT_EQ(operation.argument_groups[1].offset, 1);
+  EXPECT_EQ(operation.argument_groups[1].count, 0);
+  ASSERT_EQ(operation.argument_elements.size(), 2);
+  EXPECT_EQ(operation.argument_elements[0], 0);
+  EXPECT_EQ(operation.argument_elements[1], flow::null_argument_element);
 }
 
 struct alignas(64) Value {
@@ -80,6 +136,53 @@ TEST(FlowConstruct, DeferredCallbacksUseSuppliedStorage) {
   EXPECT_EQ(observed, 84);
   stream.resources()[stream.ops()[0].accesses[0].resource].destroy(bytes);
   EXPECT_EQ(live, 0);
+}
+
+TEST(FlowSerialize, RecordsOrderingWithoutPassingACallbackArgument) {
+  Stream stream;
+  auto pool = stream.resource<int>();
+  auto value = stream.resource<int>();
+  stream.construct(pool, 0);
+  stream.construct(value, 7);
+
+  int observed = 0;
+  const auto operation = stream.op(flow::read(value), flow::serialize(pool),
+                                   [&](const int &input) { observed = input; });
+
+  const auto &recorded = stream.ops()[operation];
+  ASSERT_EQ(recorded.accesses.size(), 2);
+  ASSERT_EQ(recorded.argument_types.size(), 1);
+  EXPECT_EQ(recorded.accesses[0].purpose, flow::AccessPurpose::argument);
+  EXPECT_EQ(recorded.accesses[1].purpose, flow::AccessPurpose::serialization);
+  EXPECT_EQ(recorded.accesses[1].mode, flow::AccessMode::read_write);
+
+  int input = 42;
+  void *storage[] = {&input};
+  invoke(stream, operation, storage);
+  EXPECT_EQ(observed, 42);
+  EXPECT_NO_THROW(stream.validate());
+}
+
+TEST(FlowConsume, PassesTheFinalValueAndLeavesTheResourceUndefined) {
+  Stream stream;
+  auto value = stream.resource<int>();
+  stream.construct(value, 7);
+
+  int observed = 0;
+  const auto operation = stream.op(flow::consume(value), [&](int &input) {
+    observed = input;
+    input = 9;
+  });
+  EXPECT_EQ(stream.ops()[operation].accesses[0].mode,
+            flow::AccessMode::consume);
+
+  int input = 7;
+  void *storage[] = {&input};
+  invoke(stream, operation, storage);
+  EXPECT_EQ(observed, 7);
+  EXPECT_EQ(input, 9);
+  EXPECT_THROW(stream.op(flow::read(value), [](const int &) {}),
+               std::logic_error);
 }
 
 TEST(FlowConstruct, ConstructsFromRuntimeResourceInputs) {
@@ -292,11 +395,12 @@ TEST(FlowConstruct, RejectsMissingRuntimeStorage) {
   EXPECT_EQ(calls, 1);
 }
 
-TEST(FlowConstruct, GlobalRecordingValidatesAndRemainsThreadLocal) {
+TEST(FlowConstruct, EndInvalidatesRecordingAndRecordingRemainsThreadLocal) {
   flow::begin();
   auto value = flow::resource<int>();
   EXPECT_THROW(flow::end(), std::logic_error);
-  flow::construct(value, 42);
+  EXPECT_THROW(flow::construct(value, 42), std::logic_error);
+
   std::thread worker([&] {
     flow::begin();
     EXPECT_THROW(flow::construct(value, 0), std::invalid_argument);
@@ -304,12 +408,13 @@ TEST(FlowConstruct, GlobalRecordingValidatesAndRemainsThreadLocal) {
     EXPECT_TRUE(flow::ops().empty());
   });
   worker.join();
-  flow::end();
-  EXPECT_EQ(flow::ops().size(), 1);
-  EXPECT_THROW(flow::construct(value, 0), std::logic_error);
+
   flow::begin();
   EXPECT_THROW(flow::construct(value, 0), std::invalid_argument);
+  auto replacement = flow::resource<int>();
+  flow::construct(replacement, 42);
   flow::end();
+  EXPECT_EQ(flow::ops().size(), 1);
 }
 
 TEST(FlowYield, RecordsAZeroAccessSubmissionBoundary) {
@@ -397,6 +502,192 @@ TEST(FlowDiscard, GlobalFunctionRecordsDiscard) {
   EXPECT_EQ(flow::ops()[index].kind, flow::detail::OperationKind::discard);
 }
 
+TEST(FlowIntrinsic, RecordsStableIdentityAndResourceAccesses) {
+  Stream stream;
+  auto input = stream.external<int>("input");
+  auto output = stream.resource<int>();
+  stream.construct(output, 0);
+
+  const auto index = stream.op(flow::intrinsic("strobe.test", "copy", 3),
+                               flow::read(input), flow::write(output));
+
+  ASSERT_TRUE(stream.ops()[index].intrinsic.has_value());
+  EXPECT_EQ(stream.ops()[index].intrinsic->domain.view(), "strobe.test");
+  EXPECT_EQ(stream.ops()[index].intrinsic->opcode.view(), "copy");
+  EXPECT_EQ(stream.ops()[index].intrinsic->version, 3);
+  ASSERT_EQ(stream.ops()[index].accesses.size(), 2);
+  EXPECT_EQ(stream.ops()[index].accesses[0].mode, flow::AccessMode::read);
+  EXPECT_EQ(stream.ops()[index].accesses[1].mode, flow::AccessMode::write);
+  EXPECT_FALSE(stream.ops()[index].invoke);
+  EXPECT_FALSE(stream.ops()[index].external.has_value());
+  EXPECT_NO_THROW(stream.validate());
+
+  EXPECT_THROW(flow::intrinsic("", "copy"), std::invalid_argument);
+  EXPECT_THROW(flow::intrinsic("strobe.test", ""), std::invalid_argument);
+  EXPECT_THROW(flow::intrinsic("strobe.test", "copy", 0),
+               std::invalid_argument);
+}
+
+TEST(FlowIntrinsic, StoresTypedTrivialImmediates) {
+  enum class Stage : std::uint32_t { transfer = 7 };
+  struct Extent {
+    std::uint32_t width;
+    std::uint32_t height;
+  };
+  static_assert(std::is_trivially_copyable_v<Extent>);
+
+  auto source = flow::intrinsic("strobe.test", "immediates", 2)
+                    .immediate(Stage::transfer)
+                    .immediate(Extent{.width = 1280, .height = 720});
+  ASSERT_EQ(source.immediates.size(), 2);
+  EXPECT_EQ(std::as_const(source).immediate<Stage>(0), Stage::transfer);
+  const auto extent = std::as_const(source).immediate<Extent>(1);
+  EXPECT_EQ(extent.width, 1280);
+  EXPECT_EQ(extent.height, 720);
+  EXPECT_THROW(std::as_const(source).immediate<std::uint32_t>(0),
+               std::invalid_argument);
+  EXPECT_THROW(std::as_const(source).immediate<Stage>(2), std::out_of_range);
+
+  Stream stream;
+  stream.op(std::move(source));
+  stream.validate();
+  ASSERT_TRUE(stream.ops()[0].intrinsic);
+  EXPECT_EQ(stream.ops()[0].intrinsic->immediate<Extent>(1).height, 720);
+}
+
+TEST(FlowIntrinsic, StoresTypedTrivialImmediateSpans) {
+  const std::array<std::uint32_t, 3> values{4, 8, 15};
+  auto source = flow::intrinsic("strobe.test", "immediate-span")
+                    .immediate_span(strobe::span<const std::uint32_t>{values});
+
+  ASSERT_EQ(source.immediates.size(), 1);
+  EXPECT_EQ(source.immediates[0].type, flow::type_id<std::uint32_t>());
+  EXPECT_EQ(source.immediates[0].element_count, values.size());
+  EXPECT_EQ(source.immediates[0].element_size, sizeof(std::uint32_t));
+  EXPECT_EQ(source.immediates[0].size, sizeof(values));
+  EXPECT_EQ(source.immediate_data.size(), sizeof(values));
+  EXPECT_EQ(
+      std::memcmp(source.immediate_data.data(), values.data(), sizeof(values)),
+      0);
+  EXPECT_THROW(std::as_const(source).immediate<std::uint32_t>(0),
+               std::invalid_argument);
+
+  const strobe::span<const std::uint32_t> empty;
+  source.immediate_span(empty);
+  EXPECT_EQ(source.immediates[1].element_count, 0);
+  EXPECT_EQ(source.immediates[1].size, 0);
+
+  Stream stream;
+  stream.op(std::move(source));
+  EXPECT_NO_THROW(stream.validate());
+}
+
+TEST(FlowOperationFormat, PrintsSourceAndAccesses) {
+  Stream stream;
+  auto input = stream.external<int>("input");
+  auto output = stream.resource<int>();
+  stream.construct(output, 0);
+  const auto index = stream.op(flow::intrinsic("strobe.test", "copy", 3),
+                               flow::read(input), flow::write(output));
+
+  EXPECT_EQ(fmt::format("{}", stream.ops()[index]),
+            fmt::format("{:<50}(strobe.test/copy)", "op r:%0, w:%1"));
+}
+
+TEST(FlowOperationFormat, PrintsOperationComponents) {
+  EXPECT_EQ(fmt::format("{}", flow::AccessMode::read_write), "rw");
+  EXPECT_EQ(fmt::format("{}", flow::AccessMode::consume), "c");
+  EXPECT_EQ(fmt::format("{}", flow::detail::OperationKind::construct),
+            "construct");
+  EXPECT_EQ(fmt::format("{}",
+                        flow::detail::AccessInfo{
+                            .resource = 7, .mode = flow::AccessMode::write}),
+            "w:%7");
+  EXPECT_EQ(fmt::format("{}", flow::OpMetadata("upload", "uploads data",
+                                               flow::OpSemantics::side_effect)),
+            "[\"upload\", side_effect]");
+  EXPECT_EQ(fmt::format("{}", flow::OpMetadata("upload")), "[\"upload\"]");
+  EXPECT_EQ(fmt::format("{}", flow::intrinsic("strobe.test", "copy", 3)),
+            "strobe.test/copy");
+  EXPECT_EQ(fmt::format("{}", flow::external_op("renderer", "draw", 2)),
+            "renderer::draw");
+  EXPECT_EQ(fmt::format("{}", flow::TypeId{0x2a}), "type(0x000000000000002a)");
+
+  flow::detail::Operation operation;
+  operation.metadata =
+      flow::OpMetadata("upload", "not printed", flow::OpSemantics::side_effect);
+  EXPECT_EQ(fmt::format("{}", operation),
+            fmt::format("{:<50}(<lambda>) [\"upload\", side_effect]", "op"));
+
+  operation.metadata = flow::OpMetadata("", "diagnostic description");
+  EXPECT_EQ(fmt::format("{}", operation),
+            fmt::format("{:<50}(<lambda>)", "op"));
+}
+
+TEST(FlowOperationFormat, PrettyPrintsOneSourceOperationPerLine) {
+  Stream stream;
+  auto input = stream.external<int>("input");
+  auto output = stream.resource<int>();
+  stream.construct(output, 0);
+  stream.op(flow::intrinsic("strobe.test", "copy", 3), flow::read(input),
+            flow::write(output));
+
+  const auto expected =
+      fmt::format("%0 = external \"input\" : {}\n{:<50}(<lambda>)\n"
+                  "{:<50}(strobe.test/copy)",
+                  flow::type_id<int>(), "%1 = construct", "op r:%0, w:%1");
+  EXPECT_EQ(flow::detail::to_pretty(stream).view(), expected);
+}
+
+TEST(FlowOperationFormat, PrettyPrintsPhiAndFeedbackAtTheirBoundaries) {
+  Stream stream;
+  auto initial = stream.resource<int>();
+  stream.construct(initial, 0);
+  auto state = stream.phi(initial);
+  auto next = stream.resource<int>();
+  stream.construct(next, 1);
+  stream.feedback(state, next, flow::FeedbackOptions{.max_in_flight = 3});
+
+  const auto expected =
+      fmt::format("{:<50}(<lambda>)\n%1 = phi %0\n{:<50}(<lambda>)\n"
+                  "{:<50}[max_in_flight=3]",
+                  "%0 = construct", "%2 = construct", "feedback %1 <- %2");
+  EXPECT_EQ(flow::detail::to_pretty(stream).view(), expected);
+}
+
+TEST(FlowOperationFormat, PrettyPrintsAcquireTokenNames) {
+  Stream stream;
+  stream.acquire("frame");
+
+  EXPECT_EQ(flow::detail::to_pretty(stream).view(),
+            fmt::format("{:<50}(<lambda>)", "acquire \"frame\""));
+}
+
+TEST(FlowIntrinsic, RecordsConstructionWithAnImplicitOutput) {
+  Stream stream;
+  auto input = stream.external<int>("input");
+  auto output = stream.resource<float>();
+
+  const auto index =
+      stream.construct(output, flow::intrinsic("strobe.test", "construct", 2),
+                       flow::read(input));
+
+  const auto &operation = stream.ops()[index];
+  EXPECT_EQ(operation.kind, flow::detail::OperationKind::construct);
+  ASSERT_TRUE(operation.intrinsic.has_value());
+  EXPECT_EQ(operation.intrinsic->domain.view(), "strobe.test");
+  EXPECT_EQ(operation.intrinsic->opcode.view(), "construct");
+  EXPECT_EQ(operation.intrinsic->version, 2);
+  ASSERT_EQ(operation.accesses.size(), 2);
+  EXPECT_EQ(operation.accesses[0].mode, flow::AccessMode::write);
+  EXPECT_EQ(operation.accesses[1].mode, flow::AccessMode::read);
+  EXPECT_EQ(operation.argument_types[0], flow::type_id<float>());
+  EXPECT_EQ(operation.argument_types[1], flow::type_id<int>());
+  EXPECT_FALSE(operation.invoke);
+  EXPECT_NO_THROW(stream.op(flow::read(output), [](const float &) {}));
+  EXPECT_NO_THROW(stream.validate());
+}
+
 TEST(FlowCutoff, RecordsVirtualOutputAndEquality) {
   Stream stream;
   auto input = stream.resource<int>();
@@ -457,11 +748,21 @@ TEST(FlowExternal, RecordsNamedBorrowedResourceMetadata) {
   EXPECT_THROW(stream.discard(window), std::logic_error);
 }
 
-TEST(FlowExternal, RequiresUniqueNonemptyNames) {
+TEST(FlowExternal, InternsMatchingNamesAndRejectsTypeMismatches) {
   Stream stream;
   EXPECT_THROW(stream.external<int>(""), std::invalid_argument);
-  EXPECT_NO_THROW(stream.external<int>("window"));
+  const auto first = stream.external<int>("window");
+  const auto second = stream.external<int>("window");
+  stream.op(flow::read(first), [](const int &) {});
+  stream.op(flow::read(second), [](const int &) {});
+
+  ASSERT_EQ(stream.externals().size(), 1);
+  ASSERT_EQ(stream.resources().size(), 1);
+  ASSERT_EQ(stream.ops().size(), 2);
+  EXPECT_EQ(stream.ops()[0].accesses[0].resource,
+            stream.ops()[1].accesses[0].resource);
   EXPECT_THROW(stream.external<float>("window"), std::invalid_argument);
+  EXPECT_NO_THROW(stream.validate());
 }
 
 TEST(FlowExternal, GlobalFunctionRecordsExternal) {
@@ -516,14 +817,29 @@ TEST(FlowPhi, GlobalApiRecordsPhiRelation) {
   flow::begin();
   auto initial = flow::resource<int>();
   flow::construct(initial, 0);
-  flow::acquire("step");
   auto state = flow::phi(initial);
+  flow::acquire("step");
   auto next = flow::resource<int>();
   flow::construct(next, 0);
   flow::op(flow::read(state), flow::write(next),
            [](const int &state, int &next) { next = state + 1; });
   flow::feedback(state, next);
   EXPECT_NO_THROW(flow::end());
+}
+
+TEST(FlowPhi, RejectsZeroFeedbackInFlightLimit) {
+  flow::begin();
+  auto initial = flow::resource<int>();
+  flow::construct(initial, 0);
+  auto state = flow::phi(initial);
+  flow::acquire("step");
+  auto next = flow::resource<int>();
+  flow::construct(next, 1);
+  EXPECT_THROW(
+      flow::feedback(state, next, flow::FeedbackOptions{.max_in_flight = 0}),
+      std::invalid_argument);
+  flow::feedback(state, next);
+  EXPECT_NO_THROW((void)flow::end());
 }
 
 TEST(FlowWhile, RecordsAHiddenConditionalBackedge) {
@@ -575,6 +891,33 @@ TEST(FlowIf, RejectsSubmissionBoundariesAndConditionalLifetimeChanges) {
     auto value = stream.resource<int>();
     EXPECT_THROW(stream.if_(
                      condition, [&] { stream.construct(value, 1); }, [] {}),
+                 std::logic_error);
+  }
+}
+
+TEST(FlowIf, RejectsConsumeInEitherConditionalBranch) {
+  {
+    Stream stream;
+    auto condition = stream.resource<bool>();
+    auto value = stream.resource<int>();
+    stream.construct(condition, true);
+    stream.construct(value, 1);
+    EXPECT_THROW(stream.if_(
+                     condition,
+                     [&] { stream.op(flow::consume(value), [](int &) {}); },
+                     [] {}),
+                 std::logic_error);
+  }
+
+  {
+    Stream stream;
+    auto condition = stream.resource<bool>();
+    auto value = stream.resource<int>();
+    stream.construct(condition, true);
+    stream.construct(value, 1);
+    EXPECT_THROW(stream.if_(
+                     condition, [] {},
+                     [&] { stream.op(flow::consume(value), [](int &) {}); }),
                  std::logic_error);
   }
 }

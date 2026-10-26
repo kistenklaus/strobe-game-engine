@@ -326,7 +326,7 @@ private:
       throw std::bad_alloc{};
     }
 
-    const std::size_t allocation_size = payload_offset + payload_capacity;
+    const std::size_t allocation_size = align_up(payload_offset + payload_capacity, allocation_alignment);
 
     void *memory = upstream_traits::allocate(m_upstream, allocation_size,
                                              allocation_alignment);

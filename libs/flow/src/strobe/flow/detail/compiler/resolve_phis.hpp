@@ -135,18 +135,15 @@ inline void validate_feedback_loops(const ResolvedIR &resolved) {
       continue;
     }
 
-    bool contains_acquire = false;
     bool contains_loop_acquire = false;
     bool contains_yield = false;
     for (const auto &node : values.nodes) {
       const bool inside = node.source_operation >= loop.declaration_position &&
                           node.source_operation < loop.feedback_position;
-      contains_acquire |= node.kind == NodeKind::acquire &&
-                          node.source_operation <= loop.declaration_position;
       contains_loop_acquire |= inside && node.kind == NodeKind::acquire;
       contains_yield |= inside && node.kind == NodeKind::yield;
     }
-    if (loop.condition == null_value_id && !contains_acquire) {
+    if (loop.condition == null_value_id && !contains_loop_acquire) {
       throw std::logic_error(
           "unconditional feedback loop requires an acquire operation");
     }

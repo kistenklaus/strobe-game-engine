@@ -49,7 +49,7 @@ int main() {
   RenderSettings settings{.frame_step = 1};
   std::mutex output_mutex;
 
-  flow::begin(flow::CompileOptions{.max_slots = 3});
+  flow::begin();
   flow::acquire("frame");
 
   auto initial_frame = flow::resource<int>();

@@ -1,5 +1,7 @@
 #include "strobe/rhi/objects/command_buffer.hpp"
 #include "strobe/core/containers/small_vector.hpp"
+#include "strobe/core/memory/allocator_ref.hpp"
+#include "strobe/core/memory/small_monotonic_resource.hpp"
 #include "strobe/rhi/buf/buffer_impl.hpp"
 #include "strobe/rhi/bvh/bvh_impl.hpp"
 #include "strobe/rhi/bvh/scratch_buffer_impl.hpp"
@@ -13,13 +15,17 @@
 #include "strobe/rhi/img/image_view_impl.hpp"
 #include "strobe/rhi/memory/memory_allocation_impl.hpp"
 #include "strobe/rhi/shader/shader_object_impl.hpp"
+#include "strobe/rhi/types/image_aspect.hpp"
 #include "strobe/rhi/types/image_subresource_range.hpp"
 #include "strobe/rhi/types/tlas_instance.hpp"
+#include "strobe/rhi/utils/access_utils.hpp"
 #include "strobe/rhi/utils/attachment_load_op_utils.hpp"
 #include "strobe/rhi/utils/attachment_store_op_utils.hpp"
 #include "strobe/rhi/utils/clear_value_utils.hpp"
 #include "strobe/rhi/utils/format_utilts.hpp"
+#include "strobe/rhi/utils/image_aspect_utils.hpp"
 #include "strobe/rhi/utils/image_layout_utils.hpp"
+#include "strobe/rhi/utils/pipeline_stage_utils.hpp"
 #include "strobe/rhi/utils/resolve_mode_utils.hpp"
 #include "strobe/rhi/vulkan/cmd/barrier.hpp"
 #include "strobe/rhi/vulkan/cmd/dispatch.hpp"
@@ -75,6 +81,103 @@ void CommandBuffer::end() {
   ZoneScopedN("CommandBuffer::end");
   auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
   vulkan::end_command_buffer(impl->cmd);
+}
+
+void CommandBuffer::pipeline_barrier(const PipelineBarrier &barrier) noexcept {
+  assert(m_handle);
+  ZoneScopedN("CommandBuffer::pipeline_barrier");
+  auto *impl = void_handle_ptr<CommandBufferImpl>(m_handle);
+  using scratch_alloc = SmallMonotonicResource<scratch_allocator, 1024>;
+  using scratch_alloc_ref = AllocatorReference<scratch_alloc>;
+  scratch_alloc scratch;
+
+  Vector<VkMemoryBarrier2, scratch_alloc_ref> memoryBarriers(
+      barrier.memoryBarriers.size(), &scratch);
+  Vector<VkBufferMemoryBarrier2, scratch_alloc_ref> bufferBarriers(
+      barrier.bufferBarriers.size(), &scratch);
+  Vector<VkImageMemoryBarrier2, scratch_alloc_ref> imageBarriers(
+      barrier.imageBarriers.size(), &scratch);
+
+  for (uint32_t i = 0; i < barrier.memoryBarriers.size(); ++i) {
+    const auto &bar = barrier.memoryBarriers[i];
+    memoryBarriers[i] = VkMemoryBarrier2{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
+        .pNext = nullptr,
+        .srcStageMask = to_vk_pipeline_stage(bar.srcStage),
+        .srcAccessMask = to_vk_access(bar.srcAccess),
+        .dstStageMask = to_vk_pipeline_stage(bar.dstStage),
+        .dstAccessMask = to_vk_access(bar.dstAccess),
+    };
+  }
+
+  for (uint32_t i = 0; i < barrier.bufferBarriers.size(); ++i) {
+    const auto &bar = barrier.bufferBarriers[i];
+    impl->state.retain(bar.buffer);
+    auto *buf_impl = object_handle_ptr<BufferImpl>(bar.buffer);
+    buf_impl->commit();
+    bufferBarriers[i] = VkBufferMemoryBarrier2{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .pNext = nullptr,
+        .srcStageMask = to_vk_pipeline_stage(bar.srcStage),
+        .srcAccessMask = to_vk_access(bar.srcAccess),
+        .dstStageMask = to_vk_pipeline_stage(bar.dstStage),
+        .dstAccessMask = to_vk_access(bar.dstAccess),
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .buffer = buf_impl->buffer.handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+  }
+
+  for (uint32_t i = 0; i < barrier.imageBarriers.size(); ++i) {
+    const auto &bar = barrier.imageBarriers[i];
+    impl->state.retain(bar.image);
+    auto *img_impl = object_handle_ptr<ImageImpl>(bar.image);
+    img_impl->commit();
+
+    ImageAspect aspect = bar.subresource.aspect;
+    if (aspect == ImageAspect::none) {
+      aspect = format_image_aspects(img_impl->format);
+    }
+
+    uint32_t levelCount = bar.subresource.levelCount;
+    if (levelCount == REMAINING_MIP_LEVELS) {
+      assert(bar.subresource.baseMipLevel < img_impl->mip_levels);
+      levelCount = img_impl->mip_levels - bar.subresource.baseMipLevel;
+    }
+
+    uint32_t layerCount = bar.subresource.layerCount;
+    if (layerCount == REMAINING_ARRAY_LAYERS) {
+      assert(bar.subresource.baseArrayLayer < img_impl->arrayLayers);
+      layerCount = img_impl->arrayLayers - bar.subresource.baseArrayLayer;
+    }
+
+    imageBarriers[i] = VkImageMemoryBarrier2{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .pNext = nullptr,
+        .srcStageMask = to_vk_pipeline_stage(bar.srcStage),
+        .srcAccessMask = to_vk_access(bar.srcAccess),
+        .dstStageMask = to_vk_pipeline_stage(bar.dstStage),
+        .dstAccessMask = to_vk_access(bar.dstAccess),
+        .oldLayout = to_vk_image_layout(bar.srcLayout),
+        .newLayout = to_vk_image_layout(bar.dstLayout),
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = img_impl->image.handle,
+        .subresourceRange =
+            VkImageSubresourceRange{
+                .aspectMask = to_vk_image_aspect(aspect),
+                .baseMipLevel = bar.subresource.baseMipLevel,
+                .levelCount = levelCount,
+                .baseArrayLayer = bar.subresource.baseArrayLayer,
+                .layerCount = layerCount,
+            },
+    };
+  }
+
+  vulkan::cmd_pipeline_barrier(impl->cmd, memoryBarriers, bufferBarriers,
+                               imageBarriers, 0);
 }
 
 void CommandBuffer::memory_barrier(const MemoryBarrier &barrier) {

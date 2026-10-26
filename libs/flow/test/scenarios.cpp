@@ -83,7 +83,14 @@ TEST(FlowScenario, RunsPersistentResizeAndPerFrameRenderingTogether) {
   std::atomic<std::uint32_t> presents = 0;
   std::atomic<std::uint32_t> presented_sum = 0;
 
-  flow::begin(flow::CompileOptions{.max_slots = 3});
+  flow::begin();
+
+  auto initial_frame = flow::resource<std::uint32_t>();
+  flow::construct(initial_frame, [&](std::uint32_t *output) {
+    frame_seed_constructions.fetch_add(1, std::memory_order_relaxed);
+    std::construct_at(output, 0);
+  });
+  auto previous_frame = flow::phi(initial_frame);
   flow::acquire("frame");
 
   auto mesh = flow::resource<Mesh>();
@@ -113,12 +120,6 @@ TEST(FlowScenario, RunsPersistentResizeAndPerFrameRenderingTogether) {
                     std::construct_at(output, GBuffer{.extent = extent});
                   });
 
-  auto initial_frame = flow::resource<std::uint32_t>();
-  flow::construct(initial_frame, [&](std::uint32_t *output) {
-    frame_seed_constructions.fetch_add(1, std::memory_order_relaxed);
-    std::construct_at(output, 0);
-  });
-  auto previous_frame = flow::phi(initial_frame);
   auto current_frame = flow::resource<std::uint32_t>();
   flow::construct(current_frame, 0);
   flow::op(flow::read(previous_frame), flow::read(blas), flow::read(gbuffer),
@@ -179,8 +180,16 @@ TEST(FlowScenario, PreservesFeedbackAndMemoizationAcrossYieldedFrames) {
   std::atomic<std::uint32_t> after_yield = 0;
   std::atomic<std::uint32_t> completed_sum = 0;
 
-  flow::begin(flow::CompileOptions{.max_slots = 3});
+  flow::begin();
+
+  auto initial = flow::resource<std::uint32_t>();
+  flow::construct(initial, [&](std::uint32_t *output) {
+    seed_constructions.fetch_add(1, std::memory_order_relaxed);
+    std::construct_at(output, 0);
+  });
+  auto previous = flow::phi(initial);
   flow::acquire("frame");
+
   auto external_revision = flow::external<std::uint32_t>("asset-revision");
   auto stable_revision = flow::cutoff(external_revision);
   auto prepared_asset = flow::resource<std::uint32_t>();
@@ -190,12 +199,6 @@ TEST(FlowScenario, PreservesFeedbackAndMemoizationAcrossYieldedFrames) {
                     std::construct_at(output, revision);
                   });
 
-  auto initial = flow::resource<std::uint32_t>();
-  flow::construct(initial, [&](std::uint32_t *output) {
-    seed_constructions.fetch_add(1, std::memory_order_relaxed);
-    std::construct_at(output, 0);
-  });
-  auto previous = flow::phi(initial);
   auto current = flow::resource<std::uint32_t>();
   flow::construct(current, 0);
   flow::op(flow::read(previous), flow::read(prepared_asset),
@@ -256,11 +259,11 @@ TEST(FlowScenario, JoinsIndependentFrameBranchesBeforePresentation) {
   std::atomic<std::uint32_t> composites = 0;
   std::atomic<std::uint32_t> presented_sum = 0;
 
-  flow::begin(flow::CompileOptions{.max_slots = 4});
-  flow::acquire("frame");
+  flow::begin();
   auto initial = flow::resource<std::uint32_t>();
   flow::construct(initial, 0);
   auto previous = flow::phi(initial);
+  flow::acquire("frame");
 
   auto frame = flow::resource<std::uint32_t>();
   flow::construct(frame, flow::read(previous),
@@ -314,11 +317,11 @@ TEST(FlowScenario, RunsStructuredControlInsideAFrameStateMachine) {
   std::atomic<std::uint32_t> odd_branches = 0;
   std::atomic<std::uint32_t> completed_frames = 0;
 
-  flow::begin(flow::CompileOptions{.max_slots = 2});
-  flow::acquire("frame");
+  flow::begin();
   auto initial_frame = flow::resource<std::uint32_t>();
   flow::construct(initial_frame, 0);
   auto previous_frame = flow::phi(initial_frame);
+  flow::acquire("frame");
 
   auto frame = flow::resource<std::uint32_t>();
   flow::construct(frame, flow::read(previous_frame),
@@ -428,13 +431,13 @@ TEST(FlowScenario, ConstructsDiscardedFeedbackStorageOncePerSlot) {
   std::atomic<std::uint32_t> observed_sum = 0;
 
   {
-    flow::begin(flow::CompileOptions{.max_slots = 3});
-    flow::acquire("frame");
+    flow::begin();
     auto initial = flow::resource<ReusableValue>();
     flow::construct(initial, [&](ReusableValue *output) {
       std::construct_at(output, &initial_destructions, 0);
     });
     auto previous = flow::phi(initial);
+    flow::acquire("frame");
 
     auto current = flow::resource<ReusableValue>();
     flow::construct(current, [&](ReusableValue *output) {
@@ -451,13 +454,16 @@ TEST(FlowScenario, ConstructsDiscardedFeedbackStorageOncePerSlot) {
              flow::read(current), [&](const ReusableValue &value) {
                observed_sum.fetch_add(value.value, std::memory_order_relaxed);
              });
-    flow::feedback(previous, current);
+    flow::feedback(previous, current,
+                   flow::FeedbackOptions{.max_in_flight = 3});
     auto program = flow::end();
 
     std::uint32_t preconstructed_slots = 0;
     for (std::size_t resource = 0;
          resource < program.data().resource_lifetimes.size(); ++resource) {
       if (program.data().resource_lifetimes[resource].preconstructed) {
+        EXPECT_TRUE(
+            program.data().resource_lifetimes[resource].retained_by_feedback);
         preconstructed_slots =
             program.data().resource_slots[resource].slot_count;
       }

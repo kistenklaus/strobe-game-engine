@@ -50,6 +50,54 @@ TEST(FlowCanonicalize, ProducesDenseNodesResourcesAndAccesses) {
   EXPECT_EQ(ir.accesses[1].mode, flow::AccessMode::read);
 }
 
+TEST(FlowSerialize, AddsResourceOrderWithoutCreatingAStaticValue) {
+  Stream stream;
+  auto domain = stream.resource<int>();
+  auto first = stream.resource<int>();
+  auto second = stream.resource<int>();
+  stream.construct(domain, 0);
+  stream.construct(first, 1);
+  stream.construct(second, 2);
+  stream.op(flow::write(first), flow::serialize(domain), [](int &) {});
+  stream.op(flow::write(second), flow::serialize(domain), [](int &) {});
+  stream.validate();
+
+  auto values = compiler::lower_values(compiler::canonicalize(stream));
+  ASSERT_EQ(values.nodes[3].argument_count, 1);
+  const auto &serialized = values.accesses[values.nodes[3].accesses.offset + 1];
+  EXPECT_EQ(serialized.purpose, flow::AccessPurpose::serialization);
+  EXPECT_EQ(serialized.input, flow::detail::null_value_id);
+  EXPECT_EQ(serialized.output, flow::detail::null_value_id);
+
+  auto resolved = compiler::resolve_phis(std::move(values));
+  auto lowered = compiler::lower_cutoffs(std::move(resolved));
+  auto dependencies = compiler::build_edges(std::move(lowered));
+  const auto ordered = compiler::add_resource_order(std::move(dependencies));
+  EXPECT_TRUE(
+      std::any_of(ordered.resource_order.begin(), ordered.resource_order.end(),
+                  [&](const compiler::ResourceOrderConstraint &constraint) {
+                    return constraint.before == 3 && constraint.after == 4 &&
+                           constraint.resource == 0;
+                  }));
+}
+
+TEST(FlowConsume, ReadsTheCurrentVersionWithoutProducingAnother) {
+  Stream stream;
+  auto value = stream.resource<int>();
+  stream.construct(value, 1);
+  stream.op(flow::consume(value), [](int &) {});
+  stream.validate();
+
+  const auto ir = compiler::lower_values(compiler::canonicalize(stream));
+  ASSERT_EQ(ir.values.size(), 1);
+  const auto &access = ir.accesses[ir.nodes[1].accesses.offset];
+  EXPECT_EQ(access.mode, flow::AccessMode::consume);
+  EXPECT_EQ(access.input, 0);
+  EXPECT_EQ(access.output, flow::detail::null_value_id);
+  EXPECT_NE(compiler::to_pretty(ir).view().find("c:%0.0"),
+            std::string_view::npos);
+}
+
 TEST(FlowCanonicalize, TurnsPhiRelationsIntoNodes) {
   Stream stream;
   auto initial = stream.resource<int>();
@@ -72,6 +120,68 @@ TEST(FlowCanonicalize, TurnsPhiRelationsIntoNodes) {
   EXPECT_EQ(phi.output, 1);
   EXPECT_EQ(phi.feedback, 2);
   EXPECT_EQ(ir.nodes[phi.node].accesses.count, 3);
+}
+
+TEST(FlowCanonicalize, PrettyPrintsTheNormalizedLinearIR) {
+  Stream stream;
+  auto input = stream.external<int>("input");
+  auto initial = stream.resource<int>();
+  stream.construct(
+      initial, flow::read(input),
+      [](int *value, const int &input) { std::construct_at(value, input); });
+  auto state = stream.phi(initial);
+  auto next = stream.resource<int>();
+  stream.construct(next, 1);
+  stream.feedback(state, next, flow::FeedbackOptions{.max_in_flight = 3});
+
+  const auto ir = compiler::canonicalize(stream);
+  const auto expected =
+      fmt::format("%0 = external #0 : {}\n{:<50}(<source-op:0>)\n%2 = phi %1\n"
+                  "{:<50}(<source-op:1>)\n{:<50}[max_in_flight=3]",
+                  flow::type_id<int>(), "%1 = construct r:%0", "%3 = construct",
+                  "feedback %2 <- %3");
+  EXPECT_EQ(compiler::to_pretty(ir).view(), expected);
+}
+
+TEST(FlowLowerValues, PrettyPrintsVersionedResourceValues) {
+  Stream stream;
+  auto input = stream.external<int>("input");
+  auto initial = stream.resource<int>();
+  stream.construct(
+      initial, flow::read(input),
+      [](int *value, const int &input) { std::construct_at(value, input); });
+  auto state = stream.phi(initial);
+  auto next = stream.resource<int>();
+  stream.construct(next, 1);
+  stream.feedback(state, next, flow::FeedbackOptions{.max_in_flight = 3});
+
+  const auto ir = compiler::lower_values(compiler::canonicalize(stream));
+  const auto expected =
+      fmt::format("%0.0 = external #0 : {}\n{:<50}(<source-op:0>)\n"
+                  "%2.0 = phi %1.0\n{:<50}(<source-op:1>)\n"
+                  "{:<50}[max_in_flight=3]",
+                  flow::type_id<int>(), "%1.0 = construct r:%0.0",
+                  "%3.0 = construct", "feedback %2.0 <- %3.0");
+  EXPECT_EQ(compiler::to_pretty(ir).view(), expected);
+}
+
+TEST(FlowLowerValues, PrettyPrintsValueTransitionsAndDiscard) {
+  Stream stream;
+  auto value = stream.resource<int>();
+  stream.construct(value, 0);
+  stream.op(flow::write(value), [](int &value) { value = 1; });
+  stream.op(flow::read_write(value), [](int &value) { ++value; });
+  stream.discard(value);
+  stream.op(flow::write(value), [](int &value) { value = 2; });
+
+  const auto ir = compiler::lower_values(compiler::canonicalize(stream));
+  const auto expected =
+      fmt::format("{:<50}(<source-op:0>)\n{:<50}(<source-op:1>)\n"
+                  "{:<50}(<source-op:2>)\n{:<50}(<source-op:3>)\n"
+                  "{:<50}(<source-op:4>)",
+                  "%0.0 = construct", "op w:%0.0->%0.1", "op rw:%0.1->%0.2",
+                  "discard %0", "op w:_->%0.3");
+  EXPECT_EQ(compiler::to_pretty(ir).view(), expected);
 }
 
 TEST(FlowCanonicalize, PreservesCutoffAndExternalRelations) {
@@ -1372,7 +1482,7 @@ TEST(FlowSlots, UsesConfiguredBoundForCyclicDefinitionsAcrossYield) {
     std::construct_at(next, state + 1);
   });
   stream.yield();
-  stream.feedback(state, next);
+  stream.feedback(state, next, flow::FeedbackOptions{.max_in_flight = 4});
   stream.validate();
 
   const auto ir = compiler::assign_slots(
@@ -1382,8 +1492,7 @@ TEST(FlowSlots, UsesConfiguredBoundForCyclicDefinitionsAcrossYield) {
                   compiler::classify_nodes(compiler::add_resource_order(
                       compiler::build_edges(compiler::lower_cutoffs(
                           compiler::resolve_phis(compiler::lower_values(
-                              compiler::canonicalize(stream))))))))))))),
-      flow::CompileOptions{.max_slots = 4});
+                              compiler::canonicalize(stream))))))))))))));
   EXPECT_EQ(ir.resources[0].slot_count, 1);
   EXPECT_FALSE(ir.resources[0].bounded_overlap);
   EXPECT_EQ(ir.resources[1].slot_count, 0);
@@ -1401,7 +1510,7 @@ TEST(FlowSlots, UsesTheFeedbackBoundWhenYieldIsOutsideTheInterval) {
   stream.construct(next, flow::read(state), [](int *next, const int &state) {
     std::construct_at(next, state + 1);
   });
-  stream.feedback(state, next);
+  stream.feedback(state, next, flow::FeedbackOptions{.max_in_flight = 4});
   stream.validate();
 
   const auto ir = compiler::assign_slots(
@@ -1411,13 +1520,12 @@ TEST(FlowSlots, UsesTheFeedbackBoundWhenYieldIsOutsideTheInterval) {
                   compiler::classify_nodes(compiler::add_resource_order(
                       compiler::build_edges(compiler::lower_cutoffs(
                           compiler::resolve_phis(compiler::lower_values(
-                              compiler::canonicalize(stream))))))))))))),
-      flow::CompileOptions{.max_slots = 4});
+                              compiler::canonicalize(stream))))))))))))));
   EXPECT_EQ(ir.resources[2].slot_count, 2);
   EXPECT_TRUE(ir.resources[2].bounded_overlap);
 }
 
-TEST(FlowSlots, UsesConfiguredBoundForAcquireDrivenResources) {
+TEST(FlowSlots, UsesOneSlotForAcyclicAcquireDrivenResources) {
   Stream stream;
   stream.acquire("frame");
   auto value = stream.resource<int>();
@@ -1432,31 +1540,51 @@ TEST(FlowSlots, UsesConfiguredBoundForAcquireDrivenResources) {
                   compiler::classify_nodes(compiler::add_resource_order(
                       compiler::build_edges(compiler::lower_cutoffs(
                           compiler::resolve_phis(compiler::lower_values(
-                              compiler::canonicalize(stream))))))))))))),
-      flow::CompileOptions{.max_slots = 4});
-  EXPECT_EQ(ir.resources[0].slot_count, 4);
-  EXPECT_TRUE(ir.resources[0].bounded_overlap);
+                              compiler::canonicalize(stream))))))))))))));
+  EXPECT_EQ(ir.resources[0].slot_count, 1);
+  EXPECT_FALSE(ir.resources[0].bounded_overlap);
 }
 
-TEST(FlowSlots, RejectsAZeroSlotLimit) {
+TEST(FlowSlots, UsesFeedbackBoundForResourcesWrittenByStructuredControl) {
   Stream stream;
+  auto initial = stream.resource<int>();
+  stream.construct(initial, 0);
+  auto state = stream.phi(initial);
+  stream.acquire("frame");
+  auto next = stream.resource<int>();
+  stream.construct(next, flow::read(state), [](int *output, const int &prior) {
+    std::construct_at(output, prior + 1);
+  });
+  auto repeat = stream.resource<bool>();
+  stream.construct(repeat, true);
+  auto scratch = stream.resource<bool>();
+  stream.construct(scratch, false);
+  stream.op(flow::write(scratch), flow::write(repeat),
+            [](bool &value, bool &condition) {
+              value = false;
+              condition = true;
+            });
+  stream.while_(repeat, [&] {
+    stream.op(flow::write(scratch), flow::write(repeat),
+              [](bool &value, bool &condition) {
+                value = true;
+                condition = false;
+              });
+  });
+  stream.op(flow::read(next), [](const int &) {});
+  stream.feedback(state, next, flow::FeedbackOptions{.max_in_flight = 3});
   stream.validate();
-  auto normalized = compiler::canonicalize(stream);
-  auto values = compiler::lower_values(std::move(normalized));
-  auto resolved = compiler::resolve_phis(std::move(values));
-  auto cutoffs = compiler::lower_cutoffs(std::move(resolved));
-  auto dependencies = compiler::build_edges(std::move(cutoffs));
-  auto ordered = compiler::add_resource_order(std::move(dependencies));
-  auto classified = compiler::classify_nodes(std::move(ordered));
-  auto graph_ir = compiler::build_graph(std::move(classified));
-  auto components = compiler::analyze_components(std::move(graph_ir));
-  auto activation = compiler::analyze_activation(std::move(components));
-  auto storage = compiler::classify_storage(std::move(activation));
-  auto lifetimes = compiler::analyze_lifetimes(std::move(storage));
-  auto interference = compiler::build_interference(std::move(lifetimes));
-  EXPECT_THROW(compiler::assign_slots(std::move(interference),
-                                      flow::CompileOptions{.max_slots = 0}),
-               std::invalid_argument);
+
+  const auto ir = compiler::assign_slots(
+      compiler::build_interference(compiler::analyze_lifetimes(
+          compiler::classify_storage(compiler::analyze_activation(
+              compiler::analyze_components(compiler::build_graph(
+                  compiler::classify_nodes(compiler::add_resource_order(
+                      compiler::build_edges(compiler::lower_cutoffs(
+                          compiler::resolve_phis(compiler::lower_values(
+                              compiler::canonicalize(stream))))))))))))));
+  EXPECT_EQ(ir.resources[4].slot_count, 3);
+  EXPECT_TRUE(ir.resources[4].bounded_overlap);
 }
 
 TEST(FlowResolvePhis, RequiresAcquireForUnconditionalFeedback) {
@@ -1471,6 +1599,34 @@ TEST(FlowResolvePhis, RequiresAcquireForUnconditionalFeedback) {
   const auto ir = compiler::resolve_phis(
       compiler::lower_values(compiler::canonicalize(stream)));
   EXPECT_THROW(compiler::validate_feedback_loops(ir), std::logic_error);
+}
+
+TEST(FlowResolvePhis, RequiresAcquireInsideUnconditionalFeedback) {
+  Stream stream;
+  auto initial = stream.resource<int>();
+  stream.construct(initial, 0);
+  stream.acquire("step");
+  auto state = stream.phi(initial);
+  auto next = stream.resource<int>();
+  stream.construct(next, 1);
+  stream.feedback(state, next);
+
+  const auto preheader = compiler::resolve_phis(
+      compiler::lower_values(compiler::canonicalize(stream)));
+  EXPECT_THROW(compiler::validate_feedback_loops(preheader), std::logic_error);
+
+  Stream valid;
+  initial = valid.resource<int>();
+  valid.construct(initial, 0);
+  state = valid.phi(initial);
+  valid.acquire("step");
+  next = valid.resource<int>();
+  valid.construct(next, 1);
+  valid.feedback(state, next);
+
+  const auto contained = compiler::resolve_phis(
+      compiler::lower_values(compiler::canonicalize(valid)));
+  EXPECT_NO_THROW(compiler::validate_feedback_loops(contained));
 }
 
 TEST(FlowResolvePhis, RejectsBoundariesInsideWhile) {

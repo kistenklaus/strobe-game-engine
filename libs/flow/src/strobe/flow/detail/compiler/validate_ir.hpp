@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <stdexcept>
+#include <string>
 
 namespace strobe::flow::detail::compiler {
 
@@ -24,6 +25,29 @@ inline bool valid_alignment(std::size_t alignment) noexcept {
   return alignment != 0 && (alignment & (alignment - 1)) == 0;
 }
 
+inline void validate_no_intrinsics(const ActivationLayoutIR &ir) {
+  const auto &layout = ir.input.input;
+  const auto &slots = layout.input;
+  const auto &interference = slots.input;
+  const auto &lifetimes = interference.input;
+  const auto &storage = lifetimes.input;
+  const auto &activation = storage.input;
+  const auto &components = activation.input;
+  const auto &nodes = components.input.classified.ordered.dependencies.lowered
+                          .resolved.values.nodes;
+  for (const auto &node : nodes) {
+    if (!node.intrinsic) {
+      continue;
+    }
+    throw std::logic_error(
+        "unhandled Flow intrinsic " +
+        std::string(node.intrinsic->domain.view()) + "/" +
+        std::string(node.intrinsic->opcode.view()) + " version " +
+        std::to_string(node.intrinsic->version) + " at source operation " +
+        std::to_string(node.source_operation));
+  }
+}
+
 inline void validate(const NormalizedIR &ir) {
   for (const auto &resource : ir.resources) {
     if (resource.type.value == 0 || !valid_alignment(resource.alignment)) {
@@ -31,12 +55,85 @@ inline void validate(const NormalizedIR &ir) {
     }
   }
   for (const auto &node : ir.nodes) {
-    if (!valid_range(node.accesses, ir.accesses.size())) {
+    if (!valid_range(node.accesses, ir.accesses.size()) ||
+        !valid_range(node.argument_groups, ir.argument_groups.size()) ||
+        !valid_range(node.argument_elements, ir.argument_elements.size()) ||
+        node.argument_count > node.accesses.count) {
       throw std::logic_error("normalized node access range is invalid");
+    }
+    std::size_t grouped_arguments = 0;
+    std::size_t grouped_elements = 0;
+    for (std::uint32_t index = 0; index < node.argument_groups.count; ++index) {
+      const auto group =
+          ir.argument_groups[node.argument_groups.offset + index];
+      if (group.offset != grouped_arguments ||
+          grouped_arguments > node.argument_count ||
+          group.count > node.argument_count - grouped_arguments ||
+          group.element_offset != grouped_elements ||
+          grouped_elements > node.argument_elements.count ||
+          group.element_count > node.argument_elements.count - grouped_elements) {
+        throw std::logic_error("normalized argument groups are invalid");
+      }
+      std::uint32_t present = 0;
+      for (std::uint32_t element = 0; element < group.element_count; ++element) {
+        const auto argument = ir.argument_elements[
+            node.argument_elements.offset + grouped_elements + element];
+        if (argument != null_argument_element &&
+            argument != group.offset + present++) {
+          throw std::logic_error("normalized argument elements are invalid");
+        }
+      }
+      if (present != group.count) {
+        throw std::logic_error("normalized argument elements are incomplete");
+      }
+      grouped_arguments += group.count;
+      grouped_elements += group.element_count;
+    }
+    if (grouped_arguments != node.argument_count ||
+        grouped_elements != node.argument_elements.count) {
+      throw std::logic_error("normalized argument groups are incomplete");
+    }
+    if (node.intrinsic &&
+        (node.intrinsic->domain.empty() || node.intrinsic->opcode.empty() ||
+         node.intrinsic->version == 0)) {
+      throw std::logic_error("normalized intrinsic is invalid");
+    }
+    if (node.intrinsic) {
+      for (const auto &immediate : node.intrinsic->immediates) {
+        if (immediate.type.value == 0 || immediate.element_size == 0 ||
+            immediate.element_count >
+                std::numeric_limits<std::uint32_t>::max() /
+                    immediate.element_size ||
+            immediate.size !=
+                immediate.element_size * immediate.element_count ||
+            immediate.offset > node.intrinsic->immediate_data.size() ||
+            immediate.size >
+                node.intrinsic->immediate_data.size() - immediate.offset) {
+          throw std::logic_error("normalized intrinsic immediate is invalid");
+        }
+      }
+    }
+    if (node.intrinsic &&
+        node.resolved_operation != null_resolved_operation_id) {
+      throw std::logic_error(
+          "normalized node cannot be intrinsic and resolved");
+    }
+    if (node.kind == NodeKind::callback || node.kind == NodeKind::construct) {
+      for (std::uint32_t index = 0; index < node.accesses.count; ++index) {
+        const auto expected = index < node.argument_count
+                                  ? AccessPurpose::argument
+                                  : AccessPurpose::serialization;
+        if (ir.accesses[node.accesses.offset + index].purpose != expected) {
+          throw std::logic_error(
+              "normalized serialization accesses must trail arguments");
+        }
+      }
     }
   }
   for (const auto &access : ir.accesses) {
-    if (access.resource >= ir.resources.size()) {
+    if (access.resource >= ir.resources.size() ||
+        (access.purpose == AccessPurpose::serialization &&
+         access.mode != AccessMode::read_write)) {
       throw std::logic_error("normalized access resource is out of range");
     }
   }
@@ -79,14 +176,31 @@ inline void validate(const ValueIR &ir) {
     }
   }
   for (const auto &node : ir.nodes) {
-    if (!valid_range(node.accesses, ir.accesses.size())) {
+    if (!valid_range(node.accesses, ir.accesses.size()) ||
+        node.argument_count > node.accesses.count) {
       throw std::logic_error("value node access range is invalid");
+    }
+    if (node.kind == NodeKind::callback || node.kind == NodeKind::construct) {
+      for (std::uint32_t index = 0; index < node.accesses.count; ++index) {
+        const auto expected = index < node.argument_count
+                                  ? AccessPurpose::argument
+                                  : AccessPurpose::serialization;
+        if (ir.accesses[node.accesses.offset + index].purpose != expected) {
+          throw std::logic_error(
+              "value serialization accesses must trail arguments");
+        }
+      }
     }
   }
   for (const auto &access : ir.accesses) {
     if (access.resource >= ir.resources.size() ||
         (access.input != null_value_id && access.input >= ir.values.size()) ||
-        (access.output != null_value_id && access.output >= ir.values.size())) {
+        (access.output != null_value_id && access.output >= ir.values.size()) ||
+        (access.mode == AccessMode::consume &&
+         (access.input == null_value_id || access.output != null_value_id)) ||
+        (access.purpose == AccessPurpose::serialization &&
+         (access.mode != AccessMode::read_write ||
+          access.input != null_value_id || access.output != null_value_id))) {
       throw std::logic_error("value access is out of range");
     }
   }
@@ -266,9 +380,22 @@ inline void validate(const ProgramData &data) {
                      data.temporal_predecessors.size()) ||
         !valid_range(node.temporal_successors,
                      data.temporal_successors.size()) ||
+        node.argument_count > node.accesses.count ||
         (node.callback != null_callback_id &&
          node.callback >= data.callbacks.size())) {
       throw std::logic_error("compiled node is invalid");
+    }
+    if (node.kind == OperationKind::callback ||
+        node.kind == OperationKind::construct) {
+      for (std::uint32_t index = 0; index < node.accesses.count; ++index) {
+        const auto expected = index < node.argument_count
+                                  ? AccessPurpose::argument
+                                  : AccessPurpose::serialization;
+        if (data.accesses[node.accesses.offset + index].purpose != expected) {
+          throw std::logic_error(
+              "compiled serialization accesses must trail arguments");
+        }
+      }
     }
   }
   for (const auto &access : data.accesses) {
@@ -278,10 +405,55 @@ inline void validate(const ProgramData &data) {
          access.output >= data.values.size())) {
       throw std::logic_error("compiled access is out of range");
     }
+    if (access.purpose == AccessPurpose::serialization &&
+        (access.mode != AccessMode::read_write ||
+         access.input != null_value_id || access.output != null_value_id)) {
+      throw std::logic_error("compiled serialization access is invalid");
+    }
+    if (access.mode == AccessMode::consume &&
+        (access.input == null_value_id || access.output != null_value_id)) {
+      throw std::logic_error("compiled consume access is invalid");
+    }
   }
   for (const auto &callback : data.callbacks) {
-    if (callback.argument_types.size() != callback.argument_accesses.size()) {
+    if (callback.argument_types.size() != callback.argument_accesses.size() ||
+        !valid_range(callback.argument_groups, data.argument_groups.size()) ||
+        !valid_range(callback.argument_elements, data.argument_elements.size())) {
       throw std::logic_error("compiled callback argument tables do not match");
+    }
+    std::size_t grouped_arguments = 0;
+    std::size_t grouped_elements = 0;
+    for (std::uint32_t index = 0; index < callback.argument_groups.count;
+         ++index) {
+      const auto group =
+          data.argument_groups[callback.argument_groups.offset + index];
+      if (group.offset != grouped_arguments ||
+          grouped_arguments > callback.argument_types.size() ||
+          group.count > callback.argument_types.size() - grouped_arguments ||
+          group.element_offset != grouped_elements ||
+          grouped_elements > callback.argument_elements.count ||
+          group.element_count >
+              callback.argument_elements.count - grouped_elements) {
+        throw std::logic_error("compiled callback argument groups are invalid");
+      }
+      std::uint32_t present = 0;
+      for (std::uint32_t element = 0; element < group.element_count; ++element) {
+        const auto argument = data.argument_elements[
+            callback.argument_elements.offset + grouped_elements + element];
+        if (argument != null_argument_element &&
+            argument != group.offset + present++) {
+          throw std::logic_error("compiled callback argument elements are invalid");
+        }
+      }
+      if (present != group.count) {
+        throw std::logic_error("compiled callback argument elements are incomplete");
+      }
+      grouped_arguments += group.count;
+      grouped_elements += group.element_count;
+    }
+    if (grouped_arguments != callback.argument_types.size() ||
+        grouped_elements != callback.argument_elements.count) {
+      throw std::logic_error("compiled callback argument groups are incomplete");
     }
   }
   if (!data.control_of_node.empty() &&

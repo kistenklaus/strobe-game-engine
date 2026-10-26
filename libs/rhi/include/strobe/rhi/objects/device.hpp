@@ -150,7 +150,7 @@ public:
    */
   Queue get_queue(QueueFlags flags = QueueFlags::graphics |
                                      QueueFlags::compute |
-                                     QueueFlags::transfer) noexcept;
+                                     QueueFlags::transfer) const noexcept;
 
   /**
    * \brief Creates command pool.

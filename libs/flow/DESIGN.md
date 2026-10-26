@@ -89,11 +89,11 @@ discard, and the objects remain alive until program shutdown. Feedback retains
 each leased slot until the following activation no longer needs its value.
 
 Owned resources with non-overlapping lifetimes may share storage. A feedback
-resource uses two slots when consecutive generations cannot overlap across a
-yield. A feedback cycle that crosses a yield reserves up to
-`CompileOptions::max_slots` slots. Repeated resources in an acquire-driven
-program use the same bound so concurrently live activations receive distinct
-storage generations. Slot exhaustion provides backpressure.
+resource uses two slots when consecutive generations cannot overlap. A
+feedback cycle reserves up to its `FeedbackOptions::max_in_flight` limit when
+its traversals may overlap. Resources driven by independent feedback regions
+use the combined limits of those regions. Slot exhaustion provides
+backpressure.
 
 The compiler represents each resource lifetime as a half-open interval of
 logical schedule positions. These positions are compact `uint32_t` indices and
@@ -105,14 +105,16 @@ the construction executes. A persistent resource uses the sentinel interval
 
 ## Phi, structured control, and cutoff
 
-A phi selects its initial value during its first activation and its retained
-feedback value during later activations. The feedback edge is temporal and
-does not create an immediate dependency cycle.
+A phi selects its initial value during the first traversal of its feedback
+cycle and its retained feedback value during later traversals. The feedback
+edge is temporal and does not create an immediate dependency cycle.
 
 `flow::feedback` defines an externally driven cycle. An executable program
-containing unconditional feedback must have an acquire before the loop so
-that each activation is bounded by a released token. Its operations remain
-independent scheduler jobs and retain the parallelism derived by the compiler.
+containing unconditional feedback must have an acquire inside every such
+cycle. Each traversal must therefore consume a released token. An acquire
+before a phi may gate unrelated acyclic work, but it does not satisfy the
+cycle's progress requirement. Operations in the cycle remain independent
+scheduler jobs and retain the parallelism derived by the compiler.
 
 `flow::while_(condition, body)` defines an internally driven pre-test loop.
 The recording callback emits the loop body once. At runtime Flow tests the
@@ -155,40 +157,39 @@ consumes a token when it reaches an acquire. If no token is available,
 submission stops before the acquire and returns a completion job for any work
 submitted before it. No worker thread blocks while waiting for a token.
 
-`Program::submit(JobScheduler*)` submits executable nodes until the next
-unavailable acquire, the next `flow::yield()`, or the end of the current
-activation. When an activation completes without reaching a yield, submission
-continues into new activations while their acquire tokens are available. A
-single call can therefore drain several released tokens. It returns an
-aggregate job that completes after every segment and activation submitted by
-that call. Calling `submit` again resumes from an unavailable acquire or after
-a yield. Reaching the end completes the activation, and the next activation
-selects feedback values. Available tokens remain counted across submissions.
+`Program::submit(JobScheduler*)` advances one persistent execution of the
+compiled state machine. Acyclic work is not implicitly restarted. Feedback
+returns control to its phi, and another traversal proceeds only when the
+acquire in that cycle can consume a token. A single call may drain several
+released tokens and submit several overlapping traversals. It returns an
+aggregate job that completes after all work submitted by that call. Calling
+`submit` again continues the same execution from unavailable acquires or after
+a yield. Available tokens remain counted across submissions.
 
-An explicit yield always ends the current submission call. The activation and
+An explicit yield always ends the current submission call. The traversal and
 resources whose lifetimes cross the yield remain alive until a later call
 resumes it. The previous submitted segment must complete before the program is
 submitted again. The submitting thread may use the returned aggregate job as
 a dependency for unrelated or external work before continuing the program.
 
-Activations submitted by one call may execute concurrently. Direct temporal
-edges order feedback producers and consumers across consecutive activations.
-Once-only nodes are claimed by one activation, and later activations reuse
-their results after the claimed producer completes. Cutoff evaluations are
-also ordered across activations so that their retained snapshot changes in
-activation order.
+Traversals submitted by one call may execute concurrently. Direct temporal
+edges order feedback producers and consumers across consecutive traversals.
+Loop-invariant nodes execute outside the cycle, and traversals reuse their
+results after the producer completes. Cutoff evaluations are ordered so that
+their retained snapshot changes in traversal order.
 
-The compiler reserves up to `CompileOptions::max_slots` activation states for
-a program containing acquires. If a memoized constructor replaces a retained
-object, one slot remains reserved for that retained generation, so at most
-`max_slots - 1` activations overlap. Once the activation states are occupied,
-`submit` blocks until a worker completes an activation and returns its state
-to the ring. Resource slot exhaustion applies the same backpressure.
-Submission does not create worker jobs that wait for activation capacity.
+Each external feedback relation specifies `FeedbackOptions::max_in_flight`,
+which defaults to two. The value bounds the live traversal states for that
+feedback region and sizes the shared activation and resource-slot arena. If a
+memoized constructor replaces a retained object, one slot remains reserved
+for that retained generation. Once the traversal states are occupied,
+`submit` blocks until a worker completes a traversal and returns its state to
+the ring. Resource slot exhaustion applies the same backpressure. Submission
+does not create worker jobs that wait for traversal capacity.
 
-A program without an unavailable acquire or yield submits its complete current
-activation. Submitting it again starts another activation. A finite graph is
-therefore reusable; the runtime does not permanently enter a finished state.
+A finite acyclic program finishes after its nodes have executed. Submitting a
+finished program does not implicitly restart it. Restarting the complete state
+machine is a separate, explicit facility.
 
 ## Runtime contract
 
@@ -228,13 +229,23 @@ Flow does not model device memory spaces, memory types, queues, or barriers.
 RDG compiler plugins use retained resource type IDs and explicit RHI access
 scopes to build device barrier plans without adding RHI dependencies to Flow.
 
-## Current scope
+## Implementation transition
 
-Submission uses one global continuation cursor. Consequently, all feedback
-components with acquire boundaries advance as part of the same program
-activation and cannot suspend and advance at independent rates. Structured
-control does not suspend: an `if_` branch or a complete `while_`, including
-nested controls, finishes within its aggregate job before dependent jobs run.
+The compiler emits explicit feedback-region descriptors and requires the
+acquire that drives an unconditional cycle to lie inside that region. The
+region executor maintains an independent token drain, iteration sequence, and
+job chain for each program containing several external feedback regions. A
+blocked region therefore does not stop a released independent region. This
+path emits a scheduler job for each node in a region traversal and preserves
+the compiler's immediate and temporal dependency edges, allowing independent
+nodes within that traversal to overlap. Traversals of one feedback region
+advance sequentially so each phi observes the completed preceding generation;
+independent feedback regions may advance concurrently. The existing yield path
+preserves its derived job parallelism and continuation. Structured control does not suspend: an
+`if_` branch or a complete `while_`, including nested controls, finishes within
+its aggregate job before dependent jobs run. Structured control and `yield`
+inside the new multi-region path remain to be unified with region-local
+frontiers.
 
 The compiler emits a fixed activation-state ring containing value pointers,
 argument pointers, current and previous resource generations, and changed-value

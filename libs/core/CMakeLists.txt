@@ -26,6 +26,6 @@ target_include_directories(strobe-core
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_precompile_headers(strobe-core
-  INTERFACE <strobe/core.hpp>
-)
+# target_precompile_headers(strobe-core
+#   INTERFACE <strobe/core.hpp>
+# )

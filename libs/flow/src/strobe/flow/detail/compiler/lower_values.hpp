@@ -99,7 +99,10 @@ inline ValueIR lower_values(NormalizedIR normalized) {
         .source_operation = source_node.source_operation,
         .accesses = {.offset = static_cast<std::uint32_t>(output_offset),
                      .count = source_node.accesses.count},
+        .argument_count = source_node.argument_count,
+        .resolved_operation = source_node.resolved_operation,
         .semantics = source_node.semantics,
+        .intrinsic = source_node.intrinsic,
     });
 
     if (source_node.kind == NodeKind::phi) {
@@ -109,12 +112,15 @@ inline ValueIR lower_values(NormalizedIR normalized) {
         throw std::logic_error("phi initial input has no static value");
       }
       result.accesses.push_back({initial.resource, AccessMode::read,
+                                 AccessPurpose::argument,
                                  *current[initial.resource], null_value_id});
       result.accesses.push_back({source_phi.feedback, AccessMode::read,
-                                 null_value_id, null_value_id});
+                                 AccessPurpose::argument, null_value_id,
+                                 null_value_id});
       const auto output = define(source_phi.output, node);
-      result.accesses.push_back(
-          {source_phi.output, AccessMode::write, null_value_id, output});
+      result.accesses.push_back({source_phi.output, AccessMode::write,
+                                 AccessPurpose::argument, null_value_id,
+                                 output});
       result.phis.push_back(ValuePhi{
           .node = node,
           .feedback_resource = source_phi.feedback,
@@ -125,6 +131,7 @@ inline ValueIR lower_values(NormalizedIR normalized) {
           .condition = null_value_id,
           .declaration_position = source_phi.declaration_position,
           .feedback_position = source_phi.feedback_position,
+          .max_in_flight = source_phi.max_in_flight,
       });
       continue;
     }
@@ -132,9 +139,24 @@ inline ValueIR lower_values(NormalizedIR normalized) {
     for (std::uint32_t index = 0; index < source_node.accesses.count; ++index) {
       const auto &access =
           normalized.accesses[source_node.accesses.offset + index];
+      if (access.purpose == AccessPurpose::serialization) {
+        result.accesses.push_back({access.resource, access.mode, access.purpose,
+                                   null_value_id, null_value_id});
+        continue;
+      }
       if (source_node.kind == NodeKind::discard) {
-        result.accesses.push_back(
-            {access.resource, access.mode, null_value_id, null_value_id});
+        result.accesses.push_back({access.resource, access.mode, access.purpose,
+                                   null_value_id, null_value_id});
+        current[access.resource] = std::nullopt;
+        continue;
+      }
+
+      if (access.mode == AccessMode::consume) {
+        if (!current[access.resource]) {
+          throw std::logic_error("consume access has no static value");
+        }
+        result.accesses.push_back({access.resource, access.mode, access.purpose,
+                                   *current[access.resource], null_value_id});
         current[access.resource] = std::nullopt;
         continue;
       }
@@ -154,7 +176,8 @@ inline ValueIR lower_values(NormalizedIR normalized) {
       if (access.mode != AccessMode::read) {
         output = define(access.resource, node);
       }
-      result.accesses.push_back({access.resource, access.mode, input, output});
+      result.accesses.push_back(
+          {access.resource, access.mode, access.purpose, input, output});
     }
   }
 

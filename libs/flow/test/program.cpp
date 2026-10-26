@@ -74,6 +74,28 @@ TEST(FlowProgram, EndReturnsAProgramSummary) {
   EXPECT_EQ(program.data().resource_slots[1].slot_count, 1);
 }
 
+TEST(FlowProgram, PrettyPrintsCompiledGraphAndStoragePlan) {
+  flow::begin();
+  auto external = flow::external<int>("source");
+  auto value = flow::resource<int>();
+  flow::construct(
+      value, flow::OpMetadata("Create value"), flow::read(external),
+      [](int *output, const int &input) { std::construct_at(output, input); });
+  flow::op(flow::OpMetadata("Observe value"), flow::read(value),
+           [](const int &) {});
+  auto program = flow::end();
+
+  const auto pretty = flow::detail::to_pretty(program.data());
+  EXPECT_NE(pretty.view().find("storage: size="), std::string_view::npos);
+  EXPECT_NE(pretty.view().find("%0 = external \"source\""),
+            std::string_view::npos);
+  EXPECT_NE(pretty.view().find("resources:"), std::string_view::npos);
+  EXPECT_NE(pretty.view().find("nodes:"), std::string_view::npos);
+  EXPECT_NE(pretty.view().find("= construct r:%0.0"), std::string_view::npos);
+  EXPECT_NE(pretty.view().find("[\"Create value\"]"), std::string_view::npos);
+  EXPECT_NE(pretty.view().find("deps={@0}"), std::string_view::npos);
+}
+
 TEST(FlowProgram, SuppliesLogicalLifetimeToConstructionCallback) {
   flow::Lifetime observed{.begin = 99, .end = 99};
 
@@ -189,7 +211,7 @@ TEST(FlowProgram, RequiresExternalOpLibraryBeforeSubmission) {
   auto program = flow::end();
 
   strobe::sync::allocator allocator;
-  strobe::sync::JobScheduler scheduler(&allocator, 1);
+  strobe::sync::JobScheduler scheduler(&allocator, 2);
   EXPECT_THROW(program.submit(&scheduler), std::logic_error);
   scheduler.stop();
 }
@@ -276,17 +298,17 @@ TEST(FlowProgram, ReservesAnAlignedRingForYieldingCycles) {
     int value;
   };
 
-  flow::begin(flow::CompileOptions{.max_slots = 3});
+  flow::begin();
   auto initial = flow::resource<Value>();
   flow::construct(initial, Value{0});
-  flow::acquire("step");
   auto state = flow::phi(initial);
+  flow::acquire("step");
   auto next = flow::resource<Value>();
   flow::construct(next, flow::read(state), [](Value *next, const Value &state) {
     std::construct_at(next, Value{state.value + 1});
   });
   flow::yield();
-  flow::feedback(state, next);
+  flow::feedback(state, next, flow::FeedbackOptions{.max_in_flight = 3});
   auto program = flow::end();
 
   const auto &slot = program.data().resource_slots[2];
@@ -347,8 +369,8 @@ TEST(FlowProgram, EmitsFeedbackAsTemporalRuntimeDependencies) {
   flow::begin();
   auto initial = flow::resource<int>();
   flow::construct(initial, 0);
-  flow::acquire("step");
   auto state = flow::phi(initial);
+  flow::acquire("step");
   auto next = flow::resource<int>();
   flow::construct(next, flow::read(state), [](int *next, const int &state) {
     std::construct_at(next, state + 1);
@@ -359,6 +381,14 @@ TEST(FlowProgram, EmitsFeedbackAsTemporalRuntimeDependencies) {
 
   const auto &data = program.data();
   ASSERT_EQ(data.nodes.size(), 5);
+  ASSERT_EQ(data.feedback_regions.size(), 1);
+  ASSERT_EQ(data.feedback_regions[0].phis.count, 1);
+  EXPECT_GT(data.feedback_regions[0].nodes.count, 0);
+  ASSERT_EQ(data.feedback_regions[0].acquires.count, 1);
+  EXPECT_EQ(data.feedback_region_phis[data.feedback_regions[0].phis.offset], 0);
+  EXPECT_EQ(
+      data.feedback_region_acquires[data.feedback_regions[0].acquires.offset],
+      0);
   ASSERT_EQ(data.resource_lifetimes.size(), 3);
   EXPECT_EQ(data.resource_lifetimes[0].interval.begin, 0);
   EXPECT_EQ(data.resource_lifetimes[0].interval.end,
@@ -393,6 +423,142 @@ TEST(FlowProgram, EmitsFeedbackAsTemporalRuntimeDependencies) {
             flow::detail::OperationKind::yield);
 }
 
+TEST(FlowProgram, CompilesIndependentFeedbackRegions) {
+  flow::begin();
+
+  auto initial_a = flow::resource<int>();
+  flow::construct(initial_a, 0);
+  auto state_a = flow::phi(initial_a);
+  flow::acquire("a");
+  auto next_a = flow::resource<int>();
+  flow::construct(next_a, 0);
+  flow::op(flow::read(state_a), flow::write(next_a),
+           [](const int &input, int &output) { output = input + 1; });
+  flow::feedback(state_a, next_a);
+
+  auto initial_b = flow::resource<int>();
+  flow::construct(initial_b, 0);
+  auto state_b = flow::phi(initial_b);
+  flow::acquire("b");
+  auto next_b = flow::resource<int>();
+  flow::construct(next_b, 0);
+  flow::op(flow::read(state_b), flow::write(next_b),
+           [](const int &input, int &output) { output = input + 1; });
+  flow::feedback(state_b, next_b);
+
+  const auto program = flow::end();
+  const auto &data = program.data();
+  ASSERT_EQ(data.feedback_regions.size(), 2);
+  ASSERT_EQ(data.feedback_regions[0].acquires.count, 1);
+  ASSERT_EQ(data.feedback_regions[1].acquires.count, 1);
+  const auto acquire_a =
+      data.feedback_region_acquires[data.feedback_regions[0].acquires.offset];
+  const auto acquire_b =
+      data.feedback_region_acquires[data.feedback_regions[1].acquires.offset];
+  EXPECT_NE(acquire_a, acquire_b);
+  EXPECT_NE(data.acquires[acquire_a].semaphore,
+            data.acquires[acquire_b].semaphore);
+  EXPECT_GT(data.feedback_regions[0].nodes.count, 0);
+  EXPECT_GT(data.feedback_regions[1].nodes.count, 0);
+}
+
+TEST(FlowProgram, CompilesFeedbackSpecificInFlightLimit) {
+  flow::begin();
+  auto initial = flow::resource<int>();
+  flow::construct(initial, 0);
+  auto state = flow::phi(initial);
+  flow::acquire("frame");
+  auto next = flow::resource<int>();
+  flow::construct(next, 0);
+  flow::op(flow::read(state), flow::write(next),
+           [](const int &input, int &output) { output = input + 1; });
+  flow::feedback(state, next, flow::FeedbackOptions{.max_in_flight = 5});
+
+  const auto program = flow::end();
+  ASSERT_EQ(program.data().feedback_regions.size(), 1);
+  EXPECT_EQ(program.data().feedback_regions[0].max_in_flight, 5);
+  EXPECT_EQ(program.data().activation_layout.capacity, 5);
+}
+
+TEST(FlowProgram, AdvancesIndependentFeedbackFrontiers) {
+  std::atomic<std::uint32_t> runs_a = 0;
+  std::atomic<std::uint32_t> runs_b = 0;
+  flow::begin();
+
+  auto initial_a = flow::resource<int>();
+  flow::construct(initial_a, 0);
+  auto state_a = flow::phi(initial_a);
+  flow::acquire("a");
+  auto next_a = flow::resource<int>();
+  flow::construct(next_a, 0);
+  flow::op(flow::read(state_a), flow::write(next_a),
+           [&](const int &input, int &output) {
+             output = input + 1;
+             runs_a.fetch_add(1, std::memory_order_relaxed);
+           });
+  flow::feedback(state_a, next_a);
+
+  auto initial_b = flow::resource<int>();
+  flow::construct(initial_b, 0);
+  auto state_b = flow::phi(initial_b);
+  flow::acquire("b");
+  auto next_b = flow::resource<int>();
+  flow::construct(next_b, 0);
+  flow::op(flow::read(state_b), flow::write(next_b),
+           [&](const int &input, int &output) {
+             output = input + 1;
+             runs_b.fetch_add(1, std::memory_order_relaxed);
+           });
+  flow::feedback(state_b, next_b);
+
+  auto program = flow::end();
+  strobe::sync::allocator allocator;
+  strobe::sync::JobScheduler scheduler(&allocator, 2);
+
+  program.release("a", 2);
+  submit_and_wait(program, scheduler);
+  EXPECT_EQ(runs_a.load(std::memory_order_relaxed), 2);
+  EXPECT_EQ(runs_b.load(std::memory_order_relaxed), 0);
+
+  program.release("b");
+  submit_and_wait(program, scheduler);
+  scheduler.stop();
+  EXPECT_EQ(runs_a.load(std::memory_order_relaxed), 2);
+  EXPECT_EQ(runs_b.load(std::memory_order_relaxed), 1);
+}
+
+TEST(FlowProgram, PreservesSingleFeedbackFrontierAcrossSubmissions) {
+  std::atomic<std::uint32_t> runs = 0;
+  flow::begin();
+  auto initial = flow::resource<int>();
+  flow::construct(initial, 0);
+  auto state = flow::phi(initial);
+  flow::acquire("frame");
+  auto next = flow::resource<int>();
+  flow::construct(next, 0);
+  flow::op(flow::read(state), flow::write(next),
+           [&](const int &input, int &output) {
+             output = input + 1;
+             runs.fetch_add(1, std::memory_order_relaxed);
+           });
+  flow::feedback(state, next);
+
+  auto program = flow::end();
+  strobe::sync::allocator allocator;
+  strobe::sync::JobScheduler scheduler(&allocator, 2);
+
+  program.release("frame", 2);
+  const auto first = program.submit(&scheduler);
+  program.release("frame", 2);
+  const auto second = program.submit(&scheduler);
+  scheduler.wait(first);
+  scheduler.wait(second);
+  program.rethrow_execution_error();
+  scheduler.stop();
+
+  EXPECT_EQ(runs.load(std::memory_order_relaxed), 4);
+}
+
 TEST(FlowProgram, BindsExternalResourcesByCompiledName) {
   int window = 7;
   flow::begin();
@@ -406,6 +572,9 @@ TEST(FlowProgram, BindsExternalResourcesByCompiledName) {
   EXPECT_THROW(program.external(0), std::logic_error);
   EXPECT_THROW(program.bind_external("missing", &window),
                std::invalid_argument);
+  float wrong_type = 0.0F;
+  EXPECT_THROW(program.bind_external("window", &wrong_type),
+               std::invalid_argument);
   EXPECT_THROW(program.bind_external("window", static_cast<void *>(nullptr)),
                std::invalid_argument);
   program.bind_external("window", &window);
@@ -418,11 +587,11 @@ TEST(FlowProgram, AcquiresAlignedGenerationsAndRejectsStaleTokens) {
     int value;
   };
 
-  flow::begin(flow::CompileOptions{.max_slots = 2});
+  flow::begin();
   auto initial = flow::resource<Value>();
   flow::construct(initial, Value{0});
-  flow::acquire("step");
   auto state = flow::phi(initial);
+  flow::acquire("step");
   auto next = flow::resource<Value>();
   flow::construct(next, flow::read(state), [](Value *next, const Value &state) {
     std::construct_at(next, Value{state.value + 1});
@@ -618,8 +787,8 @@ TEST(FlowProgram, PhiSelectsInitialThenRetainedFeedbackValues) {
   flow::begin();
   auto initial = flow::resource<int>();
   flow::construct(initial, 0);
-  flow::acquire("step");
   auto state = flow::phi(initial);
+  flow::acquire("step");
   auto next = flow::resource<int>();
   flow::construct(next, flow::read(state), [](int *next, const int &state) {
     std::construct_at(next, state + 1);
@@ -877,15 +1046,15 @@ TEST(FlowProgram, RunsWhileInsideAcquireDrivenFeedback) {
   std::atomic<std::uint32_t> inner_invocations = 0;
   std::atomic<std::uint32_t> outer_invocations = 0;
 
-  flow::begin(flow::CompileOptions{.max_slots = 2});
+  flow::begin();
   auto outer_initial = flow::resource<int>();
   flow::construct(outer_initial, 0);
   auto inner_counter = flow::resource<int>();
   flow::construct(inner_counter, 0);
   auto inner_condition = flow::resource<bool>();
   flow::construct(inner_condition, true);
-  flow::acquire("frame");
   auto outer_state = flow::phi(outer_initial);
+  flow::acquire("frame");
   flow::op(flow::write(inner_counter), flow::write(inner_condition),
            [](int &counter, bool &repeat) {
              counter = 0;
@@ -982,8 +1151,8 @@ TEST(FlowProgram, CutoffMemoizesUsingAllInputs) {
   auto initial_value = flow::external<int>("initial");
   auto external_setting = flow::external<int>("setting");
   auto stable_setting = flow::cutoff(external_setting);
-  flow::acquire("step");
   auto previous = flow::phi(initial_value);
+  flow::acquire("step");
   auto current = flow::resource<int>();
   flow::construct(current, 0);
   flow::op(flow::read(previous), flow::read(stable_setting),
@@ -1122,7 +1291,7 @@ TEST(FlowProgram, CutoffRetainsMemoizedConstructionOutputs) {
 }
 
 TEST(FlowProgram, ReservesCapacityForRetainedMemoizedValues) {
-  flow::begin(flow::CompileOptions{.max_slots = 3});
+  flow::begin();
   flow::acquire("frame");
   auto stable = flow::cutoff(flow::external<int>("input"));
   auto value = flow::resource<int>();
@@ -1133,9 +1302,9 @@ TEST(FlowProgram, ReservesCapacityForRetainedMemoizedValues) {
   flow::op(flow::read(value), [](const int &) {});
   auto program = flow::end();
 
-  EXPECT_EQ(program.data().activation_layout.capacity, 2);
+  EXPECT_EQ(program.data().activation_layout.capacity, 1);
   ASSERT_GE(program.data().resource_slots.size(), 3);
-  EXPECT_EQ(program.data().resource_slots[2].slot_count, 3);
+  EXPECT_EQ(program.data().resource_slots[2].slot_count, 2);
 }
 
 TEST(FlowProgram, ResumesAcyclicExecutionAfterYield) {
@@ -1170,11 +1339,11 @@ TEST(FlowProgram, ResumesAcyclicExecutionAfterYield) {
 TEST(FlowProgram, StartsTheNextFeedbackActivationAfterYield) {
   std::atomic<std::uint32_t> invocation = 0;
   std::atomic<std::uint32_t> observed[3] = {};
-  flow::begin(flow::CompileOptions{.max_slots = 3});
+  flow::begin();
   auto initial = flow::resource<int>();
   flow::construct(initial, 0);
-  flow::acquire("step");
   auto state = flow::phi(initial);
+  flow::acquire("step");
   auto next = flow::resource<int>();
   flow::construct(next, flow::read(state), [](int *output, const int &input) {
     std::construct_at(output, input + 1);
@@ -1245,10 +1414,10 @@ TEST(FlowProgram, DrainsTokensAcrossFeedbackActivations) {
   int initial = 0;
   std::atomic<std::uint32_t> invocation = 0;
   std::atomic<std::uint32_t> observed[3] = {};
-  flow::begin(flow::CompileOptions{.max_slots = 3});
-  flow::acquire("frame");
+  flow::begin();
   auto initial_value = flow::external<int>("initial");
   auto state = flow::phi(initial_value);
+  flow::acquire("frame");
   auto next = flow::resource<int>();
   flow::construct(next, flow::read(state), [](int *next, const int &state) {
     std::construct_at(next, state + 1);
@@ -1288,7 +1457,7 @@ TEST(FlowProgram, DrainsTokensAcrossFeedbackActivations) {
 TEST(FlowProgram, AppliesBackpressureAtTheActivationCapacity) {
   std::atomic<std::uint32_t> entered = 0;
   std::atomic<bool> proceed = false;
-  flow::begin(flow::CompileOptions{.max_slots = 2});
+  flow::begin();
   flow::acquire("frame");
   flow::op([&] {
     entered.fetch_add(1, std::memory_order_release);
@@ -1323,7 +1492,7 @@ TEST(FlowProgram, AppliesBackpressureAtTheActivationCapacity) {
 TEST(FlowProgram, AYieldStopsTokenDrainingAndRetainsItsActivation) {
   std::atomic<std::uint32_t> before = 0;
   std::atomic<std::uint32_t> after = 0;
-  flow::begin(flow::CompileOptions{.max_slots = 3});
+  flow::begin();
   flow::acquire("frame");
   flow::op([&] { before.fetch_add(1, std::memory_order_relaxed); });
   flow::yield();
@@ -1347,7 +1516,7 @@ TEST(FlowProgram, AYieldStopsTokenDrainingAndRetainsItsActivation) {
 TEST(FlowProgram, ClaimsRunOnceConstructionForOneConcurrentActivation) {
   std::atomic<std::uint32_t> constructions = 0;
   std::atomic<std::uint32_t> reads = 0;
-  flow::begin(flow::CompileOptions{.max_slots = 3});
+  flow::begin();
   auto value = flow::resource<int>();
   flow::construct(value, [&](int *storage) {
     constructions.fetch_add(1, std::memory_order_relaxed);
@@ -1376,14 +1545,14 @@ TEST(FlowProgram, HoistsImmutablePhiSeedBeforeAcquire) {
   std::atomic<std::uint32_t> seed_constructions = 0;
   std::atomic<std::uint32_t> frames = 0;
 
-  flow::begin(flow::CompileOptions{.max_slots = 3});
-  flow::acquire("frame");
+  flow::begin();
   auto initial = flow::resource<int>();
   flow::construct(initial, [&](int *storage) {
     seed_constructions.fetch_add(1, std::memory_order_relaxed);
     std::construct_at(storage, 0);
   });
   auto previous = flow::phi(initial);
+  flow::acquire("frame");
   auto current = flow::resource<int>();
   flow::construct(current, 0);
   flow::op(flow::read(previous), flow::write(current),
@@ -1416,7 +1585,7 @@ TEST(FlowProgram, HoistsImmutablePhiSeedBeforeAcquire) {
 TEST(FlowProgram, OrdersCutoffsAcrossDrainedActivations) {
   int external = 5;
   std::atomic<std::uint32_t> invocations = 0;
-  flow::begin(flow::CompileOptions{.max_slots = 3});
+  flow::begin();
   flow::acquire("frame");
   auto input = flow::external<int>("input");
   auto changed = flow::cutoff(input);
@@ -1437,7 +1606,7 @@ TEST(FlowProgram, OrdersCutoffsAcrossDrainedActivations) {
 }
 
 TEST(FlowProgram, CompilesAFixedActivationStateRing) {
-  flow::begin(flow::CompileOptions{.max_slots = 4});
+  flow::begin();
   flow::acquire("frame");
   auto value = flow::resource<int>();
   flow::construct(value, 4);
@@ -1445,7 +1614,7 @@ TEST(FlowProgram, CompilesAFixedActivationStateRing) {
   auto program = flow::end();
 
   const auto &layout = program.data().activation_layout;
-  EXPECT_EQ(layout.capacity, 4);
+  EXPECT_EQ(layout.capacity, 1);
   EXPECT_GT(layout.stride, 0);
   EXPECT_EQ(layout.size, layout.stride * layout.capacity);
   EXPECT_EQ(layout.size % layout.alignment, 0);
@@ -1455,46 +1624,22 @@ TEST(FlowProgram, CompilesAFixedActivationStateRing) {
   EXPECT_LT(layout.changed_values_offset, layout.stride);
 }
 
-TEST(FlowProgram, OwnsDenseCompiledTables) {
-  flow::detail::ProgramData data;
-  data.inputs.push_back(3);
-  data.outputs.push_back(4);
-  data.predecessors.push_back(1);
-  data.successors.push_back(2);
-  data.roots.push_back(0);
-  data.callbacks.emplace_back([](flow::Lifetime, strobe::span<void *const>) {});
-  data.nodes.push_back(flow::detail::CompiledNode{
-      .kind = flow::detail::OperationKind::callback,
-      .callback = 0,
-      .inputs = {.offset = 0, .count = 1},
-      .outputs = {.offset = 0, .count = 1},
-      .accesses = {},
-      .predecessors = {.offset = 0, .count = 1},
-      .successors = {.offset = 0, .count = 1},
-      .temporal_predecessors = {},
-      .temporal_successors = {},
-      .runs_once = false,
-  });
-
-  flow::Program program(std::move(data));
-  ASSERT_EQ(program.data().nodes.size(), 1);
-  EXPECT_EQ(program.data().nodes[0].callback, 0);
-  EXPECT_EQ(program.data().inputs[0], 3);
-  EXPECT_EQ(program.data().outputs[0], 4);
-  EXPECT_EQ(program.data().predecessors[0], 1);
-  EXPECT_EQ(program.data().successors[0], 2);
-  EXPECT_EQ(program.data().roots[0], 0);
-  EXPECT_EQ(program.data().callbacks.size(), 1);
-}
-
 TEST(FlowProgram, RunsManuallyConstructedDependencyGraph) {
   std::atomic<std::uint32_t> state = 0;
   flow::detail::ProgramData data;
-  data.callbacks.emplace_back([&](flow::Lifetime, strobe::span<void *const>) {
+  data.callbacks.emplace_back([&](flow::Lifetime, strobe::span<void *const>,
+                                  strobe::span<const std::uint32_t>,
+                                  strobe::span<const flow::ArgumentGroup>,
+                                  strobe::span<const std::uint32_t>,
+                                  strobe::span<void *const>) {
     EXPECT_EQ(state.load(std::memory_order_acquire), 0);
     state.store(1, std::memory_order_release);
   });
-  data.callbacks.emplace_back([&](flow::Lifetime, strobe::span<void *const>) {
+  data.callbacks.emplace_back([&](flow::Lifetime, strobe::span<void *const>,
+                                  strobe::span<const std::uint32_t>,
+                                  strobe::span<const flow::ArgumentGroup>,
+                                  strobe::span<const std::uint32_t>,
+                                  strobe::span<void *const>) {
     EXPECT_EQ(state.load(std::memory_order_acquire), 1);
     state.store(2, std::memory_order_release);
   });
@@ -1535,10 +1680,18 @@ TEST(FlowProgram, RunsManuallyConstructedDependencyGraph) {
 TEST(FlowProgram, RunsIndependentNodesInOneSubmission) {
   std::atomic<std::uint32_t> calls = 0;
   flow::detail::ProgramData data;
-  data.callbacks.emplace_back([&](flow::Lifetime, strobe::span<void *const>) {
+  data.callbacks.emplace_back([&](flow::Lifetime, strobe::span<void *const>,
+                                  strobe::span<const std::uint32_t>,
+                                  strobe::span<const flow::ArgumentGroup>,
+                                  strobe::span<const std::uint32_t>,
+                                  strobe::span<void *const>) {
     calls.fetch_add(1, std::memory_order_relaxed);
   });
-  data.callbacks.emplace_back([&](flow::Lifetime, strobe::span<void *const>) {
+  data.callbacks.emplace_back([&](flow::Lifetime, strobe::span<void *const>,
+                                  strobe::span<const std::uint32_t>,
+                                  strobe::span<const flow::ArgumentGroup>,
+                                  strobe::span<const std::uint32_t>,
+                                  strobe::span<void *const>) {
     calls.fetch_add(1, std::memory_order_relaxed);
   });
   data.nodes.push_back(flow::detail::CompiledNode{

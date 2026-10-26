@@ -1,6 +1,70 @@
 #include <strobe/flow/detail/op_stream.hpp>
 
+#include <fmt/format.h>
+
+#include <iterator>
+
 namespace strobe::flow::detail {
+
+String<allocator_ref> to_pretty(const OpStream &stream) {
+  String<allocator_ref> result(allocator_ref{});
+  bool first_line = true;
+  const auto begin_line = [&] {
+    if (!first_line) {
+      result.push_back('\n');
+    }
+    first_line = false;
+  };
+
+  for (const auto &external : stream.externals()) {
+    begin_line();
+    fmt::format_to(std::back_inserter(result), "%{} = external \"{}\" : {}",
+                   external.resource, external.name,
+                   stream.resources()[external.resource].type);
+  }
+
+  for (std::size_t position = 0; position <= stream.ops().size(); ++position) {
+    for (const auto &phi : stream.phis()) {
+      if (phi.feedback_position != position) {
+        continue;
+      }
+      begin_line();
+      auto prefix =
+          fmt::format("feedback %{} <- %{}", phi.output, *phi.feedback);
+      if (phi.condition) {
+        fmt::format_to(std::back_inserter(prefix), " if %{}", *phi.condition);
+      }
+      fmt::format_to(std::back_inserter(result), "{:<50}[max_in_flight={}]",
+                     prefix, phi.max_in_flight);
+    }
+
+    for (const auto &phi : stream.phis()) {
+      if (phi.position != position) {
+        continue;
+      }
+      begin_line();
+      fmt::format_to(std::back_inserter(result), "%{} = phi %{}", phi.output,
+                     phi.initial);
+    }
+
+    if (position < stream.ops().size()) {
+      begin_line();
+      const auto acquire =
+          std::find_if(stream.acquires().begin(), stream.acquires().end(),
+                       [&](const AcquireInfo &candidate) {
+                         return candidate.operation == position;
+                       });
+      if (acquire != stream.acquires().end()) {
+        const auto prefix = fmt::format("acquire \"{}\"", acquire->name);
+        fmt::format_to(std::back_inserter(result), "{:<50}(<lambda>)", prefix);
+      } else {
+        fmt::format_to(std::back_inserter(result), "{}",
+                       stream.ops()[position]);
+      }
+    }
+  }
+  return result;
+}
 
 void OpStream::validate() const {
   if (m_defined.size() != m_resources.size()) {
@@ -230,23 +294,91 @@ void OpStream::validate_external(std::size_t index,
 
 void OpStream::validate_operation(std::size_t index,
                                   const Operation &operation) const {
-  if (!operation.invoke && !operation.external) {
+  const auto source_count =
+      static_cast<unsigned>(bool(operation.invoke)) +
+      static_cast<unsigned>(operation.external.has_value()) +
+      static_cast<unsigned>(operation.intrinsic.has_value());
+  if (source_count == 0) {
     throw std::logic_error("operation has no invocation callback");
   }
-  if (operation.invoke && operation.external) {
+  if (source_count > 1) {
     throw std::logic_error("operation has multiple invocation sources");
+  }
+  if (operation.intrinsic && (operation.intrinsic->domain.empty() ||
+                              operation.intrinsic->opcode.empty() ||
+                              operation.intrinsic->version == 0)) {
+    throw std::logic_error("intrinsic operation metadata is invalid");
+  }
+  if (operation.intrinsic) {
+    for (const auto &immediate : operation.intrinsic->immediates) {
+      if (immediate.type.value == 0 || immediate.element_size == 0 ||
+          immediate.element_count > std::numeric_limits<std::uint32_t>::max() /
+                                        immediate.element_size ||
+          immediate.size != immediate.element_size * immediate.element_count ||
+          immediate.offset > operation.intrinsic->immediate_data.size() ||
+          immediate.size >
+              operation.intrinsic->immediate_data.size() - immediate.offset) {
+        throw std::logic_error("intrinsic immediate metadata is invalid");
+      }
+    }
   }
   if ((operation.kind == OperationKind::callback ||
        operation.kind == OperationKind::construct) &&
-      (operation.argument_types.size() != operation.accesses.size() ||
-       operation.argument_accesses.size() != operation.accesses.size())) {
+      (operation.argument_types.size() != operation.argument_accesses.size() ||
+       operation.argument_types.size() > operation.accesses.size())) {
     throw std::logic_error("operation argument metadata is inconsistent");
+  }
+  std::size_t grouped_arguments = 0;
+  std::size_t grouped_elements = 0;
+  for (const auto group : operation.argument_groups) {
+    if (group.offset != grouped_arguments ||
+        grouped_arguments > operation.argument_types.size() ||
+        group.count > operation.argument_types.size() - grouped_arguments ||
+        group.element_offset != grouped_elements ||
+        grouped_elements > operation.argument_elements.size() ||
+        group.element_count >
+            operation.argument_elements.size() - grouped_elements) {
+      throw std::logic_error("operation argument groups are inconsistent");
+    }
+    std::uint32_t present = 0;
+    for (std::uint32_t index = 0; index < group.element_count; ++index) {
+      const auto element = operation.argument_elements[grouped_elements + index];
+      if (element != null_argument_element &&
+          element != group.offset + present++) {
+        throw std::logic_error("operation argument elements are inconsistent");
+      }
+    }
+    if (present != group.count) {
+      throw std::logic_error("operation argument elements are incomplete");
+    }
+    grouped_arguments += group.count;
+    grouped_elements += group.element_count;
+  }
+  if (grouped_arguments != operation.argument_types.size() ||
+      grouped_elements != operation.argument_elements.size()) {
+    throw std::logic_error("operation argument groups are incomplete");
   }
   validate_unique_accesses(
       {operation.accesses.data(), operation.accesses.size()});
-  for (const auto &access : operation.accesses) {
+  for (std::size_t access_index = 0; access_index < operation.accesses.size();
+       ++access_index) {
+    const auto &access = operation.accesses[access_index];
     if (access.resource >= m_resources.size()) {
       throw std::logic_error("operation resource access is out of range");
+    }
+    if (operation.kind == OperationKind::callback ||
+        operation.kind == OperationKind::construct) {
+      const auto is_argument = access_index < operation.argument_types.size();
+      if ((is_argument && access.purpose != AccessPurpose::argument) ||
+          (!is_argument && access.purpose != AccessPurpose::serialization)) {
+        throw std::logic_error(
+            "serialization accesses must trail operation arguments");
+      }
+      if (is_argument &&
+          operation.argument_accesses[access_index] != access.mode) {
+        throw std::logic_error(
+            "operation argument access mode is inconsistent");
+      }
     }
   }
   std::size_t previous = 0;

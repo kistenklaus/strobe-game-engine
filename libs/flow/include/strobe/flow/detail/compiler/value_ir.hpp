@@ -23,6 +23,7 @@ struct StaticValue {
 struct ValueAccess {
   ResourceId resource;
   AccessMode mode;
+  AccessPurpose purpose = AccessPurpose::argument;
   ValueId input;
   ValueId output;
 };
@@ -31,7 +32,10 @@ struct ValueNode {
   NodeKind kind;
   SourceOperationId source_operation;
   IndexRange accesses;
+  std::uint32_t argument_count = 0;
+  ResolvedOperationId resolved_operation = null_resolved_operation_id;
   OpSemantics semantics = OpSemantics::none;
+  std::optional<IntrinsicOp> intrinsic;
 };
 
 struct ValuePhi {
@@ -44,6 +48,7 @@ struct ValuePhi {
   ValueId condition;
   SourceOperationId declaration_position;
   SourceOperationId feedback_position;
+  std::uint32_t max_in_flight;
 };
 
 struct ValueIf {
@@ -64,5 +69,7 @@ struct ValueIR {
   Vector<NormalizedExternal, allocator_ref> externals;
   Vector<ValueIf, allocator_ref> ifs;
 };
+
+String<allocator_ref> to_pretty(const ValueIR &ir);
 
 } // namespace strobe::flow::detail::compiler

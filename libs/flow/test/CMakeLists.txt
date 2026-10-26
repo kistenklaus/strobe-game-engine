@@ -1,5 +1,6 @@
 add_executable(strobe-flow-test EXCLUDE_FROM_ALL
   compiler.cpp
+  job_plan.cpp
   op_stream.cpp
   plugins.cpp
   program.cpp

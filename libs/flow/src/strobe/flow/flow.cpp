@@ -10,7 +10,6 @@ namespace detail {
 
 struct Recording {
   Box<OpStream, allocator_ref> stream;
-  CompileOptions options;
   CompilerPlugins plugins;
   bool active = false;
 };
@@ -26,37 +25,35 @@ OpStream &active_stream() {
 
 } // namespace detail
 
-void begin(const CompileOptions &options) {
+void begin() {
   if (detail::recording.active) {
     throw std::logic_error("flow recording is already active");
   }
   detail::recording.stream = make_box<detail::OpStream>(allocator_ref{});
-  detail::recording.options = options;
   detail::recording.plugins = CompilerPlugins{};
   detail::recording.active = true;
 }
 
-void begin(const CompilerPlugins &plugins, const CompileOptions &options) {
+void begin(const CompilerPlugins &plugins) {
   if (detail::recording.active) {
     throw std::logic_error("flow recording is already active");
   }
   detail::recording.stream = make_box<detail::OpStream>(allocator_ref{});
-  detail::recording.options = options;
   detail::recording.plugins = plugins;
   detail::recording.active = true;
 }
 
-void begin(const CompileOptions &options, const CompilerPlugins &plugins) {
-  begin(plugins, options);
-}
-
 Program end() {
   auto &stream = detail::active_stream();
-  stream.validate();
-  auto program = detail::compile(stream, detail::recording.options,
-                                 detail::recording.plugins);
-  detail::recording.active = false;
-  return program;
+  try {
+    stream.validate();
+    auto program = detail::compile(stream, detail::recording.plugins);
+    detail::recording.active = false;
+    return program;
+  } catch (...) {
+    detail::recording.active = false;
+    throw;
+  }
 }
 
 std::size_t yield() { return detail::active_stream().yield(); }
@@ -70,6 +67,13 @@ const Vector<detail::Operation, allocator_ref> &ops() {
     throw std::logic_error("flow has no recording on this thread");
   }
   return detail::recording.stream->ops();
+}
+
+String<allocator_ref> to_pretty() {
+  if (!detail::recording.stream) {
+    throw std::logic_error("flow has no recording on this thread");
+  }
+  return detail::to_pretty(*detail::recording.stream);
 }
 
 } // namespace strobe::flow

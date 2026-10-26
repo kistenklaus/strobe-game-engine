@@ -13,10 +13,10 @@ namespace {
 [[nodiscard]]
 void *traced_allocate(std::size_t size) {
   size = std::max<std::size_t>(size, 1);
-  ZoneScopedN("new");
+  // ZoneScopedN("new");
   while (true) {
     if (void *ptr = std::malloc(size)) {
-      TracySecureAlloc(ptr, size);
+      // TracySecureAlloc(ptr, size);
 
       return ptr;
     }
@@ -37,12 +37,12 @@ void *traced_allocate_aligned(std::size_t size, std::size_t alignment) {
 
   alignment = std::max(alignment, sizeof(void *));
 
-  ZoneScopedN("new (aligned)");
+  // ZoneScopedN("new (aligned)");
   while (true) {
     void *ptr = nullptr;
 
     if (posix_memalign(&ptr, alignment, size) == 0) {
-      TracySecureAlloc(ptr, size);
+      // TracySecureAlloc(ptr, size);
 
       return ptr;
     }
@@ -58,13 +58,13 @@ void *traced_allocate_aligned(std::size_t size, std::size_t alignment) {
 }
 
 void traced_deallocate(void *ptr) noexcept {
-  ZoneScopedN("delete"); 
+  // ZoneScopedN("delete"); 
 
   if (ptr == nullptr) {
     return;
   }
 
-  TracySecureFree(ptr);
+  // TracySecureFree(ptr);
 
   std::free(ptr);
 }
