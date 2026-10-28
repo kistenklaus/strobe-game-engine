@@ -84,9 +84,8 @@ TEST(IntrinsicMaterializer, SuppliesTypedImmediateSpansToLambdaBodies) {
 
   sync::allocator allocator;
   sync::JobScheduler scheduler(&allocator, 2);
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   EXPECT_EQ(observed, values);
@@ -116,9 +115,8 @@ TEST(IntrinsicMaterializer, SuppliesImmediateSpansToExternalBodies) {
 
   sync::allocator allocator;
   sync::JobScheduler scheduler(&allocator, 2);
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   EXPECT_EQ(external_count, values.size());
@@ -147,9 +145,8 @@ TEST(IntrinsicMaterializer, SupportsEmptyImmediateSpans) {
 
   sync::allocator allocator;
   sync::JobScheduler scheduler(&allocator, 2);
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   EXPECT_EQ(observed, 0);
@@ -186,9 +183,8 @@ TEST(IntrinsicMaterializer, SuppliesFixedResourceGroupsToLambdaBodies) {
 
   sync::allocator allocator;
   sync::JobScheduler scheduler(&allocator, 2);
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   EXPECT_EQ(observed, 27);
@@ -223,9 +219,8 @@ TEST(IntrinsicMaterializer, SuppliesResourceGroupsToExternalBodies) {
 
   sync::allocator allocator;
   sync::JobScheduler scheduler(&allocator, 2);
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   EXPECT_EQ(external_resource_sum, 81);
@@ -261,9 +256,8 @@ TEST(IntrinsicMaterializer, PreservesNullElementsInResourceSpans) {
 
   sync::allocator allocator;
   sync::JobScheduler scheduler(&allocator, 2);
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   ASSERT_NE(observed[0], nullptr);
@@ -300,9 +294,8 @@ TEST(IntrinsicMaterializer, SuppliesNullableResourcesAsPointers) {
 
   sync::allocator allocator;
   sync::JobScheduler scheduler(&allocator, 2);
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   EXPECT_EQ(observed, 42);
@@ -351,12 +344,53 @@ TEST(IntrinsicMaterializer, SuppliesOptionalImmediatesAsNullablePointers) {
 
   sync::allocator allocator;
   sync::JobScheduler scheduler(&allocator, 2);
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   EXPECT_EQ(observed, 42);
+}
+
+TEST(IntrinsicMaterializer, SuppliesConstructionLifetimeToLambdaBodies) {
+  flow::Lifetime observed{};
+  std::uint32_t result = 0;
+  flow::CompilerPlugins plugins;
+  plugins.normalized.emplace_back([&](flow::detail::compiler::NormalizedIR &ir,
+                                      flow::CompileContext &context) {
+    detail::IntrinsicMaterializer pass(ir, context, "strobe.test", 1);
+    pass.define("construct_with_lifetime")
+        .arg_nonnull<std::uint32_t>(flow::AccessMode::write)
+        .arg_nonnull<std::uint32_t>(flow::AccessMode::read)
+        .body([&](std::uint32_t *output, const std::uint32_t &input,
+                  flow::Lifetime lifetime) noexcept {
+          observed = lifetime;
+          std::construct_at(output, input + 1);
+        });
+    pass.run();
+  });
+
+  flow::begin(plugins);
+  const auto input = flow::resource<std::uint32_t>();
+  const auto output = flow::resource<std::uint32_t>();
+  flow::construct(input, [] (std::uint32_t *value) noexcept {
+    std::construct_at(value, 41U);
+  });
+  flow::construct(output,
+                  flow::intrinsic("strobe.test", "construct_with_lifetime"),
+                  flow::read(input));
+  flow::op(flow::read(output), [&result](const std::uint32_t &value) noexcept {
+    result = value;
+  });
+  auto program = flow::end();
+
+  sync::allocator allocator;
+  sync::JobScheduler scheduler(&allocator, 2);
+  program.submit(&scheduler);
+  program.wait();
+  scheduler.stop();
+
+  EXPECT_EQ(result, 42);
+  EXPECT_LT(observed.begin, observed.end);
 }
 
 } // namespace

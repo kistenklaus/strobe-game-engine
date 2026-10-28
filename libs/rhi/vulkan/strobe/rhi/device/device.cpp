@@ -20,7 +20,7 @@ void Device::unpin(void *handle) noexcept {
 }
 
 FragmentShader
-Device::create_fragment_shader(const FragmentShaderInfo &info) noexcept {
+Device::create_fragment_shader(const FragmentShaderInfo &info) const noexcept {
   ZoneScopedN("Device::create_fragment_shader");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return shader::create_fragment(impl->context, info,
@@ -28,14 +28,14 @@ Device::create_fragment_shader(const FragmentShaderInfo &info) noexcept {
 }
 
 VertexShader
-Device::create_vertex_shader(const VertexShaderInfo &info) noexcept {
+Device::create_vertex_shader(const VertexShaderInfo &info) const noexcept {
   ZoneScopedN("Device::create_vertex_shader");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return shader::create_vertex(impl->context, info, &impl->allocs->shaderAlloc);
 }
 
 ComputeShader
-Device::create_compute_shader(const ComputeShaderInfo &info) noexcept {
+Device::create_compute_shader(const ComputeShaderInfo &info) const noexcept {
   ZoneScopedN("Device::create_compute_shader");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return shader::create_compute(impl->context, info,
@@ -43,14 +43,14 @@ Device::create_compute_shader(const ComputeShaderInfo &info) noexcept {
 }
 
 GeometryShader
-Device::create_geometry_shader(const GeometryShaderInfo &info) noexcept {
+Device::create_geometry_shader(const GeometryShaderInfo &info) const noexcept {
   ZoneScopedN("Device::create_geometry_shader");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return shader::create_geometry(impl->context, info,
                                 &impl->allocs->shaderAlloc);
 }
 
-Swapchain Device::create_swapchain(const SwapchainInfo &info) noexcept {
+Swapchain Device::create_swapchain(const SwapchainInfo &info) const noexcept {
   ZoneScopedN("Device::create_swapchain");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
 
@@ -69,7 +69,7 @@ Queue Device::get_queue([[maybe_unused]] QueueFlags flags) const noexcept {
   return impl->universalQueue;
 }
 
-CommandPool Device::create_cmdpool() noexcept {
+CommandPool Device::create_cmdpool() const noexcept {
   ZoneScopedN("Device::create_cmdpool");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return cmd::create_cmd_pool(
@@ -94,14 +94,14 @@ Image Device::create_image(const ImageInfo &info,
 }
 
 ImageView Device::create_image_view(const Image &image,
-                                    const ImageViewInfo &info) noexcept {
+                                    const ImageViewInfo &info) const noexcept {
   ZoneScopedN("Device::create_image_view");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return img::create_image_view(image, info, &impl->allocs->imgAlloc);
 }
 
 Blas Device::create_blas(const BlasInfo &info,
-                         const MemoryLifetime &lifetime) noexcept {
+                         const MemoryLifetime &lifetime) const noexcept {
   ZoneScopedN("Device::create_blas");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return bvh::create_blas(impl->memory, impl->scratch, info, lifetime,
@@ -109,7 +109,7 @@ Blas Device::create_blas(const BlasInfo &info,
 }
 
 Tlas Device::create_tlas(const TlasInfo &info,
-                         const MemoryLifetime &lifetime) noexcept {
+                         const MemoryLifetime &lifetime) const noexcept {
   ZoneScopedN("Device::create_tlas");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return bvh::create_tlas(impl->memory, impl->scratch, info, lifetime,
@@ -117,14 +117,14 @@ Tlas Device::create_tlas(const TlasInfo &info,
 }
 
 Timepoint Device::async_copy(BufferOffset dst, BufferOffset src,
-                             uint64_t size) noexcept {
+                             uint64_t size) const noexcept {
   ZoneScopedN("Device::async_copy");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->dma.async_copy(dst, src, size);
 }
 
 Timepoint Device::async_upload(BufferOffset dst, const void *src,
-                               uint64_t size) noexcept {
+                               uint64_t size) const noexcept {
   ZoneScopedN("Device::async_upload(Buffer)");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->dma.async_upload(dst, src, size);
@@ -133,7 +133,7 @@ Timepoint Device::async_upload(BufferOffset dst, const void *src,
 Timepoint Device::async_upload(ImageRange dst, const void *src,
                                uint32_t rowLength, uint32_t imageHeight,
                                ImageLayout initialLayout,
-                               ImageLayout finalLayout) noexcept {
+                               ImageLayout finalLayout) const noexcept {
   ZoneScopedN("Device::async_upload(Image)");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->dma.async_upload(dst, src, rowLength, imageHeight, initialLayout,
@@ -141,27 +141,27 @@ Timepoint Device::async_upload(ImageRange dst, const void *src,
 }
 
 ResourceDescriptor Device::create_resource_descriptor(
-    const ResourceDescriptorInfo &info) noexcept {
+    const ResourceDescriptorInfo &info) const noexcept {
   ZoneScopedN("Device::create_buffer_descriptor");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->heapctrl.create_resource_descriptor(info);
 }
 ResourceDescriptorArray Device::create_resource_descriptors(
-    span<const ResourceDescriptorInfo> infos) noexcept {
+    span<const ResourceDescriptorInfo> infos) const noexcept {
   ZoneScopedN("Device::create_buffer_descriptors");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->heapctrl.create_resource_descriptor_array(infos);
 }
 
 SamplerDescriptor
-Device::create_sampler_descriptor(const SamplerDescriptorInfo &info) noexcept {
+Device::create_sampler_descriptor(const SamplerDescriptorInfo &info) const noexcept {
   ZoneScopedN("Device::create_sampler_descriptor");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->heapctrl.create_sampler_descriptor(info);
 }
 
 SamplerDescriptorArray Device::create_sampler_descriptors(
-    span<const SamplerDescriptorInfo> infos) noexcept {
+    span<const SamplerDescriptorInfo> infos) const noexcept {
   ZoneScopedN("Device::create_sampler_descriptors");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->heapctrl.create_sampler_descriptor_array(infos);

@@ -31,3 +31,10 @@ Serializable programs will store symbolic external operations, external
 resource names, stable resource schemas, and RDG access metadata. Runtime
 lambdas and retained typed plugin data are process-local and are not part of
 that format.
+
+
+#### Future Ideas:
+- one could merge commands buffers, if there exist two command buffers allocated from the same command pool and recording is completely serialized, and at the 
+end they are submitted together in the order that they where recorded than both can actually use the same underlying command buffer.
+
+- eager barrier merging.

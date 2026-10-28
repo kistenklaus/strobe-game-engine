@@ -8,6 +8,7 @@
 #include "strobe/flow/detail/if_info.hpp"
 #include "strobe/flow/detail/operation.hpp"
 #include "strobe/flow/detail/phi_info.hpp"
+#include "strobe/flow/detail/projection_info.hpp"
 #include "strobe/flow/detail/resource_info.hpp"
 
 #include <algorithm>
@@ -40,7 +41,7 @@ public:
   OpStream &operator=(OpStream &&) = delete;
   ~OpStream() = default;
 
-  template <typename T> Resource<T> resource() {
+  template <typename T> Resource<T> resource(std::string_view label = {}) {
     static_assert(std::is_object_v<T> && !std::is_array_v<T> &&
                   !std::is_const_v<T> && !std::is_volatile_v<T> &&
                   std::is_nothrow_destructible_v<T>);
@@ -50,6 +51,8 @@ public:
     const auto id = static_cast<ResourceId>(m_resources.size());
     m_resources.push_back(ResourceInfo{
         .type = type_id<T>(),
+        .type_name = String<allocator_ref>(flow::type_name<T>(), allocator_ref{}),
+        .label = String<allocator_ref>(label, allocator_ref{}),
         .size = sizeof(T),
         .alignment = alignof(T),
         .destroy =
@@ -60,6 +63,7 @@ public:
         .phi = std::nullopt,
         .cutoff = std::nullopt,
         .external = std::nullopt,
+        .projection = std::nullopt,
     });
     m_defined.push_back(false);
     return Resource<T>(id);
@@ -83,6 +87,8 @@ public:
     const auto phi_index = m_phis.size();
     m_resources.push_back(ResourceInfo{
         .type = type_id<T>(),
+        .type_name = String<allocator_ref>(flow::type_name<T>(), allocator_ref{}),
+        .label = String<allocator_ref>(allocator_ref{}),
         .size = 0,
         .alignment = 1,
         .destroy = nullptr,
@@ -90,6 +96,7 @@ public:
         .phi = phi_index,
         .cutoff = std::nullopt,
         .external = std::nullopt,
+        .projection = std::nullopt,
     });
     m_phis.push_back(PhiInfo{
         .output = id,
@@ -131,6 +138,8 @@ public:
     const auto external_index = m_externals.size();
     m_resources.push_back(ResourceInfo{
         .type = type_id<T>(),
+        .type_name = String<allocator_ref>(flow::type_name<T>(), allocator_ref{}),
+        .label = String<allocator_ref>(name, allocator_ref{}),
         .size = sizeof(T),
         .alignment = alignof(T),
         .destroy = nullptr,
@@ -138,11 +147,122 @@ public:
         .phi = std::nullopt,
         .cutoff = std::nullopt,
         .external = external_index,
+        .projection = std::nullopt,
     });
     m_defined.push_back(true);
     m_externals.push_back(ExternalInfo{
         .resource = id,
         .name = String<allocator_ref>(name, allocator_ref{}),
+    });
+    return Resource<T>(id);
+  }
+
+  template <typename T, typename Owner, typename Projector>
+    requires std::invocable<Projector &, Owner &> &&
+             std::same_as<std::invoke_result_t<Projector &, Owner &>, T *>
+  Resource<T> project(const Resource<Owner> &owner, std::string_view name,
+                      ProjectionKind kind, Projector &&projector) {
+    validate(owner);
+    if (name.empty()) {
+      throw std::invalid_argument("projection name cannot be empty");
+    }
+    const auto existing =
+        std::find_if(m_projections.begin(), m_projections.end(),
+                     [&](const ProjectionInfo &projection) {
+                       return projection.owner == owner.m_id &&
+                              projection.name.view() == name;
+                     });
+    if (existing != m_projections.end()) {
+      const auto resource = existing->resource;
+      if (m_resources[resource].type != type_id<T>() ||
+          existing->kind != kind) {
+        throw std::invalid_argument(
+            "projection name has a different type or kind");
+      }
+      return Resource<T>(resource);
+    }
+    if (m_resources.size() >= std::numeric_limits<ResourceId>::max()) {
+      throw std::length_error("resource id space exhausted");
+    }
+    const auto id = static_cast<ResourceId>(m_resources.size());
+    const auto projection_index = m_projections.size();
+    m_resources.push_back(ResourceInfo{
+        .type = type_id<T>(),
+        .type_name = String<allocator_ref>(flow::type_name<T>(), allocator_ref{}),
+        .label = String<allocator_ref>(name, allocator_ref{}),
+        .size = 0,
+        .alignment = 1,
+        .destroy = nullptr,
+        .construction = std::nullopt,
+        .phi = std::nullopt,
+        .cutoff = std::nullopt,
+        .external = std::nullopt,
+        .projection = projection_index,
+    });
+    m_defined.push_back(true);
+    m_projections.push_back(ProjectionInfo{
+        .resource = id,
+        .owner = owner.m_id,
+        .kind = kind,
+        .name = String<allocator_ref>(name, allocator_ref{}),
+        .resolve = [projector = std::forward<Projector>(projector)](
+                       void *value) -> void * {
+          return std::invoke(projector, *static_cast<Owner *>(value));
+        },
+        .external = std::nullopt,
+    });
+    return Resource<T>(id);
+  }
+
+  template <typename T, typename Owner>
+  Resource<T> project(const Resource<Owner> &owner, std::string_view name,
+                      ProjectionKind kind, ExternalProjector projector) {
+    validate(owner);
+    if (name.empty()) {
+      throw std::invalid_argument("projection name cannot be empty");
+    }
+    validate_external_op(projector.source);
+    const auto existing =
+        std::find_if(m_projections.begin(), m_projections.end(),
+                     [&](const ProjectionInfo &projection) {
+                       return projection.owner == owner.m_id &&
+                              projection.name.view() == name;
+                     });
+    if (existing != m_projections.end()) {
+      const auto resource = existing->resource;
+      if (m_resources[resource].type != type_id<T>() ||
+          existing->kind != kind) {
+        throw std::invalid_argument(
+            "projection name has a different type or kind");
+      }
+      return Resource<T>(resource);
+    }
+    if (m_resources.size() >= std::numeric_limits<ResourceId>::max()) {
+      throw std::length_error("resource id space exhausted");
+    }
+    const auto id = static_cast<ResourceId>(m_resources.size());
+    const auto projection_index = m_projections.size();
+    m_resources.push_back(ResourceInfo{
+        .type = type_id<T>(),
+        .type_name = String<allocator_ref>(flow::type_name<T>(), allocator_ref{}),
+        .label = String<allocator_ref>(name, allocator_ref{}),
+        .size = 0,
+        .alignment = 1,
+        .destroy = nullptr,
+        .construction = std::nullopt,
+        .phi = std::nullopt,
+        .cutoff = std::nullopt,
+        .external = std::nullopt,
+        .projection = projection_index,
+    });
+    m_defined.push_back(true);
+    m_projections.push_back(ProjectionInfo{
+        .resource = id,
+        .owner = owner.m_id,
+        .kind = kind,
+        .name = String<allocator_ref>(name, allocator_ref{}),
+        .resolve = {},
+        .external = std::move(projector.source),
     });
     return Resource<T>(id);
   }
@@ -165,6 +285,8 @@ public:
     const auto cutoff_index = m_cutoffs.size();
     m_resources.push_back(ResourceInfo{
         .type = type_id<T>(),
+        .type_name = String<allocator_ref>(flow::type_name<T>(), allocator_ref{}),
+        .label = String<allocator_ref>(allocator_ref{}),
         .size = 0,
         .alignment = 1,
         .destroy = nullptr,
@@ -172,6 +294,7 @@ public:
         .phi = std::nullopt,
         .cutoff = cutoff_index,
         .external = std::nullopt,
+        .projection = std::nullopt,
     });
     m_defined.push_back(true);
 
@@ -533,6 +656,16 @@ public:
   release_cutoff_copy(std::size_t cutoff);
 
   const Vector<ExternalInfo, allocator_ref> &externals() const noexcept;
+  const Vector<ProjectionInfo, allocator_ref> &projections() const noexcept {
+    return m_projections;
+  }
+  std::move_only_function<void *(void *) const>
+  release_projection(std::size_t projection) {
+    if (projection >= m_projections.size()) {
+      throw std::out_of_range("projection index is out of range");
+    }
+    return std::move(m_projections[projection].resolve);
+  }
 
   std::move_only_function<void(Lifetime, span<void *const>)>
   release_callback(std::size_t operation);
@@ -639,7 +772,7 @@ private:
     validate(access.m_resource);
     const auto &resource = m_resources[access.m_resource.m_id];
     if (!resource.construction && !resource.phi && !resource.cutoff &&
-        !resource.external) {
+        !resource.external && !resource.projection) {
       throw std::logic_error(
           "resource must be defined before recording accesses");
     }
@@ -656,7 +789,7 @@ private:
     validate(access.m_resource);
     const auto &resource = m_resources[access.m_resource.m_id];
     if (!resource.construction && !resource.phi && !resource.cutoff &&
-        !resource.external) {
+        !resource.external && !resource.projection) {
       throw std::logic_error(
           "resource must be defined before recording serialization");
     }
@@ -728,9 +861,8 @@ private:
           std::remove_cvref_t<decltype(std::get<A>(values))>::argument_type),
       operation.argument_accesses.push_back(operation.accesses[A].mode),
       operation.argument_elements.push_back(static_cast<std::uint32_t>(A)),
-      operation.argument_groups.push_back(
-          {static_cast<std::uint32_t>(A), 1,
-           static_cast<std::uint32_t>(A), 1})),
+      operation.argument_groups.push_back({static_cast<std::uint32_t>(A), 1,
+                                           static_cast<std::uint32_t>(A), 1})),
      ...);
     validate_unique_accesses(
         {operation.accesses.data(), operation.accesses.size()});
@@ -801,9 +933,9 @@ private:
           std::remove_cvref_t<decltype(std::get<A>(values))>::argument_type),
       operation.argument_accesses.push_back(operation.accesses[A + 1].mode),
       operation.argument_elements.push_back(static_cast<std::uint32_t>(A + 1)),
-      operation.argument_groups.push_back(
-          {static_cast<std::uint32_t>(A + 1), 1,
-           static_cast<std::uint32_t>(A + 1), 1})),
+      operation.argument_groups.push_back({static_cast<std::uint32_t>(A + 1), 1,
+                                           static_cast<std::uint32_t>(A + 1),
+                                           1})),
      ...);
     validate_unique_accesses(
         {operation.accesses.data(), operation.accesses.size()});
@@ -834,6 +966,7 @@ private:
   Vector<PhiInfo, allocator_ref> m_phis;
   Vector<CutoffInfo, allocator_ref> m_cutoffs;
   Vector<ExternalInfo, allocator_ref> m_externals;
+  Vector<ProjectionInfo, allocator_ref> m_projections;
   Vector<AcquireInfo, allocator_ref> m_acquires;
   Vector<IfInfo, allocator_ref> m_ifs;
   Vector<Operation, allocator_ref> m_ops;

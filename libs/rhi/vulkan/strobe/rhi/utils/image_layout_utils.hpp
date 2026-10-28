@@ -6,6 +6,7 @@
 namespace strobe::rhi {
 
 static inline VkImageLayout to_vk_image_layout(ImageLayout layout) {
+
   switch (layout) {
   case ImageLayout::undefined:
     return VK_IMAGE_LAYOUT_UNDEFINED;

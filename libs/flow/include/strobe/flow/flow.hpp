@@ -11,6 +11,7 @@
 #include "strobe/flow/lifetime.hpp"
 #include "strobe/flow/op_source.hpp"
 #include "strobe/flow/program.hpp"
+#include "strobe/flow/projection.hpp"
 #include "strobe/flow/type_id.hpp"
 
 namespace strobe::flow {
@@ -37,13 +38,14 @@ void begin(const CompilerPlugins &plugins);
  * \brief Declares an owned resource in the active recording.
  * \code{.cpp}
  * template<typename T>
- * Resource<T> resource();
+ * Resource<T> resource(std::string_view label = {});
  * \endcode
  *
+ * \param label Optional debug label retained in compiler output.
  * \return The resource handle used by later recording operations.
  */
-template <typename T> Resource<T> resource() {
-  return detail::active_stream().resource<T>();
+template <typename T> Resource<T> resource(std::string_view label = {}) {
+  return detail::active_stream().resource<T>(label);
 }
 
 /**
@@ -60,6 +62,55 @@ template <typename T> Resource<T> resource() {
  */
 template <typename T> Resource<T> external(std::string_view name) {
   return detail::active_stream().external<T>(name);
+}
+
+/**
+ * \brief Declares a named logical view into an owner resource.
+ * \code{.cpp}
+ * template<typename T, typename Owner, typename Projector>
+ * Resource<T> project(const Resource<Owner>& owner,
+ *                     std::string_view name,
+ *                     ProjectionKind kind,
+ *                     Projector&& projector);
+ * \endcode
+ *
+ * \param owner Resource that owns the projected object.
+ * \param name Stable identity among projections of the owner.
+ * \param kind Synchronization relationship between sibling projections.
+ * \param projector Callable returning the projected object's address.
+ * \return A logical resource backed by storage owned by owner.
+ * \attention 1 Repeated declarations with one owner and name must use the
+ * same projected type and kind.
+ * \attention 2 The returned pointer must remain valid while owner is alive.
+ */
+template <typename T, typename Owner, typename Projector>
+Resource<T> project(const Resource<Owner> &owner, std::string_view name,
+                    ProjectionKind kind, Projector &&projector) {
+  return detail::active_stream().template project<T>(
+      owner, name, kind, std::forward<Projector>(projector));
+}
+
+/**
+ * \brief Declares a projection resolved from a bound external library.
+ * \code{.cpp}
+ * template<typename T, typename Owner>
+ * Resource<T> project(const Resource<Owner>& owner,
+ *                     std::string_view name,
+ *                     ProjectionKind kind,
+ *                     ExternalProjector projector);
+ * \endcode
+ *
+ * \param owner Resource that owns the projected object.
+ * \param name Stable identity among projections of the owner.
+ * \param kind Synchronization relationship between sibling projections.
+ * \param projector Library-provided address resolver.
+ * \return A logical resource backed by storage owned by owner.
+ */
+template <typename T, typename Owner>
+Resource<T> project(const Resource<Owner> &owner, std::string_view name,
+                    ProjectionKind kind, ExternalProjector projector) {
+  return detail::active_stream().template project<T>(owner, name, kind,
+                                                     std::move(projector));
 }
 
 /**

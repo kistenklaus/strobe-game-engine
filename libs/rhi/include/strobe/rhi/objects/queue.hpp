@@ -32,8 +32,8 @@
     /**
      * \brief Adds queue wait.
      * \code{.cpp}
-     * void wait(const Timepoint& timepoint, PipelineState stage = PipelineStage::all_commands) noexcept;   (1)
-     * void wait(const SwapchainImage& image, PipelineStage& stage = PipelineStage::all_commands) noexcept; (2)
+     * void wait(const Timepoint& timepoint, PipelineState stage = PipelineStage::all_commands) const noexcept;   (1)
+     * void wait(const SwapchainImage& image, PipelineStage& stage = PipelineStage::all_commands) const noexcept; (2)
      * \endcode
      *
      * Adds a dependency on \p timepoint to subsequent queue submissions.
@@ -45,14 +45,14 @@
      * \attention 2. The Queue must be externally synchronized.
      */
     void wait(const Timepoint &timepoint,
-              PipelineStage stage = PipelineStage::all_commands) noexcept;
+              PipelineStage stage = PipelineStage::all_commands) const noexcept;
     void wait(const SwapchainImage &image,
-              PipelineStage stage = PipelineStage::all_commands) noexcept;
+              PipelineStage stage = PipelineStage::all_commands) const noexcept;
 
     /**
      * \brief Submits command buffers.
      * \code{.cpp}
-     * Timepoint submit(span<const CommandBuffer> cmds) noexcept;
+     * Timepoint submit(span<const CommandBuffer> cmds) const noexcept;
      * \endcode
      *
      * Adds \p cmds to the queue together with currently pending waits.
@@ -68,12 +68,12 @@
      * remain valid until execution completes.
      * \attention 4. The Queue must be externally synchronized.
      */
-    Timepoint submit(span<const CommandBuffer> cmds) noexcept;
+    Timepoint submit(span<const CommandBuffer> cmds) const noexcept;
 
     /**
      * \brief Presents swapchain image.
      * \code{.cpp}
-     * void present(SwapchainImage image) noexcept;
+     * void present(SwapchainImage image) const noexcept;
      * \endcode
      *
      * Schedules presentation of \p swapchainImage after preceding queue work.
@@ -87,19 +87,19 @@
      * swapchain surface.
      * \attention 5. The Queue must be externally synchronized.
      */
-    void present(SwapchainImage image) noexcept;
+    void present(SwapchainImage image) const noexcept;
 
     /**
      * \brief Flushes pending work.
      * \code{.cpp}
-     * void flush() noexcept;
+     * void flush() const noexcept;
      * \endcode
      *
      * Submits all queue operations accumulated so far.
      *
      * \attention 1. The Queue must be externally synchronized.
      */
-    void flush() noexcept;
+    void flush() const noexcept;
   };
 
 } // namespace strobe::rhi

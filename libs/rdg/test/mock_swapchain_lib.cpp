@@ -36,20 +36,16 @@ void acquire_op(const flow::ExternalOpContext &context) noexcept {
       swapchain.acquire(context.lifetime));
 }
 
-void get_image_op(const flow::ExternalOpContext &context) noexcept {
-  assert(context.argument_count == 2);
-  auto *output = static_cast<rhi::Image *>(context.arguments[0]);
-  void *token = token_from(context.arguments[1]);
+void *image_projector(void *storage) noexcept {
+  void *token = token_from(storage);
   auto &owner = MockSwapchain::from_token(token);
-  std::construct_at(output, owner.image(token));
+  return owner.image_ptr(token);
 }
 
-void get_view_op(const flow::ExternalOpContext &context) noexcept {
-  assert(context.argument_count == 2);
-  auto *output = static_cast<rhi::ImageView *>(context.arguments[0]);
-  void *token = token_from(context.arguments[1]);
+void *view_projector(void *storage) noexcept {
+  void *token = token_from(storage);
   auto &owner = MockSwapchain::from_token(token);
-  std::construct_at(output, owner.view(token));
+  return owner.view_ptr(token);
 }
 
 void wait_op(const flow::ExternalOpContext &context) noexcept {
@@ -74,17 +70,26 @@ flow::ExternalOpFunction resolve(void *, std::string_view symbol,
   if (symbol == "acquire") {
     return acquire_op;
   }
-  if (symbol == "get_image") {
-    return get_image_op;
-  }
-  if (symbol == "get_view") {
-    return get_view_op;
-  }
   if (symbol == "wait") {
     return wait_op;
   }
   if (symbol == "present") {
     return present_op;
+  }
+  return nullptr;
+}
+
+flow::ExternalProjectionFunction
+resolve_projection(void *, std::string_view symbol,
+                   std::uint32_t abi) noexcept {
+  if (abi != 1) {
+    return nullptr;
+  }
+  if (symbol == "image") {
+    return image_projector;
+  }
+  if (symbol == "view") {
+    return view_projector;
   }
   return nullptr;
 }
@@ -159,6 +164,16 @@ rhi::ImageView MockSwapchain::view(void *token) const noexcept {
   return checked_slot(token).view;
 }
 
+rhi::Image *MockSwapchain::image_ptr(void *token) noexcept {
+  std::lock_guard lock(m_mutex);
+  return &checked_slot(token).image;
+}
+
+rhi::ImageView *MockSwapchain::view_ptr(void *token) noexcept {
+  std::lock_guard lock(m_mutex);
+  return &checked_slot(token).view;
+}
+
 void MockSwapchain::wait(void *token, flow::Lifetime lifetime) noexcept {
   std::lock_guard lock(m_mutex);
   const auto &slot = checked_slot(token);
@@ -201,6 +216,7 @@ flow::Library make_mock_swapchain_lib() noexcept {
   return flow::Library{
       .state = nullptr,
       .resolve = resolve,
+      .resolve_projection = resolve_projection,
   };
 }
 

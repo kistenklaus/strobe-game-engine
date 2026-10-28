@@ -31,16 +31,14 @@ void submit_frames(flow::Program &program,
                    strobe::sync::JobScheduler &scheduler, std::uint64_t count) {
   program.release("frame", count);
 
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
 }
 
 void submit_once(flow::Program &program,
                  strobe::sync::JobScheduler &scheduler) {
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
 }
 
 } // namespace

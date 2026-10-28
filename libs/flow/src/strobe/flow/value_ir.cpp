@@ -127,7 +127,7 @@ String<allocator_ref> to_pretty(const ValueIR &ir) {
     begin_line();
     fmt::format_to(std::back_inserter(result), "%{}.{} = external #{} : {}",
                    value->resource, value->version, external.source_external,
-                   ir.resources[external.resource].type);
+                   ir.resources[external.resource].type_name);
   }
 
   SourceOperationId final_position = 0;

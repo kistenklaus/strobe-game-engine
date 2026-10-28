@@ -28,6 +28,7 @@ public:
                                      rhi::Access access,
                                      rhi::ImageLayout layout);
 
+
 private:
   explicit Image(flow::Resource<rhi::Image> runtime) noexcept
       : m_runtime(std::move(runtime)) {}
@@ -39,7 +40,7 @@ public:
   friend class SwapchainImage;
   friend class CommandBuffer;
 
-  Image image() { return Image{m_image}; }
+  Image image() const { return Image{m_image}; }
 
 private:
   explicit ImageView(flow::Resource<rhi::ImageView> runtime,

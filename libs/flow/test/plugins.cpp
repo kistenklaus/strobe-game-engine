@@ -230,9 +230,8 @@ TEST(FlowCompilerPlugins, ExecutesResolvedOperationWithStoredImmediates) {
 
   strobe::sync::allocator allocator;
   strobe::sync::JobScheduler scheduler(&allocator, 2);
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   EXPECT_EQ(observed, first + second[0] + second[1]);
@@ -311,9 +310,8 @@ TEST(FlowCompilerPlugins, SuppliesStoredImmediatesToExternalOperations) {
 
   strobe::sync::allocator allocator;
   strobe::sync::JobScheduler scheduler(&allocator, 2);
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   EXPECT_EQ(external_immediate_observed, first + second[0] + second[1]);
@@ -415,9 +413,9 @@ TEST(FlowCompilerPlugins, PreservesResourceTypesInProgramData) {
   [[maybe_unused]] auto external = flow::external<float>("external");
   auto program = flow::end();
 
-  ASSERT_EQ(program.data().resource_types.size(), 2);
-  EXPECT_EQ(program.data().resource_types[0], flow::type_id<int>());
-  EXPECT_EQ(program.data().resource_types[1], flow::type_id<float>());
+  ASSERT_EQ(program.data().resources.size(), 2);
+  EXPECT_EQ(program.data().resources[0].type, flow::type_id<int>());
+  EXPECT_EQ(program.data().resources[1].type, flow::type_id<float>());
 }
 
 } // namespace

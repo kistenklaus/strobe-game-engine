@@ -3,11 +3,100 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <cassert>
 #include <iterator>
 #include <string>
 #include <string_view>
 
 namespace strobe::flow::detail::compiler {
+
+span<NormalizedAccess>
+NormalizedIR::accesses_of(NormalizedNode &node) noexcept {
+  assert(node.accesses.offset <= accesses.size() &&
+         node.accesses.count <= accesses.size() - node.accesses.offset);
+  return span<NormalizedAccess>(accesses.data(), accesses.size())
+      .subspan(node.accesses.offset, node.accesses.count);
+}
+
+span<const NormalizedAccess>
+NormalizedIR::accesses_of(const NormalizedNode &node) const noexcept {
+  assert(node.accesses.offset <= accesses.size() &&
+         node.accesses.count <= accesses.size() - node.accesses.offset);
+  return span<const NormalizedAccess>(accesses.data(), accesses.size())
+      .subspan(node.accesses.offset, node.accesses.count);
+}
+
+span<NormalizedAccess> NormalizedIR::accesses_of(NodeId node) noexcept {
+  assert(node < nodes.size());
+  return accesses_of(nodes[node]);
+}
+
+span<const NormalizedAccess>
+NormalizedIR::accesses_of(NodeId node) const noexcept {
+  assert(node < nodes.size());
+  return accesses_of(nodes[node]);
+}
+
+span<ArgumentGroup>
+NormalizedIR::argument_groups_of(NormalizedNode &node) noexcept {
+  assert(node.argument_groups.offset <= argument_groups.size() &&
+         node.argument_groups.count <=
+             argument_groups.size() - node.argument_groups.offset);
+  return span<ArgumentGroup>(argument_groups.data(), argument_groups.size())
+      .subspan(node.argument_groups.offset, node.argument_groups.count);
+}
+
+span<const ArgumentGroup>
+NormalizedIR::argument_groups_of(const NormalizedNode &node) const noexcept {
+  assert(node.argument_groups.offset <= argument_groups.size() &&
+         node.argument_groups.count <=
+             argument_groups.size() - node.argument_groups.offset);
+  return span<const ArgumentGroup>(argument_groups.data(),
+                                   argument_groups.size())
+      .subspan(node.argument_groups.offset, node.argument_groups.count);
+}
+
+span<ArgumentGroup> NormalizedIR::argument_groups_of(NodeId node) noexcept {
+  assert(node < nodes.size());
+  return argument_groups_of(nodes[node]);
+}
+
+span<const ArgumentGroup>
+NormalizedIR::argument_groups_of(NodeId node) const noexcept {
+  assert(node < nodes.size());
+  return argument_groups_of(nodes[node]);
+}
+
+span<std::uint32_t>
+NormalizedIR::argument_elements_of(NormalizedNode &node) noexcept {
+  assert(node.argument_elements.offset <= argument_elements.size() &&
+         node.argument_elements.count <=
+             argument_elements.size() - node.argument_elements.offset);
+  return span<std::uint32_t>(argument_elements.data(), argument_elements.size())
+      .subspan(node.argument_elements.offset, node.argument_elements.count);
+}
+
+span<const std::uint32_t>
+NormalizedIR::argument_elements_of(const NormalizedNode &node) const noexcept {
+  assert(node.argument_elements.offset <= argument_elements.size() &&
+         node.argument_elements.count <=
+             argument_elements.size() - node.argument_elements.offset);
+  return span<const std::uint32_t>(argument_elements.data(),
+                                   argument_elements.size())
+      .subspan(node.argument_elements.offset, node.argument_elements.count);
+}
+
+span<std::uint32_t> NormalizedIR::argument_elements_of(NodeId node) noexcept {
+  assert(node < nodes.size());
+  return argument_elements_of(nodes[node]);
+}
+
+span<const std::uint32_t>
+NormalizedIR::argument_elements_of(NodeId node) const noexcept {
+  assert(node < nodes.size());
+  return argument_elements_of(nodes[node]);
+}
+
 namespace {
 
 std::string_view name(NodeKind kind) {
@@ -32,26 +121,24 @@ std::string_view name(NodeKind kind) {
 
 void append_node(String<allocator_ref> &result, const NormalizedIR &ir,
                  const NormalizedNode &node) {
-  const auto begin = static_cast<std::size_t>(node.accesses.offset);
-  const auto end = begin + node.accesses.count;
-  const auto first_access =
-      node.kind == NodeKind::construct ? begin + 1 : begin;
+  const auto accesses = ir.accesses_of(node);
+  const auto first_access = node.kind == NodeKind::construct ? 1U : 0U;
 
   std::string prefix;
-  if (node.kind == NodeKind::construct && begin < end) {
+  if (node.kind == NodeKind::construct && !accesses.empty()) {
     fmt::format_to(std::back_inserter(prefix), "%{} = {}",
-                   ir.accesses[begin].resource, name(node.kind));
+                   accesses.front().resource, name(node.kind));
   } else {
     fmt::format_to(std::back_inserter(prefix), "{}", name(node.kind));
   }
-  if (first_access < end) {
+  if (first_access < accesses.size()) {
     prefix.push_back(' ');
   }
-  for (auto index = first_access; index < end; ++index) {
+  for (auto index = first_access; index < accesses.size(); ++index) {
     if (index != first_access) {
       prefix.append(", ");
     }
-    const auto &access = ir.accesses[index];
+    const auto &access = accesses[index];
     if (access.purpose == AccessPurpose::serialization) {
       fmt::format_to(std::back_inserter(prefix), "s:%{}", access.resource);
     } else {
@@ -88,7 +175,7 @@ String<allocator_ref> to_pretty(const NormalizedIR &ir) {
     begin_line();
     fmt::format_to(std::back_inserter(result), "%{} = external #{} : {}",
                    external.resource, external.source_external,
-                   ir.resources[external.resource].type);
+                   ir.resources[external.resource].type_name);
   }
 
   SourceOperationId final_position = 0;

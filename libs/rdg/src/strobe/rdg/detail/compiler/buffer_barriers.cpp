@@ -37,6 +37,7 @@ flow::detail::ResolvedOperation pipeline_barrier_op(BufferState source,
                                span<const flow::ArgumentGroup>,
                                span<const std::uint32_t>,
                                span<void *const> arguments) noexcept {
+    ZoneScopedN("rdg-pipeline-barrier");
     assert(arguments.size() == 2);
     auto &command = *static_cast<rhi::CommandBuffer *>(arguments[0]);
     const auto &buffer = *static_cast<rhi::Buffer *>(arguments[1]);
@@ -80,14 +81,14 @@ void place_buffer_barriers(flow::detail::compiler::NormalizedIR &ir,
     } else {
       tracked->stage |= access.state.stage;
       tracked->access |= access.state.access;
-      state.redundant_accesses[access.node] = 1;
+      state.removed_markers[access.node] = 1;
     }
   }
 }
 
-void remove_redundant_accesses(flow::detail::compiler::NormalizedIR &ir,
-                               flow::CompileContext &context) {
-  erase_marked_nodes(ir, compiler_state(context).redundant_accesses);
+void remove_consumed_markers(flow::detail::compiler::NormalizedIR &ir,
+                             flow::CompileContext &context) {
+  erase_marked_nodes(ir, compiler_state(context).removed_markers);
 }
 
 } // namespace strobe::rdg::detail

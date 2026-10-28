@@ -15,10 +15,11 @@ flow::ResourceId
 single_resource(const flow::detail::compiler::NormalizedIR &ir,
                 const flow::detail::compiler::NormalizedNode &node,
                 flow::TypeId type, flow::AccessMode mode) {
-  if (node.accesses.count != 1 || node.accesses.offset >= ir.accesses.size()) {
+  const auto accesses = ir.accesses_of(node);
+  if (accesses.size() != 1) {
     throw std::logic_error("RDG intrinsic requires one resource");
   }
-  const auto &access = ir.accesses[node.accesses.offset];
+  const auto &access = accesses.front();
   if (access.resource >= ir.resources.size() ||
       ir.resources[access.resource].type != type || access.mode != mode ||
       access.purpose != flow::AccessPurpose::argument) {

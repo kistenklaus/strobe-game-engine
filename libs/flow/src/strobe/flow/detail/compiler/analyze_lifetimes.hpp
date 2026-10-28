@@ -97,11 +97,17 @@ inline LifetimeIR analyze_lifetimes(StorageIR input) {
       bool defines_resource = false;
       for (std::uint32_t index = 0; index < range.count; ++index) {
         const auto &access = values.accesses[range.offset + index];
-        if (access.resource != resource) {
+        bool projected_from_resource = false;
+        for (const auto &projection : values.projections) {
+          projected_from_resource |= projection.resource == access.resource &&
+                                     projection.owner == resource;
+        }
+        if (access.resource != resource && !projected_from_resource) {
           continue;
         }
         accesses_resource = true;
-        defines_resource |= access.output != null_value_id;
+        defines_resource |=
+            access.resource == resource && access.output != null_value_id;
       }
       if (!accesses_resource) {
         continue;
@@ -117,8 +123,8 @@ inline LifetimeIR analyze_lifetimes(StorageIR input) {
       const auto component = components.component_of[node];
       const auto &info = activation.components[component];
       externally_triggered |= info.externally_triggered;
-      repeatedly_defined |= defines_resource && !info.runs_once;
-      memoized_reconstruction |= defines_resource && !info.runs_once &&
+      repeatedly_defined |= defines_resource && !info.initialization;
+      memoized_reconstruction |= defines_resource && !info.initialization &&
                                  info.memoized &&
                                  values.nodes[node].kind == NodeKind::construct;
       if (info.feedback_sources.offset + info.feedback_sources.count >

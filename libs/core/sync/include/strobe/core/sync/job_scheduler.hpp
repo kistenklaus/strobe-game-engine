@@ -130,8 +130,12 @@ private:
 
       assert(m_execute != nullptr);
 
-      const uint32_t children =
-          m_execute(static_cast<void *>(m_storage), invocationId);
+      uint32_t children;
+
+      {
+        ZoneScopedN("scheduler-job");
+        children = m_execute(static_cast<void *>(m_storage), invocationId);
+      }
 
       if (children != 0) {
         m_liveInvocations.fetch_add(children, std::memory_order_relaxed);
@@ -273,7 +277,7 @@ private:
 public:
   JobScheduler(const allocator &alloc, uint32_t workerCount) noexcept
       : m_alloc(alloc), m_workerPool(m_alloc, workerCount) {
-    assert(workerCount > 1);
+    assert(workerCount > 0);
     assert(workerCount <= SLOT_COUNT);
     assert(static_cast<std::ptrdiff_t>(SLOT_COUNT) <= semaphore::max());
 
@@ -451,6 +455,26 @@ public:
     }
   }
 
+  /**
+   * \brief Returns whether a submitted job has completed.
+   * \code{.cpp}
+   * bool completed(job_id id) const noexcept;
+   * \endcode
+   *
+   * \param id Identifier returned when the job was acquired or submitted.
+   * \return Whether the identified job has completed.
+   * \attention 1. The identifier must belong to this scheduler.
+   * \attention 2. The job must have been submitted before this call.
+   */
+  bool completed(job_id id) const noexcept {
+    assert(id.m_index < SLOT_COUNT);
+    const JobSlot *slot = m_slots + id.m_index;
+    const auto completed =
+        slot->completedGeneration.load(std::memory_order_acquire);
+    const uint64_t state = slot->lifecycle.load(std::memory_order_acquire);
+    return completed == id.m_gen || lifecycle_generation(state) != id.m_gen;
+  }
+
   void request_stop() noexcept { m_workerPool.request_stop(); }
 
   void join() noexcept { m_workerPool.join(); }
@@ -472,7 +496,7 @@ private:
 
 public: // allocation info
   static constexpr size_t static_allocation_size(uint32_t workerCount) {
-    assert(workerCount > 1);
+    assert(workerCount > 0);
     assert(workerCount <= SLOT_COUNT);
 
     size_t offset = 0;

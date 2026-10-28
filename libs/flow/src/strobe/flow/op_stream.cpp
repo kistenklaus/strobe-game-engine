@@ -20,7 +20,7 @@ String<allocator_ref> to_pretty(const OpStream &stream) {
     begin_line();
     fmt::format_to(std::back_inserter(result), "%{} = external \"{}\" : {}",
                    external.resource, external.name,
-                   stream.resources()[external.resource].type);
+                   stream.resources()[external.resource].type_name);
   }
 
   for (std::size_t position = 0; position <= stream.ops().size(); ++position) {
@@ -192,7 +192,8 @@ void OpStream::validate_resource(std::size_t index,
       static_cast<unsigned>(resource.construction.has_value()) +
       static_cast<unsigned>(resource.phi.has_value()) +
       static_cast<unsigned>(resource.cutoff.has_value()) +
-      static_cast<unsigned>(resource.external.has_value());
+      static_cast<unsigned>(resource.external.has_value()) +
+      static_cast<unsigned>(resource.projection.has_value());
   if (definitions == 0) {
     throw std::logic_error("resource is missing its definition");
   }
@@ -226,6 +227,11 @@ void OpStream::validate_resource(std::size_t index,
       (*resource.external >= m_externals.size() ||
        m_externals[*resource.external].resource != index)) {
     throw std::logic_error("resource external link is inconsistent");
+  }
+  if (resource.projection &&
+      (*resource.projection >= m_projections.size() ||
+       m_projections[*resource.projection].resource != index)) {
+    throw std::logic_error("resource projection link is inconsistent");
   }
 }
 
@@ -342,7 +348,8 @@ void OpStream::validate_operation(std::size_t index,
     }
     std::uint32_t present = 0;
     for (std::uint32_t index = 0; index < group.element_count; ++index) {
-      const auto element = operation.argument_elements[grouped_elements + index];
+      const auto element =
+          operation.argument_elements[grouped_elements + index];
       if (element != null_argument_element &&
           element != group.offset + present++) {
         throw std::logic_error("operation argument elements are inconsistent");

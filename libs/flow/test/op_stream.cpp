@@ -24,6 +24,19 @@ TEST(FlowLifetime, StoresACompactLogicalRange) {
   EXPECT_EQ(lifetime.end, 19);
 }
 
+TEST(FlowResource, RecordsOptionalDebugLabels) {
+  Stream stream;
+
+  stream.resource<int>("counter");
+  stream.resource<float>();
+
+  ASSERT_EQ(stream.resources().size(), 2);
+  EXPECT_EQ(stream.resources()[0].label.view(), "counter");
+  EXPECT_EQ(stream.resources()[0].type_name.view(), flow::type_name<int>());
+  EXPECT_TRUE(stream.resources()[1].label.empty());
+  EXPECT_EQ(stream.resources()[1].type_name.view(), flow::type_name<float>());
+}
+
 TEST(FlowVariadicArguments, FlattensResourcesAndPreservesOneLogicalGroup) {
   Stream stream;
   std::array<flow::Resource<int>, 3> resources{
@@ -582,6 +595,19 @@ TEST(FlowIntrinsic, StoresTypedTrivialImmediateSpans) {
   EXPECT_NO_THROW(stream.validate());
 }
 
+TEST(FlowIntrinsic, StoresOptionalImmediatesAsZeroOrOneElementSpans) {
+  constexpr std::uint32_t value = 42;
+  auto source = flow::intrinsic("strobe.test", "optional-immediate")
+                    .optional_immediate(std::optional{value})
+                    .optional_immediate(std::optional<std::uint32_t>{});
+
+  ASSERT_EQ(source.immediates.size(), 2);
+  EXPECT_EQ(source.immediates[0].element_count, 1);
+  EXPECT_EQ(source.immediates[0].size, sizeof(value));
+  EXPECT_EQ(source.immediates[1].element_count, 0);
+  EXPECT_EQ(source.immediates[1].size, 0);
+}
+
 TEST(FlowOperationFormat, PrintsSourceAndAccesses) {
   Stream stream;
   auto input = stream.external<int>("input");
@@ -635,7 +661,7 @@ TEST(FlowOperationFormat, PrettyPrintsOneSourceOperationPerLine) {
   const auto expected =
       fmt::format("%0 = external \"input\" : {}\n{:<50}(<lambda>)\n"
                   "{:<50}(strobe.test/copy)",
-                  flow::type_id<int>(), "%1 = construct", "op r:%0, w:%1");
+                  flow::type_name<int>(), "%1 = construct", "op r:%0, w:%1");
   EXPECT_EQ(flow::detail::to_pretty(stream).view(), expected);
 }
 

@@ -43,8 +43,14 @@ inline ActivationIR analyze_activation(ComponentIR input) {
         throw std::logic_error("component node is out of range");
       }
       const auto &payload = node_graph.get(graph::NodeId{node});
-      info.externally_triggered |= payload.classification.reads_external ||
-                                   payload.kind == NodeKind::acquire;
+      // Loop-invariant operations may read stable external resources. LICM
+      // already proved that their inputs are invariant and that they have no
+      // observable side effect, so they belong to program initialization
+      // rather than to a new activation.
+      info.externally_triggered |=
+          (payload.classification.reads_external &&
+           !payload.classification.loop_invariant) ||
+          payload.kind == NodeKind::acquire;
       info.contains_cutoff |= payload.kind == NodeKind::cutoff;
       info.contains_yield |=
           payload.kind == NodeKind::yield || payload.kind == NodeKind::acquire;
@@ -106,7 +112,7 @@ inline ActivationIR analyze_activation(ComponentIR input) {
                 .count =
                     static_cast<std::uint32_t>(info.feedback_sources.size()),
             },
-        .runs_once =
+        .initialization =
             info.feedback_sources.empty() && !info.externally_triggered,
         .externally_triggered = info.externally_triggered,
         .memoized = info.memoized,

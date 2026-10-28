@@ -49,6 +49,7 @@ Timepoint &Timepoint::operator=(Timepoint &&o) noexcept {
 Timepoint::~Timepoint() noexcept { unpin_void_handle<TimelineImpl>(m_handle); }
 
 bool Timepoint::wait(uint64_t timeout) const noexcept {
+  ZoneScopedN("Timepoint::wait");
   if (m_handle == nullptr) {
     return true;
   }

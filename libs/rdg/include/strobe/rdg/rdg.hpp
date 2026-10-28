@@ -23,6 +23,7 @@ inline void begin() {
                                                   rhi::QueueFlags::graphics |
                                                   rhi::QueueFlags::present));
       });
+
   flow::op(flow::intrinsic("strobe.rdg", "def_device", 1),
            flow::read_write(device));
   flow::op(flow::intrinsic("strobe.rdg", "def_queue", 1),

@@ -7,6 +7,7 @@
 #include "strobe/rdg/rdg.hpp"
 #include "strobe/rdg/swapchain.hpp"
 #include "strobe/rhi/objects/image.hpp"
+#include "strobe/rhi/objects/timepoint.hpp"
 
 #include <gtest/gtest.h>
 
@@ -16,6 +17,14 @@
 
 namespace strobe::rdg::test {
 namespace {
+
+std::size_t submit(flow::Resource<rhi::CommandBuffer> command,
+                   flow::Resource<rhi::CommandPool> pool) {
+  const auto timepoint = flow::resource<rhi::Timepoint>();
+  return flow::construct(
+      timepoint, flow::intrinsic("strobe.rdg", "submit", 1),
+      flow::consume(command), flow::serialize(pool));
+}
 
 TEST(BarrierCompiler, LowersSwapchainStateAndAccessIntrinsics) {
   flow::CompilerPlugins plugins;
@@ -100,8 +109,108 @@ TEST(BarrierCompiler, RemovesCompatibleReadAndKeepsHazards) {
                                  .immediate(rhi::ImageLayout::read_only),
                              flow::read_write(command), flow::read(image),
                              flow::serialize(pool));
-  flow::op(flow::intrinsic("strobe.rdg", "submit", 1), flow::consume(command),
-           flow::serialize(pool));
+  submit(command, pool);
+  rdg::end();
+
+  EXPECT_NO_THROW({ auto program = flow::end(); });
+  EXPECT_TRUE(inspected);
+}
+
+TEST(BarrierCompiler, DiscardEstablishesUndefinedInitialState) {
+  bool inspected = false;
+  std::size_t discard = 0;
+  std::size_t access = 0;
+  flow::CompilerPlugins plugins;
+  rdg::append_plugins(plugins);
+  plugins.normalized.emplace_back(
+      [&](flow::detail::compiler::NormalizedIR &ir, flow::CompileContext &) {
+        inspected = true;
+        const auto contains = [&](std::size_t position) {
+          return std::ranges::any_of(ir.nodes, [&](const auto &node) {
+            return node.source_operation == position;
+          });
+        };
+        EXPECT_FALSE(contains(discard));
+        EXPECT_TRUE(contains(access));
+      });
+
+  flow::begin(plugins);
+  rdg::begin();
+
+  auto pool = flow::resource<rhi::CommandPool>();
+  flow::construct(pool);
+  auto image = flow::resource<rhi::Image>();
+  flow::construct(image);
+  auto command = flow::resource<rhi::CommandBuffer>();
+  flow::construct(command);
+
+  discard = flow::op(flow::intrinsic("strobe.rdg", "cmd-discard-image", 1),
+                     flow::read_write(command), flow::read_write(image),
+                     flow::serialize(pool));
+  access = flow::op(flow::intrinsic("strobe.rdg", "image-access", 1)
+                        .immediate(rhi::PipelineStage::color_attachment_output)
+                        .immediate(rhi::Access::color_attachment_write)
+                        .immediate(rhi::ImageLayout::attachment),
+                    flow::read_write(command), flow::read(image),
+                    flow::serialize(pool));
+  submit(command, pool);
+  rdg::end();
+
+  EXPECT_NO_THROW({ auto program = flow::end(); });
+  EXPECT_TRUE(inspected);
+}
+
+TEST(BarrierCompiler, DiscardPreventsCompatibleReadElision) {
+  bool inspected = false;
+  std::size_t first_read = 0;
+  std::size_t discard = 0;
+  std::size_t second_read = 0;
+  flow::CompilerPlugins plugins;
+  rdg::append_plugins(plugins);
+  plugins.normalized.emplace_back(
+      [&](flow::detail::compiler::NormalizedIR &ir, flow::CompileContext &) {
+        inspected = true;
+        const auto contains = [&](std::size_t position) {
+          return std::ranges::any_of(ir.nodes, [&](const auto &node) {
+            return node.source_operation == position;
+          });
+        };
+        EXPECT_TRUE(contains(first_read));
+        EXPECT_FALSE(contains(discard));
+        EXPECT_TRUE(contains(second_read));
+      });
+
+  flow::begin(plugins);
+  rdg::begin();
+
+  auto pool = flow::resource<rhi::CommandPool>();
+  flow::construct(pool);
+  auto image = flow::resource<rhi::Image>();
+  flow::construct(image);
+  auto command = flow::resource<rhi::CommandBuffer>();
+  flow::construct(command);
+
+  flow::op(flow::intrinsic("strobe.rdg", "decl-image-state", 1)
+               .immediate(rhi::PipelineStage::none)
+               .immediate(rhi::Access::none)
+               .immediate(rhi::ImageLayout::undefined),
+           flow::read(image));
+  first_read = flow::op(
+      flow::intrinsic("strobe.rdg", "image-access", 1)
+          .immediate(rhi::PipelineStage::fragment_shader)
+          .immediate(rhi::Access::shader_sampled_read)
+          .immediate(rhi::ImageLayout::read_only),
+      flow::read_write(command), flow::read(image), flow::serialize(pool));
+  discard = flow::op(flow::intrinsic("strobe.rdg", "cmd-discard-image", 1),
+                     flow::read_write(command), flow::read_write(image),
+                     flow::serialize(pool));
+  second_read = flow::op(
+      flow::intrinsic("strobe.rdg", "image-access", 1)
+          .immediate(rhi::PipelineStage::fragment_shader)
+          .immediate(rhi::Access::shader_sampled_read)
+          .immediate(rhi::ImageLayout::read_only),
+      flow::read_write(command), flow::read(image), flow::serialize(pool));
+  submit(command, pool);
   rdg::end();
 
   EXPECT_NO_THROW({ auto program = flow::end(); });
@@ -159,11 +268,8 @@ TEST(BarrierCompiler, WaitsAtFirstImageUsingSubmission) {
            flow::serialize(pool));
   flow::op(flow::intrinsic("strobe.rdg", "present", 1), flow::consume(acquired),
            flow::read(image), flow::serialize(presenting_command));
-  first_submit = flow::op(flow::intrinsic("strobe.rdg", "submit", 1),
-                          flow::consume(first_command), flow::serialize(pool));
-  presenting_submit =
-      flow::op(flow::intrinsic("strobe.rdg", "submit", 1),
-               flow::consume(presenting_command), flow::serialize(pool));
+  first_submit = submit(first_command, pool);
+  presenting_submit = submit(presenting_command, pool);
   rdg::end();
 
   EXPECT_NO_THROW({ auto program = flow::end(); });

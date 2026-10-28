@@ -351,7 +351,7 @@ private:
 private:
   Context m_context;
   using scratch_allocator =
-      SmallMonotonicResource<strobe::rhi::scratch_allocator, 1 << 10>;
+      SmallMonotonicResource<strobe::rhi::scratch_allocator, 1 << 12>;
   using scratch_allocator_ref = AllocatorReference<scratch_allocator>;
   scratch_allocator m_scratch;
   Vector<TimelineRetireBuffer> m_retireBuffers;

@@ -13,7 +13,7 @@ void append_plugins(flow::CompilerPlugins &plugins) {
   plugins.normalized.emplace_back(detail::derive_device_order);
   plugins.normalized.emplace_back(detail::place_image_barriers);
   plugins.normalized.emplace_back(detail::place_buffer_barriers);
-  plugins.normalized.emplace_back(detail::remove_redundant_accesses);
+  plugins.normalized.emplace_back(detail::remove_consumed_markers);
 
   plugins.normalized.emplace_back(detail::materialize_operations);
 

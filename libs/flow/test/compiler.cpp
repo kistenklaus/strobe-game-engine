@@ -44,10 +44,16 @@ TEST(FlowCanonicalize, ProducesDenseNodesResourcesAndAccesses) {
   EXPECT_EQ(ir.nodes[0].source_operation, 0);
   EXPECT_EQ(ir.nodes[1].source_operation, 1);
   ASSERT_EQ(ir.accesses.size(), 4);
-  EXPECT_EQ(ir.accesses[0].resource, 1);
-  EXPECT_EQ(ir.accesses[0].mode, flow::AccessMode::write);
-  EXPECT_EQ(ir.accesses[1].resource, 0);
-  EXPECT_EQ(ir.accesses[1].mode, flow::AccessMode::read);
+  const auto construct_accesses = ir.accesses_of(ir.nodes[0]);
+  ASSERT_EQ(construct_accesses.size(), 2);
+  EXPECT_EQ(construct_accesses[0].resource, 1);
+  EXPECT_EQ(construct_accesses[0].mode, flow::AccessMode::write);
+  EXPECT_EQ(construct_accesses[1].resource, 0);
+  EXPECT_EQ(construct_accesses[1].mode, flow::AccessMode::read);
+  EXPECT_EQ(ir.accesses_of(flow::detail::NodeId{0}).data(),
+            construct_accesses.data());
+  EXPECT_EQ(ir.argument_groups_of(ir.nodes[0]).size(), 2);
+  EXPECT_EQ(ir.argument_elements_of(ir.nodes[0]).size(), 2);
 }
 
 TEST(FlowSerialize, AddsResourceOrderWithoutCreatingAStaticValue) {
@@ -138,7 +144,7 @@ TEST(FlowCanonicalize, PrettyPrintsTheNormalizedLinearIR) {
   const auto expected =
       fmt::format("%0 = external #0 : {}\n{:<50}(<source-op:0>)\n%2 = phi %1\n"
                   "{:<50}(<source-op:1>)\n{:<50}[max_in_flight=3]",
-                  flow::type_id<int>(), "%1 = construct r:%0", "%3 = construct",
+                  flow::type_name<int>(), "%1 = construct r:%0", "%3 = construct",
                   "feedback %2 <- %3");
   EXPECT_EQ(compiler::to_pretty(ir).view(), expected);
 }
@@ -160,7 +166,7 @@ TEST(FlowLowerValues, PrettyPrintsVersionedResourceValues) {
       fmt::format("%0.0 = external #0 : {}\n{:<50}(<source-op:0>)\n"
                   "%2.0 = phi %1.0\n{:<50}(<source-op:1>)\n"
                   "{:<50}[max_in_flight=3]",
-                  flow::type_id<int>(), "%1.0 = construct r:%0.0",
+                  flow::type_name<int>(), "%1.0 = construct r:%0.0",
                   "%3.0 = construct", "feedback %2.0 <- %3.0");
   EXPECT_EQ(compiler::to_pretty(ir).view(), expected);
 }
@@ -747,7 +753,7 @@ TEST(FlowLicm, HoistsImmutableConstructionAcrossAcquire) {
   EXPECT_TRUE(acquire_precedes_mutable_construction);
 }
 
-TEST(FlowLicm, PropagatesInvarianceThroughConstructionInputs) {
+TEST(FlowLicm, PropagatesInvarianceThroughConstructionAndExternalInputs) {
   Stream stream;
   stream.acquire("frame");
   auto first = stream.resource<int>();
@@ -785,7 +791,7 @@ TEST(FlowLicm, PropagatesInvarianceThroughConstructionInputs) {
   EXPECT_TRUE(ir.nodes[2].loop_invariant);
   EXPECT_TRUE(ir.nodes[3].loop_invariant);
   EXPECT_TRUE(ir.nodes[4].loop_invariant);
-  EXPECT_FALSE(ir.nodes[5].loop_invariant);
+  EXPECT_TRUE(ir.nodes[5].loop_invariant);
   EXPECT_FALSE(ir.nodes[6].loop_invariant);
   EXPECT_FALSE(ir.nodes[7].loop_invariant);
 }
@@ -1042,10 +1048,34 @@ TEST(FlowActivation, ClassifiesConstantChainsAsRunningOnce) {
                   compiler::resolve_phis(compiler::lower_values(
                       compiler::canonicalize(stream))))))))));
   for (const auto &component : ir.components) {
-    EXPECT_TRUE(component.runs_once);
+    EXPECT_TRUE(component.initialization);
     EXPECT_FALSE(component.externally_triggered);
     EXPECT_EQ(component.feedback_sources.count, 0);
   }
+}
+
+TEST(FlowActivation, ClassifiesHoistedExternalConstructionAsRunningOnce) {
+  Stream stream;
+  auto device = stream.external<int>("device");
+  auto resource = stream.resource<int>();
+  stream.construct(
+      resource, flow::read(device),
+      [](int *resource, const int &device) {
+        std::construct_at(resource, device);
+      });
+  stream.validate();
+
+  const auto ir = compiler::analyze_activation(compiler::analyze_components(
+      compiler::build_graph(compiler::hoist_loop_invariants(
+          compiler::classify_nodes(compiler::add_resource_order(
+              compiler::build_edges(compiler::lower_cutoffs(
+                  compiler::resolve_phis(compiler::lower_values(
+                      compiler::canonicalize(stream)))))))))));
+  const auto component = ir.input.component_of[0];
+  EXPECT_TRUE(ir.input.input.graph.get(graph::NodeId{0})
+                  .classification.loop_invariant);
+  EXPECT_FALSE(ir.components[component].externally_triggered);
+  EXPECT_TRUE(ir.components[component].initialization);
 }
 
 TEST(FlowActivation, PropagatesMultipleFeedbackSources) {
@@ -1070,7 +1100,7 @@ TEST(FlowActivation, PropagatesMultipleFeedbackSources) {
                       compiler::canonicalize(stream))))))))));
   const auto consumer_component = ir.input.component_of[4];
   const auto &activation = ir.components[consumer_component];
-  EXPECT_FALSE(activation.runs_once);
+  EXPECT_FALSE(activation.initialization);
   ASSERT_EQ(activation.feedback_sources.count, 2);
   const auto first_component = ir.input.component_of[2];
   const auto second_component = ir.input.component_of[3];
@@ -1109,7 +1139,7 @@ TEST(FlowActivation, PropagatesExternalAndCutoffActivation) {
   EXPECT_TRUE(ir.components[construct_component].externally_triggered);
   EXPECT_TRUE(ir.components[construct_component].memoized);
   EXPECT_TRUE(ir.components[consumer_component].memoized);
-  EXPECT_FALSE(ir.components[consumer_component].runs_once);
+  EXPECT_FALSE(ir.components[consumer_component].initialization);
 }
 
 TEST(FlowActivation, PropagatesYieldReachabilityBackward) {

@@ -3,12 +3,131 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <cassert>
 #include <iterator>
 #include <limits>
 #include <string>
 #include <string_view>
 
 namespace strobe::flow::detail {
+namespace {
+
+template <typename T>
+span<T> slice(Vector<T, allocator_ref> &storage, IndexRange range) noexcept {
+  assert(range.offset <= storage.size() &&
+         range.count <= storage.size() - range.offset);
+  return span<T>(storage.data(), storage.size())
+      .subspan(range.offset, range.count);
+}
+
+template <typename T>
+span<const T> slice(const Vector<T, allocator_ref> &storage,
+                    IndexRange range) noexcept {
+  assert(range.offset <= storage.size() &&
+         range.count <= storage.size() - range.offset);
+  return span<const T>(storage.data(), storage.size())
+      .subspan(range.offset, range.count);
+}
+
+} // namespace
+
+#define STROBE_PROGRAM_NODE_VIEW(Name, Storage, Member, Type)                  \
+  span<Type> ProgramData::Name(CompiledNode &node) noexcept {                  \
+    return slice(Storage, node.Member);                                        \
+  }                                                                            \
+  span<const Type> ProgramData::Name(const CompiledNode &node)                 \
+      const noexcept {                                                         \
+    return slice(Storage, node.Member);                                        \
+  }
+
+STROBE_PROGRAM_NODE_VIEW(accesses_of, node_storage.accesses, accesses,
+                         CompiledAccess)
+STROBE_PROGRAM_NODE_VIEW(inputs_of, node_storage.inputs, inputs, ValueId)
+STROBE_PROGRAM_NODE_VIEW(outputs_of, node_storage.outputs, outputs, ValueId)
+STROBE_PROGRAM_NODE_VIEW(predecessors_of, node_storage.predecessors,
+                         predecessors, NodeId)
+STROBE_PROGRAM_NODE_VIEW(successors_of, node_storage.successors, successors,
+                         NodeId)
+STROBE_PROGRAM_NODE_VIEW(temporal_predecessors_of,
+                         node_storage.temporal_predecessors,
+                         temporal_predecessors, NodeId)
+STROBE_PROGRAM_NODE_VIEW(temporal_successors_of,
+                         node_storage.temporal_successors, temporal_successors,
+                         NodeId)
+
+#undef STROBE_PROGRAM_NODE_VIEW
+
+span<CompiledAccess> ProgramData::accesses_of(NodeId node) noexcept {
+  assert(node < nodes.size());
+  return accesses_of(nodes[node]);
+}
+
+span<const CompiledAccess>
+ProgramData::accesses_of(NodeId node) const noexcept {
+  assert(node < nodes.size());
+  return accesses_of(nodes[node]);
+}
+
+#define STROBE_PROGRAM_VIEW(Name, Descriptor, Storage, Member, Type)           \
+  span<Type> ProgramData::Name(Descriptor &descriptor) noexcept {              \
+    return slice(Storage, descriptor.Member);                                  \
+  }                                                                            \
+  span<const Type> ProgramData::Name(const Descriptor &descriptor)             \
+      const noexcept {                                                         \
+    return slice(Storage, descriptor.Member);                                  \
+  }
+
+STROBE_PROGRAM_VIEW(phis_of, CompiledFeedbackRegion, feedback_region_phis, phis,
+                    std::uint32_t)
+STROBE_PROGRAM_VIEW(nodes_of, CompiledFeedbackRegion, feedback_region_nodes,
+                    nodes, NodeId)
+STROBE_PROGRAM_VIEW(acquires_of, CompiledFeedbackRegion,
+                    feedback_region_acquires, acquires, std::uint32_t)
+STROBE_PROGRAM_VIEW(token_requirements_of, CompiledFeedbackRegion,
+                    feedback_token_requirements, token_requirements,
+                    CompiledTokenRequirement)
+STROBE_PROGRAM_VIEW(primary_steps_of, CompiledControl, control_steps,
+                    primary_steps, CompiledControlStep)
+STROBE_PROGRAM_VIEW(secondary_steps_of, CompiledControl, control_steps,
+                    secondary_steps, CompiledControlStep)
+STROBE_PROGRAM_VIEW(nodes_of, CompiledControl, control_nodes, nodes, NodeId)
+STROBE_PROGRAM_VIEW(resources_of, CompiledControl, control_resources, resources,
+                    ResourceId)
+STROBE_PROGRAM_VIEW(primary_written_resources_of, CompiledControl,
+                    control_written_resources, primary_written_resources,
+                    ResourceId)
+STROBE_PROGRAM_VIEW(secondary_written_resources_of, CompiledControl,
+                    control_written_resources, secondary_written_resources,
+                    ResourceId)
+STROBE_PROGRAM_VIEW(argument_groups_of, CompiledCallback, argument_groups,
+                    argument_groups, ArgumentGroup)
+STROBE_PROGRAM_VIEW(argument_elements_of, CompiledCallback, argument_elements,
+                    argument_elements, std::uint32_t)
+STROBE_PROGRAM_VIEW(immediates_of, CompiledCallback, immediates, immediates,
+                    CompiledImmediate)
+
+#undef STROBE_PROGRAM_VIEW
+
+span<NodeId>
+ProgramData::constructions_of(CompiledResource &resource) noexcept {
+  return slice(constructions, resource.lifetime.constructions);
+}
+
+span<const NodeId>
+ProgramData::constructions_of(const CompiledResource &resource) const noexcept {
+  return slice(constructions, resource.lifetime.constructions);
+}
+
+span<NodeId>
+ProgramData::release_after_of(CompiledResource &resource) noexcept {
+  return slice(release_after, resource.lifetime.release_after);
+}
+
+span<const NodeId>
+ProgramData::release_after_of(const CompiledResource &resource) const noexcept {
+  return slice(release_after, resource.lifetime.release_after);
+}
+
 namespace {
 
 void append_value(auto out, const ProgramData &data, ValueId value) {
@@ -99,8 +218,8 @@ const CompiledCutoff *cutoff_for(const ProgramData &data, NodeId node) {
 void append_operation(std::string &prefix, const ProgramData &data,
                       NodeId node_id, const CompiledNode &node) {
   auto out = std::back_inserter(prefix);
-  std::size_t first_access = node.accesses.offset;
-  const auto access_end = first_access + node.accesses.count;
+  const auto accesses = data.accesses_of(node);
+  std::size_t first_access = 0;
 
   if (node.kind == OperationKind::phi) {
     if (const auto *phi = phi_for(data, node_id)) {
@@ -136,16 +255,16 @@ void append_operation(std::string &prefix, const ProgramData &data,
     return;
   }
   if (node.kind == OperationKind::discard) {
-    if (first_access < data.accesses.size() && first_access < access_end) {
-      fmt::format_to(out, "discard %{}", data.accesses[first_access].resource);
+    if (!accesses.empty()) {
+      fmt::format_to(out, "discard %{}", accesses.front().resource);
     } else {
       fmt::format_to(out, "discard <invalid>");
     }
     return;
   }
   if (node.kind == OperationKind::construct) {
-    if (first_access < data.accesses.size() && first_access < access_end) {
-      append_value(out, data, data.accesses[first_access].output);
+    if (!accesses.empty()) {
+      append_value(out, data, accesses.front().output);
       fmt::format_to(out, " = construct");
       ++first_access;
     } else {
@@ -155,13 +274,9 @@ void append_operation(std::string &prefix, const ProgramData &data,
     fmt::format_to(out, "{}", node.kind);
   }
 
-  for (std::size_t index = first_access; index < access_end; ++index) {
+  for (std::size_t index = first_access; index < accesses.size(); ++index) {
     fmt::format_to(out, "{}", index == first_access ? " " : ", ");
-    if (index < data.accesses.size()) {
-      append_access(prefix, data, data.accesses[index]);
-    } else {
-      fmt::format_to(out, "<invalid-access>");
-    }
+    append_access(prefix, data, accesses[index]);
   }
 }
 
@@ -226,52 +341,56 @@ String<allocator_ref> to_pretty(const ProgramData &data) {
     for (const auto &external : data.externals) {
       fmt::format_to(out(), "  %{} = external \"{}\"", external.resource,
                      external.name);
-      if (external.resource < data.resource_types.size()) {
-        fmt::format_to(out(), " : {}", data.resource_types[external.resource]);
+      if (external.resource < data.resources.size()) {
+        fmt::format_to(out(), " : {}",
+                       data.resources[external.resource].type_name);
       }
       fmt::format_to(out(), "\n");
     }
   }
 
   fmt::format_to(out(), "\nresources:\n");
-  for (ResourceId resource = 0; resource < data.resource_types.size();
-       ++resource) {
-    fmt::format_to(out(), "  %{} : {}", resource,
-                   data.resource_types[resource]);
-    if (resource < data.resource_slots.size()) {
-      const auto &slot = data.resource_slots[resource];
-      if (slot.offset == null_storage_offset) {
-        fmt::format_to(out(), " storage=none");
-      } else {
+  for (ResourceId resource = 0; resource < data.resources.size(); ++resource) {
+    fmt::format_to(out(), "  %{}", resource);
+    if (resource < data.resources.size() &&
+        !data.resources[resource].label.empty()) {
+      fmt::format_to(out(), " \"{}\"", data.resources[resource].label);
+    }
+    if (resource < data.resources.size()) {
+      fmt::format_to(out(), " : {}", data.resources[resource].type_name);
+    } else {
+      fmt::format_to(out(), " : {}", data.resources[resource].type);
+    }
+    if (resource < data.resources.size()) {
+      const auto &slot = data.resources[resource].slots;
+      if (slot.offset != null_storage_offset) {
         fmt::format_to(out(), " storage=[offset={}, stride={}, slots={}]",
                        slot.offset, slot.slot_stride, slot.slot_count);
-        if (slot.bounded_overlap) {
-          fmt::format_to(out(), " bounded-overlap");
-        }
       }
     }
-    if (resource < data.resource_lifetimes.size()) {
-      const auto &lifetime = data.resource_lifetimes[resource];
-      fmt::format_to(out(), " lifetime=[{},{})", lifetime.interval.begin,
-                     lifetime.interval.end);
+    if (resource < data.resources.size()) {
+      const auto &lifetime = data.resources[resource].lifetime;
+      fmt::format_to(out(), " lifetime=[{},", lifetime.interval.begin);
+      if (lifetime.interval.end == std::numeric_limits<std::uint32_t>::max()) {
+        fmt::format_to(out(), "inf)");
+      } else {
+        fmt::format_to(out(), "{})", lifetime.interval.end);
+      }
       if (lifetime.repeating) {
-        fmt::format_to(out(), " repeating");
+        fmt::format_to(out(), " repeat");
       }
       if (lifetime.preconstructed) {
         fmt::format_to(out(), " preconstructed");
       }
       if (lifetime.retained_by_feedback) {
-        fmt::format_to(out(), " retained-by-feedback");
-      }
-      if (lifetime.destroy_at_shutdown) {
-        fmt::format_to(out(), " destroy-at-shutdown");
+        fmt::format_to(out(), " temporal");
       }
       if (lifetime.constructions.count != 0) {
-        fmt::format_to(out(), " construct=");
+        fmt::format_to(out(), " modified=");
         append_nodes(out(), data.constructions, lifetime.constructions);
       }
-      if (lifetime.release_after.count != 0) {
-        fmt::format_to(out(), " release-after=");
+      if (!lifetime.destroy_at_shutdown && lifetime.release_after.count != 0) {
+        fmt::format_to(out(), " last-use=");
         append_nodes(out(), data.release_after, lifetime.release_after);
       }
     }
@@ -285,12 +404,12 @@ String<allocator_ref> to_pretty(const ProgramData &data) {
     append_operation(prefix, data, node_id, node);
     fmt::format_to(out(), "  {:<50}", prefix);
     append_callback(out(), data, node);
-    if (node.runs_once || node.memoized) {
+    if (node.initialization || node.memoized) {
       fmt::format_to(out(), " [");
-      if (node.runs_once) {
-        fmt::format_to(out(), "once");
+      if (node.initialization) {
+        fmt::format_to(out(), "init");
       }
-      if (node.runs_once && node.memoized) {
+      if (node.initialization && node.memoized) {
         fmt::format_to(out(), ", ");
       }
       if (node.memoized) {
@@ -299,10 +418,10 @@ String<allocator_ref> to_pretty(const ProgramData &data) {
       fmt::format_to(out(), "]");
     }
     fmt::format_to(out(), " deps=");
-    append_nodes(out(), data.predecessors, node.predecessors);
+    append_nodes(out(), data.node_storage.predecessors, node.predecessors);
     if (node.temporal_predecessors.count != 0) {
       fmt::format_to(out(), " temporal=");
-      append_nodes(out(), data.temporal_predecessors,
+      append_nodes(out(), data.node_storage.temporal_predecessors,
                    node.temporal_predecessors);
     }
     fmt::format_to(out(), "\n");
@@ -316,7 +435,27 @@ String<allocator_ref> to_pretty(const ProgramData &data) {
       fmt::format_to(out(), "  loop#{} source=[{},{}) max_in_flight={} nodes=",
                      region_id, region.declaration_position,
                      region.feedback_position, region.max_in_flight);
-      append_nodes(out(), data.feedback_region_nodes, region.nodes);
+      bool contiguous = region.nodes.count != 0;
+      NodeId first = 0;
+      for (std::uint32_t index = 0; index < region.nodes.count; ++index) {
+        const auto flat = static_cast<std::size_t>(region.nodes.offset) + index;
+        if (flat >= data.feedback_region_nodes.size()) {
+          contiguous = false;
+          break;
+        }
+        const auto node = data.feedback_region_nodes[flat];
+        if (index == 0) {
+          first = node;
+        } else if (node != first + index) {
+          contiguous = false;
+          break;
+        }
+      }
+      if (contiguous) {
+        fmt::format_to(out(), "[@{},@{})", first, first + region.nodes.count);
+      } else {
+        append_nodes(out(), data.feedback_region_nodes, region.nodes);
+      }
       fmt::format_to(out(), " phis=");
       append_range(out(), data.feedback_region_phis, region.phis,
                    [](auto target, std::uint32_t phi) {

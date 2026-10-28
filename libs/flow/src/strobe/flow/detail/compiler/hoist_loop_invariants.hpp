@@ -18,6 +18,10 @@ inline ClassifiedIR hoist_loop_invariants(ClassifiedIR input) {
                                               allocator_ref{});
   Vector<bool, allocator_ref> candidate_values(values.values.size(), false,
                                                allocator_ref{});
+  for (ValueId value = 0; value < values.values.size(); ++value) {
+    candidate_values[value] =
+        values.values[value].flags == StaticValueFlags::external;
+  }
 
   const auto contains_semantics = [](OpSemantics value, OpSemantics flag) {
     return (static_cast<std::uint32_t>(value) &

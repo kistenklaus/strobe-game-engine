@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <string_view>
 #include <type_traits>
@@ -208,6 +209,39 @@ struct IntrinsicOp {
   }
 
   /**
+   * \brief Appends an optional typed immediate to the intrinsic.
+   * \code{.cpp}
+   * template<typename T>
+   *   requires std::is_trivially_copyable_v<T>
+   * IntrinsicOp& optional_immediate(const std::optional<T>& value) &;
+   *
+   * template<typename T>
+   *   requires std::is_trivially_copyable_v<T>
+   * IntrinsicOp&& optional_immediate(const std::optional<T>& value) &&;
+   * \endcode
+   *
+   * An absent value is recorded as an empty immediate span; a present value is
+   * recorded as a one-element immediate span.
+   *
+   * \param value Optional value copied into the intrinsic.
+   * \return This intrinsic for chained construction.
+   */
+  template <typename T>
+    requires std::is_trivially_copyable_v<T>
+  IntrinsicOp &optional_immediate(const std::optional<T> &value) & {
+    append_immediate_span<T>(value ? span<const T>(&*value, 1)
+                                   : span<const T>{});
+    return *this;
+  }
+
+  template <typename T>
+    requires std::is_trivially_copyable_v<T>
+  IntrinsicOp &&optional_immediate(const std::optional<T> &value) && {
+    optional_immediate(value);
+    return std::move(*this);
+  }
+
+  /**
    * \brief Returns a typed immediate by value.
    * \code{.cpp}
    * template<typename T>
@@ -286,7 +320,6 @@ private:
         .element_count = static_cast<std::uint32_t>(values.size()),
     });
   }
-
 };
 
 /**
@@ -374,6 +407,8 @@ struct ExternalOpContext {
  */
 using ExternalOpFunction = void (*)(const ExternalOpContext &) noexcept;
 
+using ExternalProjectionFunction = void *(*)(void *) noexcept;
+
 /**
  * \brief Provides symbol resolution for one externally owned library.
  * \code{.cpp}
@@ -382,16 +417,24 @@ using ExternalOpFunction = void (*)(const ExternalOpContext &) noexcept;
  *   ExternalOpFunction (*resolve)(void* state,
  *                                 std::string_view symbol,
  *                                 std::uint32_t abi_version) noexcept;
+ *   ExternalProjectionFunction (*resolve_projection)(
+ *       void* state,
+ *       std::string_view symbol,
+ *       std::uint32_t abi_version) noexcept;
  * };
  * \endcode
  *
  * \attention 1 The state and resolver must remain valid until all submitted
  * work using the binding has completed.
+ * \attention 2 resolve_projection may be null only when the library does not
+ * provide an external projector used by the program.
  */
 struct Library {
   void *state = nullptr;
   ExternalOpFunction (*resolve)(void *, std::string_view,
                                 std::uint32_t) noexcept = nullptr;
+  ExternalProjectionFunction (*resolve_projection)(
+      void *, std::string_view, std::uint32_t) noexcept = nullptr;
 };
 
 } // namespace strobe::flow

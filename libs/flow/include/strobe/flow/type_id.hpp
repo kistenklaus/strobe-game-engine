@@ -41,6 +41,37 @@ consteval std::uint64_t hash_type_name(std::string_view name) {
 } // namespace detail
 
 /**
+ * \brief Returns a human-readable C++ type name in the current build.
+ * \code{.cpp}
+ * template<typename T>
+ * consteval std::string_view type_name() noexcept;
+ * \endcode
+ *
+ * \return Compiler-derived name for T.
+ */
+template <typename T> consteval std::string_view type_name() noexcept {
+#if defined(__clang__)
+  constexpr std::string_view signature = __PRETTY_FUNCTION__;
+  constexpr std::string_view prefix = "T = ";
+  const auto begin = signature.find(prefix) + prefix.size();
+  return signature.substr(begin, signature.find(']', begin) - begin);
+#elif defined(__GNUC__)
+  constexpr std::string_view signature = __PRETTY_FUNCTION__;
+  constexpr std::string_view prefix = "T = ";
+  const auto begin = signature.find(prefix) + prefix.size();
+  const auto end = signature.find(';', begin);
+  return signature.substr(begin, end - begin);
+#elif defined(_MSC_VER)
+  constexpr std::string_view signature = __FUNCSIG__;
+  constexpr std::string_view prefix = "type_name<";
+  const auto begin = signature.find(prefix) + prefix.size();
+  return signature.substr(begin, signature.find(">(void)", begin) - begin);
+#else
+#error "flow::type_name requires a compiler type signature intrinsic"
+#endif
+}
+
+/**
  * \brief Returns the identifier used for a C++ type in the current build.
  * \code{.cpp}
  * template<typename T>

@@ -5,8 +5,10 @@
 #include "strobe/flow/allocator.hpp"
 #include "strobe/flow/argument_group.hpp"
 #include "strobe/flow/program.hpp"
+#include "strobe/flow/projection.hpp"
 #include "strobe/flow/resource_id.hpp"
 
+#include <strobe/core/containers/span.hpp>
 #include <strobe/core/containers/string.hpp>
 #include <strobe/core/containers/vector.hpp>
 
@@ -27,6 +29,7 @@ enum class ResourceKind : std::uint8_t {
   external,
   phi,
   cutoff,
+  projection,
 };
 
 enum class NodeKind : std::uint8_t {
@@ -42,6 +45,8 @@ enum class NodeKind : std::uint8_t {
 struct NormalizedResource {
   ResourceKind kind;
   TypeId type;
+  String<allocator_ref> type_name;
+  String<allocator_ref> label;
   std::size_t size;
   std::size_t alignment;
   void (*destroy)(void *) noexcept;
@@ -89,6 +94,13 @@ struct NormalizedExternal {
   std::uint32_t source_external;
 };
 
+struct NormalizedProjection {
+  ResourceId resource;
+  ResourceId owner;
+  ProjectionKind kind;
+  std::uint32_t source_projection;
+};
+
 struct NormalizedIf {
   ResourceId condition;
   SourceOperationId begin;
@@ -105,7 +117,26 @@ struct NormalizedIR {
   Vector<NormalizedPhi, allocator_ref> phis;
   Vector<NormalizedCutoff, allocator_ref> cutoffs;
   Vector<NormalizedExternal, allocator_ref> externals;
+  Vector<NormalizedProjection, allocator_ref> projections;
   Vector<NormalizedIf, allocator_ref> ifs;
+
+  span<NormalizedAccess> accesses_of(NormalizedNode &node) noexcept;
+  span<const NormalizedAccess>
+  accesses_of(const NormalizedNode &node) const noexcept;
+  span<NormalizedAccess> accesses_of(NodeId node) noexcept;
+  span<const NormalizedAccess> accesses_of(NodeId node) const noexcept;
+
+  span<ArgumentGroup> argument_groups_of(NormalizedNode &node) noexcept;
+  span<const ArgumentGroup>
+  argument_groups_of(const NormalizedNode &node) const noexcept;
+  span<ArgumentGroup> argument_groups_of(NodeId node) noexcept;
+  span<const ArgumentGroup> argument_groups_of(NodeId node) const noexcept;
+
+  span<std::uint32_t> argument_elements_of(NormalizedNode &node) noexcept;
+  span<const std::uint32_t>
+  argument_elements_of(const NormalizedNode &node) const noexcept;
+  span<std::uint32_t> argument_elements_of(NodeId node) noexcept;
+  span<const std::uint32_t> argument_elements_of(NodeId node) const noexcept;
 };
 
 String<allocator_ref> to_pretty(const NormalizedIR &ir);

@@ -8,8 +8,8 @@
 #include <compare>
 #include <concepts>
 #include <cstddef>
-#include <functional>
 #include <fmt/format.h>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <ranges>
@@ -31,8 +31,7 @@ namespace strobe {
  * \attention 1. A moved-from array is empty and cannot be resized.
  * \attention 2. Element access requires an index less than size().
  */
-template <typename T, Allocator Alloc = Mallocator>
-class BoxedArray {
+template <typename T, Allocator Alloc = Mallocator> class BoxedArray {
 public:
   using value_type = T;
   using allocator_type = std::remove_cvref_t<Alloc>;
@@ -64,7 +63,7 @@ private:
   }
 
   [[nodiscard]] static Header *allocate(size_type size,
-                                         const allocator_type &alloc) {
+                                        const allocator_type &alloc) {
     allocator_type local = alloc;
     Unit *block =
         allocator_traits::template allocate<Unit>(local, units_for(size));
@@ -116,12 +115,11 @@ public:
    * \brief Constructs, copies, moves, assigns, or destroys an array.
    * \code{.cpp}
    * explicit BoxedArray(size_type size, const allocator_type& alloc = {});
-   * template<std::ranges::forward_range Range> explicit BoxedArray(Range&& range, const allocator_type& alloc = {});
-   * BoxedArray(const BoxedArray& other);
-   * BoxedArray(BoxedArray&& other) noexcept;
-   * BoxedArray& operator=(const BoxedArray& other);
-   * BoxedArray& operator=(BoxedArray&& other) noexcept;
-   * ~BoxedArray() noexcept;
+   * template<std::ranges::forward_range Range> explicit BoxedArray(Range&&
+   * range, const allocator_type& alloc = {}); BoxedArray(const BoxedArray&
+   * other); BoxedArray(BoxedArray&& other) noexcept; BoxedArray&
+   * operator=(const BoxedArray& other); BoxedArray& operator=(BoxedArray&&
+   * other) noexcept; ~BoxedArray() noexcept;
    * \endcode
    * \param size Number of elements.
    * \param range Source range.
@@ -134,6 +132,15 @@ public:
       : m_header(allocate(size, alloc)) {
     for (size_type i = 0; i < size; ++i) {
       std::construct_at(elements(m_header) + i);
+    }
+  }
+
+  explicit BoxedArray(size_type size, const value_type &v,
+                      const allocator_type &alloc = {})
+    requires std::default_initializable<T>
+      : m_header(allocate(size, alloc)) {
+    for (size_type i = 0; i < size; ++i) {
+      std::construct_at(elements(m_header) + i, v);
     }
   }
 
@@ -280,9 +287,7 @@ public:
    *
    * \return Whether size() is zero.
    */
-  [[nodiscard]] bool empty() const noexcept {
-    return size() == 0;
-  }
+  [[nodiscard]] bool empty() const noexcept { return size() == 0; }
 
   /**
    * \brief Returns the element storage.
@@ -293,13 +298,9 @@ public:
    *
    * \return Pointer to the first element, or nullptr for an empty array.
    */
-  [[nodiscard]] T *data() noexcept {
-    return elements(m_header);
-  }
+  [[nodiscard]] T *data() noexcept { return elements(m_header); }
 
-  [[nodiscard]] const T *data() const noexcept {
-    return elements(m_header);
-  }
+  [[nodiscard]] const T *data() const noexcept { return elements(m_header); }
 
   /**
    * \brief Returns an iterator to the first element.
@@ -310,13 +311,9 @@ public:
    *
    * \return Iterator to the first element.
    */
-  [[nodiscard]] iterator begin() noexcept {
-    return data();
-  }
+  [[nodiscard]] iterator begin() noexcept { return data(); }
 
-  [[nodiscard]] const_iterator begin() const noexcept {
-    return data();
-  }
+  [[nodiscard]] const_iterator begin() const noexcept { return data(); }
 
   /**
    * \brief Returns an iterator past the last element.
@@ -436,7 +433,7 @@ public:
    */
   friend auto operator<=>(const BoxedArray &lhs, const BoxedArray &rhs) {
     return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(),
-                                                   rhs.begin(), rhs.end());
+                                                  rhs.begin(), rhs.end());
   }
 
   /**

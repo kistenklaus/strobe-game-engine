@@ -62,14 +62,8 @@ struct ReusableValue {
 
 void submit_and_wait(flow::Program &program,
                      strobe::sync::JobScheduler &scheduler) {
-  const auto completion = program.submit(&scheduler);
-  try {
-    scheduler.wait(completion);
-  } catch (...) {
-    program.rethrow_execution_error();
-    throw;
-  }
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
 }
 
 TEST(FlowScenario, RunsPersistentResizeAndPerFrameRenderingTogether) {
@@ -460,12 +454,12 @@ TEST(FlowScenario, ConstructsDiscardedFeedbackStorageOncePerSlot) {
 
     std::uint32_t preconstructed_slots = 0;
     for (std::size_t resource = 0;
-         resource < program.data().resource_lifetimes.size(); ++resource) {
-      if (program.data().resource_lifetimes[resource].preconstructed) {
+         resource < program.data().resources.size(); ++resource) {
+      if (program.data().resources[resource].lifetime.preconstructed) {
         EXPECT_TRUE(
-            program.data().resource_lifetimes[resource].retained_by_feedback);
+            program.data().resources[resource].lifetime.retained_by_feedback);
         preconstructed_slots =
-            program.data().resource_slots[resource].slot_count;
+            program.data().resources[resource].slots.slot_count;
       }
     }
     ASSERT_EQ(preconstructed_slots, 3);

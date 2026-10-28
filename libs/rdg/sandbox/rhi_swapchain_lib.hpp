@@ -11,6 +11,7 @@
 namespace strobe {
 
 inline void rhi_acquire(const flow::ExternalOpContext &ctx) noexcept {
+  ZoneScopedN("swapchain::rhi-acquire");
   auto *image = static_cast<rhi::SwapchainImage *>(ctx.arguments[0]);
   auto *swapchain = static_cast<rhi::Swapchain *>(ctx.arguments[1]);
   static_assert(sizeof(rhi::SwapchainImage) == sizeof(void *));
@@ -19,6 +20,7 @@ inline void rhi_acquire(const flow::ExternalOpContext &ctx) noexcept {
 }
 
 inline void rhi_present(const flow::ExternalOpContext &ctx) noexcept {
+  ZoneScopedN("swapchain::rhi-present");
   auto *queue = static_cast<rhi::Queue *>(ctx.arguments[0]);
   auto *image = static_cast<rhi::SwapchainImage *>(ctx.arguments[1]);
   FrameMark;
@@ -27,21 +29,22 @@ inline void rhi_present(const flow::ExternalOpContext &ctx) noexcept {
 }
 
 inline void rhi_wait(const flow::ExternalOpContext &ctx) noexcept {
+  ZoneScopedN("swapchain::rhi-wait");
   auto *queue = static_cast<rhi::Queue *>(ctx.arguments[0]);
   auto *image = static_cast<rhi::SwapchainImage *>(ctx.arguments[1]);
   queue->wait(*image);
 }
 
-inline void rhi_get_image(const flow::ExternalOpContext &ctx) noexcept {
-  auto *img = static_cast<rhi::Image *>(ctx.arguments[0]);
-  auto *swap_img = static_cast<rhi::SwapchainImage *>(ctx.arguments[1]);
-  std::construct_at(img, swap_img->image());
+inline void *rhi_image(void *storage) noexcept {
+  ZoneScopedN("swapchain::rhi-image");
+  auto *swap_img = static_cast<rhi::SwapchainImage *>(storage);
+  return const_cast<rhi::Image *>(&swap_img->image());
 }
 
-inline void rhi_get_view(const flow::ExternalOpContext &ctx) noexcept {
-  auto *view = static_cast<rhi::ImageView *>(ctx.arguments[0]);
-  auto *swap_img = static_cast<rhi::SwapchainImage *>(ctx.arguments[1]);
-  std::construct_at(view, swap_img->view());
+inline void *rhi_view(void *storage) noexcept {
+  ZoneScopedN("swapchain::rhi-view");
+  auto *swap_img = static_cast<rhi::SwapchainImage *>(storage);
+  return const_cast<rhi::ImageView *>(&swap_img->view());
 }
 
 static flow::ExternalOpFunction resolve(void *, std::string_view symbol,
@@ -53,20 +56,28 @@ static flow::ExternalOpFunction resolve(void *, std::string_view symbol,
     return rhi_wait;
   } else if (symbol == "present" && abi == 1) {
     return rhi_present;
-  } else if (symbol == "get_image" && abi == 1) {
-    return rhi_get_image;
-  }  else if (symbol == "get_view" && abi == 1) {
-    return rhi_get_view;
   } else {
     fmt::println("Failed to find symbol!");
     std::terminate();
   }
 }
 
+static flow::ExternalProjectionFunction
+resolve_projection(void *, std::string_view symbol, uint32_t abi) noexcept {
+  if (abi == 1 && symbol == "image") {
+    return rhi_image;
+  }
+  if (abi == 1 && symbol == "view") {
+    return rhi_view;
+  }
+  return nullptr;
+}
+
 inline flow::Library make_rhi_swapchain_lib() {
   return flow::Library{
       .state = nullptr,
       .resolve = resolve,
+      .resolve_projection = resolve_projection,
   };
 }
 

@@ -7,6 +7,7 @@
 #include "strobe/flow/detail/operation_kind.hpp"
 #include "strobe/flow/lifetime.hpp"
 #include "strobe/flow/op_source.hpp"
+#include "strobe/flow/projection.hpp"
 #include "strobe/flow/resource_id.hpp"
 
 #include <strobe/core/containers/span.hpp>
@@ -60,6 +61,14 @@ struct ResourceLifetimePlan {
   void (*destroy)(void *) noexcept = nullptr;
 };
 
+struct CompiledResource {
+  TypeId type{};
+  String<allocator_ref> type_name{allocator_ref{}};
+  String<allocator_ref> label{allocator_ref{}};
+  ResourceSlotPlan slots{};
+  ResourceLifetimePlan lifetime{};
+};
+
 struct ActivationLayout {
   std::uint32_t capacity = 1;
   std::size_t stride = 0;
@@ -84,7 +93,7 @@ struct CompiledNode {
   IndexRange successors;
   IndexRange temporal_predecessors;
   IndexRange temporal_successors;
-  bool runs_once = false;
+  bool initialization = false;
   bool memoized = false;
 };
 
@@ -102,9 +111,28 @@ struct CompiledAccess {
   ValueId output;
 };
 
+struct CompiledNodeStorage {
+  Vector<ValueId, allocator_ref> inputs;
+  Vector<ValueId, allocator_ref> outputs;
+  Vector<CompiledAccess, allocator_ref> accesses;
+  Vector<NodeId, allocator_ref> predecessors;
+  Vector<NodeId, allocator_ref> successors;
+  Vector<NodeId, allocator_ref> temporal_predecessors;
+  Vector<NodeId, allocator_ref> temporal_successors;
+};
+
 struct CompiledExternal {
   ResourceId resource;
   String<allocator_ref> name;
+};
+
+struct CompiledProjection {
+  ResourceId resource;
+  ResourceId owner;
+  ProjectionKind kind;
+  String<allocator_ref> name;
+  std::move_only_function<void *(void *) const> resolve;
+  std::optional<ExternalOp> external;
 };
 
 struct CompiledPhi {
@@ -119,12 +147,18 @@ struct CompiledAcquire {
   std::uint32_t semaphore;
 };
 
+struct CompiledTokenRequirement {
+  std::uint32_t semaphore;
+  std::uint32_t count;
+};
+
 struct CompiledFeedbackRegion {
   std::uint32_t declaration_position;
   std::uint32_t feedback_position;
   IndexRange phis;
   IndexRange nodes;
   IndexRange acquires;
+  IndexRange token_requirements;
   std::uint32_t max_in_flight = 2;
 };
 
@@ -185,8 +219,7 @@ struct CompiledImmediate {
 
 using RuntimeCallback = std::move_only_function<void(
     Lifetime, span<void *const>, span<const std::uint32_t>,
-    span<const ArgumentGroup>, span<const std::uint32_t>,
-    span<void *const>)>;
+    span<const ArgumentGroup>, span<const std::uint32_t>, span<void *const>)>;
 
 struct CompiledCallback {
   CompiledCallback() = default;
@@ -205,24 +238,26 @@ struct CompiledCallback {
   RuntimeCallback runtime;
 };
 
+struct PhysicalStoragePlan {
+  Vector<std::uint32_t, allocator_ref> resource_slot_offsets;
+  Vector<std::uint32_t, allocator_ref> slot_physical_ids;
+  Vector<std::uint32_t, allocator_ref> frontier_offsets;
+};
+
 struct ProgramData {
   CompileContext plugin_data;
   ActivationLayout activation_layout;
   Vector<CompiledNode, allocator_ref> nodes;
-  Vector<ValueId, allocator_ref> inputs;
-  Vector<ValueId, allocator_ref> outputs;
-  Vector<NodeId, allocator_ref> predecessors;
-  Vector<NodeId, allocator_ref> successors;
-  Vector<NodeId, allocator_ref> temporal_predecessors;
-  Vector<NodeId, allocator_ref> temporal_successors;
+  CompiledNodeStorage node_storage;
   Vector<CompiledValue, allocator_ref> values;
-  Vector<CompiledAccess, allocator_ref> accesses;
   Vector<CompiledExternal, allocator_ref> externals;
+  Vector<CompiledProjection, allocator_ref> projections;
   Vector<CompiledPhi, allocator_ref> phis;
   Vector<CompiledFeedbackRegion, allocator_ref> feedback_regions;
   Vector<std::uint32_t, allocator_ref> feedback_region_phis;
   Vector<NodeId, allocator_ref> feedback_region_nodes;
   Vector<std::uint32_t, allocator_ref> feedback_region_acquires;
+  Vector<CompiledTokenRequirement, allocator_ref> feedback_token_requirements;
   Vector<CompiledAcquire, allocator_ref> acquires;
   Vector<CompiledControl, allocator_ref> controls;
   Vector<CompiledControlStep, allocator_ref> control_steps;
@@ -240,9 +275,8 @@ struct ProgramData {
   std::size_t immediate_alignment = 1;
   Vector<NodeId, allocator_ref> roots;
   Vector<NodeId, allocator_ref> yields;
-  Vector<TypeId, allocator_ref> resource_types;
-  Vector<ResourceSlotPlan, allocator_ref> resource_slots;
-  Vector<ResourceLifetimePlan, allocator_ref> resource_lifetimes;
+  Vector<CompiledResource, allocator_ref> resources;
+  PhysicalStoragePlan physical_storage;
   Vector<NodeId, allocator_ref> constructions;
   Vector<NodeId, allocator_ref> release_after;
 
@@ -252,6 +286,80 @@ struct ProgramData {
   std::size_t source_operation_count = 0;
   std::size_t source_resource_count = 0;
   std::size_t source_external_count = 0;
+
+  span<CompiledAccess> accesses_of(CompiledNode &node) noexcept;
+  span<const CompiledAccess>
+  accesses_of(const CompiledNode &node) const noexcept;
+  span<CompiledAccess> accesses_of(NodeId node) noexcept;
+  span<const CompiledAccess> accesses_of(NodeId node) const noexcept;
+
+  span<ValueId> inputs_of(CompiledNode &node) noexcept;
+  span<const ValueId> inputs_of(const CompiledNode &node) const noexcept;
+  span<ValueId> outputs_of(CompiledNode &node) noexcept;
+  span<const ValueId> outputs_of(const CompiledNode &node) const noexcept;
+
+  span<NodeId> predecessors_of(CompiledNode &node) noexcept;
+  span<const NodeId> predecessors_of(const CompiledNode &node) const noexcept;
+  span<NodeId> successors_of(CompiledNode &node) noexcept;
+  span<const NodeId> successors_of(const CompiledNode &node) const noexcept;
+  span<NodeId> temporal_predecessors_of(CompiledNode &node) noexcept;
+  span<const NodeId>
+  temporal_predecessors_of(const CompiledNode &node) const noexcept;
+  span<NodeId> temporal_successors_of(CompiledNode &node) noexcept;
+  span<const NodeId>
+  temporal_successors_of(const CompiledNode &node) const noexcept;
+
+  span<std::uint32_t> phis_of(CompiledFeedbackRegion &region) noexcept;
+  span<const std::uint32_t>
+  phis_of(const CompiledFeedbackRegion &region) const noexcept;
+  span<NodeId> nodes_of(CompiledFeedbackRegion &region) noexcept;
+  span<const NodeId>
+  nodes_of(const CompiledFeedbackRegion &region) const noexcept;
+  span<std::uint32_t> acquires_of(CompiledFeedbackRegion &region) noexcept;
+  span<const std::uint32_t>
+  acquires_of(const CompiledFeedbackRegion &region) const noexcept;
+  span<CompiledTokenRequirement>
+  token_requirements_of(CompiledFeedbackRegion &region) noexcept;
+  span<const CompiledTokenRequirement>
+  token_requirements_of(const CompiledFeedbackRegion &region) const noexcept;
+
+  span<CompiledControlStep> primary_steps_of(CompiledControl &control) noexcept;
+  span<const CompiledControlStep>
+  primary_steps_of(const CompiledControl &control) const noexcept;
+  span<CompiledControlStep>
+  secondary_steps_of(CompiledControl &control) noexcept;
+  span<const CompiledControlStep>
+  secondary_steps_of(const CompiledControl &control) const noexcept;
+  span<NodeId> nodes_of(CompiledControl &control) noexcept;
+  span<const NodeId> nodes_of(const CompiledControl &control) const noexcept;
+  span<ResourceId> resources_of(CompiledControl &control) noexcept;
+  span<const ResourceId>
+  resources_of(const CompiledControl &control) const noexcept;
+  span<ResourceId>
+  primary_written_resources_of(CompiledControl &control) noexcept;
+  span<const ResourceId>
+  primary_written_resources_of(const CompiledControl &control) const noexcept;
+  span<ResourceId>
+  secondary_written_resources_of(CompiledControl &control) noexcept;
+  span<const ResourceId>
+  secondary_written_resources_of(const CompiledControl &control) const noexcept;
+
+  span<ArgumentGroup> argument_groups_of(CompiledCallback &callback) noexcept;
+  span<const ArgumentGroup>
+  argument_groups_of(const CompiledCallback &callback) const noexcept;
+  span<std::uint32_t> argument_elements_of(CompiledCallback &callback) noexcept;
+  span<const std::uint32_t>
+  argument_elements_of(const CompiledCallback &callback) const noexcept;
+  span<CompiledImmediate> immediates_of(CompiledCallback &callback) noexcept;
+  span<const CompiledImmediate>
+  immediates_of(const CompiledCallback &callback) const noexcept;
+
+  span<NodeId> constructions_of(CompiledResource &resource) noexcept;
+  span<const NodeId>
+  constructions_of(const CompiledResource &resource) const noexcept;
+  span<NodeId> release_after_of(CompiledResource &resource) noexcept;
+  span<const NodeId>
+  release_after_of(const CompiledResource &resource) const noexcept;
 };
 
 String<allocator_ref> to_pretty(const ProgramData &data);

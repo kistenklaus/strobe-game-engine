@@ -11,7 +11,8 @@ void Queue::unpin(void *handle) noexcept {
   unpin_void_handle<QueueImpl>(handle);
 }
 
-void Queue::wait(const Timepoint &timepoint, PipelineStage stage) noexcept {
+void Queue::wait(const Timepoint &timepoint,
+                 PipelineStage stage) const noexcept {
   if (!timepoint) {
     return;
   }
@@ -21,25 +22,25 @@ void Queue::wait(const Timepoint &timepoint, PipelineStage stage) noexcept {
 }
 
 void Queue::wait(const SwapchainImage &swapchainImage,
-                 PipelineStage stage) noexcept {
+                 PipelineStage stage) const noexcept {
   ZoneScopedN("Queue::wait(SwapchainImage)");
   auto *impl = void_handle_ptr<QueueImpl>(m_handle);
   impl->wait(swapchainImage, stage);
 }
 
-Timepoint Queue::submit(span<const CommandBuffer> cmds) noexcept {
+Timepoint Queue::submit(span<const CommandBuffer> cmds) const noexcept {
   ZoneScopedN("Queue::submit");
   auto *impl = void_handle_ptr<QueueImpl>(m_handle);
   return impl->submit(cmds);
 }
 
-void Queue::present(SwapchainImage swapchainImage) noexcept {
+void Queue::present(SwapchainImage swapchainImage) const noexcept {
   auto *impl = void_handle_ptr<QueueImpl>(m_handle);
   ZoneScopedN("Queue::present");
   impl->present(std::move(swapchainImage));
 }
 
-void Queue::flush() noexcept {
+void Queue::flush() const noexcept {
   auto *impl = void_handle_ptr<QueueImpl>(m_handle);
   ZoneScopedN("Queue::flush");
   impl->flush();

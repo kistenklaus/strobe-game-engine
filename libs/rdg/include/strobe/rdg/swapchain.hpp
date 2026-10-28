@@ -31,19 +31,19 @@ class SwapchainImage {
   friend SwapchainImage acquire(Swapchain swapchain);
 
 public:
-  Image image() const noexcept { return Image{m_image}; }
+  Image image() const noexcept { return m_image; }
 
-  ImageView view() const noexcept { return ImageView{m_view, m_image}; }
+  ImageView view() const noexcept { return m_view; }
 
 private:
   SwapchainImage(flow::Resource<swapchain_image_runtime> runtime,
                  flow::Resource<rhi::Image> image,
                  flow::Resource<rhi::ImageView> view) noexcept
       : m_runtime(std::move(runtime)), m_image(std::move(image)),
-        m_view(std::move(view)) {}
+        m_view(std::move(view), m_image.m_runtime) {}
   flow::Resource<swapchain_image_runtime> m_runtime;
-  flow::Resource<rhi::Image> m_image;
-  flow::Resource<rhi::ImageView> m_view;
+  Image m_image;
+  ImageView m_view;
 };
 
 inline SwapchainImage acquire(Swapchain swapchain) {
@@ -56,25 +56,18 @@ inline SwapchainImage acquire(Swapchain swapchain) {
                                          flow::OpSemantics::side_effect)),
       flow::read_write(swapchain.m_runtime));
 
-  auto image = flow::resource<rhi::Image>();
-  flow::construct(
-      image,
-      flow::external_op(
-          "swapchain", "get_image", 1,
-          flow::OpMetadata("get_image", "get image of swapchain image")),
-      flow::read(swapchain_image));
-  intr::decl_image_state(image, rhi::PipelineStage::none, rhi::Access::none,
-                         rhi::ImageLayout::undefined);
+  auto image = flow::project<rhi::Image>(
+      swapchain_image, "image", flow::ProjectionKind::disjoint,
+      flow::external_projector("swapchain", "image", 1));
 
-  auto view = flow::resource<rhi::ImageView>();
-  flow::construct(
-      view,
-      flow::external_op(
-          "swapchain", "get_view", 1,
-          flow::OpMetadata{"get_view", "get image view of swapchain image"}),
-      flow::read(swapchain_image));
+  auto view = flow::project<rhi::ImageView>(
+      swapchain_image, "view", flow::ProjectionKind::disjoint,
+      flow::external_projector("swapchain", "view", 1));
 
-  return SwapchainImage{swapchain_image, image, view};
+  auto result = SwapchainImage{swapchain_image, image, view};
+  intr::decl_image_state(result.image(), rhi::PipelineStage::none,
+                         rhi::Access::none, rhi::ImageLayout::undefined);
+  return result;
 }
 
 } // namespace strobe::rdg

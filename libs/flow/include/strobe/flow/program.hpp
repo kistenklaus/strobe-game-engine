@@ -2,23 +2,31 @@
 
 #include "strobe/flow/allocator.hpp"
 #include "strobe/flow/detail/job_plan.hpp"
+#include "strobe/flow/detail/program_artifact.hpp"
 #include "strobe/flow/detail/program_data.hpp"
 #include "strobe/flow/op_source.hpp"
 #include "strobe/flow/resource_id.hpp"
 #include "strobe/flow/type_id.hpp"
 
+#include <strobe/core/containers/boxed_array.hpp>
+#include <strobe/core/containers/boxed_bitset.hpp>
 #include <strobe/core/memory/box.hpp>
 #include <strobe/core/sync/job_scheduler.hpp>
 
+#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <numeric>
 #include <optional>
+#include <span>
 #include <string_view>
 #include <type_traits>
 
 namespace strobe::flow {
 
 namespace detail {
+class PhysicalStorageState;
 class ProgramRuntime;
 } // namespace detail
 
@@ -34,7 +42,7 @@ public:
    * \brief Constructs, moves, or destroys a program.
    * \code{.cpp}
    * Program();
-   * explicit Program(detail::ProgramData data);
+   * explicit Program(detail::ProgramArtifact artifact);
    * Program(const Program&) = delete;
    * Program& operator=(const Program&) = delete;
    * Program(Program&&) noexcept;
@@ -42,10 +50,10 @@ public:
    * ~Program();
    * \endcode
    *
-   * \param data Compiled program tables used to initialize execution.
+   * \param artifact Compiled program tables used to initialize execution.
    */
   Program();
-  explicit Program(detail::ProgramData data);
+  explicit Program(detail::ProgramArtifact artifact);
   Program(const Program &) = delete;
   Program &operator=(const Program &) = delete;
   Program(Program &&) noexcept;
@@ -248,18 +256,81 @@ public:
   /**
    * \brief Submits executable work until a boundary prevents further progress.
    * \code{.cpp}
-   * sync::job_id submit(sync::JobScheduler* scheduler);
+   * void submit(sync::JobScheduler* scheduler);
    * \endcode
    *
    * \param scheduler Persistent scheduler used for this and later submissions.
-   * \return A job that completes after all work submitted by this call.
    * \attention 1 The program and scheduler must outlive all submitted jobs.
    * \attention 2 Calls to submit and binding operations require external
    * synchronization.
    */
-  sync::job_id submit(sync::JobScheduler *scheduler);
+  void submit(sync::JobScheduler *scheduler);
+
+  /**
+   * \brief Waits for all outstanding work submitted by this program.
+   * \code{.cpp}
+   * void wait();
+   * \endcode
+   *
+   * \throws Any exception captured while executing program operations.
+   * \attention 1 Calls to wait and submit require external synchronization.
+   */
+  void wait();
 
 private:
+  struct FeedbackSubmissionState {
+    explicit FeedbackSubmissionState(std::size_t node_count,
+                                     std::size_t resource_count,
+                                     std::uint32_t max_in_flight,
+                                     std::size_t dependency_capacity,
+                                     allocator_ref allocator)
+        : jobs{BoxedArray<sync::job_id, allocator_ref>(node_count, allocator),
+               BoxedArray<sync::job_id, allocator_ref>(node_count, allocator)},
+          job_valid{
+              BoxedBitset<std::uint64_t, allocator_ref>(node_count, allocator),
+              BoxedBitset<std::uint64_t, allocator_ref>(node_count, allocator)},
+          dependencies(dependency_capacity, allocator),
+          releases(resource_count, allocator),
+          retained_acquire_jobs(resource_count, allocator),
+          retained_acquire_valid(resource_count, allocator),
+          retained_writer_jobs(resource_count, allocator),
+          retained_writer_valid(resource_count, allocator),
+          retained_acquisition_counts(resource_count, allocator),
+          retained_acquired(resource_count, allocator),
+          retained_completion_history(resource_count * max_in_flight,
+                                      allocator),
+          retained_completion_valid(resource_count * max_in_flight, allocator),
+          physical_resources_acquired(resource_count, allocator),
+          physical_frontiers_started(resource_count, allocator),
+          max_in_flight(max_in_flight) {}
+
+    BoxedArray<sync::job_id, allocator_ref> jobs[2];
+    BoxedBitset<std::uint64_t, allocator_ref> job_valid[2];
+    BoxedArray<sync::job_id, allocator_ref> dependencies;
+    BoxedArray<sync::job_id, allocator_ref> releases;
+    BoxedArray<sync::job_id, allocator_ref> retained_acquire_jobs;
+    BoxedBitset<std::uint64_t, allocator_ref> retained_acquire_valid;
+    BoxedArray<sync::job_id, allocator_ref> retained_writer_jobs;
+    BoxedBitset<std::uint64_t, allocator_ref> retained_writer_valid;
+    BoxedArray<std::uint64_t, allocator_ref> retained_acquisition_counts;
+    BoxedBitset<std::uint64_t, allocator_ref> retained_acquired;
+    BoxedArray<sync::job_id, allocator_ref> retained_completion_history;
+    BoxedBitset<std::uint64_t, allocator_ref> retained_completion_valid;
+    BoxedBitset<std::uint64_t, allocator_ref> physical_resources_acquired;
+    BoxedBitset<std::uint64_t, allocator_ref> physical_frontiers_started;
+    std::uint32_t max_in_flight = 0;
+    std::uint32_t previous_jobs = 0;
+  };
+
+  struct SerializationState {
+    explicit SerializationState(std::size_t resource_count,
+                                allocator_ref allocator)
+        : jobs(resource_count, allocator), valid(resource_count, allocator) {}
+
+    BoxedArray<sync::job_id, allocator_ref> jobs;
+    BoxedBitset<std::uint64_t, allocator_ref> valid;
+  };
+
   void bind_external_typed(std::string_view name, void *pointer, TypeId type);
   detail::ProgramRuntime &runtime() const;
   void execute_node(std::uint32_t activation, detail::NodeId node, bool prepare,
@@ -273,23 +344,32 @@ private:
   void execute_feedback_node(std::uint32_t activation, detail::NodeId node);
   void execute_job(std::uint32_t activation, detail::JobId job);
   void execute_feedback_job(std::uint32_t activation, detail::JobId job);
-  sync::job_id submit_feedback_regions(sync::JobScheduler *scheduler);
+  void submit_feedback_regions(sync::JobScheduler *scheduler);
+  void prune_completions();
+  void track_completion(sync::job_id completion);
 
   detail::ProgramData m_data;
   detail::JobPlan m_job_plan;
+  detail::FeedbackSubmissionPlan m_feedback_plan;
   Box<detail::ProgramRuntime, allocator_ref> m_runtime;
   detail::NodeId m_resume_node = 0;
   std::optional<std::uint32_t> m_resume_activation;
   Vector<std::uint64_t, allocator_ref> m_feedback_iterations;
   Vector<std::uint64_t, allocator_ref> m_activation_iterations;
-  Vector<Vector<sync::job_id, allocator_ref>, allocator_ref> m_feedback_jobs;
-  Vector<Vector<bool, allocator_ref>, allocator_ref> m_feedback_job_valid;
-  Vector<sync::job_id, allocator_ref> m_feedback_completions;
-  Vector<bool, allocator_ref> m_feedback_completion_valid;
+  Vector<FeedbackSubmissionState, allocator_ref> m_feedback_submission;
+  std::optional<SerializationState> m_serialization;
+  Box<detail::PhysicalStorageState, allocator_ref> m_physical_storage;
+  std::optional<BoxedArray<std::uint32_t, allocator_ref>>
+      m_activation_storage_slots;
+  std::optional<BoxedArray<sync::job_id, allocator_ref>> m_initialization_jobs;
+  std::optional<BoxedBitset<std::uint64_t, allocator_ref>>
+      m_initialization_job_valid;
   std::optional<sync::job_id> m_initialization_completion;
   bool m_initialization_submitted = false;
   sync::JobScheduler *m_scheduler = nullptr;
-  std::optional<sync::job_id> m_last_completion;
+  std::array<sync::job_id, sync::JobScheduler::SLOT_COUNT>
+      m_pending_completions;
+  std::uint32_t m_pending_completion_count = 0;
 };
 
 } // namespace strobe::flow

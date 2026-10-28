@@ -10,7 +10,7 @@ namespace strobe::flow::detail::compiler {
 
 struct ActivationInfo {
   IndexRange feedback_sources;
-  bool runs_once;
+  bool initialization;
   bool externally_triggered;
   bool memoized;
   bool contains_yield;

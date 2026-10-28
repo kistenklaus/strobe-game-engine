@@ -13,6 +13,7 @@ inline ValueIR lower_values(NormalizedIR normalized) {
   result.resources = std::move(normalized.resources);
   result.cutoffs = std::move(normalized.cutoffs);
   result.externals = std::move(normalized.externals);
+  result.projections = std::move(normalized.projections);
   result.nodes.reserve(normalized.nodes.size());
   result.accesses.reserve(normalized.accesses.size());
 
@@ -39,6 +40,9 @@ inline ValueIR lower_values(NormalizedIR normalized) {
 
   for (const auto &external : result.externals) {
     define(external.resource, null_node_id, StaticValueFlags::external);
+  }
+  for (const auto &projection : result.projections) {
+    define(projection.resource, null_node_id);
   }
 
   result.ifs.reserve(normalized.ifs.size());
@@ -88,6 +92,7 @@ inline ValueIR lower_values(NormalizedIR normalized) {
 
   for (NodeId node = 0; node < normalized.nodes.size(); ++node) {
     const auto &source_node = normalized.nodes[node];
+    const auto source_accesses = normalized.accesses_of(source_node);
     if (source_node.kind != NodeKind::phi) {
       resolve_if_conditions(source_node.source_operation);
       resolve_feedback(source_node.source_operation);
@@ -98,7 +103,7 @@ inline ValueIR lower_values(NormalizedIR normalized) {
         .kind = source_node.kind,
         .source_operation = source_node.source_operation,
         .accesses = {.offset = static_cast<std::uint32_t>(output_offset),
-                     .count = source_node.accesses.count},
+                     .count = static_cast<std::uint32_t>(source_accesses.size())},
         .argument_count = source_node.argument_count,
         .resolved_operation = source_node.resolved_operation,
         .semantics = source_node.semantics,
@@ -107,7 +112,7 @@ inline ValueIR lower_values(NormalizedIR normalized) {
 
     if (source_node.kind == NodeKind::phi) {
       const auto &source_phi = normalized.phis[phi_index++];
-      const auto initial = normalized.accesses[source_node.accesses.offset];
+      const auto initial = source_accesses.front();
       if (!current[initial.resource]) {
         throw std::logic_error("phi initial input has no static value");
       }
@@ -136,9 +141,8 @@ inline ValueIR lower_values(NormalizedIR normalized) {
       continue;
     }
 
-    for (std::uint32_t index = 0; index < source_node.accesses.count; ++index) {
-      const auto &access =
-          normalized.accesses[source_node.accesses.offset + index];
+    for (std::uint32_t index = 0; index < source_accesses.size(); ++index) {
+      const auto &access = source_accesses[index];
       if (access.purpose == AccessPurpose::serialization) {
         result.accesses.push_back({access.resource, access.mode, access.purpose,
                                    null_value_id, null_value_id});

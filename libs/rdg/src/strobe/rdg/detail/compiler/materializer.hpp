@@ -110,19 +110,37 @@ decltype(auto) materialized_argument(std::size_t index,
   }
 }
 
+template <typename Tuple>
+inline constexpr bool has_lifetime_parameter_v = [] {
+  if constexpr (std::tuple_size_v<Tuple> == 0) {
+    return false;
+  } else {
+    using Parameter = std::tuple_element_t<std::tuple_size_v<Tuple> - 1, Tuple>;
+    return std::is_same_v<std::remove_cvref_t<Parameter>, flow::Lifetime>;
+  }
+}();
+
 template <typename Function, typename Tuple, std::size_t... Index>
 void invoke(Function &function, span<void *const> immediates,
             span<const std::uint32_t> immediate_counts,
             span<const flow::ArgumentGroup> argument_groups,
             span<const std::uint32_t> argument_elements,
-            span<void *const> arguments,
+            span<void *const> arguments, flow::Lifetime lifetime,
             std::index_sequence<Index...>) noexcept {
   assert(immediates.size() + argument_groups.size() == sizeof...(Index));
   assert(immediate_counts.size() == immediates.size());
-  std::invoke(function,
-              materialized_argument<std::tuple_element_t<Index, Tuple>>(
-                  Index, immediates, immediate_counts, argument_groups,
-                  argument_elements, arguments)...);
+  if constexpr (has_lifetime_parameter_v<Tuple>) {
+    std::invoke(function,
+                materialized_argument<std::tuple_element_t<Index, Tuple>>(
+                    Index, immediates, immediate_counts, argument_groups,
+                    argument_elements, arguments)...,
+                lifetime);
+  } else {
+    std::invoke(function,
+                materialized_argument<std::tuple_element_t<Index, Tuple>>(
+                    Index, immediates, immediate_counts, argument_groups,
+                    argument_elements, arguments)...);
+  }
 }
 
 template <typename Parameter> constexpr flow::TypeId parameter_type() {
@@ -143,7 +161,12 @@ template <typename Parameter> constexpr flow::TypeId parameter_type() {
 
 class IntrinsicMaterializer {
 private:
-  enum class Source : std::uint8_t { recorded, serialization, global };
+  enum class Source : std::uint8_t {
+    recorded,
+    serialization,
+    global,
+    global_serialization,
+  };
 
   struct Argument {
     Source source;
@@ -294,14 +317,25 @@ public:
       return *this;
     }
 
+    template <typename T> Builder &serialize_global(flow::ResourceId resource) {
+      m_definition.has_global = true;
+      m_definition.arguments.push_back(
+          {Source::global_serialization, flow::type_id<T>(),
+           flow::AccessMode::read_write, resource, false, false});
+      return *this;
+    }
+
     template <typename Function>
       requires std::copy_constructible<std::decay_t<Function>>
     void body(Function function) {
       using Stored = std::decay_t<Function>;
       using Tuple = typename materializer_detail::callable_arguments<
           decltype(&Stored::operator())>::tuple;
+      constexpr auto argument_count =
+          std::tuple_size_v<Tuple> -
+          (materializer_detail::has_lifetime_parameter_v<Tuple> ? 1 : 0);
       validate_body<Tuple>(
-          std::make_index_sequence<std::tuple_size_v<Tuple>>{});
+          std::make_index_sequence<argument_count>{});
 
       const auto metadata = m_definition.metadata;
       m_definition.operation = [metadata,
@@ -310,15 +344,15 @@ public:
         flow::detail::ResolvedOperation operation;
         operation.metadata = metadata;
         operation.runtime =
-            [function](flow::Lifetime, span<void *const> immediates,
+            [function](flow::Lifetime lifetime, span<void *const> immediates,
                        span<const std::uint32_t> immediate_counts,
                        span<const flow::ArgumentGroup> argument_groups,
                        span<const std::uint32_t> argument_elements,
                        span<void *const> arguments) mutable noexcept {
               materializer_detail::invoke<Stored, Tuple>(
                   function, immediates, immediate_counts, argument_groups,
-                  argument_elements, arguments,
-                  std::make_index_sequence<std::tuple_size_v<Tuple>>{});
+                  argument_elements, arguments, lifetime,
+                  std::make_index_sequence<argument_count>{});
             };
         return operation;
       };
@@ -351,7 +385,8 @@ public:
         optionals.push_back(immediate.optional);
       }
       for (const auto &argument : m_definition.arguments) {
-        if (argument.source != Source::serialization) {
+        if (argument.source != Source::serialization &&
+            argument.source != Source::global_serialization) {
           types.push_back(argument.type);
           spans.push_back(argument.span);
           optionals.push_back(argument.nullable);

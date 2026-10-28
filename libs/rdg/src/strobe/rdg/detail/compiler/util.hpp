@@ -38,7 +38,13 @@ struct BufferState {
   rhi::Access access;
 };
 
-struct ImageAccessMarker {
+enum class ImageMarkerKind : std::uint8_t {
+  access,
+  discard,
+};
+
+struct ImageMarker {
+  ImageMarkerKind kind;
   flow::detail::NodeId node;
   flow::ResourceId command_buffer;
   flow::ResourceId image;
@@ -63,9 +69,9 @@ struct CompilerState {
   Vector<ImageUse, flow::allocator_ref> image_uses;
   Vector<std::optional<ImageState>, flow::allocator_ref> image_states;
   Vector<std::optional<BufferState>, flow::allocator_ref> buffer_states;
-  Vector<ImageAccessMarker, flow::allocator_ref> image_accesses;
+  Vector<ImageMarker, flow::allocator_ref> image_markers;
   Vector<BufferAccessMarker, flow::allocator_ref> buffer_accesses;
-  Vector<std::uint8_t, flow::allocator_ref> redundant_accesses;
+  Vector<std::uint8_t, flow::allocator_ref> removed_markers;
 };
 
 inline constexpr std::string_view compiler_state_id = "strobe.rdg.compiler";

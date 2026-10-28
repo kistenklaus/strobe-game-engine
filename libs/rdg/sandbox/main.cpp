@@ -5,6 +5,7 @@
 #include "strobe/flow/flow.hpp"
 #include "strobe/flow/loop.hpp"
 #include "strobe/platform/window.hpp"
+#include "strobe/rdg/buffer.hpp"
 #include "strobe/rdg/command_buffer.hpp"
 #include "strobe/rdg/command_pool.hpp"
 #include "strobe/rdg/plugins.hpp"
@@ -14,6 +15,7 @@
 
 struct Frame {
   int id;
+  strobe::vec4 color;
 };
 
 int main() {
@@ -29,22 +31,51 @@ int main() {
 
     rdg::CommandPool cmdpool{};
 
-    flow::loop([&] {
-      auto _ = flow::recv<Frame>("fchan");
-      auto target = rdg::acquire(swapchain);
+    flow::u64 size = 64;
 
-      rdg::CommandBuffer cmd = cmdpool.alloc();
-      cmd.present(target);
-      rdg::submit(cmd);
+    flow::loop(
+        [&] {
+          auto frame = flow::recv<Frame>("fchan");
+          auto target = rdg::acquire(swapchain);
 
-    }, 1);
+          rdg::CommandBuffer cmd1 = cmdpool.alloc();
+
+          // somehow doesn't get moved outside of the loop!
+          rdg::Buffer buffer{{
+              .size = size,
+              .bufferUsage = rhi::BufferUsage::storage,
+          }};
+
+          flow::vec4 color = flow::project<strobe::vec4>(
+              frame, "color", flow::ProjectionKind::disjoint,
+              [](Frame &frame) noexcept {
+                ZoneScopedN("project-frame-color");
+                return &frame.color;
+              });
+
+          rdg::Attachment attachment{
+              .view = target.view(),
+              .loadOp = rhi::AttachmentLoadOp::clear,
+              .clearValue = rdg::ClearValue::float4(color),
+          };
+
+          cmd1.begin_rendering({
+              .colorAttachments = &attachment,
+          });
+
+          cmd1.end_rendering();
+          cmd1.present(target);
+
+          auto timepoint = rdg::submit(cmd1);
+        },
+        4);
     rdg::end();
   }
 
   auto prog = flow::end();
 
   rhi::Device device = rhi::create_device({
-      // .debug_utils = true,
+      .debug_utils = true,
   });
   prog.bind_external("device", &device);
 
@@ -69,7 +100,7 @@ int main() {
   sync::JobScheduler scheduler{&alloc, 2};
 
   while (!window.should_close()) {
-    tx.send(Frame{.id = 0});
+    tx.send(Frame{.id = 0, .color = {1.0f, 0.0f, 0.0f, 1.0f}});
     prog.submit(&scheduler);
     prog.rethrow_execution_error();
   }

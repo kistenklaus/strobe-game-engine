@@ -69,8 +69,8 @@ TEST(MockSwapchainLib, AcquiresWaitsAndPresentsRingImages) {
 TEST(MockSwapchainLib, ResolvesKnownAbiOnly) {
   const auto library = make_mock_swapchain_lib();
   EXPECT_NE(library.resolve(library.state, "acquire", 1), nullptr);
-  EXPECT_NE(library.resolve(library.state, "get_image", 1), nullptr);
-  EXPECT_NE(library.resolve(library.state, "get_view", 1), nullptr);
+  EXPECT_NE(library.resolve_projection(library.state, "image", 1), nullptr);
+  EXPECT_NE(library.resolve_projection(library.state, "view", 1), nullptr);
   EXPECT_NE(library.resolve(library.state, "wait", 1), nullptr);
   EXPECT_NE(library.resolve(library.state, "present", 1), nullptr);
   EXPECT_EQ(library.resolve(library.state, "missing", 1), nullptr);

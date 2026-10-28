@@ -20,7 +20,7 @@ flow::detail::ResolvedOperation wait_swapchain_op() {
   op.argument_types.push_back(flow::type_id<rhi::Queue>());
   op.argument_types.push_back(
       flow::type_id<::strobe::rdg::swapchain_image_runtime>());
-  op.argument_accesses.push_back(flow::AccessMode::read_write);
+  op.argument_accesses.push_back(flow::AccessMode::read);
   op.argument_accesses.push_back(flow::AccessMode::read);
   op.argument_groups.push_back({0, 1, 0, 1});
   op.argument_groups.push_back({1, 1, 1, 1});
@@ -37,7 +37,7 @@ flow::detail::ResolvedOperation present_swapchain_op() {
   op.argument_types.push_back(flow::type_id<rhi::Queue>());
   op.argument_types.push_back(
       flow::type_id<::strobe::rdg::swapchain_image_runtime>());
-  op.argument_accesses.push_back(flow::AccessMode::read_write);
+  op.argument_accesses.push_back(flow::AccessMode::read);
   op.argument_accesses.push_back(flow::AccessMode::consume);
   op.argument_groups.push_back({0, 1, 0, 1});
   op.argument_groups.push_back({1, 1, 1, 1});
@@ -82,13 +82,14 @@ void lower_swapchain(flow::detail::compiler::NormalizedIR &ir,
     if (!intrinsic(node, "present")) {
       continue;
     }
+    const auto accesses = ir.accesses_of(node);
     if (queue == flow::null_resource_id || node.kind != NodeKind::callback ||
-        node.accesses.count != 3 || node.argument_count != 2) {
+        accesses.size() != 3 || node.argument_count != 2) {
       throw std::logic_error("present intrinsic contract is invalid");
     }
-    const auto image = ir.accesses[node.accesses.offset];
-    const auto resource = ir.accesses[node.accesses.offset + 1];
-    const auto command_buffer = ir.accesses[node.accesses.offset + 2];
+    const auto image = accesses[0];
+    const auto resource = accesses[1];
+    const auto command_buffer = accesses[2];
     if (image.resource >= ir.resources.size() ||
         ir.resources[image.resource].type !=
             flow::type_id<::strobe::rdg::swapchain_image_runtime>() ||
@@ -160,11 +161,13 @@ void lower_swapchain(flow::detail::compiler::NormalizedIR &ir,
   const auto append_wait = [&](const PresentMarker &marker) {
     const auto offset = ir.accesses.size();
     ir.accesses.push_back(
-        {queue, flow::AccessMode::read_write, flow::AccessPurpose::argument});
+        {queue, flow::AccessMode::read, flow::AccessPurpose::argument});
     ir.accesses.push_back(
         {marker.image, flow::AccessMode::read, flow::AccessPurpose::argument});
     ir.accesses.push_back({marker.wait_command_buffer,
                            flow::AccessMode::read_write,
+                           flow::AccessPurpose::serialization});
+    ir.accesses.push_back({queue, flow::AccessMode::read_write,
                            flow::AccessPurpose::serialization});
     const auto group_offset = ir.argument_groups.size();
     ir.argument_groups.push_back({0, 1, 0, 1});
@@ -176,7 +179,7 @@ void lower_swapchain(flow::detail::compiler::NormalizedIR &ir,
     ir.nodes.push_back(NormalizedNode{
         .kind = NodeKind::callback,
         .source_operation = marker.submit_position,
-        .accesses = {.offset = static_cast<std::uint32_t>(offset), .count = 3},
+        .accesses = {.offset = static_cast<std::uint32_t>(offset), .count = 4},
         .argument_groups = {
             .offset = static_cast<std::uint32_t>(group_offset), .count = 2},
         .argument_elements = {
@@ -192,10 +195,12 @@ void lower_swapchain(flow::detail::compiler::NormalizedIR &ir,
   const auto append_deferred_present = [&](const PresentMarker &marker) {
     const auto offset = ir.accesses.size();
     ir.accesses.push_back(
-        {queue, flow::AccessMode::read_write, flow::AccessPurpose::argument});
+        {queue, flow::AccessMode::read, flow::AccessPurpose::argument});
     ir.accesses.push_back({marker.image, flow::AccessMode::consume,
                            flow::AccessPurpose::argument});
     ir.accesses.push_back({marker.command_buffer, flow::AccessMode::read_write,
+                           flow::AccessPurpose::serialization});
+    ir.accesses.push_back({queue, flow::AccessMode::read_write,
                            flow::AccessPurpose::serialization});
     const auto group_offset = ir.argument_groups.size();
     ir.argument_groups.push_back({0, 1, 0, 1});
@@ -209,7 +214,7 @@ void lower_swapchain(flow::detail::compiler::NormalizedIR &ir,
     ir.nodes.push_back(NormalizedNode{
         .kind = NodeKind::callback,
         .source_operation = source_operation,
-        .accesses = {.offset = static_cast<std::uint32_t>(offset), .count = 3},
+        .accesses = {.offset = static_cast<std::uint32_t>(offset), .count = 4},
         .argument_groups = {
             .offset = static_cast<std::uint32_t>(group_offset), .count = 2},
         .argument_elements = {

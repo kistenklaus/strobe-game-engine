@@ -49,6 +49,7 @@ template <typename T> Resource<T> recv(std::string_view tag) {
   construct(element,
             flow::OpMetadata{"recv", "", flow::OpSemantics::side_effect},
             read_write(channel), [](T *destination, Channel<T> &tx) {
+              ZoneScopedN("flow-channel-recv");
               std::lock_guard lock{tx.m_mutex};
               std::construct_at(destination, std::move(tx.m_deque.back()));
               tx.m_deque.pop_back();

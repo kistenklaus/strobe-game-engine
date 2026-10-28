@@ -28,6 +28,9 @@ void IntrinsicMaterializer::run() {
     if (node.intrinsic->immediates.size() != definition->immediates.size()) {
       throw std::logic_error("RDG intrinsic immediate count is invalid");
     }
+    const auto recorded_accesses = m_ir.accesses_of(node);
+    const auto recorded_groups = m_ir.argument_groups_of(node);
+    const auto recorded_elements = m_ir.argument_elements_of(node);
 
     Vector<flow::detail::compiler::NormalizedAccess, flow::allocator_ref>
         arguments;
@@ -38,13 +41,21 @@ void IntrinsicMaterializer::run() {
     std::uint32_t recorded = 0;
     std::uint32_t recorded_group = 0;
     for (const auto &expected : definition->arguments) {
-      if (expected.source == Source::global) {
+      if (expected.source == Source::global ||
+          expected.source == Source::global_serialization) {
         if (expected.resource >= m_ir.resources.size() ||
             m_ir.resources[expected.resource].type != expected.type) {
           throw std::logic_error("RDG materializer global is invalid");
         }
-        arguments.push_back(
-            {expected.resource, expected.mode, AccessPurpose::argument});
+        const auto purpose = expected.source == Source::global
+                                 ? AccessPurpose::argument
+                                 : AccessPurpose::serialization;
+        auto &target =
+            purpose == AccessPurpose::argument ? arguments : serialization;
+        target.push_back({expected.resource, expected.mode, purpose});
+        if (purpose == AccessPurpose::serialization) {
+          continue;
+        }
         const auto argument = static_cast<std::uint32_t>(arguments.size() - 1);
         const auto element =
             static_cast<std::uint32_t>(argument_elements.size());
@@ -53,57 +64,55 @@ void IntrinsicMaterializer::run() {
         continue;
       }
       if (expected.source == Source::recorded &&
-          recorded_group >= node.argument_groups.count) {
+          recorded_group >= recorded_groups.size()) {
         throw std::logic_error("RDG intrinsic has too few argument groups");
       }
       const auto group = expected.source == Source::recorded
-                             ? m_ir.argument_groups[
-                                   node.argument_groups.offset + recorded_group++]
+                             ? recorded_groups[recorded_group++]
                              : flow::ArgumentGroup{recorded, 1, 0, 0};
       if ((expected.source == Source::recorded && !expected.span &&
            group.element_count != 1) ||
           (expected.source == Source::recorded && !expected.nullable &&
            group.count != group.element_count) ||
           group.offset != recorded ||
-          group.count > node.accesses.count - recorded ||
+          group.count > recorded_accesses.size() - recorded ||
           (expected.source == Source::recorded &&
-           (group.element_offset > node.argument_elements.count ||
+           (group.element_offset > recorded_elements.size() ||
             group.element_count >
-                node.argument_elements.count - group.element_offset))) {
+                recorded_elements.size() - group.element_offset))) {
         throw std::logic_error("RDG intrinsic argument group is invalid");
       }
       const auto output_offset = static_cast<std::uint32_t>(arguments.size());
       for (std::uint32_t element = 0; element < group.count; ++element) {
-      if (recorded >= node.accesses.count) {
-        throw std::logic_error("RDG intrinsic has too few accesses");
-      }
-      const auto access = m_ir.accesses[node.accesses.offset + recorded++];
-      if (access.resource >= m_ir.resources.size() ||
-          (expected.type.value != 0 &&
-           m_ir.resources[access.resource].type != expected.type)) {
-        throw std::logic_error("RDG intrinsic access type is invalid");
-      }
-      if (expected.source == Source::recorded) {
-        if (access.purpose != AccessPurpose::argument ||
-            access.mode != expected.mode) {
-          throw std::logic_error("RDG intrinsic argument access is invalid");
+        if (recorded >= recorded_accesses.size()) {
+          throw std::logic_error("RDG intrinsic has too few accesses");
         }
-        arguments.push_back(access);
-      } else {
-        if (access.purpose != AccessPurpose::serialization) {
-          throw std::logic_error(
-              "RDG intrinsic serialization access is invalid");
+        const auto access = recorded_accesses[recorded++];
+        if (access.resource >= m_ir.resources.size() ||
+            (expected.type.value != 0 &&
+             m_ir.resources[access.resource].type != expected.type)) {
+          throw std::logic_error("RDG intrinsic access type is invalid");
         }
-        serialization.push_back(access);
-      }
+        if (expected.source == Source::recorded) {
+          if (access.purpose != AccessPurpose::argument ||
+              access.mode != expected.mode) {
+            throw std::logic_error("RDG intrinsic argument access is invalid");
+          }
+          arguments.push_back(access);
+        } else {
+          if (access.purpose != AccessPurpose::serialization) {
+            throw std::logic_error(
+                "RDG intrinsic serialization access is invalid");
+          }
+          serialization.push_back(access);
+        }
       }
       if (expected.source == Source::recorded) {
         const auto output_element_offset =
             static_cast<std::uint32_t>(argument_elements.size());
         for (std::uint32_t element = 0; element < group.element_count;
              ++element) {
-          const auto mapped = m_ir.argument_elements[
-              node.argument_elements.offset + group.element_offset + element];
+          const auto mapped = recorded_elements[group.element_offset + element];
           if (mapped == flow::null_argument_element) {
             if (!expected.nullable) {
               throw std::logic_error("RDG intrinsic argument is null");
@@ -118,12 +127,11 @@ void IntrinsicMaterializer::run() {
           }
         }
         argument_groups.push_back({output_offset, group.count,
-                                   output_element_offset,
-                                   group.element_count});
+                                   output_element_offset, group.element_count});
       }
     }
-    if (recorded != node.accesses.count ||
-        recorded_group != node.argument_groups.count) {
+    if (recorded != recorded_accesses.size() ||
+        recorded_group != recorded_groups.size()) {
       throw std::logic_error("RDG intrinsic has unconsumed accesses");
     }
 
@@ -165,7 +173,8 @@ void IntrinsicMaterializer::run() {
                                       recorded.element_count});
     }
     for (const auto &argument : definition->arguments) {
-      if (argument.source == Source::serialization) {
+      if (argument.source == Source::serialization ||
+          argument.source == Source::global_serialization) {
         continue;
       }
       const auto group = argument_groups[operation.argument_groups.size()];

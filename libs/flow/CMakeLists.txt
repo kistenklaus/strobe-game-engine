@@ -9,6 +9,7 @@ add_library(strobe-flow
   src/strobe/flow/op_stream.cpp
   src/strobe/flow/op_source.cpp
   src/strobe/flow/program.cpp
+  src/strobe/flow/program_artifact.cpp
   src/strobe/flow/program_data.cpp
   src/strobe/flow/value_ir.cpp
 )

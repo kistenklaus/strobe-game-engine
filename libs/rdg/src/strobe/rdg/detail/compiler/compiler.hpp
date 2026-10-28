@@ -19,8 +19,8 @@ void place_image_barriers(flow::detail::compiler::NormalizedIR &ir,
                           flow::CompileContext &context);
 void place_buffer_barriers(flow::detail::compiler::NormalizedIR &ir,
                            flow::CompileContext &context);
-void remove_redundant_accesses(flow::detail::compiler::NormalizedIR &ir,
-                               flow::CompileContext &context);
+void remove_consumed_markers(flow::detail::compiler::NormalizedIR &ir,
+                             flow::CompileContext &context);
 void materialize_operations(flow::detail::compiler::NormalizedIR &ir,
                             flow::CompileContext &context);
 void lower_swapchain(flow::detail::compiler::NormalizedIR &ir,

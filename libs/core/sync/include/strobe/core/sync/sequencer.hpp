@@ -220,7 +220,7 @@ public:
   explicit Sequencer(const allocator &alloc, uint32_t maxThreadCount) noexcept
       : m_scheduler(alloc, std::min(maxThreadCount, schedule::SLOT_COUNT)),
         m_locationPool(alloc) {
-    assert(maxThreadCount > 1);
+    assert(maxThreadCount > 0);
   }
 
   Sequencer(const Sequencer &) = delete;
@@ -473,7 +473,7 @@ private:
 
 public:
   static constexpr size_t static_allocation_size(uint32_t threadCount) {
-    assert(threadCount > 1);
+    assert(threadCount > 0);
 
     const uint32_t workerCount = std::min(threadCount, schedule::SLOT_COUNT);
     return JobScheduler::static_allocation_size(workerCount);

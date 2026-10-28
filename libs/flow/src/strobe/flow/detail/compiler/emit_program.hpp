@@ -78,6 +78,64 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
     }
   }
 
+  struct FeedbackRegionKey {
+    SourceOperationId declaration_position;
+    SourceOperationId feedback_position;
+  };
+  Vector<FeedbackRegionKey, allocator_ref> feedback_region_keys;
+  for (const auto &phi : values.phis) {
+    if (phi.condition != null_value_id) {
+      continue;
+    }
+    const auto existing = std::find_if(
+        feedback_region_keys.begin(), feedback_region_keys.end(),
+        [&](const FeedbackRegionKey &region) {
+          return region.declaration_position == phi.declaration_position &&
+                 region.feedback_position == phi.feedback_position;
+        });
+    if (existing == feedback_region_keys.end()) {
+      feedback_region_keys.push_back({
+          .declaration_position = phi.declaration_position,
+          .feedback_position = phi.feedback_position,
+      });
+    }
+  }
+
+  constexpr auto no_feedback_region = std::numeric_limits<std::uint32_t>::max();
+  Vector<std::uint32_t, allocator_ref> feedback_region_of(
+      graph.node_count(), no_feedback_region, allocator_ref{});
+  Vector<std::uint32_t, allocator_ref> feedback_region_node_counts(
+      feedback_region_keys.size(), 0, allocator_ref{});
+  for (NodeId node = 0; node < values.nodes.size(); ++node) {
+    const auto &source = values.nodes[node];
+    for (std::uint32_t region = 0; region < feedback_region_keys.size();
+         ++region) {
+      const auto &key = feedback_region_keys[region];
+      bool is_region_phi = false;
+      for (const auto &phi : values.phis) {
+        is_region_phi |= phi.node == node &&
+                         phi.declaration_position >= key.declaration_position &&
+                         phi.feedback_position <= key.feedback_position;
+      }
+      const bool inside = source.source_operation != null_source_operation_id &&
+                          source.source_operation >= key.declaration_position &&
+                          source.source_operation < key.feedback_position;
+      const bool included =
+          (inside || is_region_phi) &&
+          !(activation.components[components.component_of[node]].initialization &&
+            !is_region_phi && source.kind != NodeKind::acquire);
+      if (!included) {
+        continue;
+      }
+      if (feedback_region_of[node] != no_feedback_region &&
+          feedback_region_of[node] != region) {
+        throw std::logic_error("feedback regions overlap");
+      }
+      feedback_region_of[node] = region;
+      ++feedback_region_node_counts[region];
+    }
+  }
+
   Vector<std::uint32_t, allocator_ref> indegree(graph.node_count(), 0,
                                                 allocator_ref{});
   NodeList ready;
@@ -89,11 +147,65 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
       ready.push_back(node);
     }
   }
+  auto select_ready = [&](std::uint32_t region) {
+    const auto selected = std::min_element(
+        ready.begin(), ready.end(), [&](NodeId left, NodeId right) {
+          if (region == no_feedback_region) {
+            const bool left_outside =
+                feedback_region_of[left] == no_feedback_region;
+            const bool right_outside =
+                feedback_region_of[right] == no_feedback_region;
+            if (left_outside != right_outside) {
+              return left_outside;
+            }
+          } else {
+            const bool left_inside = feedback_region_of[left] == region;
+            const bool right_inside = feedback_region_of[right] == region;
+            if (left_inside != right_inside) {
+              return left_inside;
+            }
+          }
+          return left < right;
+        });
+    if (selected == ready.end() ||
+        (region != no_feedback_region &&
+         feedback_region_of[*selected] != region) ||
+        (region == no_feedback_region &&
+         feedback_region_of[*selected] != no_feedback_region)) {
+      return ready.end();
+    }
+    return selected;
+  };
+  std::uint32_t active_feedback_region = no_feedback_region;
   while (!ready.empty()) {
-    const auto next = std::min_element(ready.begin(), ready.end());
+    auto next = ready.end();
+    if (active_feedback_region != no_feedback_region) {
+      next = select_ready(active_feedback_region);
+      if (next == ready.end()) {
+        if (feedback_region_node_counts[active_feedback_region] != 0) {
+          throw std::logic_error(
+              "feedback region cannot be emitted as a contiguous range");
+        }
+        active_feedback_region = no_feedback_region;
+      }
+    }
+    if (next == ready.end()) {
+      next = select_ready(no_feedback_region);
+    }
+    if (next == ready.end()) {
+      next = std::min_element(ready.begin(), ready.end());
+      active_feedback_region = feedback_region_of[*next];
+    }
     const auto node = *next;
     ready.erase(next);
     order.push_back(node);
+    if (feedback_region_of[node] != no_feedback_region) {
+      auto &remaining = feedback_region_node_counts[feedback_region_of[node]];
+      if (remaining == 0) {
+        throw std::logic_error("feedback region node count underflow");
+      }
+      --remaining;
+    }
     for (const auto destination : successors[node]) {
       if (--indegree[destination] == 0) {
         ready.push_back(destination);
@@ -130,9 +242,13 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
   data.nodes.reserve(order.size());
   data.callbacks.reserve(stream.ops().size());
 
-  data.resource_types.reserve(values.resources.size());
+  data.resources.reserve(values.resources.size());
   for (const auto &resource : values.resources) {
-    data.resource_types.push_back(resource.type);
+    data.resources.push_back(CompiledResource{
+        .type = resource.type,
+        .type_name = String<allocator_ref>(resource.type_name, allocator_ref{}),
+        .label = String<allocator_ref>(resource.label, allocator_ref{}),
+    });
   }
 
   for (const auto &value : values.values) {
@@ -146,6 +262,17 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
     data.externals.push_back(CompiledExternal{
         .resource = external.resource,
         .name = String<allocator_ref>(external.name.view(), allocator_ref{}),
+    });
+  }
+  for (std::size_t index = 0; index < stream.projections().size(); ++index) {
+    const auto &projection = stream.projections()[index];
+    data.projections.push_back(CompiledProjection{
+        .resource = projection.resource,
+        .owner = projection.owner,
+        .kind = projection.kind,
+        .name = String<allocator_ref>(projection.name.view(), allocator_ref{}),
+        .resolve = stream.release_projection(index),
+        .external = projection.external,
     });
   }
   for (const auto &phi : values.phis) {
@@ -173,6 +300,7 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
           .phis = {},
           .nodes = {},
           .acquires = {},
+          .token_requirements = {},
           .max_in_flight = source.max_in_flight,
       });
     } else if (existing->max_in_flight != source.max_in_flight) {
@@ -252,12 +380,12 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
   for (NodeId runtime = 0; runtime < order.size(); ++runtime) {
     const auto source = order[runtime];
     const auto &node = values.nodes[source];
-    const auto input_offset = data.inputs.size();
-    const auto output_offset = data.outputs.size();
-    const auto access_offset = data.accesses.size();
+    const auto input_offset = data.node_storage.inputs.size();
+    const auto output_offset = data.node_storage.outputs.size();
+    const auto access_offset = data.node_storage.accesses.size();
     for (std::uint32_t index = 0; index < node.accesses.count; ++index) {
       const auto &access = values.accesses[node.accesses.offset + index];
-      data.accesses.push_back(CompiledAccess{
+      data.node_storage.accesses.push_back(CompiledAccess{
           .resource = access.resource,
           .mode = access.mode,
           .purpose = access.purpose,
@@ -265,20 +393,20 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
           .output = access.output,
       });
       if (access.input != null_value_id) {
-        data.inputs.push_back(access.input);
+        data.node_storage.inputs.push_back(access.input);
       }
       if (access.output != null_value_id) {
-        data.outputs.push_back(access.output);
+        data.node_storage.outputs.push_back(access.output);
       }
     }
     const auto immediate_predecessors =
-        append_remapped(data.predecessors, predecessors[source]);
+        append_remapped(data.node_storage.predecessors, predecessors[source]);
     const auto immediate_successors =
-        append_remapped(data.successors, successors[source]);
+        append_remapped(data.node_storage.successors, successors[source]);
     const auto prior_activation = append_remapped(
-        data.temporal_predecessors, temporal_predecessors[source]);
-    const auto next_activation =
-        append_remapped(data.temporal_successors, temporal_successors[source]);
+        data.node_storage.temporal_predecessors, temporal_predecessors[source]);
+    const auto next_activation = append_remapped(
+        data.node_storage.temporal_successors, temporal_successors[source]);
     CallbackId callback = null_callback_id;
     if (node.resolved_operation != null_resolved_operation_id) {
       auto resolved =
@@ -303,7 +431,8 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
       }
       compiled_callback.argument_elements = {
           .offset = static_cast<std::uint32_t>(argument_element_offset),
-          .count = static_cast<std::uint32_t>(resolved.argument_elements.size())};
+          .count =
+              static_cast<std::uint32_t>(resolved.argument_elements.size())};
       const auto immediate_offset = data.immediates.size();
       for (const auto &immediate : resolved.immediates) {
         const auto aligned =
@@ -341,14 +470,16 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
         }
         compiled_callback.argument_groups = {
             .offset = static_cast<std::uint32_t>(argument_group_offset),
-            .count = static_cast<std::uint32_t>(recorded.argument_groups.size())};
+            .count =
+                static_cast<std::uint32_t>(recorded.argument_groups.size())};
         const auto argument_element_offset = data.argument_elements.size();
         for (const auto element : recorded.argument_elements) {
           data.argument_elements.push_back(element);
         }
         compiled_callback.argument_elements = {
             .offset = static_cast<std::uint32_t>(argument_element_offset),
-            .count = static_cast<std::uint32_t>(recorded.argument_elements.size())};
+            .count =
+                static_cast<std::uint32_t>(recorded.argument_elements.size())};
         auto runtime = stream.release_callback(node.source_operation);
         if (runtime) {
           compiled_callback.runtime = [runtime = std::move(runtime)](
@@ -368,11 +499,11 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
         .kind = program_kind(node.kind),
         .callback = callback,
         .inputs = {.offset = static_cast<std::uint32_t>(input_offset),
-                   .count = static_cast<std::uint32_t>(data.inputs.size() -
-                                                       input_offset)},
+                   .count = static_cast<std::uint32_t>(
+                       data.node_storage.inputs.size() - input_offset)},
         .outputs = {.offset = static_cast<std::uint32_t>(output_offset),
-                    .count = static_cast<std::uint32_t>(data.outputs.size() -
-                                                        output_offset)},
+                    .count = static_cast<std::uint32_t>(
+                        data.node_storage.outputs.size() - output_offset)},
         .accesses = {.offset = static_cast<std::uint32_t>(access_offset),
                      .count = node.accesses.count},
         .argument_count = node.argument_count,
@@ -380,8 +511,9 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
         .successors = immediate_successors,
         .temporal_predecessors = prior_activation,
         .temporal_successors = next_activation,
-        .runs_once =
-            activation.components[components.component_of[source]].runs_once,
+        .initialization =
+            activation.components[components.component_of[source]].initialization &&
+            node.kind != NodeKind::phi && node.kind != NodeKind::acquire,
         .memoized =
             activation.components[components.component_of[source]].memoized &&
             !graph.get(graph::NodeId{source}).classification.observable_effect,
@@ -404,12 +536,20 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
         const auto phi = data.feedback_region_phis[region.phis.offset + index];
         is_region_phi |= values.phis[phi].node == source;
       }
+      if (!is_region_phi) {
+        for (const auto &phi : values.phis) {
+          is_region_phi |=
+              phi.node == source &&
+              phi.declaration_position >= region.declaration_position &&
+              phi.feedback_position <= region.feedback_position;
+        }
+      }
       const bool inside =
           node.source_operation != null_source_operation_id &&
           node.source_operation >= region.declaration_position &&
           node.source_operation < region.feedback_position;
       if ((!inside && !is_region_phi) ||
-          (graph.get(graph::NodeId{source}).classification.loop_invariant &&
+          (activation.components[components.component_of[source]].initialization &&
            !is_region_phi && node.kind != NodeKind::acquire)) {
         continue;
       }
@@ -433,6 +573,30 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
     }
     if (region.acquires.count == 0) {
       throw std::logic_error("feedback region has no compiled acquire");
+    }
+
+    region.token_requirements.offset =
+        static_cast<std::uint32_t>(data.feedback_token_requirements.size());
+    for (std::uint32_t index = 0; index < region.acquires.count; ++index) {
+      const auto acquire =
+          data.feedback_region_acquires[region.acquires.offset + index];
+      if (acquire >= data.acquires.size()) {
+        throw std::logic_error("feedback region acquire is out of range");
+      }
+      const auto semaphore = data.acquires[acquire].semaphore;
+      const auto existing = std::find_if(
+          data.feedback_token_requirements.begin() +
+              region.token_requirements.offset,
+          data.feedback_token_requirements.end(),
+          [semaphore](const CompiledTokenRequirement &requirement) {
+            return requirement.semaphore == semaphore;
+          });
+      if (existing == data.feedback_token_requirements.end()) {
+        data.feedback_token_requirements.push_back({semaphore, 1});
+        ++region.token_requirements.count;
+      } else {
+        ++existing->count;
+      }
     }
   }
 
@@ -699,17 +863,21 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
     });
   }
 
-  data.resource_slots.reserve(layout.resources.size());
-  for (const auto &slot : layout.resources) {
-    data.resource_slots.push_back(ResourceSlotPlan{
+  if (layout.resources.size() != data.resources.size() ||
+      schedule.resources.size() != data.resources.size()) {
+    throw std::logic_error("compiled resource tables have different sizes");
+  }
+  for (ResourceId resource = 0; resource < layout.resources.size();
+       ++resource) {
+    const auto &slot = layout.resources[resource];
+    data.resources[resource].slots = ResourceSlotPlan{
         .offset = slot.offset == no_storage_offset ? null_storage_offset
                                                    : slot.offset,
         .slot_stride = slot.slot_stride,
         .slot_count = slot.slot_count,
         .bounded_overlap = slot.bounded_overlap,
-    });
+    };
   }
-  data.resource_lifetimes.reserve(schedule.resources.size());
   for (ResourceId resource = 0; resource < schedule.resources.size();
        ++resource) {
     const auto &lifetime = schedule.resources[resource];
@@ -755,7 +923,7 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
     }
     std::sort(data.release_after.begin() + release_offset,
               data.release_after.end());
-    data.resource_lifetimes.push_back(ResourceLifetimePlan{
+    data.resources[resource].lifetime = ResourceLifetimePlan{
         .interval = interval,
         .constructions =
             {
@@ -772,7 +940,7 @@ inline ProgramData emit_program(ActivationLayoutIR activation_layout,
         .retained_by_feedback = lifetime.retained_by_feedback,
         .destroy_at_shutdown = lifetime.destroy_at_shutdown,
         .destroy = lifetime.destroy,
-    });
+    };
   }
   return data;
 }

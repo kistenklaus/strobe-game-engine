@@ -47,11 +47,27 @@ flow::ExternalOpFunction resolve_test_library(void *, std::string_view symbol,
   return nullptr;
 }
 
+struct ExternalProjectionOwner {
+  int value;
+};
+
+void *project_external_projection_owner(void *storage) noexcept {
+  return &static_cast<ExternalProjectionOwner *>(storage)->value;
+}
+
+flow::ExternalProjectionFunction
+resolve_test_projector(void *, std::string_view symbol,
+                       std::uint32_t abi) noexcept {
+  if (symbol == "value" && abi == 1) {
+    return project_external_projection_owner;
+  }
+  return nullptr;
+}
+
 void submit_and_wait(flow::Program &program,
                      strobe::sync::JobScheduler &scheduler) {
-  const auto completion = program.submit(&scheduler);
-  scheduler.wait(completion);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
 }
 
 TEST(FlowProgram, EndReturnsAProgramSummary) {
@@ -67,17 +83,17 @@ TEST(FlowProgram, EndReturnsAProgramSummary) {
   EXPECT_EQ(program.operation_count(), 1);
   EXPECT_EQ(program.resource_count(), 2);
   EXPECT_EQ(program.external_count(), 1);
-  ASSERT_EQ(program.data().resource_slots.size(), 2);
-  EXPECT_EQ(program.data().resource_slots[0].offset,
+  ASSERT_EQ(program.data().resources.size(), 2);
+  EXPECT_EQ(program.data().resources[0].slots.offset,
             flow::detail::null_storage_offset);
-  EXPECT_EQ(program.data().resource_slots[0].slot_count, 0);
-  EXPECT_EQ(program.data().resource_slots[1].slot_count, 1);
+  EXPECT_EQ(program.data().resources[0].slots.slot_count, 0);
+  EXPECT_EQ(program.data().resources[1].slots.slot_count, 1);
 }
 
 TEST(FlowProgram, PrettyPrintsCompiledGraphAndStoragePlan) {
   flow::begin();
   auto external = flow::external<int>("source");
-  auto value = flow::resource<int>();
+  auto value = flow::resource<int>("value");
   flow::construct(
       value, flow::OpMetadata("Create value"), flow::read(external),
       [](int *output, const int &input) { std::construct_at(output, input); });
@@ -90,6 +106,7 @@ TEST(FlowProgram, PrettyPrintsCompiledGraphAndStoragePlan) {
   EXPECT_NE(pretty.view().find("%0 = external \"source\""),
             std::string_view::npos);
   EXPECT_NE(pretty.view().find("resources:"), std::string_view::npos);
+  EXPECT_NE(pretty.view().find("%1 \"value\" : int"), std::string_view::npos);
   EXPECT_NE(pretty.view().find("nodes:"), std::string_view::npos);
   EXPECT_NE(pretty.view().find("= construct r:%0.0"), std::string_view::npos);
   EXPECT_NE(pretty.view().find("[\"Create value\"]"), std::string_view::npos);
@@ -108,8 +125,8 @@ TEST(FlowProgram, SuppliesLogicalLifetimeToConstructionCallback) {
   flow::op(flow::read(value), [](const int &) {});
   auto program = flow::end();
 
-  ASSERT_EQ(program.data().resource_lifetimes.size(), 1);
-  const auto compiled = program.data().resource_lifetimes[0].interval;
+  ASSERT_EQ(program.data().resources.size(), 1);
+  const auto compiled = program.data().resources[0].lifetime.interval;
   EXPECT_EQ(compiled.begin, 0);
   EXPECT_EQ(compiled.end, 2);
 
@@ -188,7 +205,7 @@ TEST(FlowProgram, SuppliesLifetimeToExternalConstruction) {
                   flow::read(source));
   flow::op(flow::read(target), [&](const int &value) { observed = value; });
   auto program = flow::end();
-  const auto expected = program.data().resource_lifetimes[1].interval;
+  const auto expected = program.data().resources[1].lifetime.interval;
 
   program.bind_library(
       "test-library",
@@ -247,12 +264,24 @@ TEST(FlowProgram, AliasesStorageForOrderedNonOverlappingResources) {
   });
   auto program = flow::end();
 
-  const auto &slots = program.data().resource_slots;
-  ASSERT_EQ(slots.size(), 3);
-  EXPECT_EQ(slots[0].offset, slots[2].offset);
-  EXPECT_NE(slots[0].offset, slots[1].offset);
+  const auto &resources = program.data().resources;
+  ASSERT_EQ(resources.size(), 3);
+  EXPECT_EQ(resources[0].slots.offset, resources[2].slots.offset);
+  EXPECT_NE(resources[0].slots.offset, resources[1].slots.offset);
   EXPECT_EQ(program.data().storage_size, sizeof(int) * 2);
   EXPECT_EQ(program.data().storage_alignment, alignof(int));
+
+  const auto &physical_offsets =
+      program.data().physical_storage.resource_slot_offsets;
+  const auto &physical_slots =
+      program.data().physical_storage.slot_physical_ids;
+  ASSERT_EQ(physical_offsets.size(), 4);
+  ASSERT_EQ(physical_slots.size(), 3);
+  EXPECT_EQ(physical_slots[physical_offsets[0]],
+            physical_slots[physical_offsets[2]]);
+  EXPECT_NE(physical_slots[physical_offsets[0]],
+            physical_slots[physical_offsets[1]]);
+  ASSERT_FALSE(program.data().physical_storage.frontier_offsets.empty());
 }
 
 TEST(FlowProgram, SeparatesInterferingStorage) {
@@ -263,9 +292,9 @@ TEST(FlowProgram, SeparatesInterferingStorage) {
   flow::construct(second, 2);
   auto program = flow::end();
 
-  const auto &slots = program.data().resource_slots;
-  ASSERT_EQ(slots.size(), 2);
-  EXPECT_NE(slots[0].offset, slots[1].offset);
+  const auto &resources = program.data().resources;
+  ASSERT_EQ(resources.size(), 2);
+  EXPECT_NE(resources[0].slots.offset, resources[1].slots.offset);
   EXPECT_EQ(program.data().storage_size, sizeof(int) * 2);
 }
 
@@ -311,7 +340,7 @@ TEST(FlowProgram, ReservesAnAlignedRingForYieldingCycles) {
   flow::feedback(state, next, flow::FeedbackOptions{.max_in_flight = 3});
   auto program = flow::end();
 
-  const auto &slot = program.data().resource_slots[2];
+  const auto &slot = program.data().resources[2].slots;
   EXPECT_EQ(slot.slot_count, 3);
   EXPECT_EQ(slot.slot_stride, sizeof(Value));
   EXPECT_EQ(slot.offset % alignof(Value), 0);
@@ -328,8 +357,8 @@ TEST(FlowProgram, SchedulesDestructionAfterTheCompleteLastUseFrontier) {
   auto program = flow::end();
 
   const auto &data = program.data();
-  ASSERT_EQ(data.resource_lifetimes.size(), 1);
-  const auto &lifetime = data.resource_lifetimes[0];
+  ASSERT_EQ(data.resources.size(), 1);
+  const auto &lifetime = data.resources[0].lifetime;
   ASSERT_EQ(lifetime.constructions.count, 1);
   EXPECT_EQ(data.constructions[lifetime.constructions.offset], 0);
   ASSERT_EQ(lifetime.release_after.count, 2);
@@ -357,11 +386,12 @@ TEST(FlowProgram, EmitsDenseRuntimeDependenciesAndValueBindings) {
   EXPECT_EQ(data.values[1].resource, 1);
   EXPECT_EQ(data.nodes[0].predecessors.count, 0);
   ASSERT_EQ(data.nodes[1].predecessors.count, 1);
-  EXPECT_EQ(data.predecessors[data.nodes[1].predecessors.offset], 0);
+  EXPECT_EQ(data.node_storage.predecessors[data.nodes[1].predecessors.offset],
+            0);
   ASSERT_EQ(data.nodes[0].outputs.count, 1);
   ASSERT_EQ(data.nodes[1].inputs.count, 1);
-  EXPECT_EQ(data.outputs[data.nodes[0].outputs.offset],
-            data.inputs[data.nodes[1].inputs.offset]);
+  EXPECT_EQ(data.node_storage.outputs[data.nodes[0].outputs.offset],
+            data.node_storage.inputs[data.nodes[1].inputs.offset]);
   EXPECT_EQ(data.callbacks.size(), 2);
 }
 
@@ -384,20 +414,27 @@ TEST(FlowProgram, EmitsFeedbackAsTemporalRuntimeDependencies) {
   ASSERT_EQ(data.feedback_regions.size(), 1);
   ASSERT_EQ(data.feedback_regions[0].phis.count, 1);
   EXPECT_GT(data.feedback_regions[0].nodes.count, 0);
+  const auto &region = data.feedback_regions[0];
+  const auto first_region_node =
+      data.feedback_region_nodes[region.nodes.offset];
+  for (std::uint32_t index = 0; index < region.nodes.count; ++index) {
+    EXPECT_EQ(data.feedback_region_nodes[region.nodes.offset + index],
+              first_region_node + index);
+  }
   ASSERT_EQ(data.feedback_regions[0].acquires.count, 1);
   EXPECT_EQ(data.feedback_region_phis[data.feedback_regions[0].phis.offset], 0);
   EXPECT_EQ(
       data.feedback_region_acquires[data.feedback_regions[0].acquires.offset],
       0);
-  ASSERT_EQ(data.resource_lifetimes.size(), 3);
-  EXPECT_EQ(data.resource_lifetimes[0].interval.begin, 0);
-  EXPECT_EQ(data.resource_lifetimes[0].interval.end,
+  ASSERT_EQ(data.resources.size(), 3);
+  EXPECT_EQ(data.resources[0].lifetime.interval.begin, 0);
+  EXPECT_EQ(data.resources[0].lifetime.interval.end,
             std::numeric_limits<std::uint32_t>::max());
-  EXPECT_EQ(data.resource_lifetimes[2].interval.begin, 0);
-  EXPECT_EQ(data.resource_lifetimes[2].interval.end,
+  EXPECT_EQ(data.resources[2].lifetime.interval.begin, 0);
+  EXPECT_EQ(data.resources[2].lifetime.interval.end,
             std::numeric_limits<std::uint32_t>::max());
-  ASSERT_EQ(data.temporal_predecessors.size(), 1);
-  ASSERT_EQ(data.temporal_successors.size(), 1);
+  ASSERT_EQ(data.node_storage.temporal_predecessors.size(), 1);
+  ASSERT_EQ(data.node_storage.temporal_successors.size(), 1);
   flow::detail::NodeId phi = flow::detail::null_node_id;
   for (flow::detail::NodeId node = 0; node < data.nodes.size(); ++node) {
     if (data.nodes[node].kind == flow::detail::OperationKind::phi) {
@@ -406,17 +443,20 @@ TEST(FlowProgram, EmitsFeedbackAsTemporalRuntimeDependencies) {
     }
     for (std::uint32_t index = 0; index < data.nodes[node].predecessors.count;
          ++index) {
-      EXPECT_LT(data.predecessors[data.nodes[node].predecessors.offset + index],
+      EXPECT_LT(data.node_storage
+                    .predecessors[data.nodes[node].predecessors.offset + index],
                 node);
     }
   }
   ASSERT_NE(phi, flow::detail::null_node_id);
   ASSERT_EQ(data.nodes[phi].temporal_predecessors.count, 1);
   const auto feedback =
-      data.temporal_predecessors[data.nodes[phi].temporal_predecessors.offset];
+      data.node_storage
+          .temporal_predecessors[data.nodes[phi].temporal_predecessors.offset];
   ASSERT_EQ(data.nodes[feedback].temporal_successors.count, 1);
   EXPECT_EQ(
-      data.temporal_successors[data.nodes[feedback].temporal_successors.offset],
+      data.node_storage
+          .temporal_successors[data.nodes[feedback].temporal_successors.offset],
       phi);
   ASSERT_EQ(data.yields.size(), 1);
   EXPECT_EQ(data.nodes[data.yields[0]].kind,
@@ -451,6 +491,8 @@ TEST(FlowProgram, CompilesIndependentFeedbackRegions) {
   ASSERT_EQ(data.feedback_regions.size(), 2);
   ASSERT_EQ(data.feedback_regions[0].acquires.count, 1);
   ASSERT_EQ(data.feedback_regions[1].acquires.count, 1);
+  ASSERT_EQ(data.feedback_regions[0].token_requirements.count, 1);
+  ASSERT_EQ(data.feedback_regions[1].token_requirements.count, 1);
   const auto acquire_a =
       data.feedback_region_acquires[data.feedback_regions[0].acquires.offset];
   const auto acquire_b =
@@ -458,8 +500,26 @@ TEST(FlowProgram, CompilesIndependentFeedbackRegions) {
   EXPECT_NE(acquire_a, acquire_b);
   EXPECT_NE(data.acquires[acquire_a].semaphore,
             data.acquires[acquire_b].semaphore);
+  const auto &requirement_a =
+      data.feedback_token_requirements[data.feedback_regions[0]
+                                           .token_requirements.offset];
+  const auto &requirement_b =
+      data.feedback_token_requirements[data.feedback_regions[1]
+                                           .token_requirements.offset];
+  EXPECT_EQ(requirement_a.semaphore, data.acquires[acquire_a].semaphore);
+  EXPECT_EQ(requirement_b.semaphore, data.acquires[acquire_b].semaphore);
+  EXPECT_EQ(requirement_a.count, 1);
+  EXPECT_EQ(requirement_b.count, 1);
   EXPECT_GT(data.feedback_regions[0].nodes.count, 0);
   EXPECT_GT(data.feedback_regions[1].nodes.count, 0);
+  for (const auto &region : data.feedback_regions) {
+    const auto first_region_node =
+        data.feedback_region_nodes[region.nodes.offset];
+    for (std::uint32_t index = 0; index < region.nodes.count; ++index) {
+      EXPECT_EQ(data.feedback_region_nodes[region.nodes.offset + index],
+                first_region_node + index);
+    }
+  }
 }
 
 TEST(FlowProgram, CompilesFeedbackSpecificInFlightLimit) {
@@ -548,15 +608,63 @@ TEST(FlowProgram, PreservesSingleFeedbackFrontierAcrossSubmissions) {
   strobe::sync::JobScheduler scheduler(&allocator, 2);
 
   program.release("frame", 2);
-  const auto first = program.submit(&scheduler);
+  program.submit(&scheduler);
   program.release("frame", 2);
-  const auto second = program.submit(&scheduler);
-  scheduler.wait(first);
-  scheduler.wait(second);
-  program.rethrow_execution_error();
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   EXPECT_EQ(runs.load(std::memory_order_relaxed), 4);
+}
+
+TEST(FlowProgram, SerializesResourcesAcrossFeedbackActivations) {
+  std::atomic<std::uint32_t> entered = 0;
+  std::atomic<std::uint32_t> active = 0;
+  std::atomic<std::uint32_t> max_active = 0;
+  std::atomic<bool> release = false;
+
+  flow::begin();
+  auto domain = flow::resource<int>();
+  flow::construct(domain, 0);
+  auto initial = flow::resource<int>();
+  flow::construct(initial, 0);
+  auto state = flow::phi(initial);
+  flow::acquire("frame");
+  flow::op(flow::serialize(domain), [&] {
+    const auto current = active.fetch_add(1, std::memory_order_relaxed) + 1;
+    auto maximum = max_active.load(std::memory_order_relaxed);
+    while (maximum < current &&
+           !max_active.compare_exchange_weak(maximum, current,
+                                             std::memory_order_relaxed)) {
+    }
+    entered.fetch_add(1, std::memory_order_release);
+    while (!release.load(std::memory_order_acquire)) {
+      std::this_thread::yield();
+    }
+    active.fetch_sub(1, std::memory_order_relaxed);
+  });
+  auto next = flow::resource<int>();
+  flow::construct(next, 0);
+  flow::op(flow::read(state), flow::write(next),
+           [](const int &input, int &output) { output = input + 1; });
+  flow::feedback(state, next, flow::FeedbackOptions{.max_in_flight = 2});
+  auto program = flow::end();
+
+  strobe::sync::allocator allocator;
+  strobe::sync::JobScheduler scheduler(&allocator, 2);
+  program.release("frame", 2);
+  program.submit(&scheduler);
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(1);
+  while (entered.load(std::memory_order_acquire) == 0 &&
+         std::chrono::steady_clock::now() < deadline) {
+    std::this_thread::yield();
+  }
+  EXPECT_EQ(entered.load(std::memory_order_acquire), 1);
+  EXPECT_EQ(max_active.load(std::memory_order_relaxed), 1);
+  release.store(true, std::memory_order_release);
+  program.wait();
+  scheduler.stop();
 }
 
 TEST(FlowProgram, BindsExternalResourcesByCompiledName) {
@@ -582,7 +690,7 @@ TEST(FlowProgram, BindsExternalResourcesByCompiledName) {
   EXPECT_EQ(program.external(0), &window);
 }
 
-TEST(FlowProgram, AcquiresAlignedGenerationsAndRejectsStaleTokens) {
+TEST(FlowProgram, AcquiresAlignedAndReusesGenerations) {
   struct alignas(64) Value {
     int value;
   };
@@ -608,11 +716,9 @@ TEST(FlowProgram, AcquiresAlignedGenerationsAndRejectsStaleTokens) {
   EXPECT_FALSE(program.try_acquire_generation(2).has_value());
 
   program.release_generation(first);
-  EXPECT_THROW(program.resolve(first), std::logic_error);
   const auto reused = program.acquire_generation(2);
   EXPECT_EQ(reused.slot, first.slot);
   EXPECT_NE(reused.generation, first.generation);
-  EXPECT_THROW(program.release_generation(first), std::logic_error);
   program.release_generation(second);
   program.release_generation(reused);
 }
@@ -680,9 +786,9 @@ TEST(FlowProgram, ExecutesConstructionAndPassesResourceArguments) {
 
   strobe::sync::allocator allocator;
   strobe::sync::JobScheduler scheduler(&allocator, 2);
-  [[maybe_unused]] const auto completion = program.submit(&scheduler);
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
-  program.rethrow_execution_error();
   EXPECT_EQ(observed.load(std::memory_order_relaxed), 42);
 }
 
@@ -703,14 +809,14 @@ TEST(FlowProgram, ReusesAliasedStorageDuringExecution) {
     observed.store(last, std::memory_order_relaxed);
   });
   auto program = flow::end();
-  ASSERT_EQ(program.data().resource_slots[0].offset,
-            program.data().resource_slots[2].offset);
+  ASSERT_EQ(program.data().resources[0].slots.offset,
+            program.data().resources[2].slots.offset);
 
   strobe::sync::allocator allocator;
   strobe::sync::JobScheduler scheduler(&allocator, 2);
-  [[maybe_unused]] const auto completion = program.submit(&scheduler);
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
-  program.rethrow_execution_error();
   EXPECT_EQ(observed.load(std::memory_order_relaxed), 7);
 }
 
@@ -733,9 +839,9 @@ TEST(FlowProgram, ExecutesWithBoundExternalResources) {
   strobe::sync::JobScheduler scheduler(&allocator, 2);
   EXPECT_THROW(program.submit(&scheduler), std::logic_error);
   program.bind_external("input", &external);
-  [[maybe_unused]] const auto completion = program.submit(&scheduler);
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
-  program.rethrow_execution_error();
   EXPECT_EQ(observed.load(std::memory_order_relaxed), 11);
 }
 
@@ -755,9 +861,9 @@ TEST(FlowProgram, DestroysObjectsAfterTheirRuntimeFrontiers) {
 
   strobe::sync::allocator allocator;
   strobe::sync::JobScheduler scheduler(&allocator, 2);
-  [[maybe_unused]] const auto completion = program.submit(&scheduler);
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
-  program.rethrow_execution_error();
   EXPECT_EQ(destructions.load(std::memory_order_relaxed), 1);
 }
 
@@ -775,9 +881,9 @@ TEST(FlowProgram, ReportsCallbackFailuresWithoutConstructingTheOutput) {
 
   strobe::sync::allocator allocator;
   strobe::sync::JobScheduler scheduler(&allocator, 2);
-  [[maybe_unused]] const auto completion = program.submit(&scheduler);
+  program.submit(&scheduler);
+  EXPECT_THROW(program.wait(), std::runtime_error);
   scheduler.stop();
-  EXPECT_THROW(program.rethrow_execution_error(), std::runtime_error);
   EXPECT_EQ(destructions.load(std::memory_order_relaxed), 0);
 }
 
@@ -1303,8 +1409,8 @@ TEST(FlowProgram, ReservesCapacityForRetainedMemoizedValues) {
   auto program = flow::end();
 
   EXPECT_EQ(program.data().activation_layout.capacity, 1);
-  ASSERT_GE(program.data().resource_slots.size(), 3);
-  EXPECT_EQ(program.data().resource_slots[2].slot_count, 2);
+  ASSERT_GE(program.data().resources.size(), 3);
+  EXPECT_EQ(program.data().resources[2].slots.slot_count, 2);
 }
 
 TEST(FlowProgram, ResumesAcyclicExecutionAfterYield) {
@@ -1435,17 +1541,12 @@ TEST(FlowProgram, DrainsTokensAcrossFeedbackActivations) {
 
   strobe::sync::allocator allocator;
   strobe::sync::JobScheduler scheduler(&allocator, 3);
-  const auto completion = program.submit(&scheduler);
+  program.submit(&scheduler);
   std::atomic<std::uint32_t> observed_after_completion = 0;
-  const auto observer = scheduler.acquire();
-  scheduler.addDependency(observer, completion);
-  scheduler.submit(observer, [&invocation,
-                              &observed_after_completion]() noexcept {
-    observed_after_completion.store(invocation.load(std::memory_order_relaxed),
-                                    std::memory_order_relaxed);
-  });
+  program.wait();
+  observed_after_completion.store(invocation.load(std::memory_order_relaxed),
+                                  std::memory_order_relaxed);
   scheduler.stop();
-  program.rethrow_execution_error();
 
   EXPECT_EQ(invocation.load(std::memory_order_relaxed), 3);
   EXPECT_EQ(observed_after_completion.load(std::memory_order_relaxed), 3);
@@ -1454,7 +1555,7 @@ TEST(FlowProgram, DrainsTokensAcrossFeedbackActivations) {
   EXPECT_EQ(observed[2].load(std::memory_order_relaxed), 1);
 }
 
-TEST(FlowProgram, AppliesBackpressureAtTheActivationCapacity) {
+TEST(FlowProgram, DoesNotBackpressureAtTheCompiledActivationCapacity) {
   std::atomic<std::uint32_t> entered = 0;
   std::atomic<bool> proceed = false;
   flow::begin();
@@ -1480,12 +1581,12 @@ TEST(FlowProgram, AppliesBackpressureAtTheActivationCapacity) {
   }
   EXPECT_GT(entered.load(std::memory_order_acquire), 0);
   EXPECT_EQ(submission.wait_for(std::chrono::milliseconds(10)),
-            std::future_status::timeout);
+            std::future_status::ready);
 
   proceed.store(true, std::memory_order_release);
-  [[maybe_unused]] const auto completion = submission.get();
+  submission.get();
+  program.wait();
   scheduler.stop();
-  program.rethrow_execution_error();
   EXPECT_EQ(entered.load(std::memory_order_acquire), 3);
 }
 
@@ -1533,9 +1634,9 @@ TEST(FlowProgram, ClaimsRunOnceConstructionForOneConcurrentActivation) {
 
   strobe::sync::allocator allocator;
   strobe::sync::JobScheduler scheduler(&allocator, 3);
-  [[maybe_unused]] const auto completion = program.submit(&scheduler);
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
-  program.rethrow_execution_error();
 
   EXPECT_EQ(constructions.load(std::memory_order_relaxed), 1);
   EXPECT_EQ(reads.load(std::memory_order_relaxed), 3);
@@ -1566,7 +1667,7 @@ TEST(FlowProgram, HoistsImmutablePhiSeedBeforeAcquire) {
   ASSERT_LT(program.data().nodes[0].source, program.data().nodes.size());
   EXPECT_EQ(program.data().nodes[0].kind,
             flow::detail::OperationKind::construct);
-  EXPECT_TRUE(program.data().nodes[0].runs_once);
+  EXPECT_TRUE(program.data().nodes[0].initialization);
 
   strobe::sync::allocator allocator;
   strobe::sync::JobScheduler scheduler(&allocator, 3);
@@ -1598,9 +1699,9 @@ TEST(FlowProgram, OrdersCutoffsAcrossDrainedActivations) {
 
   strobe::sync::allocator allocator;
   strobe::sync::JobScheduler scheduler(&allocator, 3);
-  [[maybe_unused]] const auto completion = program.submit(&scheduler);
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
-  program.rethrow_execution_error();
 
   EXPECT_EQ(invocations.load(std::memory_order_relaxed), 1);
 }
@@ -1624,6 +1725,94 @@ TEST(FlowProgram, CompilesAFixedActivationStateRing) {
   EXPECT_LT(layout.changed_values_offset, layout.stride);
 }
 
+TEST(FlowProgram, ResolvesProjectedResourcesThroughTheirOwner) {
+  struct Pair {
+    int left;
+    int right;
+  };
+
+  int result = 0;
+  flow::begin();
+  auto owner = flow::resource<Pair>();
+  flow::construct(owner, Pair{1, 2});
+  auto left = flow::project<int>(
+      owner, "left", flow::ProjectionKind::disjoint,
+      [](Pair &pair) noexcept -> int * { return &pair.left; });
+  auto right = flow::project<int>(
+      owner, "right", flow::ProjectionKind::disjoint,
+      [](Pair &pair) noexcept -> int * { return &pair.right; });
+  flow::op(flow::write(left), [](int &value) noexcept { value = 4; });
+  flow::op(flow::write(right), [](int &value) noexcept { value = 7; });
+  flow::op(flow::read(owner),
+           [&](const Pair &pair) noexcept { result = pair.left + pair.right; });
+  auto program = flow::end();
+
+  strobe::sync::allocator allocator;
+  strobe::sync::JobScheduler scheduler(&allocator, 2);
+  submit_and_wait(program, scheduler);
+  scheduler.stop();
+
+  EXPECT_EQ(result, 11);
+  EXPECT_EQ(program.data().projections.size(), 2);
+  EXPECT_EQ(program.data().resources[1].slots.slot_count, 0);
+  EXPECT_EQ(program.data().resources[2].slots.slot_count, 0);
+}
+
+TEST(FlowProgram, ReusesProjectionIdentityForOwnerAndName) {
+  struct Pair {
+    int value;
+  };
+
+  flow::begin();
+  auto owner = flow::resource<Pair>();
+  flow::construct(owner, Pair{3});
+  auto first = flow::project<int>(
+      owner, "value", flow::ProjectionKind::overlapping,
+      [](Pair &pair) noexcept -> int * { return &pair.value; });
+  auto second = flow::project<int>(
+      owner, "value", flow::ProjectionKind::overlapping,
+      [](Pair &pair) noexcept -> int * { return &pair.value; });
+  flow::op(flow::read(first), [](const int &) noexcept {});
+  flow::op(flow::read(second), [](const int &) noexcept {});
+  auto program = flow::end();
+
+  ASSERT_EQ(program.data().projections.size(), 1);
+  ASSERT_EQ(program.data().nodes.size(), 3);
+  ASSERT_FALSE(program.data().accesses_of(1).empty());
+  ASSERT_FALSE(program.data().accesses_of(2).empty());
+  EXPECT_EQ(program.data().accesses_of(1).front().resource,
+            program.data().accesses_of(2).front().resource);
+
+  strobe::sync::allocator allocator;
+  strobe::sync::JobScheduler scheduler(&allocator, 2);
+  submit_and_wait(program, scheduler);
+  scheduler.stop();
+}
+
+TEST(FlowProgram, ResolvesExternalProjectorsWhenBindingALibrary) {
+  int observed = 0;
+  flow::begin();
+  auto owner = flow::resource<ExternalProjectionOwner>();
+  flow::construct(owner, ExternalProjectionOwner{42});
+  auto value = flow::project<int>(
+      owner, "value", flow::ProjectionKind::disjoint,
+      flow::external_projector("test-projectors", "value", 1));
+  flow::op(flow::read(value),
+           [&](const int &input) noexcept { observed = input; });
+  auto program = flow::end();
+  program.bind_library("test-projectors",
+                       flow::Library{
+                           .resolve_projection = resolve_test_projector,
+                       });
+
+  strobe::sync::allocator allocator;
+  strobe::sync::JobScheduler scheduler(&allocator, 2);
+  submit_and_wait(program, scheduler);
+  scheduler.stop();
+
+  EXPECT_EQ(observed, 42);
+}
+
 TEST(FlowProgram, RunsManuallyConstructedDependencyGraph) {
   std::atomic<std::uint32_t> state = 0;
   flow::detail::ProgramData data;
@@ -1643,8 +1832,8 @@ TEST(FlowProgram, RunsManuallyConstructedDependencyGraph) {
     EXPECT_EQ(state.load(std::memory_order_acquire), 1);
     state.store(2, std::memory_order_release);
   });
-  data.predecessors.push_back(0);
-  data.successors.push_back(1);
+  data.node_storage.predecessors.push_back(0);
+  data.node_storage.successors.push_back(1);
   data.nodes.push_back(flow::detail::CompiledNode{
       .callback = 0,
       .inputs = {},
@@ -1654,7 +1843,7 @@ TEST(FlowProgram, RunsManuallyConstructedDependencyGraph) {
       .successors = {.offset = 0, .count = 1},
       .temporal_predecessors = {},
       .temporal_successors = {},
-      .runs_once = false,
+      .initialization = false,
   });
   data.nodes.push_back(flow::detail::CompiledNode{
       .callback = 1,
@@ -1665,13 +1854,15 @@ TEST(FlowProgram, RunsManuallyConstructedDependencyGraph) {
       .successors = {},
       .temporal_predecessors = {},
       .temporal_successors = {},
-      .runs_once = false,
+      .initialization = false,
   });
 
-  flow::Program program(std::move(data));
+  flow::Program program(
+      flow::detail::compiler::build_program_artifact(std::move(data)));
   strobe::sync::allocator allocator;
   strobe::sync::JobScheduler scheduler(&allocator, 2);
-  [[maybe_unused]] const auto completion = program.submit(&scheduler);
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   EXPECT_EQ(state.load(std::memory_order_acquire), 2);
@@ -1703,7 +1894,7 @@ TEST(FlowProgram, RunsIndependentNodesInOneSubmission) {
       .successors = {},
       .temporal_predecessors = {},
       .temporal_successors = {},
-      .runs_once = false,
+      .initialization = false,
   });
   data.nodes.push_back(flow::detail::CompiledNode{
       .callback = 1,
@@ -1714,13 +1905,15 @@ TEST(FlowProgram, RunsIndependentNodesInOneSubmission) {
       .successors = {},
       .temporal_predecessors = {},
       .temporal_successors = {},
-      .runs_once = false,
+      .initialization = false,
   });
 
-  flow::Program program(std::move(data));
+  flow::Program program(
+      flow::detail::compiler::build_program_artifact(std::move(data)));
   strobe::sync::allocator allocator;
   strobe::sync::JobScheduler scheduler(&allocator, 2);
-  [[maybe_unused]] const auto completion = program.submit(&scheduler);
+  program.submit(&scheduler);
+  program.wait();
   scheduler.stop();
 
   EXPECT_EQ(calls.load(std::memory_order_relaxed), 2);

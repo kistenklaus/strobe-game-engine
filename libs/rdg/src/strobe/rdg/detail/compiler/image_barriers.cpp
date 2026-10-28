@@ -63,27 +63,36 @@ flow::detail::ResolvedOperation pipeline_barrier_op(ImageState source,
 void place_image_barriers(flow::detail::compiler::NormalizedIR &ir,
                           flow::CompileContext &context) {
   auto &state = compiler_state(context);
-  for (const auto &access : state.image_accesses) {
-    auto &tracked = state.image_states[access.image];
+  for (const auto &marker : state.image_markers) {
+    auto &tracked = state.image_states[marker.image];
+    if (marker.kind == ImageMarkerKind::discard) {
+      tracked = ImageState{
+          .stage = rhi::PipelineStage::none,
+          .access = rhi::Access::none,
+          .layout = rhi::ImageLayout::undefined,
+      };
+      state.removed_markers[marker.node] = 1;
+      continue;
+    }
     if (!tracked) {
       throw std::logic_error("image access is missing an initial state");
     }
     const bool has_previous_access =
         tracked->stage != rhi::PipelineStage::none ||
         tracked->access != rhi::Access::none;
-    const bool barrier = tracked->layout != access.state.layout ||
+    const bool barrier = tracked->layout != marker.state.layout ||
                          writes(tracked->access) ||
-                         (has_previous_access && writes(access.state.access));
-    auto &node = ir.nodes[access.node];
+                         (has_previous_access && writes(marker.state.access));
+    auto &node = ir.nodes[marker.node];
     if (barrier) {
       node.resolved_operation = context.resolve_operation(
-          pipeline_barrier_op(*tracked, access.state));
+          pipeline_barrier_op(*tracked, marker.state));
       node.intrinsic.reset();
-      *tracked = access.state;
+      *tracked = marker.state;
     } else {
-      tracked->stage |= access.state.stage;
-      tracked->access |= access.state.access;
-      state.redundant_accesses[access.node] = 1;
+      tracked->stage |= marker.state.stage;
+      tracked->access |= marker.state.access;
+      state.removed_markers[marker.node] = 1;
     }
   }
 }

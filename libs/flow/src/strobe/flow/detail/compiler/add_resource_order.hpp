@@ -14,12 +14,45 @@ inline OrderedIR add_resource_order(DependencyIR dependencies) {
   const auto &resolved = result.dependencies.lowered.resolved;
   const auto &ir = resolved.values;
 
+  struct PriorAccess {
+    NodeId node;
+    ResourceId resource;
+    AccessMode mode;
+  };
+  Vector<PriorAccess, allocator_ref> prior;
   struct ResourceState {
     std::optional<NodeId> writer;
     Vector<NodeId, allocator_ref> readers;
   };
   Vector<ResourceState, allocator_ref> states;
   states.resize(ir.resources.size());
+
+  const auto projection_of =
+      [&](ResourceId resource) -> const NormalizedProjection * {
+    for (const auto &projection : ir.projections) {
+      if (projection.resource == resource) {
+        return &projection;
+      }
+    }
+    return nullptr;
+  };
+  const auto aliases = [&](ResourceId left, ResourceId right) {
+    if (left == right) {
+      return true;
+    }
+    const auto *left_projection = projection_of(left);
+    const auto *right_projection = projection_of(right);
+    const auto left_owner = left_projection ? left_projection->owner : left;
+    const auto right_owner = right_projection ? right_projection->owner : right;
+    if (left_owner != right_owner) {
+      return false;
+    }
+    if (left_projection == nullptr || right_projection == nullptr) {
+      return true;
+    }
+    return left_projection->kind == ProjectionKind::overlapping ||
+           right_projection->kind == ProjectionKind::overlapping;
+  };
 
   const auto is_backedge = [&](NodeId node, ValueId value) {
     if (value == null_value_id) {
@@ -64,12 +97,22 @@ inline OrderedIR add_resource_order(DependencyIR dependencies) {
     }
     for (std::uint32_t index = 0; index < range.count; ++index) {
       const auto &access = ir.accesses[range.offset + index];
-      if (access.resource >= states.size()) {
+      if (access.resource >= ir.resources.size()) {
         throw std::logic_error("access resource is out of range");
       }
       if (is_backedge(node, access.input)) {
         continue;
       }
+
+      for (const auto &earlier : prior) {
+        if (earlier.resource != access.resource &&
+            aliases(earlier.resource, access.resource) &&
+            (earlier.mode != AccessMode::read ||
+             access.mode != AccessMode::read)) {
+          add_constraint(earlier.node, node, access.resource);
+        }
+      }
+      prior.push_back({node, access.resource, access.mode});
 
       auto &state = states[access.resource];
       if (access.mode == AccessMode::read) {
@@ -79,7 +122,6 @@ inline OrderedIR add_resource_order(DependencyIR dependencies) {
         state.readers.push_back(node);
         continue;
       }
-
       if (state.writer && state.readers.empty()) {
         add_constraint(*state.writer, node, access.resource);
       }

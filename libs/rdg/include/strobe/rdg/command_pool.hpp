@@ -16,9 +16,12 @@ public:
   CommandBuffer alloc() {
     flow::Resource<rhi::CommandBuffer> cmd =
         flow::resource<rhi::CommandBuffer>();
+
     flow::construct(
-        cmd, flow::OpMetadata{"alloc_cmd", "allocate a command buffer"}, flow::read_write(m_runtime),
+        cmd, flow::OpMetadata{"alloc_cmd", "allocate a command buffer"},
+        flow::read_write(m_runtime),
         [](rhi::CommandBuffer *cmd, rhi::CommandPool &pool) noexcept {
+          ZoneScopedN("cmdpool-alloc");
           std::construct_at(cmd, pool.alloc(rhi::CommandBufferFlags::none));
           cmd->begin();
         });

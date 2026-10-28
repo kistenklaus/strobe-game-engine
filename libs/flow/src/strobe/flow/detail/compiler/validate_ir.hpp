@@ -61,23 +61,23 @@ inline void validate(const NormalizedIR &ir) {
         node.argument_count > node.accesses.count) {
       throw std::logic_error("normalized node access range is invalid");
     }
+    const auto accesses = ir.accesses_of(node);
+    const auto argument_groups = ir.argument_groups_of(node);
+    const auto argument_elements = ir.argument_elements_of(node);
     std::size_t grouped_arguments = 0;
     std::size_t grouped_elements = 0;
-    for (std::uint32_t index = 0; index < node.argument_groups.count; ++index) {
-      const auto group =
-          ir.argument_groups[node.argument_groups.offset + index];
+    for (const auto group : argument_groups) {
       if (group.offset != grouped_arguments ||
           grouped_arguments > node.argument_count ||
           group.count > node.argument_count - grouped_arguments ||
           group.element_offset != grouped_elements ||
-          grouped_elements > node.argument_elements.count ||
-          group.element_count > node.argument_elements.count - grouped_elements) {
+          grouped_elements > argument_elements.size() ||
+          group.element_count > argument_elements.size() - grouped_elements) {
         throw std::logic_error("normalized argument groups are invalid");
       }
       std::uint32_t present = 0;
       for (std::uint32_t element = 0; element < group.element_count; ++element) {
-        const auto argument = ir.argument_elements[
-            node.argument_elements.offset + grouped_elements + element];
+        const auto argument = argument_elements[grouped_elements + element];
         if (argument != null_argument_element &&
             argument != group.offset + present++) {
           throw std::logic_error("normalized argument elements are invalid");
@@ -90,7 +90,7 @@ inline void validate(const NormalizedIR &ir) {
       grouped_elements += group.element_count;
     }
     if (grouped_arguments != node.argument_count ||
-        grouped_elements != node.argument_elements.count) {
+        grouped_elements != argument_elements.size()) {
       throw std::logic_error("normalized argument groups are incomplete");
     }
     if (node.intrinsic &&
@@ -119,11 +119,11 @@ inline void validate(const NormalizedIR &ir) {
           "normalized node cannot be intrinsic and resolved");
     }
     if (node.kind == NodeKind::callback || node.kind == NodeKind::construct) {
-      for (std::uint32_t index = 0; index < node.accesses.count; ++index) {
+      for (std::uint32_t index = 0; index < accesses.size(); ++index) {
         const auto expected = index < node.argument_count
                                   ? AccessPurpose::argument
                                   : AccessPurpose::serialization;
-        if (ir.accesses[node.accesses.offset + index].purpose != expected) {
+        if (accesses[index].purpose != expected) {
           throw std::logic_error(
               "normalized serialization accesses must trail arguments");
         }
@@ -364,22 +364,24 @@ inline void validate(const ActivationLayoutIR &ir) {
 }
 
 inline void validate(const ProgramData &data) {
-  if (data.resource_types.size() != data.source_resource_count ||
-      data.resource_slots.size() != data.source_resource_count ||
-      data.resource_lifetimes.size() != data.source_resource_count ||
+  if (data.resources.size() != data.source_resource_count ||
+      data.resources.size() != data.source_resource_count ||
+      data.resources.size() != data.source_resource_count ||
+      data.resources.size() != data.source_resource_count ||
+      data.resources.size() != data.source_resource_count ||
       !valid_alignment(data.storage_alignment)) {
     throw std::logic_error("compiled resource tables do not match source");
   }
   for (const auto &node : data.nodes) {
-    if (!valid_range(node.inputs, data.inputs.size()) ||
-        !valid_range(node.outputs, data.outputs.size()) ||
-        !valid_range(node.accesses, data.accesses.size()) ||
-        !valid_range(node.predecessors, data.predecessors.size()) ||
-        !valid_range(node.successors, data.successors.size()) ||
+    if (!valid_range(node.inputs, data.node_storage.inputs.size()) ||
+        !valid_range(node.outputs, data.node_storage.outputs.size()) ||
+        !valid_range(node.accesses, data.node_storage.accesses.size()) ||
+        !valid_range(node.predecessors, data.node_storage.predecessors.size()) ||
+        !valid_range(node.successors, data.node_storage.successors.size()) ||
         !valid_range(node.temporal_predecessors,
-                     data.temporal_predecessors.size()) ||
+                     data.node_storage.temporal_predecessors.size()) ||
         !valid_range(node.temporal_successors,
-                     data.temporal_successors.size()) ||
+                     data.node_storage.temporal_successors.size()) ||
         node.argument_count > node.accesses.count ||
         (node.callback != null_callback_id &&
          node.callback >= data.callbacks.size())) {
@@ -391,14 +393,14 @@ inline void validate(const ProgramData &data) {
         const auto expected = index < node.argument_count
                                   ? AccessPurpose::argument
                                   : AccessPurpose::serialization;
-        if (data.accesses[node.accesses.offset + index].purpose != expected) {
+        if (data.node_storage.accesses[node.accesses.offset + index].purpose != expected) {
           throw std::logic_error(
               "compiled serialization accesses must trail arguments");
         }
       }
     }
   }
-  for (const auto &access : data.accesses) {
+  for (const auto &access : data.node_storage.accesses) {
     if (access.resource >= data.source_resource_count ||
         (access.input != null_value_id && access.input >= data.values.size()) ||
         (access.output != null_value_id &&
@@ -482,8 +484,8 @@ inline void validate(const ProgramData &data) {
     }
     const auto condition_resource =
         data.values[compiled.initial_condition].resource;
-    if (condition_resource >= data.resource_types.size() ||
-        data.resource_types[condition_resource] != type_id<bool>()) {
+    if (condition_resource >= data.resources.size() ||
+        data.resources[condition_resource].type != type_id<bool>()) {
       throw std::logic_error("compiled control condition is invalid");
     }
   }

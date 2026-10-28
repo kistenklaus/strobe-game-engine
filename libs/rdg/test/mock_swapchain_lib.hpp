@@ -45,6 +45,8 @@ public:
   void *acquire(flow::Lifetime lifetime) noexcept;
   rhi::Image image(void *token) const noexcept;
   rhi::ImageView view(void *token) const noexcept;
+  rhi::Image *image_ptr(void *token) noexcept;
+  rhi::ImageView *view_ptr(void *token) noexcept;
   void wait(void *token, flow::Lifetime lifetime) noexcept;
   void present(void *token, flow::Lifetime lifetime) noexcept;
 

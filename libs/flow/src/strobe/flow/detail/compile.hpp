@@ -39,7 +39,7 @@ inline void run_compiler_plugins(IR &ir, CompileContext &context,
   }
 }
 inline Program compile(OpStream &stream, const CompilerPlugins &plugins) {
-  constexpr bool verbose = false;
+  constexpr bool verbose = true;
   if (verbose) {
     fmt::println("OpStream:\n{}\n", to_pretty(stream));
   }
@@ -87,10 +87,11 @@ inline Program compile(OpStream &stream, const CompilerPlugins &plugins) {
   auto data = compiler::emit_program(std::move(activations), stream, context);
   run_compiler_plugins(data, context, plugins.program);
   data.plugin_data = std::move(context);
+  auto artifact = compiler::build_program_artifact(std::move(data));
   if (verbose) {
-    fmt::println("ProgramData:\n{}\n", to_pretty(data));
+    fmt::println("ProgramData:\n{}\n", to_pretty(artifact.data));
   }
-  Program program(std::move(data));
+  Program program(std::move(artifact));
   if (verbose) {
     fmt::println("JobPlan:\n{}\n",
                  to_pretty(program.job_plan(), program.data()));

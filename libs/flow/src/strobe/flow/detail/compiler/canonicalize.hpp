@@ -69,12 +69,17 @@ inline NormalizedIR canonicalize(const detail::OpStream &stream) {
     } else if (resource.cutoff) {
       kind = ResourceKind::cutoff;
       detail = static_cast<std::uint32_t>(*resource.cutoff);
+    } else if (resource.projection) {
+      kind = ResourceKind::projection;
+      detail = static_cast<std::uint32_t>(*resource.projection);
     } else {
       throw std::logic_error("resource has no normalized kind");
     }
     result.resources.push_back(NormalizedResource{
         .kind = kind,
         .type = resource.type,
+        .type_name = String<allocator_ref>(resource.type_name, allocator_ref{}),
+        .label = String<allocator_ref>(resource.label, allocator_ref{}),
         .size = resource.size,
         .alignment = resource.alignment,
         .destroy = resource.destroy,
@@ -143,14 +148,14 @@ inline NormalizedIR canonicalize(const detail::OpStream &stream) {
         .accesses = {.offset = static_cast<std::uint32_t>(access_offset),
                      .count =
                          static_cast<std::uint32_t>(operation.accesses.size())},
-        .argument_groups = {
-            .offset = static_cast<std::uint32_t>(argument_group_offset),
-            .count = static_cast<std::uint32_t>(
-                operation.argument_groups.size())},
-        .argument_elements = {
-            .offset = static_cast<std::uint32_t>(argument_element_offset),
-            .count = static_cast<std::uint32_t>(
-                operation.argument_elements.size())},
+        .argument_groups = {.offset = static_cast<std::uint32_t>(
+                                argument_group_offset),
+                            .count = static_cast<std::uint32_t>(
+                                operation.argument_groups.size())},
+        .argument_elements = {.offset = static_cast<std::uint32_t>(
+                                  argument_element_offset),
+                              .count = static_cast<std::uint32_t>(
+                                  operation.argument_elements.size())},
         .argument_count =
             static_cast<std::uint32_t>(operation.argument_types.size()),
         .semantics = operation.metadata.semantics,
@@ -172,6 +177,15 @@ inline NormalizedIR canonicalize(const detail::OpStream &stream) {
     result.externals.push_back(NormalizedExternal{
         .resource = stream.externals()[index].resource,
         .source_external = static_cast<std::uint32_t>(index),
+    });
+  }
+  for (std::size_t index = 0; index < stream.projections().size(); ++index) {
+    const auto &projection = stream.projections()[index];
+    result.projections.push_back(NormalizedProjection{
+        .resource = projection.resource,
+        .owner = projection.owner,
+        .kind = projection.kind,
+        .source_projection = static_cast<std::uint32_t>(index),
     });
   }
   result.ifs.reserve(stream.ifs().size());

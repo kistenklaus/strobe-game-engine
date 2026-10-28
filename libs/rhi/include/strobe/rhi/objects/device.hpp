@@ -58,7 +58,7 @@ public:
    * \brief Creates fragment shader.
    * \code{.cpp}
    * FragmentShader create_fragment_shader(const FragmentShaderInfo& info)
-   * noexcept;
+   * const noexcept;
    * \endcode
    *
    * Creates a fragment shader from \p info.
@@ -70,12 +70,12 @@ public:
    * \attention 1. \p info must describe a valid fragment shader.
    */
   FragmentShader
-  create_fragment_shader(const FragmentShaderInfo &info) noexcept;
+  create_fragment_shader(const FragmentShaderInfo &info) const noexcept;
 
   /**
    * \brief Creates vertex shader.
    * \code{.cpp}
-   * VertexShader create_vertex_shader(const VertexShaderInfo& info) noexcept;
+   * VertexShader create_vertex_shader(const VertexShaderInfo& info) const noexcept;
    * \endcode
    *
    * Creates a vertex shader from \p info.
@@ -86,13 +86,13 @@ public:
    *
    * \attention 1. \p info must describe a valid vertex shader.
    */
-  VertexShader create_vertex_shader(const VertexShaderInfo &info) noexcept;
+  VertexShader create_vertex_shader(const VertexShaderInfo &info) const noexcept;
 
   /**
    * \brief Creates compute shader.
    * \code{.cpp}
    * ComputeShader create_compute_shader(const ComputeShaderInfo& info)
-   * noexcept;
+   * const noexcept;
    * \endcode
    *
    * Creates a compute shader from \p info.
@@ -103,24 +103,24 @@ public:
    *
    * \attention 1. \p info must describe a valid compute shader.
    */
-  ComputeShader create_compute_shader(const ComputeShaderInfo &info) noexcept;
+  ComputeShader create_compute_shader(const ComputeShaderInfo &info) const noexcept;
 
   /**
    * \brief Creates geometry shader.
    * \code{cpp}
    * GeometryShader create_geometry_shader(const GeometryShaderInfo& info)
-   * noexcept;
+   * const noexcept;
    * \endcode
    *
    * \attention 1. \p info must describe a valid geometry shader.
    */
   GeometryShader
-  create_geometry_shader(const GeometryShaderInfo &info) noexcept;
+  create_geometry_shader(const GeometryShaderInfo &info) const noexcept;
 
   /**
    * \brief Creates swapchain.
    * \code{.cpp}
-   * Swapchain create_swapchain(const SwapchainInfo& info) noexcept;
+   * Swapchain create_swapchain(const SwapchainInfo& info) const noexcept;
    * \endcode
    *
    * Creates a presentation swapchain from \p info.
@@ -131,13 +131,13 @@ public:
    *
    * \attention 1. \p info must reference a valid presentation surface.
    */
-  Swapchain create_swapchain(const SwapchainInfo &info) noexcept;
+  Swapchain create_swapchain(const SwapchainInfo &info) const noexcept;
 
   /**
    * \brief Gets device queue.
    * \code{.cpp}
    * Queue get_queue(QueueFlags flags = QueueFlags::graphics |
-   * QueueFlags::compute | QueueFlags::transfer) noexcept;
+   * QueueFlags::compute | QueueFlags::transfer) const noexcept;
    * \endcode
    *
    * Returns a queue supporting the requested capabilities.
@@ -155,14 +155,14 @@ public:
   /**
    * \brief Creates command pool.
    * \code{.cpp}
-   * CommandPool create_cmdpool() noexcept;
+   * CommandPool create_cmdpool() const noexcept;
    * \endcode
    *
    * Creates a command pool associated with this device.
    *
    * \return Created command pool.
    */
-  CommandPool create_cmdpool() noexcept;
+  CommandPool create_cmdpool() const noexcept;
 
   /**
    * \brief Creates buffer.
@@ -210,7 +210,7 @@ public:
    * \brief Creates image view.
    * \code{.cpp}
    * ImageView create_image_view(const Image& image, const ImageViewInfo& info)
-   * noexcept;
+   * const noexcept;
    * \endcode
    *
    * Creates a view into \p image.
@@ -224,13 +224,13 @@ public:
    * \attention 2. \p info must describe a valid view of \p image.
    */
   ImageView create_image_view(const Image &image,
-                              const ImageViewInfo &info) noexcept;
+                              const ImageViewInfo &info) const noexcept;
 
   /**
    * \brief Creates BLAS.
    * \code{.cpp}
    * Blas create_blas(const BlasInfo& info, const MemoryLifetime& = {})
-   * noexcept;
+   * const noexcept;
    * \endcode
    *
    * Creates a bottom-level acceleration structure.
@@ -246,13 +246,13 @@ public:
    * allocation.
    */
   Blas create_blas(const BlasInfo &info,
-                   const MemoryLifetime &lifetime = {}) noexcept;
+                   const MemoryLifetime &lifetime = {}) const noexcept;
 
   /**
    * \brief Creates TLAS.
    * \code{.cpp}
    * Tlas create_tlas(const TlasInfo& info, const MemoryLifetime& lifetime = {})
-   * noexcept;
+   * const noexcept;
    * \endcode
    *
    * Creates a top-level acceleration structure.
@@ -268,13 +268,13 @@ public:
    * allocation.
    */
   Tlas create_tlas(const TlasInfo &info,
-                   const MemoryLifetime &lifetime = {}) noexcept;
+                   const MemoryLifetime &lifetime = {}) const noexcept;
 
   /**
    * \brief Copies buffer asynchronously.
    * \code{.cpp}
    * Timepoint async_copy(BufferOffset dst, BufferOffset src, uint64_t size =
-   * std::numeric_limits<uint64_t>::max()) noexcept;
+   * std::numeric_limits<uint64_t>::max()) const noexcept;
    * \endcode
    *
    * Schedules a device-side copy from \p src to \p dst.
@@ -295,13 +295,13 @@ public:
    */
   Timepoint
   async_copy(BufferOffset dst, BufferOffset src,
-             uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
+             uint64_t size = std::numeric_limits<uint64_t>::max()) const noexcept;
 
   /**
    * \brief Uploads buffer asynchronously.
    * \code{.cpp}
    * Timepoint async_upload(BufferOffset dst, void* src, uint64_t size =
-   * std::numeric_limits<uint64_t>::max()) noexcept;
+   * std::numeric_limits<uint64_t>::max()) const noexcept;
    * \endcode
    *
    * Schedules a host-to-device upload into \p dst.
@@ -319,12 +319,12 @@ public:
    */
   Timepoint
   async_upload(BufferOffset dst, const void *src,
-               uint64_t size = std::numeric_limits<uint64_t>::max()) noexcept;
+               uint64_t size = std::numeric_limits<uint64_t>::max()) const noexcept;
   Timepoint
   async_upload(ImageRange dst, const void *src, uint32_t rowLength = 0,
                uint32_t imageHeight = 0,
                ImageLayout initialLayout = ImageLayout::transfer_dst,
-               ImageLayout finalLayout = ImageLayout::transfer_dst) noexcept;
+               ImageLayout finalLayout = ImageLayout::transfer_dst) const noexcept;
 
   /**
    * \brief Creates resource descriptor.
@@ -356,46 +356,46 @@ public:
    * may be used.
    */
   ResourceDescriptor
-  create_resource_descriptor(const ResourceDescriptorInfo &info) noexcept;
+  create_resource_descriptor(const ResourceDescriptorInfo &info) const noexcept;
   inline ResourceDescriptor create_storage_buffer_descriptor(
-      const StorageBufferDescriptorInfo &info) noexcept {
+      const StorageBufferDescriptorInfo &info) const noexcept {
     return create_resource_descriptor(info);
   }
   inline ResourceDescriptor create_storage_texel_buffer_descriptor(
-      const StorageTexelBufferDescriptorInfo &info) noexcept {
+      const StorageTexelBufferDescriptorInfo &info) const noexcept {
     return create_resource_descriptor(info);
   }
   inline ResourceDescriptor create_uniform_buffer_descriptor(
-      const UniformBufferDescriptorInfo &info) noexcept {
+      const UniformBufferDescriptorInfo &info) const noexcept {
     return create_resource_descriptor(info);
   }
   inline ResourceDescriptor create_uniform_texel_buffer_descriptor(
-      const UniformTexelBufferDescriptorInfo &info) noexcept {
+      const UniformTexelBufferDescriptorInfo &info) const noexcept {
     return create_resource_descriptor(info);
   }
   inline ResourceDescriptor create_sampled_image_descriptor(
-      const SampledImageDescriptorInfo &info) noexcept {
+      const SampledImageDescriptorInfo &info) const noexcept {
     assert(info.layout != ImageLayout::undefined && "layout must be set!");
     assert(info.subresource.aspect != ImageAspect::none);
     return create_resource_descriptor(info);
   }
   inline ResourceDescriptor create_storage_image_descriptor(
-      const StorageImageDescriptorInfo &info) noexcept {
+      const StorageImageDescriptorInfo &info) const noexcept {
     return create_resource_descriptor(info);
   }
   inline ResourceDescriptor
-  create_tlas_descriptor(const TlasDescriptorInfo &info) noexcept {
+  create_tlas_descriptor(const TlasDescriptorInfo &info) const noexcept {
     return create_resource_descriptor(info);
   }
 
   ResourceDescriptorArray create_resource_descriptors(
-      span<const ResourceDescriptorInfo> infos) noexcept;
+      span<const ResourceDescriptorInfo> infos) const noexcept;
 
   SamplerDescriptor
-  create_sampler_descriptor(const SamplerDescriptorInfo &info) noexcept;
+  create_sampler_descriptor(const SamplerDescriptorInfo &info) const noexcept;
 
   SamplerDescriptorArray
-  create_sampler_descriptors(span<const SamplerDescriptorInfo> infos) noexcept;
+  create_sampler_descriptors(span<const SamplerDescriptorInfo> infos) const noexcept;
 };
 
 } // namespace strobe::rhi

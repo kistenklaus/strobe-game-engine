@@ -28,7 +28,8 @@ inline StorageIR classify_storage(ActivationIR input) {
     if (resource_kind == ResourceKind::external) {
       storage = StorageClass::external;
     } else if (resource_kind == ResourceKind::phi ||
-               resource_kind == ResourceKind::cutoff) {
+               resource_kind == ResourceKind::cutoff ||
+               resource_kind == ResourceKind::projection) {
       storage = StorageClass::virtual_value;
     }
 
@@ -45,10 +46,10 @@ inline StorageIR classify_storage(ActivationIR input) {
       }
       const auto producer_component =
           components.component_of[static_value.producer];
-      const bool producer_runs_once =
-          input.components[producer_component].runs_once;
+      const bool producer_initialization =
+          input.components[producer_component].initialization;
       retained_by_memoization = input.components[producer_component].memoized;
-      if (producer_runs_once) {
+      if (producer_initialization) {
         for (NodeId node = 0; node < values.nodes.size(); ++node) {
           const auto range = values.nodes[node].accesses;
           if (range.offset + range.count > values.accesses.size()) {
@@ -59,7 +60,7 @@ inline StorageIR classify_storage(ActivationIR input) {
             consumes |= values.accesses[range.offset + index].input == value;
           }
           if (consumes &&
-              !input.components[components.component_of[node]].runs_once) {
+              !input.components[components.component_of[node]].initialization) {
             crosses_activation = true;
             break;
           }
@@ -123,7 +124,8 @@ inline StorageIR classify_storage(ActivationIR input) {
     if (source.kind == ResourceKind::external) {
       storage = StorageClass::external;
     } else if (source.kind == ResourceKind::phi ||
-               source.kind == ResourceKind::cutoff) {
+               source.kind == ResourceKind::cutoff ||
+               source.kind == ResourceKind::projection) {
       storage = StorageClass::virtual_value;
     } else if (resource < classified.preconstructed_resources.size() &&
                classified.preconstructed_resources[resource]) {

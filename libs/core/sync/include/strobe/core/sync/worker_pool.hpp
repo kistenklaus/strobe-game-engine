@@ -122,7 +122,7 @@ public: // public functions
   /// requires alloc to be stably placed!
   WorkerPool(allocator alloc, uint32_t workerCount) noexcept
       : m_workerCount(workerCount) {
-    assert(workerCount > 1);
+    assert(workerCount > 0);
     m_workers =
         allocator_traits::template allocate<WorkerRecord>(alloc, workerCount);
     for (uint32_t i = 0; i < workerCount; ++i) {
@@ -189,6 +189,9 @@ private:
   }
 
   JobFn *try_steal(uint32_t workerId, WorkerRecord &self) noexcept {
+    if (m_workerCount == 1) {
+      return nullptr;
+    }
     const uint32_t attempts =
         std::min<uint32_t>(m_workerCount - 1, MAX_STEAL_ATTEMPTS);
     uint32_t targetId = workerId + (1 + self.prng.bounded(m_workerCount - 1));
@@ -266,7 +269,7 @@ private:
 
 public: // allocation info
   static constexpr size_t static_allocation_size(uint32_t workerCount) {
-    assert(workerCount > 1);
+    assert(workerCount > 0);
 
     return sizeof(WorkerRecord) * workerCount +
            workerCount * WorkerQueue::static_allocation_size(DEQUE_CAPACITY);

@@ -67,6 +67,7 @@ struct ValueIR {
   Vector<ValuePhi, allocator_ref> phis;
   Vector<NormalizedCutoff, allocator_ref> cutoffs;
   Vector<NormalizedExternal, allocator_ref> externals;
+  Vector<NormalizedProjection, allocator_ref> projections;
   Vector<ValueIf, allocator_ref> ifs;
 };
 
