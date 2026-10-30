@@ -48,3 +48,6 @@ if (STROBE_BUILD_DOCS)
   add_subdirectory(docs)
 endif()
 
+
+add_subdirectory(examples/deferred)
+
