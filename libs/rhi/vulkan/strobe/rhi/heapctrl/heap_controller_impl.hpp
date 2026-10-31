@@ -9,6 +9,7 @@
 #include "strobe/rhi/heap/resource_descriptor_heap.hpp"
 #include "strobe/rhi/heap/resource_descriptor_wizard.hpp"
 #include "strobe/rhi/heap/sampler_descriptor_array_wizard.hpp"
+#include "strobe/rhi/heap/sampler_descriptor_heap.hpp"
 #include "strobe/rhi/heap/sampler_descriptor_heap_impl.hpp"
 #include "strobe/rhi/heap/sampler_descriptor_wizard.hpp"
 #include "strobe/rhi/memory/memory_pool.hpp"
@@ -18,6 +19,7 @@
 #include "strobe/rhi/objects/sampler_descriptor_array.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/stage/stage_arena.hpp"
+#include <fmt/format.h>
 
 namespace strobe::rhi {
 
@@ -44,8 +46,26 @@ struct HeapControllerImpl {
                                  .memoryUsage = MemoryUsage::automatic,
                              },
                              {}, m_bufAlloc);
-      m_rHeap = heap::create_rheap(m_memoryPool.context(), std::move(rbuf),
-                                   heapAlloc);
+      m_rHeap = heap::create_rheap(
+          m_memoryPool.context(),
+          {
+              .pUserData = this,
+              .fnp_create_descriptor =
+                  [](void *pUserData,
+                     const ResourceDescriptorInfo &info) noexcept
+                  -> ResourceDescriptor {
+                return static_cast<HeapControllerImpl *>(pUserData)
+                    ->create_resource_descriptor(info);
+              },
+              .fnp_create_descriptor_array =
+                  [](void *pUserData,
+                     span<const ResourceDescriptorInfo> infos) noexcept
+                  -> ResourceDescriptorArray {
+                return static_cast<HeapControllerImpl *>(pUserData)
+                    ->create_resource_descriptor_array(infos);
+              },
+          },
+          std::move(rbuf), heapAlloc);
     }
     { // sampler heap
       m_sPageSize = props.samplerDescriptorSize * 128;
@@ -60,8 +80,27 @@ struct HeapControllerImpl {
                                  .memoryUsage = MemoryUsage::device,
                              },
                              {}, m_bufAlloc);
-      m_sHeap = heap::create_sheap(m_memoryPool.context(), std::move(sbuf),
-                                   heapAlloc);
+      m_sHeap = heap::create_sheap(
+          m_memoryPool.context(),
+          {
+              .pUserData = this,
+              .fnp_create_descriptor =
+                  [](void *pUserData,
+                     const SamplerDescriptorInfo &info) noexcept
+                  -> SamplerDescriptor {
+                return static_cast<HeapControllerImpl *>(pUserData)
+                    ->create_sampler_descriptor(info);
+              },
+              .fnp_create_descriptor_array =
+                  [](void *pUserData,
+                     span<const SamplerDescriptorInfo> infos) noexcept
+                  -> SamplerDescriptorArray {
+                return static_cast<HeapControllerImpl *>(pUserData)
+                    ->create_sampler_descriptor_array(infos);
+              },
+
+          },
+          std::move(sbuf), heapAlloc);
     }
   }
 
@@ -151,6 +190,9 @@ struct HeapControllerImpl {
           });
     }
   }
+
+  ResourceDescriptorHeap rheap() const noexcept { return m_rHeap; }
+  SamplerDescriptorHeap sheap() const noexcept { return m_sHeap; }
 
 private:
   // m_rMutex must be held!

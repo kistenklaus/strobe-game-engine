@@ -23,9 +23,9 @@ struct handle_allocators {
   explicit handle_allocators(strobe::rhi::allocator_ref alloc)
       : alloc(alloc), shaderAlloc(alloc), syncAlloc(alloc), memAlloc(alloc),
         bufAlloc(alloc), imgAlloc(alloc), stageAlloc(alloc, &bufAlloc),
-        bvhAlloc(alloc, &bufAlloc), cmdAlloc(alloc),
-        swapAlloc(alloc, &imgAlloc), gcAlloc(alloc), queAlloc(alloc),
-        dmaAlloc(alloc, &cmdAlloc), heapAlloc(alloc),
+        bvhAlloc(alloc, &bufAlloc), cmdAlloc(alloc), heapAlloc(alloc),
+        swapAlloc(alloc, &imgAlloc), gcAlloc(alloc),
+        queAlloc(alloc), dmaAlloc(alloc, &cmdAlloc),
         heapCtrlAlloc(alloc, &heapAlloc, &bufAlloc), deviceAlloc(alloc) {}
 
   handle_allocators(const handle_allocators &) = delete;
@@ -42,11 +42,11 @@ struct handle_allocators {
   stage::handle_allocators stageAlloc;
   bvh::handle_allocators bvhAlloc;
   cmd::handle_allocators cmdAlloc;
+  heap::handle_allocators heapAlloc;
   swap::handle_allocators swapAlloc;
   gc::handle_allocators gcAlloc;
   que::handle_allocators queAlloc;
   dma::handle_allocators dmaAlloc;
-  heap::handle_allocators heapAlloc;
   heapctrl::handle_allocators heapCtrlAlloc;
   handle_allocator<DeviceImpl> deviceAlloc;
 };

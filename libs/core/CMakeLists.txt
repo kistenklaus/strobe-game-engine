@@ -8,18 +8,20 @@ add_subdirectory(sync)
 add_subdirectory(events)
 add_subdirectory(fs)
 add_subdirectory(type_traits)
+add_subdirectory(color)
 
 add_library(strobe-core INTERFACE)
 
 target_link_libraries(strobe-core 
   INTERFACE strobe-core-memory
-  INTERFACE ${STROBE_CORE_LINA_LIB}
+  INTERFACE strobe-core-lina
   INTERFACE strobe-core-containers
   INTERFACE strobe-core-graph
   INTERFACE strobe-core-sync
   INTERFACE strobe-core-events
   INTERFACE strobe-core-fs
   INTERFACE ${STROBE_CORE_TYPE_TRAITS_LIB}
+  INTERFACE strobe-core-color
 )
 
 target_include_directories(strobe-core

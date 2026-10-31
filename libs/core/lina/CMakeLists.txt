@@ -1,6 +1,13 @@
-set(STROBE_CORE_LINA_LIB ${STROBE_CORE_LIB}-lina CACHE INTERNAL "")
 
+add_library(strobe-core-lina INTERFACE)
 
-add_library(${STROBE_CORE_LINA_LIB} INTERFACE)
+target_include_directories(strobe-core-lina
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
-target_include_directories(${STROBE_CORE_LINA_LIB} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(strobe-core-lina
+  INTERFACE strobe-core-containers
+)
+
+add_subdirectory(test)
+add_subdirectory(bench)

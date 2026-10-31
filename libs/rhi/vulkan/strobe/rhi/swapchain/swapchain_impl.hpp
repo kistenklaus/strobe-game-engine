@@ -2,6 +2,7 @@
 
 #include "strobe/core/lina/vec.hpp"
 #include "strobe/rhi/handle.hpp"
+#include "strobe/rhi/heap/heap.hpp"
 #include "strobe/rhi/img/img.hpp"
 #include "strobe/rhi/object_factory.hpp"
 #include "strobe/rhi/swapchain/surface.hpp"
@@ -16,6 +17,7 @@
 #include "strobe/rhi/vulkan/swapchain.hpp"
 #include <atomic>
 #include <stdexcept>
+#include <vulkan/vulkan_core.h>
 
 namespace strobe::rhi {
 
@@ -23,12 +25,14 @@ struct SwapchainImpl {
 
   explicit SwapchainImpl(
       Surface surface, FencePool fencePool, BinarySemaphorePool semPool,
-      bool vsync, ImageUsage imageUsage,
+      ResourceDescriptorHeap rheap, bool vsync, ImageUsage imageUsage,
+      bool srgb,
       Vector<uint32_t, strobe::rhi::allocator_ref> presentQueueFamilyIndicies,
       img::handle_allocators *imgAlloc,
       strobe::rhi::allocator_ref alloc) noexcept
       : m_surface(std::move(surface)), m_fencePool(std::move(fencePool)),
-        m_semPool(std::move(semPool)), m_sync(vsync), m_imageUsage(imageUsage),
+        m_semPool(std::move(semPool)), m_rheap(std::move(rheap)), m_sync(vsync),
+        m_srgb(srgb), m_imageUsage(imageUsage),
         presentQueueFamilyIndicies(std::move(presentQueueFamilyIndicies)),
         m_alloc(alloc), m_imgAlloc(imgAlloc), m_generationAllocator(alloc),
         m_swapchainImageAllocator(alloc) {}
@@ -69,20 +73,40 @@ struct SwapchainImpl {
       throw std::runtime_error("Surface exposes no supported formats");
     }
     VkSurfaceFormatKHR format = formats[0];
-    for (const VkSurfaceFormatKHR &candidate : formats) {
-      if (candidate.format == VK_FORMAT_B8G8R8A8_SRGB &&
-          candidate.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-        format = candidate;
-        break;
-      }
-    }
-    if (!(format.format == VK_FORMAT_B8G8R8A8_SRGB &&
-          format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)) {
+    if (m_srgb) {
       for (const VkSurfaceFormatKHR &candidate : formats) {
-        if (candidate.format == VK_FORMAT_R8G8B8A8_SRGB &&
+        if (candidate.format == VK_FORMAT_B8G8R8A8_SRGB &&
             candidate.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
           format = candidate;
           break;
+        }
+      }
+      if (!(format.format == VK_FORMAT_B8G8R8A8_SRGB &&
+            format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)) {
+        for (const VkSurfaceFormatKHR &candidate : formats) {
+          if (candidate.format == VK_FORMAT_R8G8B8A8_SRGB &&
+              candidate.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            format = candidate;
+            break;
+          }
+        }
+      }
+    } else {
+      for (const VkSurfaceFormatKHR &candidate : formats) {
+        if (candidate.format == VK_FORMAT_B8G8R8A8_UNORM &&
+            candidate.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+          format = candidate;
+          break;
+        }
+      }
+      if (!(format.format == VK_FORMAT_B8G8R8A8_UNORM &&
+            format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)) {
+        for (const VkSurfaceFormatKHR &candidate : formats) {
+          if (candidate.format == VK_FORMAT_R8G8B8A8_SRGB &&
+              candidate.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            format = candidate;
+            break;
+          }
         }
       }
     }
@@ -114,7 +138,6 @@ struct SwapchainImpl {
       extent.y() = std::clamp(extent.y(), capabilities.minImageExtent.height,
                               capabilities.maxImageExtent.height);
     } else {
-      fmt::println("minimized");
       return false; // minimized
     }
 
@@ -176,21 +199,16 @@ struct SwapchainImpl {
           &m_imgAlloc->imageAllocator, m_surface.context(), MemoryAllocation{},
           nativeImages[i], ImageType::image_2d, from_vk_format(format.format),
           uvec3{extent.x(), extent.y(), 1}, 1, 1, SampleCount::x1));
-      frames[i].view =
-          img::create_image_view(frames[i].image,
-                                 {
-                                     .type = ImageViewType::image_2d,
-                                     .format = Format::undefined,
-                                     .range = {.aspect = ImageAspect::color},
-                                 },
-                                 m_imgAlloc);
+      frames[i].lazyView = {};
+      frames[i].lazySampledImageDescriptor = {};
+      frames[i].lazyStorageImageDescriptor = {};
     }
 
     generation = detail::make_object<SwapchainGeneration>(
         make_void_handle<SwapchainGenerationImpl>(
-            &m_generationAllocator, m_surface, m_fencePool, m_semPool,
+            &m_generationAllocator, m_surface, m_fencePool, m_semPool, m_rheap,
             swapchain, std::move(frames), extent, from_vk_format(format.format),
-            &m_swapchainImageAllocator, m_alloc));
+            &m_swapchainImageAllocator, m_imgAlloc, m_alloc));
     return true;
   }
 
@@ -198,7 +216,9 @@ private:
   const Surface m_surface{};
   const FencePool m_fencePool{};
   const BinarySemaphorePool m_semPool{};
+  const ResourceDescriptorHeap m_rheap{};
   const bool m_sync;
+  const bool m_srgb;
   const ImageUsage m_imageUsage;
   const Vector<uint32_t, strobe::rhi::allocator_ref> presentQueueFamilyIndicies;
   strobe::rhi::allocator_ref m_alloc;

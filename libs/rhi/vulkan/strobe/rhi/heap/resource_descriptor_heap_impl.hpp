@@ -2,10 +2,11 @@
 
 #include "strobe/rhi/context/context.hpp"
 #include "strobe/rhi/handle.hpp"
-#include "strobe/rhi/heap/resource_descriptor_array_impl.hpp"
-#include "strobe/rhi/heap/resource_descriptor_impl.hpp"
 #include "strobe/rhi/heap/descriptor_heap_bind_info.hpp"
+#include "strobe/rhi/heap/resource_descriptor_array_impl.hpp"
+#include "strobe/rhi/heap/resource_descriptor_dip.hpp"
 #include "strobe/rhi/heap/resource_descriptor_heap_index_pool.hpp"
+#include "strobe/rhi/heap/resource_descriptor_impl.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/timepoint.hpp"
 #include "strobe/rhi/vulkan/device_info/device_properties.hpp"
@@ -17,11 +18,12 @@ namespace strobe::rhi {
 
 struct ResourceDescriptorHeapImpl {
 public:
-  explicit ResourceDescriptorHeapImpl(Context context, Buffer buffer,
+  explicit ResourceDescriptorHeapImpl(Context context,
+                                      ResourceDescriptorDIP dip, Buffer buffer,
                                       strobe::rhi::allocator_ref alloc) noexcept
-      : context(std::move(context)),
+      : context(std::move(context)), dip(dip),
         layout(buffer.size(),
-               this->context.ctx()->deviceInfo().properties.descriptorHeap, 
+               this->context.ctx()->deviceInfo().properties.descriptorHeap,
                alloc),
         alloc(alloc), bufferDescAlloc(alloc), bufferDescArrayAlloc(alloc),
         m_buffer(std::move(buffer)), m_ready({}),
@@ -59,6 +61,7 @@ public:
   }
 
   const Context context;
+  const ResourceDescriptorDIP dip;
   ResourceDescriptorHeapIndexPool layout; // <- internally synchronized.
 
   [[no_unique_address]] strobe::rhi::allocator_ref alloc;

@@ -31,6 +31,18 @@ ResourceDescriptorHeap::create_descriptor_array_wizard(
   return ResourceDescriptorArrayWizard{*this, index, infos, impl->alloc};
 }
 
+ResourceDescriptor ResourceDescriptorHeap::create_descriptor(
+    const ResourceDescriptorInfo &info) noexcept {
+  auto* impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
+  return impl->dip.create_descriptor(info);
+}
+
+ResourceDescriptorArray ResourceDescriptorHeap::create_descriptor_array(
+    span<const ResourceDescriptorInfo> infos) noexcept {
+  auto* impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
+  return impl->dip.create_descriptor_array(infos);
+}
+
 Buffer ResourceDescriptorHeap::buffer() const noexcept {
   auto *impl = void_handle_ptr<ResourceDescriptorHeapImpl>(m_handle);
   return impl->buffer();

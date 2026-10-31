@@ -47,7 +47,7 @@ Device::create_geometry_shader(const GeometryShaderInfo &info) const noexcept {
   ZoneScopedN("Device::create_geometry_shader");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return shader::create_geometry(impl->context, info,
-                                &impl->allocs->shaderAlloc);
+                                 &impl->allocs->shaderAlloc);
 }
 
 Swapchain Device::create_swapchain(const SwapchainInfo &info) const noexcept {
@@ -59,9 +59,9 @@ Swapchain Device::create_swapchain(const SwapchainInfo &info) const noexcept {
       1, impl->allocs->alloc};
   queueFamilyIndicies[0] =
       object_handle_ptr<QueueImpl>(impl->universalQueue)->family();
-  return swap::create_swapchain(impl->context, impl->fencePool, impl->semPool,
-                                info, std::move(queueFamilyIndicies),
-                                &impl->allocs->swapAlloc);
+  return swap::create_swapchain(
+      impl->context, impl->fencePool, impl->semPool, impl->heapctrl.rheap(),
+      info, std::move(queueFamilyIndicies), &impl->allocs->swapAlloc);
 }
 
 Queue Device::get_queue([[maybe_unused]] QueueFlags flags) const noexcept {
@@ -153,8 +153,8 @@ ResourceDescriptorArray Device::create_resource_descriptors(
   return impl->heapctrl.create_resource_descriptor_array(infos);
 }
 
-SamplerDescriptor
-Device::create_sampler_descriptor(const SamplerDescriptorInfo &info) const noexcept {
+SamplerDescriptor Device::create_sampler_descriptor(
+    const SamplerDescriptorInfo &info) const noexcept {
   ZoneScopedN("Device::create_sampler_descriptor");
   auto *impl = void_handle_ptr<DeviceImpl>(m_handle);
   return impl->heapctrl.create_sampler_descriptor(info);

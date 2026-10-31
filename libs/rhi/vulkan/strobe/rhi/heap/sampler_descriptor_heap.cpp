@@ -31,6 +31,18 @@ SamplerDescriptorHeap::create_descriptor_array_wizard(
   return SamplerDescriptorArrayWizard{*this, index, infos, impl->alloc};
 }
 
+SamplerDescriptor SamplerDescriptorHeap::create_descriptor(
+    const SamplerDescriptorInfo &info) noexcept {
+  auto *impl = void_handle_ptr<SamplerDescriptorHeapImpl>(m_handle);
+  return impl->dip.create_descriptor(info);
+}
+
+SamplerDescriptorArray SamplerDescriptorHeap::create_descriptor_array(
+    span<const SamplerDescriptorInfo> infos) noexcept {
+  auto *impl = void_handle_ptr<SamplerDescriptorHeapImpl>(m_handle);
+  return impl->dip.create_descriptor_array(infos);
+}
+
 Buffer SamplerDescriptorHeap::buffer() const noexcept {
   auto *impl = void_handle_ptr<SamplerDescriptorHeapImpl>(m_handle);
   return impl->buffer();

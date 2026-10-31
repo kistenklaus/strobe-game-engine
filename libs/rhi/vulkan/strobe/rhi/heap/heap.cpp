@@ -6,18 +6,22 @@
 
 namespace strobe::rhi {
 
-ResourceDescriptorHeap heap::create_rheap(Context context, Buffer buffer,
+ResourceDescriptorHeap heap::create_rheap(Context context,
+                                          ResourceDescriptorDIP dip,
+                                          Buffer buffer,
                                           handle_allocators *alloc) {
   return detail::make_object<ResourceDescriptorHeap>(
       make_void_handle<ResourceDescriptorHeapImpl>(
-          &alloc->rHeapAlloc, std::move(context), std::move(buffer),
+          &alloc->rHeapAlloc, std::move(context), dip, std::move(buffer),
           alloc->alloc));
 }
-SamplerDescriptorHeap heap::create_sheap(Context context, Buffer buffer,
+SamplerDescriptorHeap heap::create_sheap(Context context,
+                                         SamplerDescriptorDIP dip,
+                                         Buffer buffer,
                                          handle_allocators *alloc) {
   return detail::make_object<SamplerDescriptorHeap>(
       make_void_handle<SamplerDescriptorHeapImpl>(
-          &alloc->sHeapAlloc, std::move(context), std::move(buffer),
+          &alloc->sHeapAlloc, std::move(context), dip, std::move(buffer),
           alloc->alloc));
 }
 

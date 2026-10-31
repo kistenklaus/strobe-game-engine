@@ -19,10 +19,10 @@ struct handle_allocators {
   handle_allocator<SamplerDescriptorHeapImpl> sHeapAlloc;
 };
 
-ResourceDescriptorHeap create_rheap(Context context, Buffer buffer,
+ResourceDescriptorHeap create_rheap(Context context, ResourceDescriptorDIP dip, Buffer buffer,
                                     handle_allocators *alloc);
 
-SamplerDescriptorHeap create_sheap(Context context, Buffer buffer,
+SamplerDescriptorHeap create_sheap(Context context, SamplerDescriptorDIP dip, Buffer buffer,
                                    handle_allocators *alloc);
 
 } // namespace strobe::rhi::heap

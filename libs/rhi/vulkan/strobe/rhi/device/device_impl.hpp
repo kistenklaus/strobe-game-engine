@@ -41,6 +41,8 @@ struct DeviceImpl {
   Queue transferQueue;
   AsyncCopyEngine dma;
   HeapController heapctrl;
+
+  // inverted calls.
 };
 
 } // namespace strobe::rhi

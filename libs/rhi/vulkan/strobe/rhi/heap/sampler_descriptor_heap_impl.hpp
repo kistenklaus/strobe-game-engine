@@ -4,6 +4,7 @@
 #include "strobe/rhi/handle.hpp"
 #include "strobe/rhi/heap/descriptor_heap_bind_info.hpp"
 #include "strobe/rhi/heap/sampler_descriptor_array_impl.hpp"
+#include "strobe/rhi/heap/sampler_descriptor_dip.hpp"
 #include "strobe/rhi/heap/sampler_descriptor_heap_index_pool.hpp"
 #include "strobe/rhi/heap/sampler_descriptor_impl.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
@@ -12,9 +13,10 @@ namespace strobe::rhi {
 
 class SamplerDescriptorHeapImpl {
 public:
-  explicit SamplerDescriptorHeapImpl(Context context, Buffer buffer,
+  explicit SamplerDescriptorHeapImpl(Context context, SamplerDescriptorDIP dip,
+                                     Buffer buffer,
                                      strobe::rhi::allocator_ref alloc) noexcept
-      : context(std::move(context)),
+      : context(std::move(context)), dip(dip),
         layout(buffer.size(),
                this->context.ctx()->deviceInfo().properties.descriptorHeap,
                alloc),
@@ -53,6 +55,7 @@ public:
   }
 
   const Context context;
+  const SamplerDescriptorDIP dip;
   SamplerDescriptorHeapIndexPool layout;
 
   [[no_unique_address]] strobe::rhi::allocator_ref alloc;

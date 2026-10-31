@@ -18,6 +18,7 @@ struct SwapchainInfo {
   GLFWwindow *window = nullptr;
   bool vsync = false;
   ImageUsage imageUsage = ImageUsage::color_attachment;
+  bool srgb = true;
 };
 // [SwapchainInfo]
 

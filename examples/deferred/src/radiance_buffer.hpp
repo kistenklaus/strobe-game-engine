@@ -2,6 +2,7 @@
 
 #include "strobe/rhi/objects/device.hpp"
 #include "strobe/rhi/objects/image.hpp"
+#include "strobe/rhi/objects/resource_descriptor.hpp"
 
 struct RBuffer {
 
@@ -21,9 +22,15 @@ struct RBuffer {
                            .format = strobe::rhi::Format::rgba16_float,
                            .range = {.aspect = strobe::rhi::ImageAspect::color},
                        });
+    rbuf.radianceStorage = device.create_storage_image_descriptor({
+        .image = rbuf.radiance,
+        .layout = strobe::rhi::ImageLayout::general,
+        .subresource = {.aspect = strobe::rhi::ImageAspect::color},
+    });
     return rbuf;
   }
 
   strobe::rhi::Image radiance;
   strobe::rhi::ImageView radianceView;
+  strobe::rhi::ResourceDescriptor radianceStorage;
 };

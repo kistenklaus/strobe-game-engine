@@ -5,6 +5,8 @@
 #include "strobe/rhi/heap/descriptor_heap_bind_info.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/object.hpp"
+#include "strobe/rhi/objects/resource_descriptor.hpp"
+#include "strobe/rhi/objects/resource_descriptor_array.hpp"
 #include "strobe/rhi/types/resource_descriptor_info.hpp"
 #include "strobe/rhi/vulkan/context/context.hpp"
 
@@ -28,6 +30,12 @@ public:
 
   ResourceDescriptorArrayWizard create_descriptor_array_wizard(
       span<const ResourceDescriptorInfo> infos) noexcept;
+
+  ResourceDescriptor
+  create_descriptor(const ResourceDescriptorInfo &info) noexcept;
+
+  ResourceDescriptorArray
+  create_descriptor_array(span<const ResourceDescriptorInfo> infos) noexcept;
 
   Buffer buffer() const noexcept;
 

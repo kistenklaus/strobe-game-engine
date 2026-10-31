@@ -3,6 +3,7 @@
 #include "strobe/rhi/objects/image.hpp"
 #include "strobe/rhi/objects/image_view.hpp"
 #include "strobe/rhi/objects/object.hpp"
+#include "strobe/rhi/objects/resource_descriptor.hpp"
 
     namespace strobe::rhi {
 
@@ -48,6 +49,30 @@
      * \return Swapchain image view.
      */
     const ImageView &view() const noexcept;
+
+    /**
+     * \brief Gets sampled image descriptor
+     * \code{.cpp}
+     * const ImageView& sampled_image_descriptor() const noexcept;
+     * \endcode
+     *
+     * Returns a sampled image descriptor associated with the swapchain image.
+     *
+     * \return swapchain sampled image descriptor
+     */
+    const ResourceDescriptor &sampled_image_descriptor() const noexcept;
+
+    /**
+     * \brief Gets storage image descriptor
+     * \code{.cpp}
+     * const ImageView& storage_image_descriptor() const noexcept;
+     * \endcode
+     *
+     * Returns a storage image descriptor associated with the swapchain image.
+     *
+     * \return swapchain storage image descriptor
+     */
+    const ResourceDescriptor &storage_image_descriptor() const noexcept;
 
     /**
      * \brief Gets image extent.

@@ -8,6 +8,7 @@
 #include "window.hpp"
 #include <fmt/ostream.h>
 #include <tracy/Tracy.hpp>
+#include "strobe/core/color/color.hpp"
 
 int main() {
   Window window{{
@@ -25,6 +26,8 @@ int main() {
   strobe::rhi::Swapchain swapchain = device.create_swapchain({
       .window = window.native(),
       .vsync = false,
+      .imageUsage = strobe::rhi::ImageUsage::storage,
+      .srgb = false,
   });
 
   window.show();
@@ -42,7 +45,13 @@ int main() {
 
     strobe::rhi::CommandBuffer cmd = cmdpool.alloc();
     cmd.begin();
-    deferred.render(cmd, target.image(), frameIndex);
+    deferred.render(
+        cmd,
+        {
+            .color = target.image(),
+            .colorStorageDescriptor = target.storage_image_descriptor(),
+        },
+        frameIndex);
     cmd.end();
 
     queue.wait(target);

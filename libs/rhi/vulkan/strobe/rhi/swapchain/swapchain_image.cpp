@@ -23,7 +23,23 @@ const ImageView &SwapchainImage::view() const noexcept {
   assert(m_handle);
   auto *impl = void_handle_ptr<SwapchainImageImpl>(m_handle);
   auto *gen = object_handle_ptr<SwapchainGenerationImpl>(impl->generation);
-  return gen->frames[impl->index].view;
+  return gen->lazy_image_view(impl->index);
+}
+
+const ResourceDescriptor &
+SwapchainImage::sampled_image_descriptor() const noexcept {
+  assert(m_handle);
+  auto *impl = void_handle_ptr<SwapchainImageImpl>(m_handle);
+  auto *gen = object_handle_ptr<SwapchainGenerationImpl>(impl->generation);
+  return gen->lazy_sampled_image_descriptor(impl->index);
+}
+
+const ResourceDescriptor &
+SwapchainImage::storage_image_descriptor() const noexcept {
+  assert(m_handle);
+  auto *impl = void_handle_ptr<SwapchainImageImpl>(m_handle);
+  auto *gen = object_handle_ptr<SwapchainGenerationImpl>(impl->generation);
+  return gen->lazy_storage_image_descriptor(impl->index);
 }
 
 const uvec2 SwapchainImage::extent() const noexcept {

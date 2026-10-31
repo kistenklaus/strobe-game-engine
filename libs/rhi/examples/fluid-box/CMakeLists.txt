@@ -101,6 +101,7 @@ add_executable(fluid-box EXCLUDE_FROM_ALL
 
 target_link_libraries(fluid-box 
   PRIVATE strobe-platform
+  PRIVATE strobe-lina
   PRIVATE strobe::rhi
   PRIVATE fluid-box-splat-fragment-shader
   PRIVATE fluid-box-splat-vertex-shader

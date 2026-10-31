@@ -2,6 +2,7 @@
 
 #include "strobe/rhi/objects/device.hpp"
 #include "strobe/rhi/objects/image.hpp"
+#include "strobe/rhi/objects/resource_descriptor.hpp"
 
 struct VBuffer {
 
@@ -21,6 +22,12 @@ struct VBuffer {
                            .format = strobe::rhi::Format::d32_float,
                            .range = {.aspect = strobe::rhi::ImageAspect::depth},
                        });
+    vbuffer.visibilityStorage = device.create_storage_image_descriptor({
+        .image = vbuffer.depth,
+        .layout = strobe::rhi::ImageLayout::general,
+        .subresource = {.aspect = strobe::rhi::ImageAspect::depth},
+    });
+
     vbuffer.visibility = device.create_image({
         .type = strobe::rhi::ImageType::image_2d,
         .format = strobe::rhi::Format::r32_uint,
@@ -34,11 +41,18 @@ struct VBuffer {
             .format = strobe::rhi::Format::r32_uint,
             .range = {.aspect = strobe::rhi::ImageAspect::color},
         });
+    vbuffer.visibilityStorage = device.create_storage_image_descriptor({
+        .image = vbuffer.visibility,
+        .layout = strobe::rhi::ImageLayout::general,
+        .subresource = {.aspect = strobe::rhi::ImageAspect::color},
+    });
     return vbuffer;
   }
 
   strobe::rhi::Image depth;
   strobe::rhi::ImageView depthView;
+  strobe::rhi::ResourceDescriptor depthStorage;
   strobe::rhi::Image visibility;
   strobe::rhi::ImageView visibilityView;
+  strobe::rhi::ResourceDescriptor visibilityStorage;
 };

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "strobe/core/containers/span.hpp"
+#include "strobe/rhi/heap/resource_descriptor_heap.hpp"
+#include "strobe/rhi/heap/sampler_descriptor_heap.hpp"
 #include "strobe/rhi/objects/object.hpp"
 #include "strobe/rhi/objects/resource_descriptor.hpp"
 #include "strobe/rhi/objects/resource_descriptor_array.hpp"
@@ -30,6 +32,9 @@ public:
   create_sampler_descriptor(const SamplerDescriptorInfo &info) noexcept;
   SamplerDescriptorArray create_sampler_descriptor_array(
       span<const SamplerDescriptorInfo> infos) noexcept;
+
+  ResourceDescriptorHeap rheap() const noexcept;
+  SamplerDescriptorHeap sheap() const noexcept;
 };
 
 } // namespace strobe::rhi

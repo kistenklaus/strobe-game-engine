@@ -4,6 +4,8 @@
 #include "strobe/rhi/heap/descriptor_heap_bind_info.hpp"
 #include "strobe/rhi/objects/buffer.hpp"
 #include "strobe/rhi/objects/object.hpp"
+#include "strobe/rhi/objects/sampler_descriptor.hpp"
+#include "strobe/rhi/objects/sampler_descriptor_array.hpp"
 #include "strobe/rhi/types/sampler_descriptor_info.hpp"
 #include "strobe/rhi/vulkan/context/context.hpp"
 namespace strobe::rhi {
@@ -22,8 +24,15 @@ public:
 
   SamplerDescriptorWizard
   create_descriptor_wizard(const SamplerDescriptorInfo &info) noexcept;
+
   SamplerDescriptorArrayWizard create_descriptor_array_wizard(
       span<const SamplerDescriptorInfo> infos) noexcept;
+
+  SamplerDescriptor
+  create_descriptor(const SamplerDescriptorInfo &info) noexcept;
+
+  SamplerDescriptorArray
+  create_descriptor_array(span<const SamplerDescriptorInfo> infos) noexcept;
 
   Buffer buffer() const noexcept;
 
